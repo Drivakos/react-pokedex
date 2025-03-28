@@ -1,23 +1,35 @@
+export interface PokemonForm {
+  form_name: string;
+  is_mega: boolean;
+}
+
 export interface Pokemon {
   id: number;
   name: string;
-  types: string[];
-  weight: number;
   height: number;
-  moves: Move[];
-  sprites: {
-    other: {
-      'official-artwork': {
-        front_default: string;
-      };
-    };
-  };
-  evolution_chain?: {
-    url: string;
-  };
-  can_mega_evolve: boolean;
+  weight: number;
+  types: string[];
+  moves: string[];
+  sprites: any;
   generation: string;
   has_evolutions: boolean;
+  can_mega_evolve: boolean;
+}
+
+export interface RawPokemonData {
+  id: number;
+  name: string;
+  height: number;
+  weight: number;
+  types: { type: { name: string } }[];
+  moves: { move: { name: string } }[];
+  sprites: { data: any }[];
+  species: {
+    generation: { name: string };
+    evolution_chain_id: number | null;
+    evolves_from_species_id: number | null;
+  };
+  forms: PokemonForm[];
 }
 
 export interface Move {
@@ -44,8 +56,8 @@ export interface Filters {
     min: number;
     max: number;
   };
-  canMegaEvolve: boolean | null;
   hasEvolutions: boolean | null;
+  canMegaEvolve: boolean | null;
 }
 
 export const TYPE_COLORS: Record<string, string> = {

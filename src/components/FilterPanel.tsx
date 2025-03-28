@@ -1,6 +1,28 @@
 import React from 'react';
-import { X, ChevronDown, RefreshCw } from 'lucide-react';
-import { Filters, TYPE_COLORS } from '../types/pokemon';
+import { RefreshCw } from 'lucide-react';
+import { Filters } from '../types/pokemon';
+
+// Add type colors mapping
+const TYPE_COLORS = {
+  normal: 'bg-gray-400',
+  fire: 'bg-red-500',
+  water: 'bg-blue-500',
+  electric: 'bg-yellow-400',
+  grass: 'bg-green-500',
+  ice: 'bg-blue-200',
+  fighting: 'bg-red-700',
+  poison: 'bg-purple-500',
+  ground: 'bg-yellow-600',
+  flying: 'bg-indigo-400',
+  psychic: 'bg-pink-500',
+  bug: 'bg-lime-500',
+  rock: 'bg-yellow-800',
+  ghost: 'bg-purple-700',
+  dragon: 'bg-indigo-700',
+  dark: 'bg-gray-700',
+  steel: 'bg-gray-500',
+  fairy: 'bg-pink-300',
+} as const;
 
 interface FilterPanelProps {
   filters: Filters;
@@ -42,32 +64,31 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
   };
 
   return (
-    <div className="bg-white rounded-lg shadow-lg p-6 mb-8">
-      <div className="flex justify-between items-center mb-6">
-        <h2 className="text-xl font-bold">Filters</h2>
+    <div className="bg-white p-6 rounded-lg shadow-md mb-8">
+      <div className="flex justify-between items-center mb-4">
+        <h2 className="text-xl font-semibold">Filters</h2>
         <button
           onClick={resetFilters}
-          className="flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+          className="flex items-center gap-2 text-blue-500 hover:text-blue-600"
         >
           <RefreshCw size={16} />
-          Reset All
+          Reset
         </button>
       </div>
-      
+
       <div className="space-y-6">
-        {/* Types Filter */}
         <div>
-          <h3 className="font-semibold mb-2">Types</h3>
+          <h3 className="text-lg font-medium mb-2">Types</h3>
           <div className="flex flex-wrap gap-2">
-            {availableTypes.map((type) => (
+            {availableTypes.map(type => (
               <button
                 key={type}
                 onClick={() => handleTypeToggle(type)}
                 className={`${
-                  filters.types.includes(type) ? TYPE_COLORS[type] : 'bg-gray-100'
+                  filters.types.includes(type) ? TYPE_COLORS[type as keyof typeof TYPE_COLORS] : 'bg-gray-100'
                 } px-3 py-1 rounded-full text-sm capitalize ${
                   filters.types.includes(type) ? 'text-white' : 'text-gray-700'
-                }`}
+                } transition-colors duration-200 hover:opacity-90`}
               >
                 {type}
               </button>
@@ -75,121 +96,148 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
           </div>
         </div>
 
-        {/* Moves Filter */}
         <div>
-          <h3 className="font-semibold mb-2">Moves</h3>
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 max-h-40 overflow-y-auto p-2 border rounded-lg">
-            {availableMoves.map((move) => (
-              <label key={move} className="flex items-center gap-2 text-sm">
-                <input
-                  type="checkbox"
-                  checked={filters.moves.includes(move)}
-                  onChange={() => handleMoveToggle(move)}
-                  className="rounded border-gray-300 text-blue-500 focus:ring-blue-500"
-                />
-                <span className="capitalize">{move.replace('-', ' ')}</span>
-              </label>
+          <h3 className="text-lg font-medium mb-2">Weight (hectograms)</h3>
+          <div className="flex gap-4">
+            <div className="flex-1">
+              <label className="block text-sm text-gray-600 mb-1">Min</label>
+              <input
+                type="number"
+                min="0"
+                value={filters.weight.min || ''}
+                onChange={(e) => onFilterChange({
+                  ...filters,
+                  weight: { ...filters.weight, min: parseInt(e.target.value) || 0 }
+                })}
+                className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+            <div className="flex-1">
+              <label className="block text-sm text-gray-600 mb-1">Max</label>
+              <input
+                type="number"
+                min="0"
+                value={filters.weight.max || ''}
+                onChange={(e) => onFilterChange({
+                  ...filters,
+                  weight: { ...filters.weight, max: parseInt(e.target.value) || 0 }
+                })}
+                className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <h3 className="text-lg font-medium mb-2">Height (decimeters)</h3>
+          <div className="flex gap-4">
+            <div className="flex-1">
+              <label className="block text-sm text-gray-600 mb-1">Min</label>
+              <input
+                type="number"
+                min="0"
+                value={filters.height.min || ''}
+                onChange={(e) => onFilterChange({
+                  ...filters,
+                  height: { ...filters.height, min: parseInt(e.target.value) || 0 }
+                })}
+                className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+            <div className="flex-1">
+              <label className="block text-sm text-gray-600 mb-1">Max</label>
+              <input
+                type="number"
+                min="0"
+                value={filters.height.max || ''}
+                onChange={(e) => onFilterChange({
+                  ...filters,
+                  height: { ...filters.height, max: parseInt(e.target.value) || 0 }
+                })}
+                className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <h3 className="text-lg font-medium mb-2">Evolution</h3>
+          <div className="flex gap-4">
+            <button
+              onClick={() => onFilterChange({
+                ...filters,
+                hasEvolutions: filters.hasEvolutions === true ? null : true
+              })}
+              className={`flex-1 px-4 py-2 rounded-lg border ${
+                filters.hasEvolutions === true
+                  ? 'bg-blue-500 text-white border-blue-500'
+                  : 'bg-white text-gray-700 border-gray-300'
+              }`}
+            >
+              Has Evolutions
+            </button>
+            <button
+              onClick={() => onFilterChange({
+                ...filters,
+                hasEvolutions: filters.hasEvolutions === false ? null : false
+              })}
+              className={`flex-1 px-4 py-2 rounded-lg border ${
+                filters.hasEvolutions === false
+                  ? 'bg-blue-500 text-white border-blue-500'
+                  : 'bg-white text-gray-700 border-gray-300'
+              }`}
+            >
+              No Evolutions
+            </button>
+          </div>
+        </div>
+
+        <div>
+          <h3 className="text-lg font-medium mb-2">Mega Evolution</h3>
+          <div className="flex gap-4">
+            <button
+              onClick={() => onFilterChange({
+                ...filters,
+                canMegaEvolve: filters.canMegaEvolve === true ? null : true
+              })}
+              className={`flex-1 px-4 py-2 rounded-lg border ${
+                filters.canMegaEvolve === true
+                  ? 'bg-blue-500 text-white border-blue-500'
+                  : 'bg-white text-gray-700 border-gray-300'
+              }`}
+            >
+              Can Mega Evolve
+            </button>
+            <button
+              onClick={() => onFilterChange({
+                ...filters,
+                canMegaEvolve: filters.canMegaEvolve === false ? null : false
+              })}
+              className={`flex-1 px-4 py-2 rounded-lg border ${
+                filters.canMegaEvolve === false
+                  ? 'bg-blue-500 text-white border-blue-500'
+                  : 'bg-white text-gray-700 border-gray-300'
+              }`}
+            >
+              Cannot Mega Evolve
+            </button>
+          </div>
+        </div>
+
+        <div>
+          <h3 className="text-lg font-medium mb-2">Moves</h3>
+          <div className="flex flex-wrap gap-2">
+            {availableMoves.map(move => (
+              <button
+                key={move}
+                onClick={() => handleMoveToggle(move)}
+                className={`${
+                  filters.moves.includes(move) ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-700'
+                } px-3 py-1 rounded-full text-sm transition-colors duration-200 hover:opacity-90`}
+              >
+                {move}
+              </button>
             ))}
-          </div>
-        </div>
-
-        {/* Generation Filter */}
-        <div>
-          <h3 className="font-semibold mb-2">Generation</h3>
-          <select
-            className="w-full p-2 border rounded-lg"
-            value={filters.generation}
-            onChange={(e) => onFilterChange({ ...filters, generation: e.target.value })}
-          >
-            <option value="">All Generations</option>
-            <option value="gen-i">Generation I</option>
-            <option value="gen-ii">Generation II</option>
-            <option value="gen-iii">Generation III</option>
-            <option value="gen-iv">Generation IV</option>
-            <option value="gen-v">Generation V</option>
-            <option value="gen-vi">Generation VI</option>
-            <option value="gen-vii">Generation VII</option>
-            <option value="gen-viii">Generation VIII</option>
-          </select>
-        </div>
-
-        {/* Evolution & Mega Evolution Filters */}
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <h3 className="font-semibold mb-2">Has Evolutions</h3>
-            <select
-              className="w-full p-2 border rounded-lg"
-              value={filters.hasEvolutions === null ? '' : filters.hasEvolutions.toString()}
-              onChange={(e) => {
-                const value = e.target.value === '' ? null : e.target.value === 'true';
-                onFilterChange({ ...filters, hasEvolutions: value });
-              }}
-            >
-              <option value="">All</option>
-              <option value="true">Yes</option>
-              <option value="false">No</option>
-            </select>
-          </div>
-          <div>
-            <h3 className="font-semibold mb-2">Can Mega Evolve</h3>
-            <select
-              className="w-full p-2 border rounded-lg"
-              value={filters.canMegaEvolve === null ? '' : filters.canMegaEvolve.toString()}
-              onChange={(e) => {
-                const value = e.target.value === '' ? null : e.target.value === 'true';
-                onFilterChange({ ...filters, canMegaEvolve: value });
-              }}
-            >
-              <option value="">All</option>
-              <option value="true">Yes</option>
-              <option value="false">No</option>
-            </select>
-          </div>
-        </div>
-
-        {/* Size Filters */}
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <h3 className="font-semibold mb-2">Height Range</h3>
-            <select
-              className="w-full p-2 border rounded-lg"
-              value={`${filters.height.min}-${filters.height.max}`}
-              onChange={(e) => {
-                const [min, max] = e.target.value.split('-').map(Number);
-                onFilterChange({
-                  ...filters,
-                  height: { min, max }
-                });
-              }}
-            >
-              <option value="0-0">All Heights</option>
-              <option value="0-1">Up to 1m</option>
-              <option value="1-2">1m - 2m</option>
-              <option value="2-3">2m - 3m</option>
-              <option value="3-4">3m - 4m</option>
-              <option value="4-999">4m+</option>
-            </select>
-          </div>
-          <div>
-            <h3 className="font-semibold mb-2">Weight Range</h3>
-            <select
-              className="w-full p-2 border rounded-lg"
-              value={`${filters.weight.min}-${filters.weight.max}`}
-              onChange={(e) => {
-                const [min, max] = e.target.value.split('-').map(Number);
-                onFilterChange({
-                  ...filters,
-                  weight: { min, max }
-                });
-              }}
-            >
-              <option value="0-0">All Weights</option>
-              <option value="0-10">Up to 10kg</option>
-              <option value="10-25">10kg - 25kg</option>
-              <option value="25-50">25kg - 50kg</option>
-              <option value="50-100">50kg - 100kg</option>
-              <option value="100-999">100kg+</option>
-            </select>
           </div>
         </div>
       </div>
