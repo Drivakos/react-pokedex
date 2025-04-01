@@ -10,7 +10,6 @@ const SEARCH_DEBOUNCE_MS = 300;
 const GRAPHQL_ENDPOINT = 'https://beta.pokeapi.co/graphql/v1beta';
 
 function App() {
-  const [pokemon, setPokemon] = useState<Pokemon[]>([]);
   const [displayedPokemon, setDisplayedPokemon] = useState<Pokemon[]>([]);
   const [page, setPage] = useState(0);
   const [hasMore, setHasMore] = useState(true);
@@ -31,8 +30,10 @@ function App() {
     weight: { min: 0, max: 0 },
     height: { min: 0, max: 0 },
     hasEvolutions: null,
-    canMegaEvolve: null,
   });
+
+  const [availableTypes, setAvailableTypes] = useState<string[]>([]);
+  const [availableMoves, setAvailableMoves] = useState<string[]>([]);
 
   const buildWhereConditions = (searchTerm: string, filters: Filters) => {
     const conditions = {
@@ -43,35 +44,37 @@ function App() {
       moves: filters.moves.length > 0
         ? `pokemon_v2_pokemonmoves: { pokemon_v2_move: { name: { _in: ${JSON.stringify(filters.moves)} } } }`
         : '',
-
+  
       generation: filters.generation
         ? `pokemon_v2_pokemonspecy: { pokemon_v2_generation: { name: { _eq: ${JSON.stringify(filters.generation)} } } }`
         : '',
-
+  
       name: searchTerm
         ? `name: { _ilike: ${JSON.stringify(`%${searchTerm.toLowerCase()}%`)} }`
         : '',
-
+  
       weight: filters.weight.min > 0 || filters.weight.max > 0
         ? `weight: { ${filters.weight.min > 0 ? `_gte: ${filters.weight.min},` : ''} ${filters.weight.max > 0 ? `_lte: ${filters.weight.max}` : ''} }`
         : '',
-
+  
       height: filters.height.min > 0 || filters.height.max > 0
         ? `height: { ${filters.height.min > 0 ? `_gte: ${filters.height.min},` : ''} ${filters.height.max > 0 ? `_lte: ${filters.height.max}` : ''} }`
         : '',
-
+  
       evolution: filters.hasEvolutions !== null
-        ? `pokemon_v2_pokemonspecy: { ${filters.hasEvolutions ? 'evolution_chain_id: { _is_null: false }' : 'evolution_chain_id: { _is_null: true }' } }`
+        ? `pokemon_v2_pokemonspecy: {
+            pokemon_v2_evolutionchain: {
+              pokemon_v2_pokemonspecies_aggregate: {
+                count: ${filters.hasEvolutions ? 'gt: 1' : 'equals: 1'}
+              }
+            }
+          }`
         : '',
-
-      megaEvolution: filters.canMegaEvolve !== null
-        ? `pokemon_v2_pokemonforms: { form_name: { ${filters.canMegaEvolve ? '_ilike: "mega%"' : '_not_ilike: "mega%"' } } }`
-        : ''
     };
-
+  
     return Object.values(conditions).filter(Boolean).join(', ');
   };
-
+  
   const fetchPokemonDetails = async (offset: number) => {
     try {
       const whereConditions = buildWhereConditions(debouncedSearchTerm, filters);
@@ -80,7 +83,7 @@ function App() {
             `{ pokemon_v2_pokemontypes: { pokemon_v2_type: { name: { _eq: ${JSON.stringify(type)} } } } }`
           ).join(',')}]`
         : '';
-
+  
       const query = `
         query GetFilteredPokemon($limit: Int!, $offset: Int!) {
           pokemon_v2_pokemon(
@@ -90,12 +93,17 @@ function App() {
             where: {
               ${whereConditions}
               ${typeAndCondition}
+              pokemon_v2_pokemonforms: { 
+                is_default: { _eq: true }
+              }
             }
           ) {
             id
             name
             height
             weight
+            is_default
+            base_experience
             types: pokemon_v2_pokemontypes {
               type: pokemon_v2_type {
                 name
@@ -113,29 +121,38 @@ function App() {
               generation: pokemon_v2_generation {
                 name
               }
-              evolution_chain_id
-              evolves_from_species_id
+              pokemon_v2_pokemons {
+                pokemon_v2_pokemonforms {
+                  form_name
+                  is_default
+                }
+              }
+              pokemon_v2_evolutionchain {
+                pokemon_v2_pokemonspecies {
+                  name
+                }
+              }
             }
             forms: pokemon_v2_pokemonforms {
               form_name
-              is_mega
+              is_default
             }
           }
         }
       `;
-
+  
       const response = await fetch(GRAPHQL_ENDPOINT, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ query, variables: { limit: POKEMON_PER_PAGE, offset } }),
       });
-
+  
       const result = await response.json();
       
       if (result.errors) {
         throw new Error(result.errors[0].message);
       }
-
+  
       const rawPokemon = result.data.pokemon_v2_pokemon as RawPokemonData[];
       
       return rawPokemon.map(p => ({
@@ -147,8 +164,11 @@ function App() {
         moves: p.moves.map(m => m.move.name),
         sprites: p.sprites[0]?.data || {},
         generation: p.species?.generation?.name || 'unknown',
-        has_evolutions: Boolean(p.species?.evolution_chain_id),
-        can_mega_evolve: p.forms?.some(form => form.form_name?.toLowerCase().includes('mega')),
+        has_evolutions: p.species?.pokemon_v2_pokemons?.some(pokemon => 
+          pokemon.pokemon_v2_pokemonforms?.some(form => form.form_name !== "None")
+        ),
+        is_default: p.is_default,
+        base_experience: p.base_experience,
       }));
     } catch (error) {
       throw error;
@@ -174,7 +194,6 @@ function App() {
           setLoadingProgress(0);
         }
         const initialPokemon = await fetchPokemonDetails(0);
-        setPokemon(initialPokemon);
         setDisplayedPokemon(initialPokemon);
         setHasMore(initialPokemon.length === POKEMON_PER_PAGE);
         setPage(0);
@@ -192,6 +211,43 @@ function App() {
 
     fetchInitialPokemon();
   }, [debouncedSearchTerm, filters, initialLoad]);
+
+  useEffect(() => {
+    const fetchTypesAndMoves = async () => {
+      const query = `
+        query GetAllTypesAndMoves {
+          pokemon_v2_type(where: {pokemon_v2_pokemontypes: {pokemon_v2_pokemon: {}}}) {
+            name
+          }
+          pokemon_v2_move(where: {pokemon_v2_pokemonmoves: {pokemon_v2_pokemon: {}}}) {
+            name
+          }
+        }
+      `;
+
+      try {
+        const response = await fetch(GRAPHQL_ENDPOINT, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ query }),
+        });
+
+        const result = await response.json();
+        if (result.errors) {
+          throw new Error(result.errors[0].message);
+        }
+
+        const types = result.data.pokemon_v2_type.map((t: { name: string }) => t.name).sort();
+        const moves = result.data.pokemon_v2_move.map((m: { name: string }) => m.name).sort();
+        setAvailableTypes(types);
+        setAvailableMoves(moves);
+      } catch (error) {
+        console.error('Error fetching types and moves:', error);
+      }
+    };
+
+    fetchTypesAndMoves();
+  }, []);
 
   const loadMorePokemon = useCallback(async () => {
     if (loadingRef.current || !hasMore) return;
@@ -238,9 +294,6 @@ function App() {
       observer.disconnect();
     };
   }, [displayedPokemon, loadMorePokemon, hasMore, loading]);
-
-  const availableTypes = Array.from(new Set(pokemon.flatMap(p => p.types))).sort();
-  const availableMoves = Array.from(new Set(pokemon.flatMap(p => p.moves))).sort();
 
   return (
     <div className="min-h-screen bg-gray-100 p-8">

@@ -130,17 +130,18 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
         </div>
 
         <div>
-          <h3 className="text-lg font-medium mb-2">Height (decimeters)</h3>
+          <h3 className="text-lg font-medium mb-2">Height (meters)</h3>
           <div className="flex gap-4">
             <div className="flex-1">
               <label className="block text-sm text-gray-600 mb-1">Min</label>
               <input
                 type="number"
                 min="0"
-                value={filters.height.min || ''}
+                step="0.1"
+                value={filters.height.min ? (filters.height.min / 10).toFixed(1) : ''}
                 onChange={(e) => onFilterChange({
                   ...filters,
-                  height: { ...filters.height, min: parseInt(e.target.value) || 0 }
+                  height: { ...filters.height, min: Math.round(parseFloat(e.target.value) * 10) || 0 }
                 })}
                 className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
@@ -150,10 +151,11 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
               <input
                 type="number"
                 min="0"
-                value={filters.height.max || ''}
+                step="0.1"
+                value={filters.height.max ? (filters.height.max / 10).toFixed(1) : ''}
                 onChange={(e) => onFilterChange({
                   ...filters,
-                  height: { ...filters.height, max: parseInt(e.target.value) || 0 }
+                  height: { ...filters.height, max: Math.round(parseFloat(e.target.value) * 10) || 0 }
                 })}
                 className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
