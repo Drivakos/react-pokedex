@@ -34,6 +34,7 @@ function App() {
 
   const [availableTypes, setAvailableTypes] = useState<string[]>([]);
   const [availableMoves, setAvailableMoves] = useState<string[]>([]);
+  const [availableGenerations, setAvailableGenerations] = useState<string[]>([]);
 
   const buildWhereConditions = (searchTerm: string, filters: Filters) => {
     const conditions = {
@@ -46,7 +47,7 @@ function App() {
         : '',
   
       generation: filters.generation
-        ? `pokemon_v2_pokemonspecy: { pokemon_v2_generation: { name: { _eq: ${JSON.stringify(filters.generation)} } } }`
+        ? `pokemon_v2_pokemonspecy: { pokemon_v2_generation: { name: { _eq: "${filters.generation}" } } }`
         : '',
   
       name: searchTerm
@@ -222,6 +223,9 @@ function App() {
           pokemon_v2_move(where: {pokemon_v2_pokemonmoves: {pokemon_v2_pokemon: {}}}) {
             name
           }
+          pokemon_v2_generation(order_by: {id: asc}) {
+            name
+          }
         }
       `;
 
@@ -239,8 +243,10 @@ function App() {
 
         const types = result.data.pokemon_v2_type.map((t: { name: string }) => t.name).sort();
         const moves = result.data.pokemon_v2_move.map((m: { name: string }) => m.name).sort();
+        const generations = result.data.pokemon_v2_generation.map((g: { name: string }) => g.name);
         setAvailableTypes(types);
         setAvailableMoves(moves);
+        setAvailableGenerations(generations);
       } catch (error) {
         console.error('Error fetching types and moves:', error);
       }
@@ -349,6 +355,7 @@ function App() {
               onFilterChange={setFilters}
               availableTypes={availableTypes}
               availableMoves={availableMoves}
+              availableGenerations={availableGenerations}
             />
           )}
 

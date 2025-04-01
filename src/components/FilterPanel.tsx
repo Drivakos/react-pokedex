@@ -29,6 +29,7 @@ interface FilterPanelProps {
   onFilterChange: (filters: Filters) => void;
   availableTypes: string[];
   availableMoves: string[];
+  availableGenerations: string[];
 }
 
 export const FilterPanel: React.FC<FilterPanelProps> = ({
@@ -36,6 +37,7 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
   onFilterChange,
   availableTypes,
   availableMoves,
+  availableGenerations,
 }) => {
   const handleTypeToggle = (type: string) => {
     const newTypes = filters.types.includes(type)
@@ -51,6 +53,10 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
     onFilterChange({ ...filters, moves: newMoves });
   };
 
+  const handleGenerationChange = (generation: string) => {
+    onFilterChange({ ...filters, generation });
+  };
+
   const resetFilters = () => {
     onFilterChange({
       types: [],
@@ -63,157 +69,171 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
   };
 
   return (
-    <div className="bg-white p-6 rounded-lg shadow-md mb-8">
-      <div className="flex justify-between items-center mb-4">
-        <h2 className="text-xl font-semibold">Filters</h2>
+    <div className="bg-white rounded-lg shadow-lg p-6 space-y-6 max-h-[80vh] overflow-y-auto">
+      <div className="flex justify-between items-center">
+        <h2 className="text-xl font-bold">Filters</h2>
         <button
           onClick={resetFilters}
-          className="flex items-center gap-2 text-blue-500 hover:text-blue-600"
+          className="text-blue-500 hover:text-blue-700 flex items-center gap-2"
         >
           <RefreshCw size={16} />
           Reset
         </button>
       </div>
 
-      <div className="space-y-6">
-        <div>
-          <h3 className="text-lg font-medium mb-2">Types</h3>
-          <div className="flex flex-wrap gap-2">
-            {availableTypes.map(type => (
-              <button
-                key={type}
-                onClick={() => handleTypeToggle(type)}
-                className={`${
-                  filters.types.includes(type) ? TYPE_COLORS[type as keyof typeof TYPE_COLORS] : 'bg-gray-100'
-                } px-3 py-1 rounded-full text-sm capitalize ${
-                  filters.types.includes(type) ? 'text-white' : 'text-gray-700'
-                } transition-colors duration-200 hover:opacity-90`}
-              >
-                {type}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <div>
-          <h3 className="text-lg font-medium mb-2">Weight (kg)</h3>
-          <div className="flex gap-4">
-            <div className="flex-1">
-              <label className="block text-sm text-gray-600 mb-1">Min</label>
-              <input
-                type="number"
-                min="0"
-                step="0.1"
-                value={filters.weight.min ? (filters.weight.min / 10).toFixed(1) : ''}
-                onChange={(e) => onFilterChange({
-                  ...filters,
-                  weight: { ...filters.weight, min: Math.round(parseFloat(e.target.value) * 10) || 0 }
-                })}
-                className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-            <div className="flex-1">
-              <label className="block text-sm text-gray-600 mb-1">Max</label>
-              <input
-                type="number"
-                min="0"
-                step="0.1"
-                value={filters.weight.max ? (filters.weight.max / 10).toFixed(1) : ''}
-                onChange={(e) => onFilterChange({
-                  ...filters,
-                  weight: { ...filters.weight, max: Math.round(parseFloat(e.target.value) * 10) || 0 }
-                })}
-                className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-          </div>
-        </div>
-
-        <div>
-          <h3 className="text-lg font-medium mb-2">Height (meters)</h3>
-          <div className="flex gap-4">
-            <div className="flex-1">
-              <label className="block text-sm text-gray-600 mb-1">Min</label>
-              <input
-                type="number"
-                min="0"
-                step="0.1"
-                value={filters.height.min ? (filters.height.min / 10).toFixed(1) : ''}
-                onChange={(e) => onFilterChange({
-                  ...filters,
-                  height: { ...filters.height, min: Math.round(parseFloat(e.target.value) * 10) || 0 }
-                })}
-                className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-            <div className="flex-1">
-              <label className="block text-sm text-gray-600 mb-1">Max</label>
-              <input
-                type="number"
-                min="0"
-                step="0.1"
-                value={filters.height.max ? (filters.height.max / 10).toFixed(1) : ''}
-                onChange={(e) => onFilterChange({
-                  ...filters,
-                  height: { ...filters.height, max: Math.round(parseFloat(e.target.value) * 10) || 0 }
-                })}
-                className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-          </div>
-        </div>
-
-        <div>
-          <h3 className="text-lg font-medium mb-2">Evolution</h3>
-          <div className="flex gap-4">
+      {/* Types Section */}
+      <div>
+        <h3 className="font-semibold mb-2">Types</h3>
+        <div className="flex flex-wrap gap-2">
+          {availableTypes.map((type) => (
             <button
-              onClick={() => onFilterChange({
-                ...filters,
-                hasEvolutions: filters.hasEvolutions === true ? null : true
-              })}
-              className={`flex-1 px-4 py-2 rounded-lg border ${
-                filters.hasEvolutions === true
-                  ? 'bg-blue-500 text-white border-blue-500'
-                  : 'bg-white text-gray-700 border-gray-300'
+              key={type}
+              onClick={() => handleTypeToggle(type)}
+              className={`px-3 py-1 rounded-full text-white text-sm capitalize transition-transform hover:scale-105 ${
+                filters.types.includes(type) ? TYPE_COLORS[type as keyof typeof TYPE_COLORS] : 'bg-gray-300'
               }`}
             >
-              Has Evolutions
+              {type}
             </button>
-            <button
-              onClick={() => onFilterChange({
+          ))}
+        </div>
+      </div>
+
+      {/* Generation Section */}
+      <div>
+        <h3 className="font-semibold mb-2">Generation</h3>
+        <select
+          value={filters.generation}
+          onChange={(e) => handleGenerationChange(e.target.value)}
+          className="w-full p-2 border rounded-lg"
+        >
+          <option value="">All Generations</option>
+          {availableGenerations.map((gen) => (
+            <option key={gen} value={gen}>
+              {gen.replace('-', ' ').toUpperCase()}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      {/* Weight Range */}
+      <div>
+        <h3 className="text-lg font-medium mb-2">Weight (kg)</h3>
+        <div className="flex gap-4">
+          <div className="flex-1">
+            <label className="block text-sm text-gray-600 mb-1">Min</label>
+            <input
+              type="number"
+              min="0"
+              step="0.1"
+              value={filters.weight.min ? (filters.weight.min / 10).toFixed(1) : ''}
+              onChange={(e) => onFilterChange({
                 ...filters,
-                hasEvolutions: filters.hasEvolutions === false ? null : false
+                weight: { ...filters.weight, min: Math.round(parseFloat(e.target.value) * 10) || 0 }
               })}
-              className={`flex-1 px-4 py-2 rounded-lg border ${
-                filters.hasEvolutions === false
-                  ? 'bg-blue-500 text-white border-blue-500'
-                  : 'bg-white text-gray-700 border-gray-300'
-              }`}
+              className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+          <div className="flex-1">
+            <label className="block text-sm text-gray-600 mb-1">Max</label>
+            <input
+              type="number"
+              min="0"
+              step="0.1"
+              value={filters.weight.max ? (filters.weight.max / 10).toFixed(1) : ''}
+              onChange={(e) => onFilterChange({
+                ...filters,
+                weight: { ...filters.weight, max: Math.round(parseFloat(e.target.value) * 10) || 0 }
+              })}
+              className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Height Range */}
+      <div>
+        <h3 className="text-lg font-medium mb-2">Height (meters)</h3>
+        <div className="flex gap-4">
+          <div className="flex-1">
+            <label className="block text-sm text-gray-600 mb-1">Min</label>
+            <input
+              type="number"
+              min="0"
+              step="0.1"
+              value={filters.height.min ? (filters.height.min / 10).toFixed(1) : ''}
+              onChange={(e) => onFilterChange({
+                ...filters,
+                height: { ...filters.height, min: Math.round(parseFloat(e.target.value) * 10) || 0 }
+              })}
+              className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+          <div className="flex-1">
+            <label className="block text-sm text-gray-600 mb-1">Max</label>
+            <input
+              type="number"
+              min="0"
+              step="0.1"
+              value={filters.height.max ? (filters.height.max / 10).toFixed(1) : ''}
+              onChange={(e) => onFilterChange({
+                ...filters,
+                height: { ...filters.height, max: Math.round(parseFloat(e.target.value) * 10) || 0 }
+              })}
+              className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Evolution */}
+      <div>
+        <h3 className="text-lg font-medium mb-2">Evolution</h3>
+        <div className="flex gap-4">
+          <button
+            onClick={() => onFilterChange({
+              ...filters,
+              hasEvolutions: filters.hasEvolutions === true ? null : true
+            })}
+            className={`flex-1 px-4 py-2 rounded-lg border ${
+              filters.hasEvolutions === true
+                ? 'bg-blue-500 text-white border-blue-500'
+                : 'bg-white text-gray-700 border-gray-300'
+            }`}
+          >
+            Has Evolutions
+          </button>
+          <button
+            onClick={() => onFilterChange({
+              ...filters,
+              hasEvolutions: filters.hasEvolutions === false ? null : false
+            })}
+            className={`flex-1 px-4 py-2 rounded-lg border ${
+              filters.hasEvolutions === false
+                ? 'bg-blue-500 text-white border-blue-500'
+                : 'bg-white text-gray-700 border-gray-300'
+            }`}
+          >
+            No Evolutions
+          </button>
+        </div>
+      </div>
+
+      {/* Moves */}
+      <div>
+        <h3 className="text-lg font-medium mb-2">Moves</h3>
+        <div className="flex flex-wrap gap-2">
+          {availableMoves.map(move => (
+            <button
+              key={move}
+              onClick={() => handleMoveToggle(move)}
+              className={`${
+                filters.moves.includes(move) ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-700'
+              } px-3 py-1 rounded-full text-sm transition-colors duration-200 hover:opacity-90`}
             >
-              No Evolutions
+              {move}
             </button>
-          </div>
-        </div>
-
-        <div>
-          <h3 className="text-lg font-medium mb-2">Generation</h3>
-        </div>
-
-        <div>
-          <h3 className="text-lg font-medium mb-2">Moves</h3>
-          <div className="flex flex-wrap gap-2">
-            {availableMoves.map(move => (
-              <button
-                key={move}
-                onClick={() => handleMoveToggle(move)}
-                className={`${
-                  filters.moves.includes(move) ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-700'
-                } px-3 py-1 rounded-full text-sm transition-colors duration-200 hover:opacity-90`}
-              >
-                {move}
-              </button>
-            ))}
-          </div>
+          ))}
         </div>
       </div>
     </div>
