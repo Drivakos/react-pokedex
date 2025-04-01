@@ -58,7 +58,6 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
       generation: '',
       weight: { min: 0, max: 0 },
       height: { min: 0, max: 0 },
-      canMegaEvolve: null,
       hasEvolutions: null,
     });
   };
@@ -97,17 +96,18 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
         </div>
 
         <div>
-          <h3 className="text-lg font-medium mb-2">Weight (hectograms)</h3>
+          <h3 className="text-lg font-medium mb-2">Weight (kg)</h3>
           <div className="flex gap-4">
             <div className="flex-1">
               <label className="block text-sm text-gray-600 mb-1">Min</label>
               <input
                 type="number"
                 min="0"
-                value={filters.weight.min || ''}
+                step="0.1"
+                value={filters.weight.min ? (filters.weight.min / 10).toFixed(1) : ''}
                 onChange={(e) => onFilterChange({
                   ...filters,
-                  weight: { ...filters.weight, min: parseInt(e.target.value) || 0 }
+                  weight: { ...filters.weight, min: Math.round(parseFloat(e.target.value) * 10) || 0 }
                 })}
                 className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
@@ -117,10 +117,11 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
               <input
                 type="number"
                 min="0"
-                value={filters.weight.max || ''}
+                step="0.1"
+                value={filters.weight.max ? (filters.weight.max / 10).toFixed(1) : ''}
                 onChange={(e) => onFilterChange({
                   ...filters,
-                  weight: { ...filters.weight, max: parseInt(e.target.value) || 0 }
+                  weight: { ...filters.weight, max: Math.round(parseFloat(e.target.value) * 10) || 0 }
                 })}
                 className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
@@ -193,35 +194,7 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
         </div>
 
         <div>
-          <h3 className="text-lg font-medium mb-2">Mega Evolution</h3>
-          <div className="flex gap-4">
-            <button
-              onClick={() => onFilterChange({
-                ...filters,
-                canMegaEvolve: filters.canMegaEvolve === true ? null : true
-              })}
-              className={`flex-1 px-4 py-2 rounded-lg border ${
-                filters.canMegaEvolve === true
-                  ? 'bg-blue-500 text-white border-blue-500'
-                  : 'bg-white text-gray-700 border-gray-300'
-              }`}
-            >
-              Can Mega Evolve
-            </button>
-            <button
-              onClick={() => onFilterChange({
-                ...filters,
-                canMegaEvolve: filters.canMegaEvolve === false ? null : false
-              })}
-              className={`flex-1 px-4 py-2 rounded-lg border ${
-                filters.canMegaEvolve === false
-                  ? 'bg-blue-500 text-white border-blue-500'
-                  : 'bg-white text-gray-700 border-gray-300'
-              }`}
-            >
-              Cannot Mega Evolve
-            </button>
-          </div>
+          <h3 className="text-lg font-medium mb-2">Generation</h3>
         </div>
 
         <div>
