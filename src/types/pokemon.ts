@@ -1,8 +1,3 @@
-export interface PokemonForm {
-  form_name: string;
-  is_mega: boolean;
-}
-
 export interface Pokemon {
   id: number;
   name: string;
@@ -13,7 +8,24 @@ export interface Pokemon {
   sprites: any;
   generation: string;
   has_evolutions: boolean;
-  can_mega_evolve: boolean;
+  is_default: boolean;
+  base_experience: number;
+}
+
+interface PokemonForm {
+  form_name: string;
+  is_default: boolean;
+}
+
+interface PokemonWithForms {
+  pokemon_v2_pokemonforms: PokemonForm[];
+}
+
+interface Species {
+  generation: {
+    name: string;
+  };
+  pokemon_v2_pokemons: PokemonWithForms[];
 }
 
 export interface RawPokemonData {
@@ -21,27 +33,23 @@ export interface RawPokemonData {
   name: string;
   height: number;
   weight: number;
-  types: { type: { name: string } }[];
-  moves: { move: { name: string } }[];
-  sprites: { data: any }[];
-  species: {
-    generation: { name: string };
-    evolution_chain_id: number | null;
-    evolves_from_species_id: number | null;
-  };
+  is_default: boolean;
+  base_experience: number;
+  types: Array<{
+    type: {
+      name: string;
+    };
+  }>;
+  moves: Array<{
+    move: {
+      name: string;
+    };
+  }>;
+  sprites: Array<{
+    data: any;
+  }>;
+  species: Species;
   forms: PokemonForm[];
-}
-
-export interface Move {
-  move: {
-    name: string;
-    url: string;
-  };
-}
-
-export interface PokemonType {
-  name: string;
-  color: string;
 }
 
 export interface Filters {
@@ -57,7 +65,6 @@ export interface Filters {
     max: number;
   };
   hasEvolutions: boolean | null;
-  canMegaEvolve: boolean | null;
 }
 
 export const TYPE_COLORS: Record<string, string> = {

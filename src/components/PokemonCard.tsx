@@ -11,17 +11,19 @@ export const PokemonCard: React.FC<PokemonCardProps> = ({ pokemon, onClick }) =>
   return (
     <div
       onClick={onClick}
-      className="bg-white rounded-lg shadow-lg p-4 cursor-pointer transform transition-transform hover:scale-105"
+      className="bg-white rounded-lg shadow-lg p-4 cursor-pointer transform transition-transform hover:scale-105 h-[320px] flex flex-col"
     >
       <img
         src={pokemon.sprites.other['official-artwork'].front_default}
         alt={pokemon.name}
-        className="w-full h-48 object-contain mb-4"
+        className="w-full h-48 object-contain"
       />
-      <h3 className="text-xl font-bold capitalize mb-2">
-        {pokemon.name} #{String(pokemon.id).padStart(3, '0')}
+      <h3 className="text-xl font-bold capitalize min-h-[3rem] flex items-center">
+        <span className="line-clamp-2">
+          {pokemon.name} #{String(pokemon.id).padStart(3, '0')}
+        </span>
       </h3>
-      <div className="flex gap-2 mb-2">
+      <div className="flex gap-2 mt-auto">
         {pokemon.types.map((type) => (
           <span
             key={type}
