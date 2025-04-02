@@ -1,5 +1,5 @@
-import React from 'react';
-import { RefreshCw } from 'lucide-react';
+import React, { useState } from 'react';
+import { RefreshCw, ChevronDown, Search } from 'lucide-react';
 import { Filters } from '../types/pokemon';
 
 // Add type colors mapping
@@ -32,6 +32,14 @@ interface FilterPanelProps {
   availableGenerations: string[];
 }
 
+// Add helper function to format move names
+const formatMoveName = (move: string): string => {
+  return move
+    .split('-')
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ');
+};
+
 export const FilterPanel: React.FC<FilterPanelProps> = ({
   filters,
   onFilterChange,
@@ -39,6 +47,10 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
   availableMoves,
   availableGenerations,
 }) => {
+  const [activeTab, setActiveTab] = useState<'types' | 'moves' | 'other'>('types');
+  const [moveSearch, setMoveSearch] = useState('');
+  const [showAllMoves, setShowAllMoves] = useState(false);
+
   const handleTypeToggle = (type: string) => {
     const newTypes = filters.types.includes(type)
       ? filters.types.filter(t => t !== type)
@@ -57,184 +69,221 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
     onFilterChange({ ...filters, generation });
   };
 
+  const handleWeightChange = (min: number | null, max: number | null) => {
+    onFilterChange({
+      ...filters,
+      weight: { min: min || 0, max: max || Infinity },
+    });
+  };
+
+  const handleHeightChange = (min: number | null, max: number | null) => {
+    onFilterChange({
+      ...filters,
+      height: { min: min || 0, max: max || Infinity },
+    });
+  };
+
   const resetFilters = () => {
     onFilterChange({
       types: [],
       moves: [],
       generation: '',
-      weight: { min: 0, max: 0 },
-      height: { min: 0, max: 0 },
-      hasEvolutions: null,
+      weight: { min: 0, max: Infinity },
+      height: { min: 0, max: Infinity },
+      hasEvolutions: null
     });
+    setMoveSearch('');
   };
 
+  const filteredMoves = availableMoves
+    .filter(move => formatMoveName(move).toLowerCase().includes(moveSearch.toLowerCase()))
+    .slice(0, showAllMoves ? undefined : 20);
+
   return (
-    <div className="bg-white rounded-lg shadow-lg p-6 space-y-6 max-h-[80vh] overflow-y-auto">
+    <div className="bg-white p-4 rounded-lg shadow-lg space-y-4 mb-4 md:mb-6">
+      {/* Header with Reset */}
       <div className="flex justify-between items-center">
         <h2 className="text-xl font-bold">Filters</h2>
         <button
           onClick={resetFilters}
-          className="text-blue-500 hover:text-blue-700 flex items-center gap-2"
+          className="flex items-center gap-2 text-gray-600 hover:text-gray-800"
         >
           <RefreshCw size={16} />
           Reset
         </button>
       </div>
 
-      {/* Types Section */}
-      <div>
-        <h3 className="font-semibold mb-2">Types</h3>
-        <div className="flex flex-wrap gap-2">
-          {availableTypes.map((type) => (
-            <button
-              key={type}
-              onClick={() => handleTypeToggle(type)}
-              className={`px-3 py-1 rounded-full text-white text-sm capitalize transition-transform hover:scale-105 ${
-                filters.types.includes(type) ? TYPE_COLORS[type as keyof typeof TYPE_COLORS] : 'bg-gray-300'
-              }`}
-            >
-              {type}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Generation Section */}
-      <div>
-        <h3 className="font-semibold mb-2">Generation</h3>
-        <select
-          value={filters.generation}
-          onChange={(e) => handleGenerationChange(e.target.value)}
-          className="w-full p-2 border rounded-lg"
+      {/* Filter Tabs */}
+      <div className="flex gap-2 border-b">
+        <button
+          onClick={() => setActiveTab('types')}
+          className={`px-4 py-2 ${
+            activeTab === 'types'
+              ? 'border-b-2 border-blue-500 text-blue-500'
+              : 'text-gray-600'
+          }`}
         >
-          <option value="">All Generations</option>
-          {availableGenerations.map((gen) => (
-            <option key={gen} value={gen}>
-              {gen.replace('-', ' ').toUpperCase()}
-            </option>
-          ))}
-        </select>
+          Types
+        </button>
+        <button
+          onClick={() => setActiveTab('moves')}
+          className={`px-4 py-2 ${
+            activeTab === 'moves'
+              ? 'border-b-2 border-blue-500 text-blue-500'
+              : 'text-gray-600'
+          }`}
+        >
+          Moves
+        </button>
+        <button
+          onClick={() => setActiveTab('other')}
+          className={`px-4 py-2 ${
+            activeTab === 'other'
+              ? 'border-b-2 border-blue-500 text-blue-500'
+              : 'text-gray-600'
+          }`}
+        >
+          Other
+        </button>
       </div>
 
-      {/* Weight Range */}
-      <div>
-        <h3 className="text-lg font-medium mb-2">Weight (kg)</h3>
-        <div className="flex gap-4">
-          <div className="flex-1">
-            <label className="block text-sm text-gray-600 mb-1">Min</label>
-            <input
-              type="number"
-              min="0"
-              step="0.1"
-              value={filters.weight.min ? (filters.weight.min / 10).toFixed(1) : ''}
-              onChange={(e) => onFilterChange({
-                ...filters,
-                weight: { ...filters.weight, min: Math.round(parseFloat(e.target.value) * 10) || 0 }
-              })}
-              className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
+      {/* Tab Content */}
+      <div className="mt-4">
+        {activeTab === 'types' && (
+          <div className="space-y-4">
+            <div className="grid grid-cols-3 gap-2">
+              {availableTypes.map(type => (
+                <button
+                  key={type}
+                  onClick={() => handleTypeToggle(type)}
+                  className={`px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200 hover:opacity-90 mb-2 ${
+                    filters.types.includes(type)
+                      ? `${TYPE_COLORS[type as keyof typeof TYPE_COLORS]} text-white`
+                      : 'bg-gray-100 text-gray-700'
+                  }`}
+                >
+                  {type.charAt(0).toUpperCase() + type.slice(1)}
+                </button>
+              ))}
+            </div>
           </div>
-          <div className="flex-1">
-            <label className="block text-sm text-gray-600 mb-1">Max</label>
-            <input
-              type="number"
-              min="0"
-              step="0.1"
-              value={filters.weight.max ? (filters.weight.max / 10).toFixed(1) : ''}
-              onChange={(e) => onFilterChange({
-                ...filters,
-                weight: { ...filters.weight, max: Math.round(parseFloat(e.target.value) * 10) || 0 }
-              })}
-              className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
-        </div>
-      </div>
+        )}
 
-      {/* Height Range */}
-      <div>
-        <h3 className="text-lg font-medium mb-2">Height (meters)</h3>
-        <div className="flex gap-4">
-          <div className="flex-1">
-            <label className="block text-sm text-gray-600 mb-1">Min</label>
-            <input
-              type="number"
-              min="0"
-              step="0.1"
-              value={filters.height.min ? (filters.height.min / 10).toFixed(1) : ''}
-              onChange={(e) => onFilterChange({
-                ...filters,
-                height: { ...filters.height, min: Math.round(parseFloat(e.target.value) * 10) || 0 }
-              })}
-              className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
-          <div className="flex-1">
-            <label className="block text-sm text-gray-600 mb-1">Max</label>
-            <input
-              type="number"
-              min="0"
-              step="0.1"
-              value={filters.height.max ? (filters.height.max / 10).toFixed(1) : ''}
-              onChange={(e) => onFilterChange({
-                ...filters,
-                height: { ...filters.height, max: Math.round(parseFloat(e.target.value) * 10) || 0 }
-              })}
-              className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
-        </div>
-      </div>
+        {activeTab === 'moves' && (
+          <div className="space-y-4">
+            {/* Move Search */}
+            <div className="relative">
+              <input
+                type="text"
+                value={moveSearch}
+                onChange={(e) => setMoveSearch(e.target.value)}
+                placeholder="Search moves..."
+                className="w-full px-4 py-2 pr-10 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <Search className="absolute right-3 top-2.5 text-gray-400" size={20} />
+            </div>
 
-      {/* Evolution */}
-      <div>
-        <h3 className="text-lg font-medium mb-2">Evolution</h3>
-        <div className="flex gap-4">
-          <button
-            onClick={() => onFilterChange({
-              ...filters,
-              hasEvolutions: filters.hasEvolutions === true ? null : true
-            })}
-            className={`flex-1 px-4 py-2 rounded-lg border ${
-              filters.hasEvolutions === true
-                ? 'bg-blue-500 text-white border-blue-500'
-                : 'bg-white text-gray-700 border-gray-300'
-            }`}
-          >
-            Has Evolutions
-          </button>
-          <button
-            onClick={() => onFilterChange({
-              ...filters,
-              hasEvolutions: filters.hasEvolutions === false ? null : false
-            })}
-            className={`flex-1 px-4 py-2 rounded-lg border ${
-              filters.hasEvolutions === false
-                ? 'bg-blue-500 text-white border-blue-500'
-                : 'bg-white text-gray-700 border-gray-300'
-            }`}
-          >
-            No Evolutions
-          </button>
-        </div>
-      </div>
+            {/* Move List */}
+            <div className="max-h-60 overflow-y-auto space-y-2">
+              <div className="grid grid-cols-2 gap-2">
+                {filteredMoves.map(move => (
+                  <button
+                    key={move}
+                    onClick={() => handleMoveToggle(move)}
+                    className={`${
+                      filters.moves.includes(move)
+                        ? 'bg-blue-500 text-white'
+                        : 'bg-gray-100 text-gray-700'
+                    } px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200 hover:opacity-90 mb-2 text-left truncate`}
+                  >
+                    {formatMoveName(move)}
+                  </button>
+                ))}
+              </div>
+              {!showAllMoves && availableMoves.length > 20 && (
+                <button
+                  onClick={() => setShowAllMoves(true)}
+                  className="w-full text-blue-500 hover:text-blue-600 flex items-center justify-center gap-1 mt-2"
+                >
+                  Show all moves <ChevronDown size={16} />
+                </button>
+              )}
+            </div>
+          </div>
+        )}
 
-      {/* Moves */}
-      <div>
-        <h3 className="text-lg font-medium mb-2">Moves</h3>
-        <div className="flex flex-wrap gap-2">
-          {availableMoves.map(move => (
-            <button
-              key={move}
-              onClick={() => handleMoveToggle(move)}
-              className={`${
-                filters.moves.includes(move) ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-700'
-              } px-3 py-1 rounded-full text-sm transition-colors duration-200 hover:opacity-90`}
-            >
-              {move}
-            </button>
-          ))}
-        </div>
+        {activeTab === 'other' && (
+          <div className="space-y-4">
+            {/* Generation */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Generation
+              </label>
+              <select
+                value={filters.generation}
+                onChange={(e) => handleGenerationChange(e.target.value)}
+                className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="">All Generations</option>
+                {availableGenerations.map(gen => (
+                  <option key={gen} value={gen}>
+                    {gen.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Weight Range */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Weight Range (kg)
+              </label>
+              <div className="flex gap-2">
+                <input
+                  type="number"
+                  min="0"
+                  placeholder="Min"
+                  value={filters.weight.min === 0 ? '' : filters.weight.min}
+                  onChange={(e) => handleWeightChange(e.target.value ? Number(e.target.value) : null, filters.weight.max)}
+                  className="w-1/2 px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                <input
+                  type="number"
+                  min="0"
+                  placeholder="Max"
+                  value={filters.weight.max === Infinity ? '' : filters.weight.max}
+                  onChange={(e) => handleWeightChange(filters.weight.min, e.target.value ? Number(e.target.value) : null)}
+                  className="w-1/2 px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+            </div>
+
+            {/* Height Range */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Height Range (m)
+              </label>
+              <div className="flex gap-2">
+                <input
+                  type="number"
+                  min="0"
+                  placeholder="Min"
+                  value={filters.height.min === 0 ? '' : filters.height.min}
+                  onChange={(e) => handleHeightChange(e.target.value ? Number(e.target.value) : null, filters.height.max)}
+                  className="w-1/2 px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                <input
+                  type="number"
+                  min="0"
+                  placeholder="Max"
+                  value={filters.height.max === Infinity ? '' : filters.height.max}
+                  onChange={(e) => handleHeightChange(filters.height.min, e.target.value ? Number(e.target.value) : null)}
+                  className="w-1/2 px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
