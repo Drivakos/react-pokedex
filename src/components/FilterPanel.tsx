@@ -72,14 +72,20 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
   const handleWeightChange = (min: number | null, max: number | null) => {
     onFilterChange({
       ...filters,
-      weight: { min: min || 0, max: max || Infinity },
+      weight: { 
+        min: min ? min * 10 : 0, // Convert kg to hectograms
+        max: max ? max * 10 : 1000 // Convert kg to hectograms
+      },
     });
   };
 
   const handleHeightChange = (min: number | null, max: number | null) => {
     onFilterChange({
       ...filters,
-      height: { min: min || 0, max: max || Infinity },
+      height: { 
+        min: min ? min * 10 : 0, // Convert meters to decimeters
+        max: max ? max * 10 : 100 // Convert meters to decimeters
+      },
     });
   };
 
@@ -88,11 +94,24 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
       types: [],
       moves: [],
       generation: '',
-      weight: { min: 0, max: Infinity },
-      height: { min: 0, max: Infinity },
+      weight: { min: 0, max: 1000 }, // 100kg in hectograms
+      height: { min: 0, max: 100 }, // 10m in decimeters
       hasEvolutions: null
     });
     setMoveSearch('');
+  };
+
+  const getTypeFiltersCount = () => filters.types.length;
+
+  const getMoveFiltersCount = () => filters.moves.length;
+
+  const getOtherFiltersCount = () => {
+    let count = 0;
+    if (filters.generation) count++;
+    if (filters.weight.min > 0 || filters.weight.max < 1000) count++;
+    if (filters.height.min > 0 || filters.height.max < 100) count++;
+    if (filters.hasEvolutions !== null) count++;
+    return count;
   };
 
   const filteredMoves = availableMoves
@@ -116,34 +135,34 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
       {/* Filter Tabs */}
       <div className="flex gap-2 border-b">
         <button
-          onClick={() => setActiveTab('types')}
           className={`px-4 py-2 ${
             activeTab === 'types'
               ? 'border-b-2 border-blue-500 text-blue-500'
               : 'text-gray-600'
           }`}
+          onClick={() => setActiveTab('types')}
         >
-          Types
+          Types {getTypeFiltersCount() > 0 && `(${getTypeFiltersCount()})`}
         </button>
         <button
-          onClick={() => setActiveTab('moves')}
           className={`px-4 py-2 ${
             activeTab === 'moves'
               ? 'border-b-2 border-blue-500 text-blue-500'
               : 'text-gray-600'
           }`}
+          onClick={() => setActiveTab('moves')}
         >
-          Moves
+          Moves {getMoveFiltersCount() > 0 && `(${getMoveFiltersCount()})`}
         </button>
         <button
-          onClick={() => setActiveTab('other')}
           className={`px-4 py-2 ${
             activeTab === 'other'
               ? 'border-b-2 border-blue-500 text-blue-500'
               : 'text-gray-600'
           }`}
+          onClick={() => setActiveTab('other')}
         >
-          Other
+          Other {getOtherFiltersCount() > 0 && `(${getOtherFiltersCount()})`}
         </button>
       </div>
 
@@ -242,17 +261,19 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
                 <input
                   type="number"
                   min="0"
+                  step="0.1"
                   placeholder="Min"
-                  value={filters.weight.min === 0 ? '' : filters.weight.min}
-                  onChange={(e) => handleWeightChange(e.target.value ? Number(e.target.value) : null, filters.weight.max)}
+                  value={filters.weight.min / 10} // Convert hectograms to kg
+                  onChange={(e) => handleWeightChange(e.target.value ? Number(e.target.value) : null, filters.weight.max / 10)}
                   className="w-1/2 px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
                 <input
                   type="number"
                   min="0"
+                  step="0.1"
                   placeholder="Max"
-                  value={filters.weight.max === Infinity ? '' : filters.weight.max}
-                  onChange={(e) => handleWeightChange(filters.weight.min, e.target.value ? Number(e.target.value) : null)}
+                  value={filters.weight.max === 1000 ? '' : filters.weight.max / 10} // Convert hectograms to kg
+                  onChange={(e) => handleWeightChange(filters.weight.min / 10, e.target.value ? Number(e.target.value) : null)}
                   className="w-1/2 px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
@@ -267,17 +288,19 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
                 <input
                   type="number"
                   min="0"
+                  step="0.1"
                   placeholder="Min"
-                  value={filters.height.min === 0 ? '' : filters.height.min}
-                  onChange={(e) => handleHeightChange(e.target.value ? Number(e.target.value) : null, filters.height.max)}
+                  value={filters.height.min / 10} // Convert decimeters to meters
+                  onChange={(e) => handleHeightChange(e.target.value ? Number(e.target.value) : null, filters.height.max / 10)}
                   className="w-1/2 px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
                 <input
                   type="number"
                   min="0"
+                  step="0.1"
                   placeholder="Max"
-                  value={filters.height.max === Infinity ? '' : filters.height.max}
-                  onChange={(e) => handleHeightChange(filters.height.min, e.target.value ? Number(e.target.value) : null)}
+                  value={filters.height.max === 100 ? '' : filters.height.max / 10} // Convert decimeters to meters
+                  onChange={(e) => handleHeightChange(filters.height.min / 10, e.target.value ? Number(e.target.value) : null)}
                   className="w-1/2 px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
