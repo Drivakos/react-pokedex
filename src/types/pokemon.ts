@@ -41,8 +41,9 @@ export interface PokemonStats {
   speed: number;
 }
 
-export interface EvolutionDetail {
+export interface PokemonEvolution {
   species_name: string;
+  species_id: number;
   min_level: number | null;
   trigger_name: string | null;
   item: string | null;
@@ -61,7 +62,7 @@ export interface PokemonDetails {
   flavor_text: string;
   genera: string;
   generation: string;
-  evolution_chain: EvolutionDetail[];
+  evolution_chain: PokemonEvolution[];
   base_experience: number;
   has_evolutions: boolean;
 }

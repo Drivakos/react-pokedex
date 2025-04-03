@@ -5,35 +5,7 @@ import { usePokemon } from '../hooks/usePokemon';
 import { PokemonDetails } from '../types/pokemon';
 import { TYPE_COLORS } from '../types/pokemon';
 
-// Map of Pokémon names to their IDs for common evolution chains
-const POKEMON_NAME_TO_ID: Record<string, number> = {
-  // Bulbasaur line
-  'bulbasaur': 1,
-  'ivysaur': 2,
-  'venusaur': 3,
-  // Charmander line
-  'charmander': 4,
-  'charmeleon': 5,
-  'charizard': 6,
-  // Squirtle line
-  'squirtle': 7,
-  'wartortle': 8,
-  'blastoise': 9,
-  // Pikachu line
-  'pichu': 172,
-  'pikachu': 25,
-  'raichu': 26,
-  // Eevee and evolutions
-  'eevee': 133,
-  'vaporeon': 134,
-  'jolteon': 135,
-  'flareon': 136,
-  'espeon': 196,
-  'umbreon': 197,
-  'leafeon': 470,
-  'glaceon': 471,
-  'sylveon': 700,
-};
+// No need for hardcoded mapping anymore as we get species_id from the API
 
 const PokemonPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -44,29 +16,9 @@ const PokemonPage: React.FC = () => {
   const [selectedMoveCategory, setSelectedMoveCategory] = useState<'all' | 'level-up' | 'machine' | 'egg'>('all');
   const [error, setError] = useState<string | null>(null);
   
-  // Helper function to get Pokémon ID by name
-  const getPokemonIdByName = (name: string): number => {
-    // First check our hardcoded map
-    if (POKEMON_NAME_TO_ID[name]) {
-      return POKEMON_NAME_TO_ID[name];
-    }
-    
-    // If we don't have it in our map, try to extract it from the evolution chain
-    if (pokemonDetails?.evolution_chain) {
-      const evoIndex = pokemonDetails.evolution_chain.findIndex(evo => evo.species_name === name);
-      if (evoIndex >= 0) {
-        // For first evolution, use the current Pokémon's ID
-        if (evoIndex === 0) {
-          return pokemonDetails.id;
-        } 
-        // For subsequent evolutions, we'll have to estimate
-        // This is not perfect but better than showing completely wrong Pokémon
-        return pokemonDetails.id + evoIndex;
-      }
-    }
-    
-    // Fallback to the current Pokémon's ID
-    return pokemonDetails?.id || 1;
+  // Helper function to get Pokémon ID from evolution data
+  const getPokemonIdFromEvolution = (evo: any): number => {
+    return evo.species_id;
   };
 
   useEffect(() => {
@@ -507,18 +459,18 @@ const PokemonPage: React.FC = () => {
                             )}
                             <div className={`w-32 h-32 bg-gray-100 rounded-full flex items-center justify-center mb-2 ${evo.species_name === pokemonDetails.name ? 'ring-2 ring-blue-500' : ''}`}>
                               <Link 
-                                to={`/pokemon/${getPokemonIdByName(evo.species_name)}`}
+                                to={`/pokemon/${getPokemonIdFromEvolution(evo)}`}
                                 className="cursor-pointer transition-transform hover:scale-110"
                                 title={`View ${evo.species_name} details`}
                               >
                                 <img
-                                  src={`https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${getPokemonIdByName(evo.species_name)}.png`}
+                                  src={`https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${getPokemonIdFromEvolution(evo)}.png`}
                                   alt={evo.species_name}
                                   className="w-24 h-24 object-contain"
                                   onError={(e) => {
                                     // Fallback if image doesn't load
                                     const target = e.target as HTMLImageElement;
-                                    target.src = `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${getPokemonIdByName(evo.species_name)}.png`;
+                                    target.src = `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${getPokemonIdFromEvolution(evo)}.png`;
                                   }}
                                 />
                               </Link>

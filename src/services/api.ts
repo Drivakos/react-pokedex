@@ -303,12 +303,18 @@ export const fetchPokemonDetails = async (id: number): Promise<PokemonDetails> =
     
     const abilities = await Promise.all(abilitiesPromises);
     
-    // Process evolution chain
+    // Process evolution chain with species IDs
     const evolutions = [];
     if (evolutionData) {
       let evoData = evolutionData.chain;
+      
+      // Fetch species data for the base form
+      const baseSpeciesResponse = await fetch(`${REST_ENDPOINT}/pokemon-species/${evoData.species.name}`);
+      const baseSpeciesData = await baseSpeciesResponse.json();
+      
       let evoDetails = {
         species_name: evoData.species.name,
+        species_id: baseSpeciesData.id,
         min_level: 1,
         trigger_name: null,
         item: null
@@ -317,9 +323,14 @@ export const fetchPokemonDetails = async (id: number): Promise<PokemonDetails> =
       
       // Process first evolution
       if (evoData.evolves_to.length > 0) {
-        evoData.evolves_to.forEach((evo1: any) => {
+        // Use Promise.all to fetch all first evolution species data in parallel
+        const firstEvoPromises = evoData.evolves_to.map(async (evo1: any) => {
+          const speciesResponse = await fetch(`${REST_ENDPOINT}/pokemon-species/${evo1.species.name}`);
+          const speciesData = await speciesResponse.json();
+          
           const evoDetails = {
             species_name: evo1.species.name,
+            species_id: speciesData.id,
             min_level: evo1.evolution_details[0]?.min_level || null,
             trigger_name: evo1.evolution_details[0]?.trigger?.name || null,
             item: evo1.evolution_details[0]?.item?.name || null
@@ -328,17 +339,26 @@ export const fetchPokemonDetails = async (id: number): Promise<PokemonDetails> =
           
           // Process second evolution
           if (evo1.evolves_to.length > 0) {
-            evo1.evolves_to.forEach((evo2: any) => {
+            // Use Promise.all to fetch all second evolution species data in parallel
+            const secondEvoPromises = evo1.evolves_to.map(async (evo2: any) => {
+              const speciesResponse = await fetch(`${REST_ENDPOINT}/pokemon-species/${evo2.species.name}`);
+              const speciesData = await speciesResponse.json();
+              
               const evoDetails = {
                 species_name: evo2.species.name,
+                species_id: speciesData.id,
                 min_level: evo2.evolution_details[0]?.min_level || null,
                 trigger_name: evo2.evolution_details[0]?.trigger?.name || null,
                 item: evo2.evolution_details[0]?.item?.name || null
               };
               evolutions.push(evoDetails);
             });
+            
+            await Promise.all(secondEvoPromises);
           }
         });
+        
+        await Promise.all(firstEvoPromises);
       }
     }
     
