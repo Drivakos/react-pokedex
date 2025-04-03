@@ -4,6 +4,7 @@ import { ArrowLeft, Heart, Shield, Zap, Swords, Award, Dumbbell } from 'lucide-r
 import { usePokemon } from '../hooks/usePokemon';
 import { PokemonDetails } from '../types/pokemon';
 import { TYPE_COLORS, TYPE_BACKGROUNDS } from '../types/pokemon';
+import PokemonCards from './PokemonCards';
 
 // No need for hardcoded mapping anymore as we get species_id from the API
 
@@ -16,7 +17,7 @@ const PokemonPage: React.FC = () => {
   const [selectedMoveCategory, setSelectedMoveCategory] = useState<'all' | 'level-up' | 'machine' | 'egg'>('all');
   const [error, setError] = useState<string | null>(null);
   
-  // Helper function to get Pokémon ID from evolution data
+  // Helper function to get Pok├⌐mon ID from evolution data
   const getPokemonIdFromEvolution = (evo: any): number => {
     return evo.species_id;
   };
@@ -31,7 +32,7 @@ const PokemonPage: React.FC = () => {
           setPokemonDetails(detailedData);
         } catch (err) {
           console.error('Error fetching Pokemon details:', err);
-          setError('Failed to load Pokémon data. Please try again later.');
+          setError('Failed to load Pok├⌐mon data. Please try again later.');
         } finally {
           setLoading(false);
         }
@@ -46,7 +47,7 @@ const PokemonPage: React.FC = () => {
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="flex flex-col items-center">
           <div className="w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mb-4"></div>
-          <p className="text-gray-600">Loading Pokémon data...</p>
+          <p className="text-gray-600">Loading Pok├⌐mon data...</p>
         </div>
       </div>
     );
@@ -59,7 +60,7 @@ const PokemonPage: React.FC = () => {
           <h2 className="text-2xl font-bold text-red-600 mb-4">Error</h2>
           <p className="text-gray-700 mb-6">{error}</p>
           <Link to="/" className="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded-lg transition-colors">
-            Back to Pokédex
+            Back to Pok├⌐dex
           </Link>
         </div>
       </div>
@@ -70,10 +71,10 @@ const PokemonPage: React.FC = () => {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center">
-          <h2 className="text-2xl font-bold text-gray-700 mb-2">Pokémon Not Found</h2>
-          <p className="text-gray-600 mb-6">We couldn't find the Pokémon you're looking for.</p>
+          <h2 className="text-2xl font-bold text-gray-700 mb-2">Pok├⌐mon Not Found</h2>
+          <p className="text-gray-600 mb-6">We couldn't find the Pok├⌐mon you're looking for.</p>
           <Link to="/" className="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded-lg transition-colors">
-            Back to Pokédex
+            Back to Pok├⌐dex
           </Link>
         </div>
       </div>
@@ -92,7 +93,7 @@ const PokemonPage: React.FC = () => {
     // Some types are more visually distinctive, so we prioritize them
     const priorityTypes = ['dragon', 'fire', 'water', 'electric', 'grass', 'ice', 'ghost', 'psychic'];
     
-    // Check if the Pokémon has any of the priority types
+    // Check if the Pok├⌐mon has any of the priority types
     for (const priorityType of priorityTypes) {
       if (pokemonDetails.types.includes(priorityType)) {
         return priorityType;
@@ -141,7 +142,7 @@ const PokemonPage: React.FC = () => {
           <div className="flex items-center">
             <Link to="/" className="flex items-center text-white hover:text-gray-200 transition-colors">
               <ArrowLeft size={20} className="mr-2" />
-              <span className="font-medium">Back to Pokédex</span>
+              <span className="font-medium">Back to Pok├⌐dex</span>
             </Link>
           </div>
         </div>
@@ -367,6 +368,11 @@ const PokemonPage: React.FC = () => {
                     )}
                   </div>
                 </div>
+                
+                <div className="mt-12">
+                  <h2 className="text-2xl font-bold mb-6">Pokémon Trading Cards</h2>
+                  <PokemonCards pokemonName={pokemonDetails.name} pokemonId={pokemonDetails.id} />
+                </div>
               </div>
             )}
 
@@ -497,7 +503,7 @@ const PokemonPage: React.FC = () => {
                               );
                               
                               // We'll limit to max 2 final evolutions for better visual layout
-                              // This covers most Pokémon evolution patterns (like Eevee being a special case)
+                              // This covers most Pok├⌐mon evolution patterns (like Eevee being a special case)
                               const limitedFinalEvolutions = finalEvolutions.slice(0, Math.min(finalEvolutions.length, 2));
                               
                               // Create a single branch for the middle evolution with its final evolutions
@@ -755,7 +761,7 @@ const PokemonPage: React.FC = () => {
                       
                       <div className="mt-4 bg-gray-50 p-4 rounded-lg border border-gray-200">
                         <p className="text-sm text-gray-600">
-                          Note: Evolution data is approximated. For exact evolution methods, please refer to official Pokémon resources.
+                          Note: Evolution data is approximated. For exact evolution methods, please refer to official Pok├⌐mon resources.
                         </p>
                       </div>
                     </div>
@@ -764,7 +770,7 @@ const PokemonPage: React.FC = () => {
                   <div className="flex justify-center">
                     <div className="bg-gray-50 p-6 rounded-lg border border-gray-200 text-center max-w-md">
                       <p className="text-gray-700">
-                        This Pokémon does not evolve.
+                        This Pok├⌐mon does not evolve.
                       </p>
                     </div>
                   </div>
