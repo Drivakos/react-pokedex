@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { RefreshCw } from 'lucide-react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { Helmet } from 'react-helmet';
 import { PokemonDetail } from './components/PokemonDetail';
 import { FilterPanel } from './components/FilterPanel';
 import { PokemonList } from './components/PokemonList';
@@ -183,6 +184,10 @@ function PokedexHome() {
   // Desktop Layout
   return (
     <div className="max-w-screen-xl mx-auto p-4 min-h-screen">
+      <Helmet>
+        <title>Pokédex | Complete Pokémon Database</title>
+        <meta name="description" content="Browse the complete Pokédex with detailed information on all Pokémon including stats, abilities, evolutions, and more." />
+      </Helmet>
       <header className="mb-6">
         <h1 className="text-3xl font-bold text-center mb-6">Pokédex</h1>
         

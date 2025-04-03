@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { ArrowLeft, Heart, Shield, Zap, Swords, Award, Dumbbell } from 'lucide-react';
+import { Helmet } from 'react-helmet';
 import { usePokemon } from '../hooks/usePokemon';
 import { PokemonDetails } from '../types/pokemon';
 import { TYPE_COLORS, TYPE_BACKGROUNDS } from '../types/pokemon';
@@ -17,7 +18,7 @@ const PokemonPage: React.FC = () => {
   const [selectedMoveCategory, setSelectedMoveCategory] = useState<'all' | 'level-up' | 'machine' | 'egg'>('all');
   const [error, setError] = useState<string | null>(null);
   
-  // Helper function to get Pok├⌐mon ID from evolution data
+  // Helper function to get Pokémon ID from evolution data
   const getPokemonIdFromEvolution = (evo: any): number => {
     return evo.species_id;
   };
@@ -31,8 +32,8 @@ const PokemonPage: React.FC = () => {
           const detailedData = await getPokemonDetails(parseInt(id, 10));
           setPokemonDetails(detailedData);
         } catch (err) {
-          console.error('Error fetching Pokemon details:', err);
-          setError('Failed to load Pok├⌐mon data. Please try again later.');
+          console.error('Error fetching Pokémon details:', err);
+          setError('Failed to load Pokémon data. Please try again later.');
         } finally {
           setLoading(false);
         }
@@ -47,7 +48,7 @@ const PokemonPage: React.FC = () => {
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="flex flex-col items-center">
           <div className="w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mb-4"></div>
-          <p className="text-gray-600">Loading Pok├⌐mon data...</p>
+          <p className="text-gray-600">Loading Pokémon data...</p>
         </div>
       </div>
     );
@@ -60,7 +61,7 @@ const PokemonPage: React.FC = () => {
           <h2 className="text-2xl font-bold text-red-600 mb-4">Error</h2>
           <p className="text-gray-700 mb-6">{error}</p>
           <Link to="/" className="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded-lg transition-colors">
-            Back to Pok├⌐dex
+            Back to Pokédex
           </Link>
         </div>
       </div>
@@ -71,17 +72,17 @@ const PokemonPage: React.FC = () => {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center">
-          <h2 className="text-2xl font-bold text-gray-700 mb-2">Pok├⌐mon Not Found</h2>
-          <p className="text-gray-600 mb-6">We couldn't find the Pok├⌐mon you're looking for.</p>
+          <h2 className="text-2xl font-bold text-gray-700 mb-2">Pokémon Not Found</h2>
+          <p className="text-gray-600 mb-6">We couldn't find the Pokémon you're looking for.</p>
           <Link to="/" className="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded-lg transition-colors">
-            Back to Pok├⌐dex
+            Back to Pokédex
           </Link>
         </div>
       </div>
     );
   }
 
-  // Format Pokemon ID with leading zeros
+  // Format Pokémon ID with leading zeros
   const formattedId = String(pokemonDetails.id).padStart(3, '0');
   
   // Determine the primary type for background styling
@@ -93,7 +94,7 @@ const PokemonPage: React.FC = () => {
     // Some types are more visually distinctive, so we prioritize them
     const priorityTypes = ['dragon', 'fire', 'water', 'electric', 'grass', 'ice', 'ghost', 'psychic'];
     
-    // Check if the Pok├⌐mon has any of the priority types
+    // Check if the Pokémon has any of the priority types
     for (const priorityType of priorityTypes) {
       if (pokemonDetails.types.includes(priorityType)) {
         return priorityType;
@@ -136,18 +137,23 @@ const PokemonPage: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      <Helmet>
+        <title>{`${pokemonDetails.name.charAt(0).toUpperCase() + pokemonDetails.name.slice(1)} (#${formattedId}) | Pokédex`}</title>
+        <meta name="description" content={`View detailed information about ${pokemonDetails.name.charAt(0).toUpperCase() + pokemonDetails.name.slice(1)}, a ${pokemonDetails.types.join('/')} type Pokémon. See stats, moves, evolutions and more.`} />
+      </Helmet>
       {/* Header */}
       <header className="bg-red-600 text-white py-4">
         <div className="container mx-auto px-4">
           <div className="flex items-center">
             <Link to="/" className="flex items-center text-white hover:text-gray-200 transition-colors">
               <ArrowLeft size={20} className="mr-2" />
-              <span className="font-medium">Back to Pok├⌐dex</span>
+              <span className="font-medium">Back to Pokédex</span>
             </Link>
           </div>
         </div>
       </header>
 
+      {/* Pokémon Info Section */}
       {/* Pokemon Info Section */}
       <div className="container mx-auto px-4 py-8">
         <div className="bg-white rounded-lg shadow-lg overflow-hidden">
