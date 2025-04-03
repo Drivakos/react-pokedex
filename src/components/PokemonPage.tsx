@@ -6,6 +6,7 @@ import { usePokemon } from '../hooks/usePokemon';
 import { PokemonDetails } from '../types/pokemon';
 import { TYPE_COLORS, TYPE_BACKGROUNDS } from '../types/pokemon';
 import PokemonCards from './PokemonCards';
+import Footer from './Footer';
 
 // No need for hardcoded mapping anymore as we get species_id from the API
 
@@ -139,7 +140,26 @@ const PokemonPage: React.FC = () => {
     <div className="min-h-screen bg-gray-50">
       <Helmet>
         <title>{`${pokemonDetails.name.charAt(0).toUpperCase() + pokemonDetails.name.slice(1)} (#${formattedId}) | Pokédex`}</title>
-        <meta name="description" content={`View detailed information about ${pokemonDetails.name.charAt(0).toUpperCase() + pokemonDetails.name.slice(1)}, a ${pokemonDetails.types.join('/')} type Pokémon. See stats, moves, evolutions and more.`} />
+        <meta name="description" content={`${pokemonDetails.name.charAt(0).toUpperCase() + pokemonDetails.name.slice(1)} is a ${pokemonDetails.types.join('/')} type Pokémon. Learn about its stats, abilities, evolutions, and more.`} />
+        <link rel="canonical" href={`${window.location.origin}/pokemon/${pokemonDetails.id}`} />
+        <script type="application/ld+json">
+          {JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "VideoGame",
+            "name": "Pokémon",
+            "character": {
+              "@type": "Character",
+              "name": pokemonDetails.name.charAt(0).toUpperCase() + pokemonDetails.name.slice(1),
+              "image": `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${pokemonDetails.id}.png`,
+              "description": `${pokemonDetails.flavor_text || `A ${pokemonDetails.types.join('/')} type Pokémon with a base experience of ${pokemonDetails.base_experience}.`}`,
+              "identifier": `#${formattedId}`
+            },
+            "applicationCategory": "Game",
+            "genre": "Role-playing game",
+            "gamePlatform": ["Nintendo Switch", "Nintendo 3DS", "Game Boy"],
+            "url": `${window.location.origin}/pokemon/${pokemonDetails.id}`
+          })}
+        </script>
       </Helmet>
       {/* Header */}
       <header className="bg-red-600 text-white py-4">
@@ -767,7 +787,7 @@ const PokemonPage: React.FC = () => {
                       
                       <div className="mt-4 bg-gray-50 p-4 rounded-lg border border-gray-200">
                         <p className="text-sm text-gray-600">
-                          Note: Evolution data is approximated. For exact evolution methods, please refer to official Pok├⌐mon resources.
+                          Note: Evolution data is approximated. For exact evolution methods, please refer to official Pokémon resources.
                         </p>
                       </div>
                     </div>
@@ -776,7 +796,7 @@ const PokemonPage: React.FC = () => {
                   <div className="flex justify-center">
                     <div className="bg-gray-50 p-6 rounded-lg border border-gray-200 text-center max-w-md">
                       <p className="text-gray-700">
-                        This Pok├⌐mon does not evolve.
+                        This Pokémon does not evolve.
                       </p>
                     </div>
                   </div>
@@ -786,6 +806,7 @@ const PokemonPage: React.FC = () => {
           </div>
         </div>
       </div>
+      <Footer />
     </div>
   );
 };

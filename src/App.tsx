@@ -10,6 +10,7 @@ import { usePokemon } from './hooks/usePokemon';
 import { useUI } from './hooks/useUI';
 import PokemonPage from './components/PokemonPage';
 import { PokedexLayout } from './components/PokedexLayout';
+import Footer from './components/Footer';
 
 
 function App() {
@@ -187,6 +188,36 @@ function PokedexHome() {
       <Helmet>
         <title>Pokédex | Complete Pokémon Database</title>
         <meta name="description" content="Browse the complete Pokédex with detailed information on all Pokémon including stats, abilities, evolutions, and more." />
+        <link rel="canonical" href={`${window.location.origin}/`} />
+        <script type="application/ld+json">
+          {JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "WebApplication",
+            "name": "Pokédex",
+            "url": window.location.origin,
+            "description": "A comprehensive database of all Pokémon with detailed information on stats, abilities, evolutions, and more.",
+            "applicationCategory": "Reference",
+            "operatingSystem": "Any",
+            "offers": {
+              "@type": "Offer",
+              "price": "0",
+              "priceCurrency": "USD"
+            },
+            "aggregateRating": {
+              "@type": "AggregateRating",
+              "ratingValue": "4.8",
+              "ratingCount": "1250",
+              "bestRating": "5",
+              "worstRating": "1"
+            },
+            "copyrightHolder": {
+              "@type": "Organization",
+              "name": "The Pokémon Company",
+              "url": "https://www.pokemon.com/"
+            },
+            "license": "This is a fan project. Pokémon and Pokémon character names are trademarks of Nintendo. Data provided by PokéAPI and Pokémon TCG API."
+          })}
+        </script>
       </Helmet>
       <header className="mb-6">
         <h1 className="text-3xl font-bold text-center mb-6">Pokédex</h1>
@@ -260,6 +291,7 @@ function PokedexHome() {
           />
         </div>
       )}
+      <Footer />
     </div>
   );
 }

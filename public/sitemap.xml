@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:xhtml="http://www.w3.org/1999/xhtml">
+  <!-- Homepage -->
+  <url>
+    <loc>https://yourpokemondomain.com/</loc>
+    <lastmod>2025-04-04</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>1.0</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://yourpokemondomain.com/" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://yourpokemondomain.com/" />
+  </url>
+  
+  <!-- First 10 Pokémon as examples (you would dynamically generate all 898+ in production) -->
+  <url>
+    <loc>https://yourpokemondomain.com/pokemon/1</loc>
+    <lastmod>2025-04-04</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://yourpokemondomain.com/pokemon/1" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://yourpokemondomain.com/pokemon/1" />
+  </url>
+  <url>
+    <loc>https://yourpokemondomain.com/pokemon/2</loc>
+    <lastmod>2025-04-04</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://yourpokemondomain.com/pokemon/2" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://yourpokemondomain.com/pokemon/2" />
+  </url>
+  <url>
+    <loc>https://yourpokemondomain.com/pokemon/3</loc>
+    <lastmod>2025-04-04</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://yourpokemondomain.com/pokemon/3" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://yourpokemondomain.com/pokemon/3" />
+  </url>
+  <url>
+    <loc>https://yourpokemondomain.com/pokemon/4</loc>
+    <lastmod>2025-04-04</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://yourpokemondomain.com/pokemon/4" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://yourpokemondomain.com/pokemon/4" />
+  </url>
+  <url>
+    <loc>https://yourpokemondomain.com/pokemon/5</loc>
+    <lastmod>2025-04-04</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://yourpokemondomain.com/pokemon/5" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://yourpokemondomain.com/pokemon/5" />
+  </url>
+  <url>
+    <loc>https://yourpokemondomain.com/pokemon/6</loc>
+    <lastmod>2025-04-04</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://yourpokemondomain.com/pokemon/6" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://yourpokemondomain.com/pokemon/6" />
+  </url>
+  <url>
+    <loc>https://yourpokemondomain.com/pokemon/7</loc>
+    <lastmod>2025-04-04</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://yourpokemondomain.com/pokemon/7" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://yourpokemondomain.com/pokemon/7" />
+  </url>
+  <url>
+    <loc>https://yourpokemondomain.com/pokemon/8</loc>
+    <lastmod>2025-04-04</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://yourpokemondomain.com/pokemon/8" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://yourpokemondomain.com/pokemon/8" />
+  </url>
+  <url>
+    <loc>https://yourpokemondomain.com/pokemon/9</loc>
+    <lastmod>2025-04-04</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://yourpokemondomain.com/pokemon/9" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://yourpokemondomain.com/pokemon/9" />
+  </url>
+  <url>
+    <loc>https://yourpokemondomain.com/pokemon/10</loc>
+    <lastmod>2025-04-04</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://yourpokemondomain.com/pokemon/10" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://yourpokemondomain.com/pokemon/10" />
+  </url>
+</urlset>
