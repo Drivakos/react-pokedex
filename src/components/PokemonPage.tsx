@@ -456,56 +456,254 @@ const PokemonPage: React.FC = () => {
                 
                 {pokemonDetails.has_evolutions ? (
                   <div>
-                    <div className="flex flex-col md:flex-row items-center justify-center gap-8 flex-wrap">
-                      {pokemonDetails.evolution_chain.map((evo, index) => {
-                        // Skip rendering if it's not the first and there's no evolution trigger
-                        if (index > 0 && !evo.trigger_name && !evo.min_level) return null;
-                        
-                        return (
-                          <div key={`evo-${index}`} className="flex flex-col items-center">
-                            {/* Add placeholder for first evolution to maintain consistent height */}
-                            {index === 0 ? (
-                              <div className="text-center mb-4 text-gray-600 text-sm h-5">
-                                <span>&nbsp;</span>
+                    {/* Visual Evolution Tree */}
+                    <div className="relative py-8 px-4 overflow-x-auto">
+                      <div className="min-w-max">
+                        {/* Process evolution data */}
+                        {(() => {
+                          // Organize evolutions into stages
+                          const baseForm = pokemonDetails.evolution_chain.find((_, i) => i === 0);
+                          if (!baseForm) return null;
+                          
+                          // Define types for our evolution tree structure
+                          type EvolutionBranch = {
+                            evolution: typeof baseForm;
+                            furtherEvolutions: typeof baseForm[];
+                          };
+                          
+                          // Get all direct evolutions from base form
+                          const directEvolutions = pokemonDetails.evolution_chain.filter(evo => 
+                            evo !== baseForm && (evo.min_level || evo.trigger_name));
+                            
+                          // Group evolutions by their parent
+                          const evolutionTree = {
+                            base: baseForm,
+                            branches: [] as EvolutionBranch[]
+                          };
+                          
+                          // Simplified evolution chain handling focused on visual clarity
+                          // For 3-stage evolution chains like Poliwag -> Poliwhirl -> Poliwrath/Politoed
+                          if (pokemonDetails.evolution_chain.length >= 3) {
+                            // For clarity in branching evolutions, we'll handle the most common case:
+                            // A base form that evolves into a middle form, which then branches into multiple final forms
+                            
+                            // Get the middle evolution (usually the first evolution from base)
+                            const middleEvolution = directEvolutions.length > 0 ? directEvolutions[0] : null;
+                            
+                            if (middleEvolution) {
+                              // All other evolutions that aren't the base or middle are considered final evolutions
+                              const finalEvolutions = pokemonDetails.evolution_chain.filter(evo => 
+                                evo !== baseForm && evo !== middleEvolution
+                              );
+                              
+                              // We'll limit to max 2 final evolutions for better visual layout
+                              // This covers most Pokémon evolution patterns (like Eevee being a special case)
+                              const limitedFinalEvolutions = finalEvolutions.slice(0, Math.min(finalEvolutions.length, 2));
+                              
+                              // Create a single branch for the middle evolution with its final evolutions
+                              evolutionTree.branches = [{
+                                evolution: middleEvolution,
+                                furtherEvolutions: limitedFinalEvolutions
+                              }];
+                            } else {
+                              // Fallback for unusual evolution chains
+                              evolutionTree.branches = directEvolutions.map(directEvo => ({
+                                evolution: directEvo,
+                                furtherEvolutions: [] as typeof baseForm[]
+                              }));
+                            }
+                          } else {
+                            // For simple evolution chains (1 or 2 stages)
+                            evolutionTree.branches = directEvolutions.map(directEvo => ({
+                              evolution: directEvo,
+                              furtherEvolutions: [] as typeof baseForm[]
+                            }));
+                          }
+                          
+                          // Check if this is a branching evolution (multiple stage 1 evolutions)
+                          const hasBranchingEvolution = evolutionTree.branches.length > 1;
+                          
+                          return (
+                            <div className="flex flex-col items-center">
+                              {/* Base Form */}
+                              <div className="flex flex-col items-center">
+                                <div className={`w-32 h-32 bg-gray-100 rounded-full flex items-center justify-center mb-2 ${baseForm.species_name === pokemonDetails.name ? 'ring-2 ring-blue-500' : ''}`}>
+                                  <Link 
+                                    to={`/pokemon/${baseForm.species_id}`}
+                                    className="cursor-pointer transition-transform hover:scale-110"
+                                    title={`View ${baseForm.species_name} details`}
+                                  >
+                                    <img
+                                      src={`https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${baseForm.species_id}.png`}
+                                      alt={baseForm.species_name}
+                                      className="w-24 h-24 object-contain"
+                                      onError={(e) => {
+                                        const target = e.target as HTMLImageElement;
+                                        target.src = `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${baseForm.species_id}.png`;
+                                      }}
+                                    />
+                                  </Link>
+                                </div>
+                                <div className="text-center">
+                                  <p className="font-medium capitalize">{baseForm.species_name}</p>
+                                  {/* Show final evolution badge if there are no evolutions */}
+                                  {evolutionTree.branches.length === 0 && (
+                                    <span className="inline-block bg-yellow-100 text-yellow-800 text-xs px-2 py-1 rounded-full mt-1">
+                                      Final Evolution
+                                    </span>
+                                  )}
+                                </div>
                               </div>
-                            ) : (
-                              <div className="text-center mb-4 text-gray-600 text-sm h-5">
-                                {evo.trigger_name === 'level-up' && evo.min_level && (
-                                  <span>Level {evo.min_level}</span>
-                                )}
-                                {evo.trigger_name === 'use-item' && evo.item && (
-                                  <span>Use {evo.item.replace('-', ' ')}</span>
-                                )}
-                                {evo.trigger_name && !evo.min_level && !evo.item && (
-                                  <span>{evo.trigger_name.replace('-', ' ')}</span>
-                                )}
-                                {!evo.trigger_name && (
-                                  <span>Evolution</span>
-                                )}
-                              </div>
-                            )}
-                            <div className={`w-32 h-32 bg-gray-100 rounded-full flex items-center justify-center mb-2 ${evo.species_name === pokemonDetails.name ? 'ring-2 ring-blue-500' : ''}`}>
-                              <Link 
-                                to={`/pokemon/${getPokemonIdFromEvolution(evo)}`}
-                                className="cursor-pointer transition-transform hover:scale-110"
-                                title={`View ${evo.species_name} details`}
-                              >
-                                <img
-                                  src={`https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${getPokemonIdFromEvolution(evo)}.png`}
-                                  alt={evo.species_name}
-                                  className="w-24 h-24 object-contain"
-                                  onError={(e) => {
-                                    // Fallback if image doesn't load
-                                    const target = e.target as HTMLImageElement;
-                                    target.src = `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${getPokemonIdFromEvolution(evo)}.png`;
-                                  }}
-                                />
-                              </Link>
+                              
+                              {/* Evolution Tree */}
+                              {evolutionTree.branches.length > 0 && (
+                                <div className="mt-6 relative">
+                                  {/* Vertical line from base to branches */}
+                                  <div className="absolute top-0 left-1/2 transform -translate-x-1/2 w-0.5 h-12 bg-gray-300 z-10"></div>
+                                  
+                                  {/* Horizontal line for branches */}
+                                  {hasBranchingEvolution && (
+                                    <div className="absolute top-12 left-0 right-0 h-0.5 bg-gray-300 z-10">
+                                    </div>
+                                  )}
+                                  
+                                  {/* Branches */}
+                                  <div className="flex justify-between mt-12 relative w-full px-8"
+                                       style={{ maxWidth: '600px', margin: '0 auto' }}>
+                                    {evolutionTree.branches.map((branch, branchIndex) => (
+                                      <div key={`branch-${branchIndex}`} className="flex flex-col items-center relative mx-4">
+                                        {/* Vertical line from horizontal branch to evolution */}
+                                        {hasBranchingEvolution && (
+                                          <div className="absolute top-0 left-1/2 transform -translate-x-1/2 w-0.5 h-12 bg-gray-300 z-10"></div>
+                                        )}
+                                        
+                                        {/* Evolution Method */}
+                                        <div className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm mb-4 mt-12">
+                                          {branch.evolution.trigger_name === 'level-up' && branch.evolution.min_level && (
+                                            <span>Level {branch.evolution.min_level}</span>
+                                          )}
+                                          {branch.evolution.trigger_name === 'use-item' && branch.evolution.item && (
+                                            <span>Use {branch.evolution.item.replace('-', ' ')}</span>
+                                          )}
+                                          {branch.evolution.trigger_name === 'trade' && (
+                                            <span>Trade</span>
+                                          )}
+                                          {branch.evolution.trigger_name && !branch.evolution.min_level && !branch.evolution.item && branch.evolution.trigger_name !== 'trade' && (
+                                            <span>{branch.evolution.trigger_name.replace('-', ' ')}</span>
+                                          )}
+                                          {!branch.evolution.trigger_name && (
+                                            <span>Evolution</span>
+                                          )}
+                                        </div>
+                                        
+                                        {/* Evolution Pokemon */}
+                                        <div className={`w-32 h-32 bg-gray-100 rounded-full flex items-center justify-center mb-2 ${branch.evolution.species_name === pokemonDetails.name ? 'ring-2 ring-blue-500' : ''}`}>
+                                          <Link 
+                                            to={`/pokemon/${branch.evolution.species_id}`}
+                                            className="cursor-pointer transition-transform hover:scale-110"
+                                            title={`View ${branch.evolution.species_name} details`}
+                                          >
+                                            <img
+                                              src={`https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${branch.evolution.species_id}.png`}
+                                              alt={branch.evolution.species_name}
+                                              className="w-24 h-24 object-contain"
+                                              onError={(e) => {
+                                                const target = e.target as HTMLImageElement;
+                                                target.src = `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${branch.evolution.species_id}.png`;
+                                              }}
+                                            />
+                                          </Link>
+                                        </div>
+                                        <div className="text-center">
+                                          <p className="font-medium capitalize">{branch.evolution.species_name}</p>
+                                          {/* Show final evolution badge if there are no further evolutions */}
+                                          {branch.furtherEvolutions.length === 0 && (
+                                            <span className="inline-block bg-yellow-100 text-yellow-800 text-xs px-2 py-1 rounded-full mt-1">
+                                              Final Evolution
+                                            </span>
+                                          )}
+                                        </div>
+                                        
+                                        {/* Further Evolutions */}
+                                        {branch.furtherEvolutions.length > 0 && (
+                                          <div className="mt-6 relative">
+                                            {/* Vertical line to further evolutions */}
+                                            <div className="absolute top-0 left-1/2 transform -translate-x-1/2 w-0.5 h-12 bg-gray-300 z-10"></div>
+                                            
+                                            {/* Horizontal line connecting all further evolutions */}
+                                            {branch.furtherEvolutions.length > 1 && (
+                                              <div className="absolute top-12 left-0 right-0 h-0.5 bg-gray-300 z-10">
+                                              </div>
+                                            )}
+                                            
+                                            {/* Further evolution branches */}
+                                            <div className="flex justify-between mt-12 relative w-full px-8"
+                                                 style={{ maxWidth: '600px', margin: '0 auto' }}>
+                                              {branch.furtherEvolutions.map((furtherEvo, furtherIndex) => (
+                                                <div key={`further-${branchIndex}-${furtherIndex}`} className="flex flex-col items-center relative mx-4">
+                                                  {/* Vertical line from horizontal branch to further evolution */}
+                                                  {branch.furtherEvolutions.length > 1 && (
+                                                    <div className="absolute top-0 left-1/2 transform -translate-x-1/2 w-0.5 h-12 bg-gray-300 z-10"></div>
+                                                  )}
+                                                  
+                                                  {/* Evolution Method */}
+                                                  <div className="bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-sm mb-4 mt-12">
+                                                    {furtherEvo.trigger_name === 'level-up' && furtherEvo.min_level && (
+                                                      <span>Level {furtherEvo.min_level}</span>
+                                                    )}
+                                                    {furtherEvo.trigger_name === 'use-item' && furtherEvo.item && (
+                                                      <span>Use {furtherEvo.item.replace('-', ' ')}</span>
+                                                    )}
+                                                    {furtherEvo.trigger_name === 'trade' && (
+                                                      <span>Trade</span>
+                                                    )}
+                                                    {furtherEvo.trigger_name && !furtherEvo.min_level && !furtherEvo.item && furtherEvo.trigger_name !== 'trade' && (
+                                                      <span>{furtherEvo.trigger_name.replace('-', ' ')}</span>
+                                                    )}
+                                                    {!furtherEvo.trigger_name && (
+                                                      <span>Evolution</span>
+                                                    )}
+                                                  </div>
+                                                  
+                                                  {/* Further Evolution Pokemon */}
+                                                  <div className={`w-32 h-32 bg-gray-100 rounded-full flex items-center justify-center mb-2 ${furtherEvo.species_name === pokemonDetails.name ? 'ring-2 ring-blue-500' : ''}`}>
+                                                    <Link 
+                                                      to={`/pokemon/${furtherEvo.species_id}`}
+                                                      className="cursor-pointer transition-transform hover:scale-110"
+                                                      title={`View ${furtherEvo.species_name} details`}
+                                                    >
+                                                      <img
+                                                        src={`https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${furtherEvo.species_id}.png`}
+                                                        alt={furtherEvo.species_name}
+                                                        className="w-24 h-24 object-contain"
+                                                        onError={(e) => {
+                                                          const target = e.target as HTMLImageElement;
+                                                          target.src = `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${furtherEvo.species_id}.png`;
+                                                        }}
+                                                      />
+                                                    </Link>
+                                                  </div>
+                                                  <div className="text-center">
+                                                    <p className="font-medium capitalize">{furtherEvo.species_name}</p>
+                                                    {/* All further evolutions are final */}
+                                                    <span className="inline-block bg-yellow-100 text-yellow-800 text-xs px-2 py-1 rounded-full mt-1">
+                                                      Final Evolution
+                                                    </span>
+                                                  </div>
+                                                </div>
+                                              ))}
+                                            </div>
+                                          </div>
+                                        )}
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
                             </div>
-                            <p className="font-medium capitalize">{evo.species_name}</p>
-                          </div>
-                        );
-                      })}
+                          );
+                        })()}
+                      </div>
                     </div>
                     
                     {/* Evolution Details Information */}
