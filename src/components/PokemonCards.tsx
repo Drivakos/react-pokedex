@@ -28,6 +28,54 @@ const PokemonCards: React.FC<PokemonCardsProps> = ({ pokemonName, pokemonId }) =
   const [selectedCard, setSelectedCard] = useState<PokemonCard | null>(null);
   const [visibleCards, setVisibleCards] = useState<number>(10);
   const [hasMore, setHasMore] = useState<boolean>(true);
+  
+  // Handle 3D card effect on mouse move
+  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    const cardImageContainer = e.currentTarget;
+    const cardId = cardImageContainer.getAttribute('data-card-id');
+    if (!cardId) return;
+    
+    const rect = cardImageContainer.getBoundingClientRect();
+    const x = e.clientX - rect.left; // x position within the element
+    const y = e.clientY - rect.top; // y position within the element
+    
+    // Calculate rotation based on mouse position
+    // When mouse is on the left, rotate negative on Y axis
+    // When mouse is on the right, rotate positive on Y axis
+    // When mouse is on the top, rotate positive on X axis
+    // When mouse is on the bottom, rotate negative on X axis
+    const xRotation = 20 * ((y - rect.height / 2) / rect.height);
+    const yRotation = -20 * ((x - rect.width / 2) / rect.width);
+    
+    // Apply the transformation
+    cardImageContainer.style.transform = `
+      perspective(1000px)
+      scale(1.05)
+      rotateX(${xRotation}deg)
+      rotateY(${yRotation}deg)
+    `;
+    
+    // Add shine effect based on mouse position
+    const shine = cardImageContainer.querySelector('.card-shine') as HTMLElement;
+    if (shine) {
+      shine.style.background = `radial-gradient(
+        circle at ${x}px ${y}px,
+        rgba(255, 255, 255, 0.3) 0%,
+        rgba(255, 255, 255, 0) 70%
+      )`;
+    }
+  };
+  
+  // Reset card on mouse leave
+  const handleMouseLeave = (e: React.MouseEvent<HTMLDivElement>) => {
+    const cardImageContainer = e.currentTarget;
+    cardImageContainer.style.transform = '';
+    
+    const shine = cardImageContainer.querySelector('.card-shine') as HTMLElement;
+    if (shine) {
+      shine.style.background = 'none';
+    }
+  };
 
   useEffect(() => {
     // Reset state when Pokemon changes
@@ -157,18 +205,24 @@ const PokemonCards: React.FC<PokemonCardsProps> = ({ pokemonName, pokemonId }) =
       
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
         {cards.slice(0, visibleCards).map((card) => (
-          <div 
-            key={card.id} 
-            className="card-container cursor-pointer transform transition-transform hover:scale-105"
-            onClick={() => openCardModal(card)}
-          >
-            <img 
-              src={card.images.small} 
-              alt={`${card.name} card`} 
-              className="rounded-lg shadow-md w-full"
-              loading="lazy"
-            />
-            <div className="mt-2 text-xs text-center">
+          <div key={card.id} className="card-container cursor-pointer">
+            <div 
+              className="card-image-container relative transition-all duration-300 ease-out hover:z-10 mb-2"
+              onClick={() => openCardModal(card)}
+              onMouseMove={(e) => handleMouseMove(e)}
+              onMouseLeave={handleMouseLeave}
+              data-card-id={card.id}
+            >
+              <img 
+                src={card.images.small} 
+                alt={`${card.name} card`} 
+                className="rounded-lg shadow-md w-full relative z-10"
+                loading="lazy"
+              />
+              <div className="card-shine absolute inset-0 z-20 rounded-lg pointer-events-none"></div>
+              <div className="absolute inset-0 bg-gradient-to-br from-transparent via-transparent to-black/5 rounded-lg z-0"></div>
+            </div>
+            <div className="text-xs text-center">
               <div className="font-medium">{card.set.name}</div>
               {card.rarity && <div className="text-gray-500">{card.rarity}</div>}
             </div>
