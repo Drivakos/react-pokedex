@@ -508,10 +508,58 @@ const PokemonPage: React.FC = () => {
                       })}
                     </div>
                     
-                    <div className="mt-8 bg-gray-50 p-4 rounded-lg border border-gray-200">
-                      <p className="text-sm text-gray-600">
-                        Note: Evolution data is approximated. For exact evolution methods, please refer to official Pokémon resources.
-                      </p>
+                    {/* Evolution Details Information */}
+                    <div className="mt-8">
+                      <h3 className="text-xl font-bold mb-4">Evolution Details</h3>
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {pokemonDetails.evolution_chain.map((evo, index) => (
+                          <div key={`evo-detail-${index}`} className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                            <div className="flex items-center mb-3">
+                              <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mr-3">
+                                <img
+                                  src={`https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${evo.species_id}.png`}
+                                  alt={evo.species_name}
+                                  className="w-12 h-12 object-contain"
+                                />
+                              </div>
+                              <div>
+                                <h4 className="font-bold capitalize text-lg">{evo.species_name}</h4>
+                                <p className="text-xs text-gray-500">#{String(evo.species_id).padStart(3, '0')}</p>
+                              </div>
+                            </div>
+                            
+                            <div className="text-sm">
+                              {index === 0 ? (
+                                <p className="text-gray-600">Base form</p>
+                              ) : (
+                                <div>
+                                  <p className="font-medium mb-1">Evolution Trigger:</p>
+                                  <ul className="list-disc pl-5 text-gray-600 space-y-1">
+                                    {evo.min_level && (
+                                      <li>Evolves at level {evo.min_level}</li>
+                                    )}
+                                    {evo.trigger_name && (
+                                      <li>Trigger: {evo.trigger_name.replace('-', ' ')}</li>
+                                    )}
+                                    {evo.item && (
+                                      <li>Requires item: {evo.item.replace('-', ' ')}</li>
+                                    )}
+                                    {!evo.min_level && !evo.item && evo.trigger_name !== 'level-up' && (
+                                      <li>Special evolution method</li>
+                                    )}
+                                  </ul>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                      
+                      <div className="mt-4 bg-gray-50 p-4 rounded-lg border border-gray-200">
+                        <p className="text-sm text-gray-600">
+                          Note: Evolution data is approximated. For exact evolution methods, please refer to official Pokémon resources.
+                        </p>
+                      </div>
                     </div>
                   </div>
                 ) : (
