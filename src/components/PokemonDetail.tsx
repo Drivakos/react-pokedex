@@ -33,6 +33,7 @@ export const PokemonDetail: React.FC<PokemonDetailProps> = ({ pokemon, onClose }
           <img
             src={`https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${pokemon.id}.png`}
             alt={pokemon.name}
+            title={`${pokemon.name.charAt(0).toUpperCase() + pokemon.name.slice(1)} - #${String(pokemon.id).padStart(3, '0')}`}
             className="w-64 h-64 object-contain mb-4"
           />
           

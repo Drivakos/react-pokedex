@@ -17,6 +17,7 @@ export const PokemonCard: React.FC<PokemonCardProps> = memo(({ pokemon, onClick 
       <img
         src={getOfficialArtwork(pokemon.sprites)}
         alt={pokemon.name}
+        title={`${formatName(pokemon.name)} - ${formatPokemonId(pokemon.id)}`}
         className="w-full h-48 object-contain"
         loading="lazy"
       />

@@ -2,11 +2,49 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <link rel="icon" type="image/svg+xml" href="/images/pokedex.svg" />
+    <link rel="apple-touch-icon" href="/images/pokedex.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <link rel="alternate" hreflang="en" href="https://yourpokemondomain.com" />
-    <link rel="alternate" hreflang="x-default" href="https://yourpokemondomain.com" />
+    <meta name="theme-color" content="#E61515" />
+    <meta name="robots" content="index, follow" />
+    
+    <!-- Internationalization -->
+    <link rel="alternate" hreflang="en" href="https://pokehelper.gr" />
+    <link rel="alternate" hreflang="x-default" href="https://pokehelper.gr" />
+    <link rel="alternate" hreflang="el" href="https://pokehelper.gr/el" />
+    
+    <!-- Default Meta Tags (will be overridden by React Helmet) -->
     <title>Pokédex | Complete Pokémon Database</title>
+    <meta name="description" content="Browse the complete Pokédex with detailed information on all Pokémon including stats, abilities, evolutions, and more." />
+    
+    <!-- Default Open Graph Tags (will be overridden by React Helmet) -->
+    <meta property="og:title" content="Pokédex | Complete Pokémon Database" />
+    <meta property="og:description" content="Browse the complete Pokédex with detailed information on all Pokémon including stats, abilities, evolutions, and more." />
+    <meta property="og:image" content="https://pokehelper.gr/images/pokedex.svg" />
+    <meta property="og:url" content="https://pokehelper.gr" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Pokédex" />
+    
+    <!-- Default Twitter Card Tags (will be overridden by React Helmet) -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:site" content="@pokedex" />
+    <meta name="twitter:title" content="Pokédex | Complete Pokémon Database" />
+    <meta name="twitter:description" content="Browse the complete Pokédex with detailed information on all Pokémon including stats, abilities, evolutions, and more." />
+    <meta name="twitter:image" content="https://pokehelper.gr/images/pokedex.svg" />
+    
+    <!-- Suppress React StrictMode warnings from third-party libraries -->
+    <script>
+      // Suppress specific React warnings in development mode
+      const originalConsoleError = console.error;
+      console.error = function(msg) {
+        if (msg && typeof msg === 'string' && 
+            (msg.includes('UNSAFE_componentWillMount') || 
+             msg.includes('SideEffect(NullComponent'))) {
+          return;
+        }
+        originalConsoleError.apply(console, arguments);
+      };
+    </script>
   </head>
   <body>
     <div id="root"></div>

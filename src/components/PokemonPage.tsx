@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { ArrowLeft, Heart, Shield, Zap, Swords, Award, Dumbbell } from 'lucide-react';
-import { Helmet } from 'react-helmet';
+import { Helmet } from 'react-helmet-async';
 import { usePokemon } from '../hooks/usePokemon';
 import { PokemonDetails } from '../types/pokemon';
 import { TYPE_COLORS, TYPE_BACKGROUNDS } from '../types/pokemon';
@@ -142,23 +142,72 @@ const PokemonPage: React.FC = () => {
         <title>{`${pokemonDetails.name.charAt(0).toUpperCase() + pokemonDetails.name.slice(1)} (#${formattedId}) | Pokédex`}</title>
         <meta name="description" content={`${pokemonDetails.name.charAt(0).toUpperCase() + pokemonDetails.name.slice(1)} is a ${pokemonDetails.types.join('/')} type Pokémon. Learn about its stats, abilities, evolutions, and more.`} />
         <link rel="canonical" href={`${window.location.origin}/pokemon/${pokemonDetails.id}`} />
+        
+        {/* Open Graph tags */}
+        <meta property="og:title" content={`${pokemonDetails.name.charAt(0).toUpperCase() + pokemonDetails.name.slice(1)} (#${formattedId}) | Pokédex`} />
+        <meta property="og:description" content={`${pokemonDetails.name.charAt(0).toUpperCase() + pokemonDetails.name.slice(1)} is a ${pokemonDetails.types.join('/')} type Pokémon. Learn about its stats, abilities, evolutions, and more.`} />
+        <meta property="og:image" content={`${window.location.origin}/images/pokedex.svg`} />
+        <meta property="og:url" content={`${window.location.origin}/pokemon/${pokemonDetails.id}`} />
+        <meta property="og:type" content="article" />
+        <meta property="og:site_name" content="Pokédex" />
+        
+        {/* Twitter Card tags */}
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:site" content="@pokedex" />
+        <meta name="twitter:title" content={`${pokemonDetails.name.charAt(0).toUpperCase() + pokemonDetails.name.slice(1)} (#${formattedId}) | Pokédex`} />
+        <meta name="twitter:description" content={`${pokemonDetails.name.charAt(0).toUpperCase() + pokemonDetails.name.slice(1)} is a ${pokemonDetails.types.join('/')} type Pokémon. Learn about its stats, abilities, evolutions, and more.`} />
+        <meta name="twitter:image" content={`${window.location.origin}/images/pokedex.svg`} />
         <script type="application/ld+json">
-          {JSON.stringify({
-            "@context": "https://schema.org",
-            "@type": "VideoGame",
-            "name": "Pokémon",
-            "character": {
-              "@type": "Character",
-              "name": pokemonDetails.name.charAt(0).toUpperCase() + pokemonDetails.name.slice(1),
-              "image": `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${pokemonDetails.id}.png`,
-              "description": `${pokemonDetails.flavor_text || `A ${pokemonDetails.types.join('/')} type Pokémon with a base experience of ${pokemonDetails.base_experience}.`}`,
-              "identifier": `#${formattedId}`
-            },
-            "applicationCategory": "Game",
-            "genre": "Role-playing game",
-            "gamePlatform": ["Nintendo Switch", "Nintendo 3DS", "Game Boy"],
-            "url": `${window.location.origin}/pokemon/${pokemonDetails.id}`
-          })}
+          {(() => {
+            // Format the Pokémon name once to reuse it
+            const formattedName = pokemonDetails.name.charAt(0).toUpperCase() + pokemonDetails.name.slice(1);
+            
+            // Create the description with fallback
+            const description = pokemonDetails.flavor_text || 
+              `A ${pokemonDetails.types.join('/')} type Pokémon with a base experience of ${pokemonDetails.base_experience}.`;
+            
+            // Image URL
+            const imageUrl = `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${pokemonDetails.id}.png`;
+            
+            // Base URL for this Pokémon
+            const pokemonUrl = `${window.location.origin}/pokemon/${pokemonDetails.id}`;
+            
+            // Create the structured data object
+            const structuredData = {
+              "@context": "https://schema.org",
+              "@type": "VideoGame",
+              "name": "Pokémon",
+              "character": {
+                "@type": "Character",
+                "name": formattedName,
+                "image": imageUrl,
+                "description": description,
+                "identifier": `#${formattedId}`,
+                "subjectOf": [
+                  {
+                    "@type": "CreativeWork",
+                    "name": `${formattedName} Trading Card Game Cards`,
+                    "description": `Collection of official Pokémon Trading Card Game cards featuring ${formattedName}`,
+                    "url": `${pokemonUrl}#cards`
+                  }
+                ]
+              },
+              "applicationCategory": "Game",
+              "genre": "Role-playing game",
+              "gamePlatform": ["Nintendo Switch", "Nintendo 3DS", "Game Boy"],
+              "url": pokemonUrl,
+              "associatedMedia": {
+                "@type": "CollectionPage",
+                "name": `${formattedName} Trading Cards`,
+                "description": `Official Pokémon Trading Card Game cards featuring ${formattedName}`,
+                "url": `${pokemonUrl}#cards`
+              }
+            };
+            
+            
+            // Return the stringified data
+            return JSON.stringify(structuredData);
+          })()}
         </script>
       </Helmet>
       {/* Header */}
@@ -188,6 +237,7 @@ const PokemonPage: React.FC = () => {
                 <img
                   src={pokemonDetails.sprites.official_artwork || `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${pokemonDetails.id}.png`}
                   alt={pokemonDetails.name}
+                  title={`${pokemonDetails.name.charAt(0).toUpperCase() + pokemonDetails.name.slice(1)} - #${formattedId} - ${pokemonDetails.types.join('/')} Type Pokémon`}
                   className="w-48 h-48 object-contain"
                 />
               </div>
@@ -568,6 +618,7 @@ const PokemonPage: React.FC = () => {
                                     <img
                                       src={`https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${baseForm.species_id}.png`}
                                       alt={baseForm.species_name}
+                                      title={`${baseForm.species_name.charAt(0).toUpperCase() + baseForm.species_name.slice(1)} - #${String(baseForm.species_id).padStart(3, '0')} - Base Form`}
                                       className="w-24 h-24 object-contain"
                                       onError={(e) => {
                                         const target = e.target as HTMLImageElement;
@@ -638,6 +689,7 @@ const PokemonPage: React.FC = () => {
                                             <img
                                               src={`https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${branch.evolution.species_id}.png`}
                                               alt={branch.evolution.species_name}
+                                              title={`${branch.evolution.species_name.charAt(0).toUpperCase() + branch.evolution.species_name.slice(1)} - #${String(branch.evolution.species_id).padStart(3, '0')} - Evolution`}
                                               className="w-24 h-24 object-contain"
                                               onError={(e) => {
                                                 const target = e.target as HTMLImageElement;

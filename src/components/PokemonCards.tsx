@@ -216,6 +216,7 @@ const PokemonCards: React.FC<PokemonCardsProps> = ({ pokemonName, pokemonId }) =
               <img 
                 src={card.images.small} 
                 alt={`${card.name} card`} 
+                title={`${card.name} - ${card.set.name} (${card.set.series})`}
                 className="rounded-lg shadow-md w-full relative z-10"
                 loading="lazy"
               />
@@ -255,6 +256,7 @@ const PokemonCards: React.FC<PokemonCardsProps> = ({ pokemonName, pokemonId }) =
             <img 
               src={selectedCard.images.large} 
               alt={`${selectedCard.name} card large`} 
+              title={`${selectedCard.name} - ${selectedCard.set.name} (${selectedCard.set.series}) - ${selectedCard.rarity || 'Trading Card'}`}
               className="rounded-lg max-h-[80vh] max-w-full"
             />
             <div className="mt-2 text-center text-white">

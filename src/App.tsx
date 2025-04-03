@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { RefreshCw } from 'lucide-react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import { Helmet } from 'react-helmet';
+import { Helmet } from 'react-helmet-async';
 import { PokemonDetail } from './components/PokemonDetail';
 import { FilterPanel } from './components/FilterPanel';
 import { PokemonList } from './components/PokemonList';
@@ -189,6 +189,21 @@ function PokedexHome() {
         <title>Pokédex | Complete Pokémon Database</title>
         <meta name="description" content="Browse the complete Pokédex with detailed information on all Pokémon including stats, abilities, evolutions, and more." />
         <link rel="canonical" href={`${window.location.origin}/`} />
+        
+        {/* Open Graph tags */}
+        <meta property="og:title" content="Pokédex | Complete Pokémon Database" />
+        <meta property="og:description" content="Browse the complete Pokédex with detailed information on all Pokémon including stats, abilities, evolutions, and more." />
+        <meta property="og:image" content={`${window.location.origin}/images/pokedex.svg`} />
+        <meta property="og:url" content={window.location.origin} />
+        <meta property="og:type" content="website" />
+        <meta property="og:site_name" content="Pokédex" />
+        
+        {/* Twitter Card tags */}
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:site" content="@pokedex" />
+        <meta name="twitter:title" content="Pokédex | Complete Pokémon Database" />
+        <meta name="twitter:description" content="Browse the complete Pokédex with detailed information on all Pokémon including stats, abilities, evolutions, and more." />
+        <meta name="twitter:image" content={`${window.location.origin}/images/pokedex.svg`} />
         <script type="application/ld+json">
           {JSON.stringify({
             "@context": "https://schema.org",
@@ -198,18 +213,6 @@ function PokedexHome() {
             "description": "A comprehensive database of all Pokémon with detailed information on stats, abilities, evolutions, and more.",
             "applicationCategory": "Reference",
             "operatingSystem": "Any",
-            "offers": {
-              "@type": "Offer",
-              "price": "0",
-              "priceCurrency": "USD"
-            },
-            "aggregateRating": {
-              "@type": "AggregateRating",
-              "ratingValue": "4.8",
-              "ratingCount": "1250",
-              "bestRating": "5",
-              "worstRating": "1"
-            },
             "copyrightHolder": {
               "@type": "Organization",
               "name": "The Pokémon Company",
