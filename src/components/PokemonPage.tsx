@@ -3,7 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import { ArrowLeft, Heart, Shield, Zap, Swords, Award, Dumbbell } from 'lucide-react';
 import { usePokemon } from '../hooks/usePokemon';
 import { PokemonDetails } from '../types/pokemon';
-import { TYPE_COLORS } from '../types/pokemon';
+import { TYPE_COLORS, TYPE_BACKGROUNDS } from '../types/pokemon';
 
 // No need for hardcoded mapping anymore as we get species_id from the API
 
@@ -82,6 +82,29 @@ const PokemonPage: React.FC = () => {
 
   // Format Pokemon ID with leading zeros
   const formattedId = String(pokemonDetails.id).padStart(3, '0');
+  
+  // Determine the primary type for background styling
+  const getPrimaryType = () => {
+    if (!pokemonDetails || !pokemonDetails.types || pokemonDetails.types.length === 0) {
+      return 'normal'; // Default fallback
+    }
+    
+    // Some types are more visually distinctive, so we prioritize them
+    const priorityTypes = ['dragon', 'fire', 'water', 'electric', 'grass', 'ice', 'ghost', 'psychic'];
+    
+    // Check if the Pokémon has any of the priority types
+    for (const priorityType of priorityTypes) {
+      if (pokemonDetails.types.includes(priorityType)) {
+        return priorityType;
+      }
+    }
+    
+    // Otherwise, use the first type
+    return pokemonDetails.types[0];
+  };
+  
+  const primaryType = getPrimaryType();
+  const backgroundStyle = TYPE_BACKGROUNDS[primaryType] || TYPE_BACKGROUNDS.normal;
 
   // Filter moves by category
   const filterMovesByCategory = () => {
@@ -127,8 +150,12 @@ const PokemonPage: React.FC = () => {
       {/* Pokemon Info Section */}
       <div className="container mx-auto px-4 py-8">
         <div className="bg-white rounded-lg shadow-lg overflow-hidden">
-          {/* Pokemon Header */}
-          <div className="bg-gradient-to-r from-blue-500 to-blue-600 text-white p-6">
+          {/* Pokemon Header with Type-based Background */}
+          <div className={`bg-gradient-to-r ${backgroundStyle.gradient} text-white p-6 relative overflow-hidden`}>
+            {/* Background Pattern Overlay */}
+            {backgroundStyle.pattern && (
+              <div className={`absolute inset-0 ${backgroundStyle.pattern}`}></div>
+            )}
             <div className="flex flex-col md:flex-row md:items-center">
               <div className="flex-shrink-0 flex justify-center mb-4 md:mb-0 md:mr-8">
                 <img
