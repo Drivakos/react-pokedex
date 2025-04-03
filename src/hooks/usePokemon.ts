@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Pokemon, Filters } from '../types/pokemon';
-import { fetchPokemonData, fetchFilterOptions } from '../services/api';
+import { Pokemon, Filters, PokemonDetails } from '../types/pokemon';
+import { fetchPokemonData, fetchFilterOptions, fetchPokemonById, fetchPokemonDetails } from '../services/api';
 
 export const POKEMON_PER_PAGE = 20;
 export const SEARCH_DEBOUNCE_MS = 300;
@@ -129,6 +129,26 @@ export const usePokemon = () => {
     setFilters(newFilters);
   }, []);
 
+  // Get a single Pokemon by ID
+  const getPokemonById = useCallback(async (id: number): Promise<Pokemon> => {
+    try {
+      return await fetchPokemonById(id);
+    } catch (error) {
+      console.error(`Error in getPokemonById for ID ${id}:`, error);
+      throw error;
+    }
+  }, []);
+  
+  // Get detailed Pokemon data from REST API
+  const getPokemonDetails = useCallback(async (id: number): Promise<PokemonDetails> => {
+    try {
+      return await fetchPokemonDetails(id);
+    } catch (error) {
+      console.error(`Error in getPokemonDetails for ID ${id}:`, error);
+      throw error;
+    }
+  }, []);
+
   return {
     // Pokemon data
     displayedPokemon,
@@ -140,6 +160,8 @@ export const usePokemon = () => {
     // Actions
     setSelectedPokemon,
     loadMorePokemon,
+    getPokemonById,
+    getPokemonDetails,
     
     // Search
     searchTerm,

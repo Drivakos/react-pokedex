@@ -1,7 +1,8 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 import { Pokemon } from '../types/pokemon';
 import { TYPE_COLORS } from '../types/pokemon';
-import { X } from 'lucide-react';
+import { X, ExternalLink } from 'lucide-react';
 
 interface PokemonDetailProps {
   pokemon: Pokemon;
@@ -87,6 +88,16 @@ export const PokemonDetail: React.FC<PokemonDetailProps> = ({ pokemon, onClose }
                 <p className="font-semibold">{pokemon.base_experience}</p>
               </div>
             </div>
+          </div>
+          
+          <div className="mt-6 w-full">
+            <Link 
+              to={`/pokemon/${pokemon.id}`} 
+              className="flex items-center justify-center gap-2 w-full bg-blue-500 hover:bg-blue-600 text-white py-3 px-4 rounded-lg font-medium transition-colors"
+            >
+              <span>See Full Details</span>
+              <ExternalLink size={18} />
+            </Link>
           </div>
         </div>
       </div>

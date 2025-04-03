@@ -1,14 +1,28 @@
-import { useState } from 'react';
-import { SlidersHorizontal, RefreshCw } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { RefreshCw } from 'lucide-react';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { PokemonDetail } from './components/PokemonDetail';
 import { FilterPanel } from './components/FilterPanel';
 import { PokemonList } from './components/PokemonList';
 import { SearchBar } from './components/SearchBar';
 import { usePokemon } from './hooks/usePokemon';
 import { useUI } from './hooks/useUI';
+import PokemonPage from './components/PokemonPage';
+import { PokedexLayout } from './components/PokedexLayout';
 
 
 function App() {
+  return (
+    <Router>
+      <Routes>
+        <Route path="/" element={<PokedexHome />} />
+        <Route path="/pokemon/:id" element={<PokemonPage />} />
+      </Routes>
+    </Router>
+  );
+}
+
+function PokedexHome() {
   // Use our custom hooks
   const { 
     displayedPokemon,
@@ -30,7 +44,24 @@ function App() {
   
   // Show filters by default on desktop, hidden on mobile
   const { lastPokemonElementRef } = useUI();
-  const [showFilters, setShowFilters] = useState(true);
+  const [showFilters, setShowFilters] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+  
+  // Check if we're on mobile
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    
+    // Initial check
+    checkMobile();
+    
+    // Add resize listener
+    window.addEventListener('resize', checkMobile);
+    
+    // Cleanup
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   // Setup the intersection observer for infinite scrolling
   const setupObserver = (node: HTMLDivElement | null) => {
@@ -68,6 +99,88 @@ function App() {
     });
   };
 
+  // Content for both layouts
+  const pokemonContent = (
+    <div className="flex-1">
+      {loading && loadingProgress < 100 ? (
+        <div className="flex flex-col items-center justify-center h-64">
+          <div className="w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mb-4"></div>
+          <div className="w-full max-w-xs bg-gray-200 rounded-full h-4 overflow-hidden">
+            <div 
+              className="bg-blue-500 h-4 transition-all duration-300"
+              style={{ width: `${loadingProgress}%` }}
+            ></div>
+          </div>
+          <p className="mt-2 text-gray-600">Loading Pokémon...</p>
+        </div>
+      ) : displayedPokemon.length > 0 ? (
+        <PokemonList 
+          pokemon={displayedPokemon}
+          onSelectPokemon={setSelectedPokemon}
+          lastPokemonRef={setupObserver}
+          isLoading={loading}
+        />
+      ) : (
+        <div className="flex flex-col items-center justify-center h-64 bg-gray-50 rounded-lg border border-gray-200">
+          <p className="text-xl text-gray-600 mb-2">No Pokémon found</p>
+          <p className="text-gray-500">Try adjusting your search or filters</p>
+        </div>
+      )}
+    </div>
+  );
+  
+  // Filter panel for both layouts
+  const filterPanel = (
+    <FilterPanel
+      isDesktop={!isMobile}
+      filters={filters}
+      onFilterChange={handleFilterChange}
+      availableTypes={availableTypes}
+      availableMoves={availableMoves}
+      availableGenerations={availableGenerations}
+      isMobileOpen={showFilters}
+      setIsMobileOpen={setShowFilters}
+    />
+  );
+  
+  // Pokemon detail modal for both layouts
+  const detailModal = selectedPokemon && (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50">
+      <PokemonDetail 
+        pokemon={selectedPokemon} 
+        onClose={() => setSelectedPokemon(null)} 
+      />
+    </div>
+  );
+  
+  // Mobile Pokedex Layout
+  if (isMobile) {
+    return (
+      <PokedexLayout
+        searchTerm={searchTerm}
+        setSearchTerm={setSearchTerm}
+        isSearching={isSearching}
+        filterCount={getTotalFiltersCount()}
+        onToggleFilters={() => setShowFilters(!showFilters)}
+        onResetFilters={resetFilters}
+      >
+        {pokemonContent}
+        
+        {/* Mobile Filters - fixed positioning */}
+        <div>
+          <div 
+            className={`fixed inset-0 bg-black bg-opacity-50 z-30 transition-opacity duration-300 ${showFilters ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+            onClick={() => setShowFilters(false)}
+          />
+          {filterPanel}
+        </div>
+        
+        {detailModal}
+      </PokedexLayout>
+    );
+  }
+
+  // Desktop Layout
   return (
     <div className="max-w-screen-xl mx-auto p-4 min-h-screen">
       <header className="mb-6">
@@ -81,14 +194,14 @@ function App() {
               onToggleFilters={() => setShowFilters(!showFilters)}
               filterCount={getTotalFiltersCount()}
               isSearching={isSearching}
-              showFilterButton={false} // Hide filter toggle on mobile
+              showFilterButton={true}
             />
             
             {/* Desktop Reset Filters Button - Only show when filters are active */}
             {getTotalFiltersCount() > 0 && (
               <button
                 onClick={() => resetFilters()}
-                className="hidden md:flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors whitespace-nowrap"
+                className="flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors whitespace-nowrap"
               >
                 <RefreshCw size={16} />
                 <span>Reset Filters</span>
@@ -99,53 +212,11 @@ function App() {
       </header>
 
       {/* Desktop Filters Panel */}
-      <div className="mb-6 hidden md:block">
-        {showFilters && (
-          <FilterPanel
-            isDesktop={true}
-            filters={filters}
-            onFilterChange={handleFilterChange}
-            availableTypes={availableTypes}
-            availableMoves={availableMoves}
-            availableGenerations={availableGenerations}
-            isMobileOpen={false}
-            setIsMobileOpen={() => {}}
-          />
-        )}
+      <div className="mb-6">
+        {showFilters && filterPanel}
       </div>
 
       <main className="flex flex-col gap-6">
-        {/* Mobile Filter Button - Fixed */}
-        <button
-          onClick={() => setShowFilters(!showFilters)}
-          className="fixed bottom-4 right-4 md:hidden z-50 bg-blue-500 text-white p-3 rounded-full shadow-lg flex items-center justify-center"
-        >
-          <SlidersHorizontal size={24} />
-          {getTotalFiltersCount() > 0 && (
-            <span className="bg-white text-blue-500 px-1.5 py-0.5 rounded-full text-xs font-bold ml-1">
-              {getTotalFiltersCount()}
-            </span>
-          )}
-        </button>
-        
-        {/* Mobile Filters - fixed positioning */}
-        <div className="md:hidden">
-          <div 
-            className={`fixed inset-0 bg-black bg-opacity-50 z-30 transition-opacity duration-300 ${showFilters ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
-            onClick={() => setShowFilters(false)}
-          />
-          <FilterPanel
-            isDesktop={false}
-            filters={filters}
-            onFilterChange={handleFilterChange}
-            availableTypes={availableTypes}
-            availableMoves={availableMoves}
-            availableGenerations={availableGenerations}
-            isMobileOpen={showFilters}
-            setIsMobileOpen={setShowFilters}
-          />
-        </div>
-
         {/* Pokemon Grid */}
         <div className="flex-1">
           {loading && loadingProgress < 100 ? (
