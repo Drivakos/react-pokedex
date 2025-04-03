@@ -21,11 +21,20 @@ interface PokemonWithForms {
   pokemon_v2_pokemonforms: PokemonForm[];
 }
 
+interface PokemonSpeciesEvolution {
+  name: string;
+}
+
+interface EvolutionChain {
+  pokemon_v2_pokemonspecies: PokemonSpeciesEvolution[];
+}
+
 interface Species {
   generation: {
     name: string;
   };
   pokemon_v2_pokemons: PokemonWithForms[];
+  pokemon_v2_evolutionchain?: EvolutionChain;
 }
 
 export interface RawPokemonData {

@@ -46,3 +46,8 @@ yarn-error.log*
 # OS
 .DS_Store
 Thumbs.db
+
+# Documentation and schema files
+docs/graphql-schema.md
+src/schema/schema.json
+src/schema/schema-summary.json
