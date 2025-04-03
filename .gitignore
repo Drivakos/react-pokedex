@@ -39,6 +39,9 @@ build
 *.swo
 
 # Debug
+
+# Deployment config
+windsurf_deployment.yaml
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*

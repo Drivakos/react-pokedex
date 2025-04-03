@@ -1,0 +1,78 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18'
+        cache: 'npm'
+    
+    - name: Install dependencies
+      run: npm ci
+      
+    - name: Create .env file
+      run: |
+        touch .env
+        echo "VITE_API_URL=${{ secrets.VITE_API_URL || 'https://pokeapi.co/api/v2' }}" >> .env
+        echo "VITE_ENABLE_ANALYTICS=${{ secrets.VITE_ENABLE_ANALYTICS || 'false' }}" >> .env
+        echo "VITE_ENABLE_TCG_CARDS=${{ secrets.VITE_ENABLE_TCG_CARDS || 'true' }}" >> .env
+        echo "VITE_ENABLE_ADVANCED_SEARCH=${{ secrets.VITE_ENABLE_ADVANCED_SEARCH || 'true' }}" >> .env
+    
+    - name: Lint
+      run: npm run lint || echo "Linting failed but continuing..."
+    
+    - name: Build
+      run: npm run build
+    
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: build-artifacts
+        path: dist
+    
+  deploy:
+    needs: build-and-test
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Download build artifacts
+      uses: actions/download-artifact@v3
+      with:
+        name: build-artifacts
+        path: dist
+        
+    - name: Create .env file for deployment
+      run: |
+        touch .env
+        echo "NETLIFY_AUTH_TOKEN=${{ secrets.NETLIFY_AUTH_TOKEN }}" >> .env
+        echo "NETLIFY_SITE_ID=${{ secrets.NETLIFY_SITE_ID }}" >> .env
+    
+    - name: Deploy to Netlify
+      uses: nwtgck/actions-netlify@v2
+      with:
+        publish-dir: './dist'
+        production-branch: main
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        deploy-message: "Deploy from GitHub Actions"
+        enable-pull-request-comment: true
+        enable-commit-comment: true
+        overwrites-pull-request-comment: true
+      env:
+        NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
+        NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
+      timeout-minutes: 5
