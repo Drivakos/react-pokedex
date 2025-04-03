@@ -12,6 +12,60 @@ export interface Pokemon {
   base_experience: number;
 }
 
+export interface PokemonAbility {
+  name: string;
+  is_hidden: boolean;
+  description: string;
+}
+
+export interface PokemonMove {
+  name: string;
+  learned_at_level: number;
+  learn_method: string;
+}
+
+export interface PokemonSprites {
+  front_default: string;
+  back_default: string;
+  front_shiny: string;
+  back_shiny: string;
+  official_artwork: string;
+}
+
+export interface PokemonStats {
+  hp: number;
+  attack: number;
+  defense: number;
+  special_attack: number;
+  special_defense: number;
+  speed: number;
+}
+
+export interface EvolutionDetail {
+  species_name: string;
+  min_level: number | null;
+  trigger_name: string | null;
+  item: string | null;
+}
+
+export interface PokemonDetails {
+  id: number;
+  name: string;
+  height: number;
+  weight: number;
+  types: string[];
+  abilities: PokemonAbility[];
+  stats: PokemonStats;
+  sprites: PokemonSprites;
+  moves: PokemonMove[];
+  flavor_text: string;
+  genera: string;
+  generation: string;
+  evolution_chain: EvolutionDetail[];
+  base_experience: number;
+  has_evolutions: boolean;
+}
+
 interface PokemonForm {
   form_name: string;
   is_default: boolean;
