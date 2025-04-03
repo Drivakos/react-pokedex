@@ -7,22 +7,28 @@
   port = 5173
   publish = "dist"
 
-# Fix for MIME type issues with JavaScript modules
+# Ensure assets are served with correct MIME types
 [[headers]]
-  for = "/*.js"
+  for = "/assets/*"
   [headers.values]
-    Content-Type = "application/javascript"
+    Cache-Control = "public, max-age=31536000, immutable"
 
 [[headers]]
-  for = "/*.mjs"
+  for = "/assets/*.js"
   [headers.values]
-    Content-Type = "application/javascript"
+    Content-Type = "application/javascript; charset=utf-8"
 
 [[headers]]
-  for = "/*.css"
+  for = "/assets/*.css"
   [headers.values]
-    Content-Type = "text/css"
+    Content-Type = "text/css; charset=utf-8"
 
+[[headers]]
+  for = "/assets/*.svg"
+  [headers.values]
+    Content-Type = "image/svg+xml"
+
+# General security headers
 [[headers]]
   for = "/*"
   [headers.values]
@@ -31,17 +37,19 @@
     X-Content-Type-Options = "nosniff"
     Referrer-Policy = "strict-origin-when-cross-origin"
     Permissions-Policy = "camera=(), microphone=(), geolocation=()"
-    Content-Security-Policy = "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://raw.githubusercontent.com; font-src 'self'; connect-src 'self' https://pokeapi.co;"
+    Content-Security-Policy = "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://raw.githubusercontent.com; font-src 'self'; connect-src 'self' https://pokeapi.co https://api.pokemontcg.io;"
+    Access-Control-Allow-Origin = "*"
 
-# Handle SPA routing
+# Make sure assets are never redirected
+[[redirects]]
+  from = "/assets/*"
+  to = "/assets/:splat"
+  status = 200
+  force = false
+
+# Handle SPA routing for everything else
 [[redirects]]
   from = "/*"
   to = "/index.html"
   status = 200
   force = true
-
-# Custom 404 page
-[[redirects]]
-  from = "/*"
-  to = "/index.html"
-  status = 404
