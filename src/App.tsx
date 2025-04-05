@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { RefreshCw, SlidersHorizontal, X, Search } from 'lucide-react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
@@ -108,8 +108,10 @@ function PokedexHome() {
             <SearchBar 
               value={searchTerm}
               onChange={setSearchTerm}
-              placeholder="Search Pokémon..."
               isSearching={isSearching}
+              onToggleFilters={() => setShowDesktopFilters(!showDesktopFilters)}
+              filterCount={getTotalFiltersCount()}
+              showFilterButton={false}
             />
           </div>
           
@@ -130,7 +132,7 @@ function PokedexHome() {
             {getTotalFiltersCount() > 0 && (
               <button
                 onClick={resetFilters}
-                className="hidden md:flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors duration-200"
+                className="invisible md:visible hidden md:flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors duration-200"
               >
                 <RefreshCw size={16} />
                 <span>Reset Filters</span>
