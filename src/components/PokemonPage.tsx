@@ -7,6 +7,8 @@ import { PokemonDetails } from '../types/pokemon';
 import { TYPE_COLORS, TYPE_BACKGROUNDS } from '../types/pokemon';
 import PokemonCards from './PokemonCards';
 import Footer from './Footer';
+import PokemonSeoContent from './PokemonSeoContent';
+import RelatedPokemon from './RelatedPokemon';
 
 // No need for hardcoded mapping anymore as we get species_id from the API
 
@@ -19,10 +21,7 @@ const PokemonPage: React.FC = () => {
   const [selectedMoveCategory, setSelectedMoveCategory] = useState<'all' | 'level-up' | 'machine' | 'egg'>('all');
   const [error, setError] = useState<string | null>(null);
   
-  // Helper function to get Pokémon ID from evolution data
-  const getPokemonIdFromEvolution = (evo: any): number => {
-    return evo.species_id;
-  };
+
 
   useEffect(() => {
     const fetchPokemonData = async () => {
@@ -139,18 +138,13 @@ const PokemonPage: React.FC = () => {
   return (
     <div className="min-h-screen bg-gray-50">
       <Helmet>
-        <title>{`${pokemonDetails.name.charAt(0).toUpperCase() + pokemonDetails.name.slice(1)} (#${formattedId}) | Pokédex`}</title>
-        <meta name="description" content={`${pokemonDetails.name.charAt(0).toUpperCase() + pokemonDetails.name.slice(1)} is a ${pokemonDetails.types.join('/')} type Pokémon. Learn about its stats, abilities, evolutions, and more.`} />
-        <link rel="canonical" href={`${window.location.origin}/pokemon/${pokemonDetails.id}`} />
-        
-        {/* Open Graph tags */}
-        <meta property="og:title" content={`${pokemonDetails.name.charAt(0).toUpperCase() + pokemonDetails.name.slice(1)} (#${formattedId}) | Pokédex`} />
-        <meta property="og:description" content={`${pokemonDetails.name.charAt(0).toUpperCase() + pokemonDetails.name.slice(1)} is a ${pokemonDetails.types.join('/')} type Pokémon. Learn about its stats, abilities, evolutions, and more.`} />
-        <meta property="og:image" content={`${window.location.origin}/images/pokedex.svg`} />
+        <title>{pokemonDetails.name} | Pokémon #{formattedId} | Complete Pokédex Guide</title>
+        <meta name="description" content={`Complete guide to ${pokemonDetails.name}, a ${pokemonDetails.types.join('/')} type Pokémon. Learn about its biology, habitat, training tips, evolution methods, competitive strategies, and more.`} />
+        <meta name="keywords" content={`${pokemonDetails.name}, Pokémon ${formattedId}, ${pokemonDetails.types.join(', ')} type, Pokédex, Pokémon guide, Pokémon evolution, Pokémon stats, ${pokemonDetails.name} moves, ${pokemonDetails.name} abilities`} />
         <meta property="og:url" content={`${window.location.origin}/pokemon/${pokemonDetails.id}`} />
         <meta property="og:type" content="article" />
         <meta property="og:site_name" content="Pokédex" />
-        
+        <link rel="canonical" href={`${window.location.origin}/pokemon/${pokemonDetails.id}`} />
         {/* Twitter Card tags */}
         <meta name="twitter:card" content="summary_large_image" />
         <meta name="twitter:site" content="@pokedex" />
@@ -445,10 +439,7 @@ const PokemonPage: React.FC = () => {
                   </div>
                 </div>
                 
-                <div className="mt-12">
-                  <h2 className="text-2xl font-bold mb-6">Pokémon Trading Cards</h2>
-                  <PokemonCards pokemonName={pokemonDetails.name} pokemonId={pokemonDetails.id} />
-                </div>
+                {/* Trading Cards section moved to bottom */}
               </div>
             )}
 
@@ -858,6 +849,24 @@ const PokemonPage: React.FC = () => {
           </div>
         </div>
       </div>
+      <div className="container mx-auto px-4 py-8">
+        {pokemonDetails && <PokemonSeoContent pokemon={pokemonDetails} />}
+        
+        <div className="mt-12">
+          <h2 className="text-2xl font-bold mb-6">Pokémon Trading Cards</h2>
+          {pokemonDetails && <PokemonCards pokemonName={pokemonDetails.name} pokemonId={pokemonDetails.id} />}
+        </div>
+        
+        {pokemonDetails && pokemonDetails.types && pokemonDetails.types.length > 0 && (
+          <RelatedPokemon 
+            pokemonId={pokemonDetails.id}
+            pokemonType={pokemonDetails.types[0]}
+            limit={6}
+            title={`Other ${pokemonDetails.types[0].charAt(0).toUpperCase() + pokemonDetails.types[0].slice(1)}-type Pokémon`}
+          />
+        )}
+      </div>
+      
       <Footer />
     </div>
   );
