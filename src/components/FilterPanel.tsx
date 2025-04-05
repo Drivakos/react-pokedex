@@ -432,7 +432,7 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
     <>
       {/* Filter Panel */}
       <div
-        className={`${isDesktop ? '' : 'fixed'} md:relative inset-y-0 right-0 w-80 md:w-auto bg-white p-4 shadow-lg z-50 h-full md:h-auto ${isDesktop ? '' : 'transform transition-transform duration-300'}`}
+        className={`${isDesktop ? '' : 'fixed'} md:relative inset-y-0 right-0 w-80 md:w-auto bg-white p-4 shadow-lg z-50 h-full md:h-auto ${isDesktop ? '' : 'transform transition-transform duration-300 ease-in-out'} ${!isDesktop && !isMobileOpen ? 'translate-x-full' : ''}`}
       >
         <FilterContent 
           isDesktop={isDesktop}

@@ -236,8 +236,8 @@ function PokedexHome() {
               )}
               
               {activeFilterTab === 'other' && (
-                <div className="other-filters space-y-4">
-                  <div className="generation-filter">
+                <div className="other-filters flex flex-col md:flex-row md:gap-6 space-y-4 md:space-y-0">
+                  <div className="generation-filter md:w-1/3">
                     <h3 className="font-medium mb-2">Generation</h3>
                     <select 
                       className="w-full p-2 border border-gray-300 rounded-md"
@@ -253,7 +253,7 @@ function PokedexHome() {
                     </select>
                   </div>
                   
-                  <div className="weight-filter">
+                  <div className="weight-filter md:w-1/3">
                     <h3 className="font-medium mb-2">Weight Range (kg)</h3>
                     <div className="flex gap-2">
                       <input 
@@ -279,7 +279,7 @@ function PokedexHome() {
                     </div>
                   </div>
                   
-                  <div className="height-filter">
+                  <div className="height-filter md:w-1/3">
                     <h3 className="font-medium mb-2">Height Range (m)</h3>
                     <div className="flex gap-2">
                       <input 
@@ -443,8 +443,8 @@ function PokedexHome() {
             )}
             
             {activeFilterTab === 'other' && (
-              <div className="other-filters space-y-4">
-                <div className="generation-filter">
+              <div className="other-filters flex flex-col md:flex-row md:gap-6 space-y-4 md:space-y-0">
+                <div className="generation-filter md:w-1/3">
                   <h3 className="font-medium mb-2">Generation</h3>
                   <select 
                     className="w-full p-2 border border-gray-300 rounded-md"
@@ -460,7 +460,7 @@ function PokedexHome() {
                   </select>
                 </div>
                 
-                <div className="weight-filter">
+                <div className="weight-filter md:w-1/3">
                   <h3 className="font-medium mb-2">Weight Range (kg)</h3>
                   <div className="flex gap-2">
                     <input 
@@ -486,7 +486,7 @@ function PokedexHome() {
                   </div>
                 </div>
                 
-                <div className="height-filter">
+                <div className="height-filter md:w-1/3">
                   <h3 className="font-medium mb-2">Height Range (m)</h3>
                   <div className="flex gap-2">
                     <input 
