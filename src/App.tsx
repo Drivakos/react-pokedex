@@ -46,6 +46,7 @@ function PokedexHome() {
   const [showMobileFilters, setShowMobileFilters] = useState(false);
   const [showDesktopFilters, setShowDesktopFilters] = useState(false);
   const [activeFilterTab, setActiveFilterTab] = useState('types');
+  const [moveSearch, setMoveSearch] = useState('');
   
   // Setup the intersection observer for infinite scrolling
   const setupObserver = (node: HTMLDivElement | null) => {
@@ -208,14 +209,23 @@ function PokedexHome() {
                     <div className="relative">
                       <input
                         type="text"
+                        value={moveSearch}
+                        onChange={(e) => setMoveSearch(e.target.value)}
                         placeholder="Search moves..."
                         className="w-full p-2 pl-10 border border-gray-300 rounded-md"
+                        data-component-name="PokedexHome"
                       />
                       <Search className="absolute left-3 top-2.5 text-gray-400" size={18} />
                     </div>
                   </div>
                   <div className="grid grid-cols-2 gap-2 max-h-60 overflow-y-auto">
-                    {availableMoves.slice(0, 10).map(move => (
+                    {availableMoves
+                      .filter(move => {
+                        const formattedMove = move.toLowerCase().replace(/-/g, ' ');
+                        const searchTerm = moveSearch.toLowerCase();
+                        return formattedMove.includes(searchTerm) || move.toLowerCase().includes(searchTerm);
+                      })
+                      .slice(0, 10).map(move => (
                       <button
                         key={move}
                         onClick={() => {

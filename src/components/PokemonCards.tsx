@@ -29,42 +29,42 @@ const PokemonCards: React.FC<PokemonCardsProps> = ({ pokemonName, pokemonId }) =
   const [visibleCards, setVisibleCards] = useState<number>(10);
   const [hasMore, setHasMore] = useState<boolean>(true);
   
-  // Use refs instead of state for animation values to prevent re-renders
+
   const animationFrameIdRef = useRef<number | null>(null);
   const previousRotationRef = useRef<{x: number, y: number}>({ x: 0, y: 0 });
   const currentCardRef = useRef<HTMLDivElement | null>(null);
   
-  // Get card rarity class for special effects
+
   const getRarityClass = (rarity?: string): string => {
     if (!rarity) return '';
     
     const rarityLower = rarity.toLowerCase();
     
-    // Prismatic cards (highest tier)
+
     if (rarityLower.includes('secret rare') || rarityLower.includes('hyper rare') || rarityLower.includes('rainbow rare')) {
       return 'prismatic';
     }
-    // Holographic cards (very high tier)
+
     else if (rarityLower.includes('holo gx') || rarityLower.includes('full art') || rarityLower.includes('alt art')) {
       return 'holographic';
     }
-    // Ultra rare cards (high tier)
+
     else if (rarityLower.includes('rare holo') || rarityLower.includes('ultra rare') || rarityLower.includes('ex')) {
       return 'ultra-rare';
     }
-    // Rare cards (medium tier)
+
     else if (rarityLower.includes('rare') || rarityLower.includes('holo')) {
       return 'rare';
     }
-    // Uncommon cards (low tier)
+
     else if (rarityLower.includes('uncommon')) {
       return 'uncommon';
     }
-    // Common cards (lowest tier)
+
     return '';
   };
   
-  // Handle 3D card effect on mouse move with smooth transitions
+
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
     const cardImageContainer = e.currentTarget;
     currentCardRef.current = cardImageContainer;
@@ -73,50 +73,50 @@ const PokemonCards: React.FC<PokemonCardsProps> = ({ pokemonName, pokemonId }) =
     const cardRarity = cardImageContainer.getAttribute('data-card-rarity') || '';
     if (!cardId) return;
     
-    // Cancel any existing animation frame
+
     if (animationFrameIdRef.current !== null) {
       cancelAnimationFrame(animationFrameIdRef.current);
     }
     
-    // Store card data for animation
+
     const rect = cardImageContainer.getBoundingClientRect();
-    const x = e.clientX - rect.left; // x position within the element
-    const y = e.clientY - rect.top; // y position within the element
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
     
-    // Increase tilt angle based on rarity - with higher values
-    let tiltFactor = 35; // Base tilt for common cards (increased from 25)
+
+    let tiltFactor = 35;
     
     if (cardRarity.includes('prismatic')) {
-      tiltFactor = 55; // Maximum tilt for prismatic cards (increased from 40)
+      tiltFactor = 55;
     } else if (cardRarity.includes('holographic')) {
-      tiltFactor = 45; // High tilt for holographic cards (increased from 35)
+      tiltFactor = 45;
     } else if (cardRarity.includes('ultra-rare')) {
-      tiltFactor = 40; // Enhanced tilt for ultra-rare cards (increased from 30)
+      tiltFactor = 40;
     }
     
-    // Calculate raw rotation values
+
     const rawXRotation = tiltFactor * ((y - rect.height / 2) / rect.height);
     const rawYRotation = -tiltFactor * ((x - rect.width / 2) / rect.width);
     
-    // Start animation loop
+
     const animateCard = () => {
       if (!currentCardRef.current) return;
       
-      // Apply smoothing by interpolating between previous and current rotation
-      const smoothingFactor = 0.08; // Lower value for smoother transitions (reduced from 0.15)
+
+      const smoothingFactor = 0.08;
       
-      // Get previous rotation values from ref
+
       const prevX = previousRotationRef.current.x;
       const prevY = previousRotationRef.current.y;
       
-      // Interpolate between previous rotation and new rotation for smoothness
+
       const xRotation = prevX + (rawXRotation - prevX) * smoothingFactor;
       const yRotation = prevY + (rawYRotation - prevY) * smoothingFactor;
       
-      // Update previous rotation ref for next frame
+
       previousRotationRef.current = { x: xRotation, y: yRotation };
       
-      // Apply the transformation with increased perspective for more dramatic effect
+
       currentCardRef.current.style.transform = `
         perspective(600px)
         scale(1.1)
@@ -124,53 +124,50 @@ const PokemonCards: React.FC<PokemonCardsProps> = ({ pokemonName, pokemonId }) =
         rotateY(${yRotation}deg)
       `;
       
-      // Apply shine effect based on card tilt
+
       updateShineEffect(currentCardRef.current, cardRarity, xRotation, yRotation, tiltFactor);
       
-      // Continue animation loop
+
       animationFrameIdRef.current = requestAnimationFrame(animateCard);
     };
     
-    // Start the animation
+
     animateCard();
   };
     
-  // Separate function to update shine effect
+
   const updateShineEffect = (cardElement: HTMLDivElement, cardRarity: string, xRotation: number, yRotation: number, tiltFactor: number) => {
     const rect = cardElement.getBoundingClientRect();
     const shine = cardElement.querySelector('.card-shine') as HTMLElement;
     
     if (!shine) return;
     
-    // Calculate light reflection based on card tilt
-    // This creates a more realistic effect as if light is reflecting off the card surface
-    // The reflection position changes based on how the card is tilted
+
     
-    // Calculate reflection position based on tilt
+
     const reflectionX = rect.width * (0.5 - (yRotation / (tiltFactor * 2)));
     const reflectionY = rect.height * (0.5 - (xRotation / (tiltFactor * 2)));
     
-    // Calculate intensity based on tilt angle
-    // More extreme angles = more intense reflection
+
     const tiltMagnitude = Math.sqrt(xRotation * xRotation + yRotation * yRotation) / tiltFactor;
     
-    // Base reflection intensity - balanced for all cards
-    let reflectionIntensity = 0.35 + (tiltMagnitude * 0.45); // 0.35 to 0.8 range
+
+    let reflectionIntensity = 0.35 + (tiltMagnitude * 0.45);
     
-    // Adjust intensity based on card rarity
+
     if (cardRarity.includes('prismatic')) {
-      reflectionIntensity = 0.45 + (tiltMagnitude * 0.55); // 0.45 to 1.0 range for prismatic
+      reflectionIntensity = 0.45 + (tiltMagnitude * 0.55);
     } else if (cardRarity.includes('holographic')) {
-      reflectionIntensity = 0.4 + (tiltMagnitude * 0.5); // 0.4 to 0.9 range for holographic
+      reflectionIntensity = 0.4 + (tiltMagnitude * 0.5);
     } else if (cardRarity.includes('ultra-rare')) {
-      reflectionIntensity = 0.35 + (tiltMagnitude * 0.45); // 0.35 to 0.8 range for ultra-rare
+      reflectionIntensity = 0.35 + (tiltMagnitude * 0.45);
     } else if (cardRarity.includes('rare')) {
-      reflectionIntensity = 0.3 + (tiltMagnitude * 0.4); // 0.3 to 0.7 range for rare
+      reflectionIntensity = 0.3 + (tiltMagnitude * 0.4);
     }
     
-    // Enhanced shine effects based on rarity
+
     if (cardRarity.includes('prismatic')) {
-      // Prismatic effect with rainbow colors and intense shine
+
       shine.style.background = `
         radial-gradient(
           circle at ${reflectionX}px ${reflectionY}px,
@@ -186,11 +183,10 @@ const PokemonCards: React.FC<PokemonCardsProps> = ({ pokemonName, pokemonId }) =
       `;
     } 
     else if (cardRarity.includes('holographic')) {
-      // Calculate angle based on tilt direction
+
       const tiltAngle = Math.atan2(xRotation, yRotation) * (180 / Math.PI);
       
-      // Holographic effect with linear gradient that changes with tilt angle
-      // Reduced opacity to make sure card art remains visible
+
       shine.style.background = `
         linear-gradient(
           ${tiltAngle}deg,
@@ -204,8 +200,7 @@ const PokemonCards: React.FC<PokemonCardsProps> = ({ pokemonName, pokemonId }) =
       `;
     }
     else if (cardRarity.includes('ultra-rare')) {
-      // Rainbow holographic effect for ultra rare
-      // Reduced opacity to ensure card art visibility
+
       shine.style.background = `
         radial-gradient(
           circle at ${reflectionX}px ${reflectionY}px,
@@ -219,8 +214,7 @@ const PokemonCards: React.FC<PokemonCardsProps> = ({ pokemonName, pokemonId }) =
       `;
     } 
     else if (cardRarity.includes('rare')) {
-      // Gold/silver shine for rare cards
-      // Significantly reduced opacity to fix the issue with rare holos
+
       shine.style.background = `
         radial-gradient(
           circle at ${reflectionX}px ${reflectionY}px,
@@ -231,8 +225,7 @@ const PokemonCards: React.FC<PokemonCardsProps> = ({ pokemonName, pokemonId }) =
       `;
     } 
     else {
-      // Standard shine for common cards
-      // Very subtle effect
+
       shine.style.background = `
         radial-gradient(
           circle at ${reflectionX}px ${reflectionY}px,
@@ -242,7 +235,7 @@ const PokemonCards: React.FC<PokemonCardsProps> = ({ pokemonName, pokemonId }) =
       `;
     }
     
-    // Update particle effects
+
     const particles = cardElement.querySelector('.card-particles') as HTMLElement;
     if (particles) {
       if (cardRarity.includes('prismatic') || cardRarity.includes('holographic') || cardRarity.includes('ultra-rare')) {
@@ -267,8 +260,7 @@ const PokemonCards: React.FC<PokemonCardsProps> = ({ pokemonName, pokemonId }) =
       animationFrameIdRef.current = null;
     }
 
-    // Reset transform with a smooth transition
-    // The transition is defined in the style attribute of the element
+
     cardImageContainer.style.transform = `
       perspective(600px)
       scale(1.0)
@@ -276,7 +268,7 @@ const PokemonCards: React.FC<PokemonCardsProps> = ({ pokemonName, pokemonId }) =
       rotateY(0deg)
     `;
 
-    // Reset previous rotation ref
+
     previousRotationRef.current = { x: 0, y: 0 };
     currentCardRef.current = null;
 
@@ -292,7 +284,7 @@ const PokemonCards: React.FC<PokemonCardsProps> = ({ pokemonName, pokemonId }) =
   };
 
   useEffect(() => {
-    // Reset state when Pokemon changes
+
     setVisibleCards(10);
     setHasMore(true);
 
@@ -301,11 +293,10 @@ const PokemonCards: React.FC<PokemonCardsProps> = ({ pokemonName, pokemonId }) =
         setLoading(true);
         setError(null);
 
-        // Format the Pokémon name for the API query
-        // Remove any special characters and make it lowercase
+
         const formattedName = pokemonName.toLowerCase().replace(/[^a-z0-9]/g, '');
 
-        // Handle special cases for Pokémon with different names in the TCG
+
         let searchName = formattedName;
         const specialCases: Record<string, string> = {
           'nidoranf': 'nidoran female',
@@ -328,10 +319,10 @@ const PokemonCards: React.FC<PokemonCardsProps> = ({ pokemonName, pokemonId }) =
           searchName = specialCases[formattedName];
         }
 
-        // Try multiple search strategies to get as many cards as possible
+
         let allCards: PokemonCard[] = [];
 
-        // Strategy 1: Exact name match
+
         const exactMatchResponse = await fetch(
           `https://api.pokemontcg.io/v2/cards?q=name:"${searchName}"&orderBy=set.releaseDate&pageSize=50`
         );
@@ -341,7 +332,7 @@ const PokemonCards: React.FC<PokemonCardsProps> = ({ pokemonName, pokemonId }) =
           allCards = [...allCards, ...exactMatchData.data];
         }
 
-        // Strategy 2: Partial name match (if exact match didn't return many results)
+
         if (allCards.length < 20) {
           const partialMatchResponse = await fetch(
             `https://api.pokemontcg.io/v2/cards?q=name:*${searchName}*&orderBy=set.releaseDate&pageSize=50`
@@ -353,7 +344,7 @@ const PokemonCards: React.FC<PokemonCardsProps> = ({ pokemonName, pokemonId }) =
           }
         }
 
-        // Strategy 3: Try with National Pokédex number (for older cards)
+
         if (pokemonId) {
           const dexNumberResponse = await fetch(
             `https://api.pokemontcg.io/v2/cards?q=nationalPokedexNumbers:${pokemonId}&orderBy=set.releaseDate&pageSize=50`
@@ -365,12 +356,12 @@ const PokemonCards: React.FC<PokemonCardsProps> = ({ pokemonName, pokemonId }) =
           }
         }
 
-        // Filter out duplicates and keep only unique cards
+
         const uniqueCards = allCards.filter((card: PokemonCard, index: number, self: PokemonCard[]) =>
           index === self.findIndex((c) => c.id === card.id)
         );
 
-        // Sort by release date (newest first)
+
         uniqueCards.sort((a, b) => {
           if (a.set.releaseDate && b.set.releaseDate) {
             return new Date(b.set.releaseDate).getTime() - new Date(a.set.releaseDate).getTime();
@@ -440,20 +431,16 @@ const PokemonCards: React.FC<PokemonCardsProps> = ({ pokemonName, pokemonId }) =
                   className="rounded-lg shadow-md w-full relative z-10"
                   loading="lazy"
                 />
-                {/* Basic shine effect for all cards */}
                 <div className="card-shine absolute inset-0 z-20 rounded-lg pointer-events-none"></div>
                 
-                {/* Gradient background */}
                 <div className="absolute inset-0 bg-gradient-to-br from-transparent via-transparent to-black/5 rounded-lg z-0"></div>
                 
-                {/* Special effects for different card rarities */}
-                
-                {/* Rare cards */}
+
                 {rarityClass === 'rare' && (
                   <div className="absolute inset-0 bg-gradient-to-r from-yellow-200/20 to-yellow-400/20 rounded-lg z-5 pointer-events-none"></div>
                 )}
                 
-                {/* Ultra rare special effects */}
+
                 {rarityClass === 'ultra-rare' && (
                   <>
                     <div className="absolute inset-0 bg-gradient-to-r from-purple-500/20 via-pink-500/20 to-blue-500/20 rounded-lg z-5 pointer-events-none animate-pulse"></div>
@@ -475,7 +462,7 @@ const PokemonCards: React.FC<PokemonCardsProps> = ({ pokemonName, pokemonId }) =
                   </>
                 )}
                 
-                {/* Holographic special effects */}
+
                 {rarityClass === 'holographic' && (
                   <>
                     <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/30 via-blue-500/30 to-purple-500/30 rounded-lg z-5 pointer-events-none animate-pulse"></div>
@@ -497,7 +484,7 @@ const PokemonCards: React.FC<PokemonCardsProps> = ({ pokemonName, pokemonId }) =
                   </>
                 )}
                 
-                {/* Prismatic special effects */}
+
                 {rarityClass === 'prismatic' && (
                   <>
                     <div className="absolute inset-0 bg-gradient-to-r from-pink-500/30 via-purple-500/30 to-indigo-500/30 rounded-lg z-5 pointer-events-none animate-pulse"></div>
@@ -545,7 +532,7 @@ const PokemonCards: React.FC<PokemonCardsProps> = ({ pokemonName, pokemonId }) =
         })}
       </div>
       
-      {/* Show More Button */}
+
       {hasMore && cards.length > visibleCards && (
         <div className="mt-6 text-center">
           <button
@@ -557,7 +544,7 @@ const PokemonCards: React.FC<PokemonCardsProps> = ({ pokemonName, pokemonId }) =
         </div>
       )}
       
-      {/* Card Modal */}
+
       {selectedCard && (
         <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4" onClick={closeCardModal}>
           <div className="relative max-w-lg mx-auto" onClick={(e) => e.stopPropagation()}>
@@ -575,7 +562,7 @@ const PokemonCards: React.FC<PokemonCardsProps> = ({ pokemonName, pokemonId }) =
                 className="rounded-lg max-h-[80vh] max-w-full relative z-10"
               />
               
-              {/* Special effects for rare cards in modal view */}
+
               {getRarityClass(selectedCard.rarity) === 'prismatic' && (
                 <>
                   <div className="absolute inset-0 bg-gradient-to-r from-pink-500/30 via-purple-500/30 to-indigo-500/30 rounded-lg z-5 animate-pulse"></div>
