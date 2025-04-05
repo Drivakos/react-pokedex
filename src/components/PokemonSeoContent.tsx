@@ -1,6 +1,8 @@
 import React from 'react';
 import { PokemonDetails } from '../types/pokemon';
 
+
+
 interface PokemonSeoContentProps {
   pokemon: PokemonDetails;
 }
@@ -218,78 +220,111 @@ const PokemonSeoContent: React.FC<PokemonSeoContentProps> = ({ pokemon }) => {
   };
   
   return (
-    <div className="mt-8 px-4 py-6 bg-white rounded-lg shadow-md">
-      <h2 className="text-2xl font-bold mb-6 text-gray-800 border-b pb-2">Complete Pokédex Entry: {pokemon.name}</h2>
+    <div className="p-6 bg-white rounded-lg shadow-md w-full">
+      <h2 className="text-2xl font-bold mb-6 border-b pb-2">Complete Pokédex Entry: {pokemon.name}</h2>
       
+      <div className="space-y-8 w-full">
+        <section>
+          <h3 className="text-xl font-semibold mb-4 flex items-center">
+            <span className="bg-blue-100 text-blue-800 p-1 rounded-md mr-2">
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-microscope"><path d="M6 18h8"/><path d="M3 22h18"/><path d="M14 22a7 7 0 1 0 0-14h-1"/><path d="M9 14h2"/><path d="M9 12a2 2 0 0 1-2-2V6h6v4a2 2 0 0 1-2 2Z"/></svg>
+            </span>
+            Biology & Physiology
+          </h3>
+          <div className="bg-gray-50 p-4 rounded-lg border border-gray-100">
+            <p className="text-gray-700 leading-relaxed mb-4">
+              {getBiologyInfo()}
+            </p>
+            <p className="text-gray-700 leading-relaxed">
+              {pokemon.genera ? `Classified as the ${pokemon.genera}, ` : ''}
+              {pokemon.name} is known for its distinctive appearance and abilities that align with its {pokemon.types && Array.isArray(pokemon.types) ? pokemon.types.join(' and ') : ''} typing.
+            </p>
+          </div>
+        </section>
+        
+        <section>
+          <h3 className="text-xl font-semibold mb-4 flex items-center">
+            <span className="bg-green-100 text-green-800 p-1 rounded-md mr-2">
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-mountain"><path d="m8 3 4 8 5-5 5 15H2L8 3z"/></svg>
+            </span>
+            Habitat & Behavior
+          </h3>
+          <div className="bg-gray-50 p-4 rounded-lg border border-gray-100">
+            <p className="text-gray-700 leading-relaxed mb-4">
+              In the wild, {pokemon.name} typically inhabits {getHabitatDescription()}.
+              {pokemon.generation ? ` First discovered in the ${pokemon.generation.replace('-', ' ').toUpperCase()} of Pokémon,` : ''} 
+              it has adapted to its environment through specialized behaviors and abilities.
+            </p>
+            <p className="text-gray-700 leading-relaxed">
+              {pokemon.name} primarily sustains itself on {getDietInfo()}, which helps maintain its health and energy levels.
+            </p>
+          </div>
+        </section>
 
-      <section className="mb-8">
-        <h3 className="text-xl font-semibold mb-3 text-gray-700">Biology & Physiology</h3>
-        <p className="text-gray-600 leading-relaxed mb-4">
-          {getBiologyInfo()}
-        </p>
-        <p className="text-gray-600 leading-relaxed">
-          {pokemon.genera ? `Classified as the ${pokemon.genera}, ` : ''}
-          {pokemon.name} is known for its distinctive appearance and abilities that align with its {pokemon.types && Array.isArray(pokemon.types) ? pokemon.types.join(' and ') : ''} typing.
-        </p>
-      </section>
+        <section>
+          <h3 className="text-xl font-semibold mb-4 flex items-center">
+            <span className="bg-purple-100 text-purple-800 p-1 rounded-md mr-2">
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-dumbbell"><path d="m6.5 6.5 11 11"/><path d="m21 21-1-1"/><path d="m3 3 1 1"/><path d="m18 22 4-4"/><path d="m2 6 4-4"/><path d="m3 10 7-7"/><path d="m14 21 7-7"/></svg>
+            </span>
+            Training Tips
+          </h3>
+          <div className="bg-gray-50 p-4 rounded-lg border border-gray-100">
+            <p className="text-gray-700 leading-relaxed mb-4">
+              Trainers looking to raise a strong {pokemon.name} should consider the following strategies:
+            </p>
+            <ul className="list-disc pl-6 text-gray-700 space-y-2">
+              {getTrainingTips().map((tip, index) => (
+                <li key={index} className="leading-relaxed">{tip}</li>
+              ))}
+            </ul>
+            <p className="text-gray-700 leading-relaxed mt-4">
+              {getEvolutionAdvice()}
+            </p>
+          </div>
+        </section>
       
-
-      <section className="mb-8">
-        <h3 className="text-xl font-semibold mb-3 text-gray-700">Habitat & Behavior</h3>
-        <p className="text-gray-600 leading-relaxed mb-4">
-          In the wild, {pokemon.name} typically inhabits {getHabitatDescription()}.
-          {pokemon.generation ? ` First discovered in the ${pokemon.generation.replace('-', ' ').toUpperCase()} of Pokémon,` : ''} 
-          it has adapted to its environment through specialized behaviors and abilities.
-        </p>
-        <p className="text-gray-600 leading-relaxed">
-          {pokemon.name} primarily sustains itself on {getDietInfo()}, which helps maintain its health and energy levels.
-        </p>
-      </section>
-
-      <section className="mb-8">
-        <h3 className="text-xl font-semibold mb-3 text-gray-700">Training Tips</h3>
-        <p className="text-gray-600 leading-relaxed mb-4">
-          Trainers looking to raise a strong {pokemon.name} should consider the following strategies:
-        </p>
-        <ul className="list-disc pl-6 text-gray-600 space-y-2">
-          {getTrainingTips().map((tip, index) => (
-            <li key={index} className="leading-relaxed">{tip}</li>
-          ))}
-        </ul>
-        <p className="text-gray-600 leading-relaxed mt-4">
-          {getEvolutionAdvice()}
-        </p>
-      </section>
-    
-      <section className="mb-8">
-        <h3 className="text-xl font-semibold mb-3 text-gray-700">Competitive Battling</h3>
-        <p className="text-gray-600 leading-relaxed mb-4">
-          With a base stat total of {pokemon.stats ? Object.values(pokemon.stats).reduce((a, b) => a + b, 0) : 0}, 
-          {pokemon.name} has notable strengths in competitive play:
-        </p>
-        <ul className="list-disc pl-6 text-gray-600 space-y-2">
-          {getCompetitiveTips().map((tip, index) => (
-            <li key={index} className="leading-relaxed">{tip}</li>
-          ))}
-        </ul>
-      </section>
-      
-
-      <section>
-        <h3 className="text-xl font-semibold mb-3 text-gray-700">Trivia & Additional Information</h3>
-        <ul className="list-disc pl-6 text-gray-600 space-y-2">
-          <li className="leading-relaxed">
-            {pokemon.name} has a base experience yield of {pokemon.base_experience || 'unknown'} points when defeated in battle.
-          </li>
-          <li className="leading-relaxed">
-            It possesses {pokemon.abilities?.length || 0} known abilities that can provide strategic advantages in various situations.
-          </li>
-          <li className="leading-relaxed">
-            {pokemon.name} can learn {pokemon.moves?.length || 0} different moves throughout its development, offering trainers flexibility in battle strategies.
-          </li>
-        </ul>
-      </section>
-      
+        <section>
+          <h3 className="text-xl font-semibold mb-4 flex items-center">
+            <span className="bg-red-100 text-red-800 p-1 rounded-md mr-2">
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-swords"><path d="m14.5 17.5 3-3 2.5 2.5c1 1 2 1 3 0l.5-.5-8.5-8.5-1 1c-1 1-1 2 0 3l2.5 2.5-3 3"/><path d="m5.5 13.5-2 2 2 2"/><path d="m7.5 15.5-2 2"/><path d="M16 12 8.5 4.5l-.5.5c-1 1-1 2 0 3l.5.5c1 1 2 1 3 0l.5-.5 3 3-3 3"/><path d="m11.5 15.5-3 3"/><path d="m4.5 16.5-1.5 1.5"/></svg>
+            </span>
+            Competitive Battling
+          </h3>
+          <div className="bg-gray-50 p-4 rounded-lg border border-gray-100">
+            <p className="text-gray-700 leading-relaxed mb-4">
+              With a base stat total of {pokemon.stats ? Object.values(pokemon.stats).reduce((a, b) => a + b, 0) : 0}, 
+              {pokemon.name} has notable strengths in competitive play:
+            </p>
+            <ul className="list-disc pl-6 text-gray-700 space-y-2">
+              {getCompetitiveTips().map((tip, index) => (
+                <li key={index} className="leading-relaxed">{tip}</li>
+              ))}
+            </ul>
+          </div>
+        </section>
+        
+        <section>
+          <h3 className="text-xl font-semibold mb-4 flex items-center">
+            <span className="bg-yellow-100 text-yellow-800 p-1 rounded-md mr-2">
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-lightbulb"><path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5"/><path d="M9 18h6"/><path d="M10 22h4"/></svg>
+            </span>
+            Trivia & Additional Information
+          </h3>
+          <div className="bg-gray-50 p-4 rounded-lg border border-gray-100">
+            <ul className="list-disc pl-6 text-gray-700 space-y-2">
+              <li className="leading-relaxed">
+                {pokemon.name} has a base experience yield of {pokemon.base_experience || 'unknown'} points when defeated in battle.
+              </li>
+              <li className="leading-relaxed">
+                It possesses {pokemon.abilities?.length || 0} known abilities that can provide strategic advantages in various situations.
+              </li>
+              <li className="leading-relaxed">
+                {pokemon.name} can learn {pokemon.moves?.length || 0} different moves throughout its development, offering trainers flexibility in battle strategies.
+              </li>
+            </ul>
+          </div>
+        </section>
+      </div>
 
       <div className="hidden">
         <h4>{pokemon.name} Pokémon Guide</h4>
