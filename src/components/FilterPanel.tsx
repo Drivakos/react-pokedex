@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, memo } from 'react';
-import { RefreshCw, ChevronDown, Search, SlidersHorizontal, X } from 'lucide-react';
+import { RefreshCw, ChevronDown, Search, X } from 'lucide-react';
 import { Filters } from '../types/pokemon';
 
 // Add type colors mapping
@@ -83,7 +83,7 @@ interface FilterContentProps {
   getMoveFiltersCount: () => number;
   getOtherFiltersCount: () => number;
   getTotalFiltersCount: () => number;
-  setIsMobileOpen: (open: boolean) => void;
+  handleMobileClose: (open: boolean) => void;
 }
 
 const FilterContent = memo(({ 
@@ -109,10 +109,10 @@ const FilterContent = memo(({
   getMoveFiltersCount,
   getOtherFiltersCount,
   getTotalFiltersCount,
-  setIsMobileOpen
+  handleMobileClose
 }: FilterContentProps) => {
   return (
-    <div className={`bg-white ${isDesktop ? 'p-4 rounded-lg' : 'h-full'} flex flex-col`}>
+    <div className={`bg-white ${isDesktop ? 'p-4 rounded-lg' : 'h-full'} flex flex-col relative`}>
       {/* Header */}
       <div className="flex justify-between items-center">
         <h2 className="text-xl font-bold">Filters</h2>
@@ -124,8 +124,9 @@ const FilterContent = memo(({
             <RefreshCw size={16} /><span>Reset</span>
           </button>
           <button
-            onClick={() => setIsMobileOpen(false)}
-            className="md:hidden text-gray-600 hover:text-gray-800 ml-4"
+            onClick={() => handleMobileClose(false)}
+            className="md:hidden text-gray-600 hover:text-gray-800 ml-4 p-2"
+            aria-label="Close filters"
           >
             <X size={24} />
           </button>
@@ -133,38 +134,38 @@ const FilterContent = memo(({
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 mt-4 overflow-y-auto">
+      <div className="flex-1 mt-4 overflow-y-auto pb-16">
         {/* Filter Tabs */}
-        <div className={`flex gap-2 border-b ${isDesktop ? 'flex-wrap' : ''}`}>
+        <div className="flex border-b overflow-x-auto no-scrollbar w-full">
           <button
-            className={`px-4 py-2 whitespace-nowrap ${
+            className={`px-3 py-2 flex-shrink-0 min-w-0 ${
               activeTab === 'types'
                 ? 'border-b-2 border-blue-500 text-blue-500 font-medium'
                 : 'text-gray-600'
             }`}
             onClick={() => setActiveTab('types')}
           >
-            Types{getTypeFiltersCount() > 0 ? ` (${getTypeFiltersCount()})` : ''}
+            <span className="truncate">Types{getTypeFiltersCount() > 0 ? ` (${getTypeFiltersCount()})` : ''}</span>
           </button>
           <button
-            className={`px-4 py-2 whitespace-nowrap ${
+            className={`px-3 py-2 flex-shrink-0 min-w-0 ${
               activeTab === 'moves'
                 ? 'border-b-2 border-blue-500 text-blue-500 font-medium'
                 : 'text-gray-600'
             }`}
             onClick={() => setActiveTab('moves')}
           >
-            Moves{getMoveFiltersCount() > 0 ? ` (${getMoveFiltersCount()})` : ''}
+            <span className="truncate">Moves{getMoveFiltersCount() > 0 ? ` (${getMoveFiltersCount()})` : ''}</span>
           </button>
           <button
-            className={`px-4 py-2 whitespace-nowrap ${
+            className={`px-3 py-2 flex-shrink-0 min-w-0 ${
               activeTab === 'other'
                 ? 'border-b-2 border-blue-500 text-blue-500 font-medium'
                 : 'text-gray-600'
             }`}
             onClick={() => setActiveTab('other')}
           >
-            Other{getOtherFiltersCount() > 0 ? ` (${getOtherFiltersCount()})` : ''}
+            <span className="truncate">Other{getOtherFiltersCount() > 0 ? ` (${getOtherFiltersCount()})` : ''}</span>
           </button>
         </div>
 
@@ -303,10 +304,10 @@ const FilterContent = memo(({
         </div>
       </div>
 
-      {/* Mobile Reset Button */}
+      {/* Mobile Reset Button - Fixed at bottom */}
       <button
         onClick={resetFilters}
-        className="md:hidden w-full mt-4 py-3 bg-gray-100 text-gray-700 rounded-lg flex items-center justify-center gap-2 hover:bg-gray-200 transition-colors"
+        className="md:hidden w-full mt-4 py-3 bg-gray-100 text-gray-700 rounded-lg flex items-center justify-center gap-2 hover:bg-gray-200 transition-colors sticky bottom-0 shadow-lg"
       >
         <RefreshCw size={16} />
         Reset all filters {getTotalFiltersCount() > 0 && `(${getTotalFiltersCount()})`}
@@ -322,18 +323,13 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
   availableMoves, 
   availableGenerations,
   isDesktop = false,
-  isMobileOpen,
-  setIsMobileOpen,
+  isMobileOpen = false,
+  setIsMobileOpen = () => {},
 }) => {
   const [activeTab, setActiveTab] = useState<'types' | 'moves' | 'other'>('types');
   const [moveSearch, setMoveSearch] = useState('');
   const [debouncedMoveSearch, setDebouncedMoveSearch] = useState('');
   const [showAllMoves, setShowAllMoves] = useState(false);
-  const [internalMobileOpen, setInternalMobileOpen] = useState(false);
-  
-  // Use props if provided, otherwise use internal state
-  const mobileOpen = isMobileOpen !== undefined ? isMobileOpen : internalMobileOpen;
-  const handleSetMobileOpen = setIsMobileOpen || setInternalMobileOpen;
   const searchTimeoutRef = React.useRef<number>();
 
   useEffect(() => {
@@ -427,36 +423,16 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
     setMoveSearch(value);
   }, []);
 
+  // Don't render anything if we're on mobile and the panel is closed
+  if (!isDesktop && !isMobileOpen) {
+    return null;
+  }
+  
   return (
     <>
-      {/* Mobile Filter Button - Only show if we're managing our own state */}
-      {!setIsMobileOpen && (
-        <button
-          onClick={() => handleSetMobileOpen(true)}
-          className="fixed bottom-4 right-4 md:hidden z-40 bg-blue-500 text-white p-3 rounded-full shadow-lg flex items-center gap-2"
-        >
-          <SlidersHorizontal size={20} />
-          {getTotalFiltersCount() > 0 && (
-            <span className="bg-white text-blue-500 px-2 py-0.5 rounded-full text-sm font-bold">
-              {getTotalFiltersCount()}
-            </span>
-          )}
-        </button>
-      )}
-
-      {/* Mobile Overlay - Only show if we're managing our own state */}
-      {!setIsMobileOpen && mobileOpen && (
-        <div
-          className="fixed inset-0 bg-black bg-opacity-50 z-40 md:hidden"
-          onClick={() => handleSetMobileOpen(false)}
-        />
-      )}
-
       {/* Filter Panel */}
       <div
-        className={`fixed md:relative inset-y-0 right-0 w-80 md:w-auto bg-white p-4 shadow-lg transform transition-transform duration-300 ease-in-out z-50 md:translate-x-0 ${
-          mobileOpen ? 'translate-x-0' : 'translate-x-full'
-        } md:space-y-4 md:mb-6 h-full md:h-auto`}
+        className={`${isDesktop ? '' : 'fixed'} md:relative inset-y-0 right-0 w-80 md:w-auto bg-white p-4 shadow-lg z-50 h-full md:h-auto ${isDesktop ? '' : 'transform transition-transform duration-300'}`}
       >
         <FilterContent 
           isDesktop={isDesktop}
@@ -481,7 +457,7 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
           getMoveFiltersCount={getMoveFiltersCount}
           getOtherFiltersCount={getOtherFiltersCount}
           getTotalFiltersCount={getTotalFiltersCount}
-          setIsMobileOpen={handleSetMobileOpen}
+          handleMobileClose={setIsMobileOpen}
         />
       </div>
     </>
