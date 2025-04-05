@@ -92,10 +92,10 @@ const PokedexHome: React.FC = () => {
       </Helmet>
       
       <header className="mb-6">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
-          <h1 className="text-3xl font-bold text-gray-800">Pokédex</h1>
+        <div className="flex flex-col md:flex-row md:items-center md:justify-center gap-4 md:gap-6 mb-6" data-component-name="PokedexHome">
+          <h1 className="text-3xl font-bold text-gray-800 md:w-1/5 md:flex md:items-center md:h-12" data-component-name="PokedexHome">Pokédex</h1>
           
-          <div className="flex-1 max-w-2xl">
+          <div className="flex-1 max-w-2xl md:w-3/5 md:flex md:items-center" data-component-name="PokedexHome">
             <SearchBar 
               value={searchTerm}
               onChange={setSearchTerm}
@@ -106,10 +106,10 @@ const PokedexHome: React.FC = () => {
             />
           </div>
           
-          <div className="flex items-center gap-2">
+          <div className="flex items-center justify-end md:w-1/5 md:h-12">
             <button
               onClick={() => setShowDesktopFilters(!showDesktopFilters)}
-              className={`hidden md:flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors duration-200 ${getTotalFiltersCount() > 0 ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
+              className={`hidden md:flex items-center gap-2 px-5 py-3 rounded-md text-base font-semibold shadow-md transition-colors duration-200 ${getTotalFiltersCount() > 0 ? 'bg-blue-600 text-white hover:bg-blue-700' : 'bg-blue-500 text-white hover:bg-blue-600'}`} data-component-name="PokedexHome"
             >
               <SlidersHorizontal size={16} />
               <span>Filters</span>

@@ -19,7 +19,7 @@ export const SearchBar: React.FC<SearchBarProps> = memo(({
   showFilterButton = true,
 }) => {
   return (
-    <div className="relative flex items-center mb-4 w-full">
+    <div className="relative flex items-center w-full">
       <div className="relative flex-1 w-full">
         <Search className="absolute left-3 top-2.5 text-gray-400" size={20} />
         <input
