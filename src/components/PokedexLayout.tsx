@@ -1,5 +1,6 @@
 import React, { ReactNode } from 'react';
-import { SlidersHorizontal, RefreshCw, Search } from 'lucide-react';
+import { RefreshCw, Search } from 'lucide-react';
+import { FilterPanel } from './FilterPanel';
 
 interface PokedexLayoutProps {
   children: ReactNode;
@@ -7,8 +8,12 @@ interface PokedexLayoutProps {
   setSearchTerm: (term: string) => void;
   isSearching: boolean;
   filterCount: number;
-  onToggleFilters: () => void;
   onResetFilters: () => void;
+  filters?: any;
+  onFilterChange?: (filters: any) => void;
+  availableTypes?: string[];
+  availableMoves?: string[];
+  availableGenerations?: string[];
 }
 
 export const PokedexLayout: React.FC<PokedexLayoutProps> = ({
@@ -17,8 +22,12 @@ export const PokedexLayout: React.FC<PokedexLayoutProps> = ({
   setSearchTerm,
   isSearching,
   filterCount,
-  onToggleFilters,
-  onResetFilters
+  onResetFilters,
+  filters = {},
+  onFilterChange = () => {},
+  availableTypes = [],
+  availableMoves = [],
+  availableGenerations = []
 }) => {
   return (
     <div className="min-h-screen flex flex-col bg-gray-100">
@@ -62,20 +71,6 @@ export const PokedexLayout: React.FC<PokedexLayoutProps> = ({
       {/* Bottom Control Panel */}
       <div className="bg-gray-200 py-3 px-4 border-t border-gray-300">
         <div className="flex justify-between items-center">
-          {/* Filter Button */}
-          <button
-            onClick={onToggleFilters}
-            className="flex items-center justify-center gap-2 bg-blue-500 text-white px-4 py-2 rounded-lg shadow"
-          >
-            <SlidersHorizontal size={18} />
-            <span>Filters</span>
-            {filterCount > 0 && (
-              <span className="bg-white text-blue-500 px-1.5 py-0.5 rounded-full text-xs font-bold">
-                {filterCount}
-              </span>
-            )}
-          </button>
-          
           {/* Reset Button - Only show when filters are active */}
           {filterCount > 0 && (
             <button
@@ -92,6 +87,20 @@ export const PokedexLayout: React.FC<PokedexLayoutProps> = ({
             <div className="w-10 h-10 bg-red-500 rounded-full"></div>
             <div className="w-10 h-10 bg-blue-500 rounded-full"></div>
           </div>
+        </div>
+        
+        {/* Filter Panel Section */}
+        <div className="mt-4">
+          <FilterPanel
+            filters={filters}
+            onFilterChange={onFilterChange}
+            availableTypes={availableTypes}
+            availableMoves={availableMoves}
+            availableGenerations={availableGenerations}
+            isDesktop={true}
+            isMobileOpen={true}
+            setIsMobileOpen={() => {}}
+          />
         </div>
       </div>
     </div>
