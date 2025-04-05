@@ -1,34 +1,59 @@
 # React Pokédex
 
-A modern Pokédex application built with React that features:
-- Infinite scrolling for Pokemon list
-- Advanced filtering system
-- Detailed Pokemon information
-- Smooth loading animations
-- Responsive design
+A modern, feature-rich Pokédex application built with React, TypeScript, and Tailwind CSS. This application provides comprehensive information about Pokémon, including detailed stats, evolutions, moves, and trading cards.
 
 ## Features
 
-- Infinite scrolling through Pokemon database
-- Filter Pokemon by:
-  - Types
-  - Moves
-  - Generation
-  - Weight
-  - Height
+### Core Features
+- Infinite scrolling through Pokémon database
+- Advanced filtering system with multiple criteria
+- Detailed Pokémon information pages
+- Smooth loading animations and transitions
+- Fully responsive design for all devices
+
+### Filtering System
+- Filter Pokémon by:
+  - Types (Fire, Water, Grass, etc.)
+  - Moves (specific attacks and abilities)
+  - Generation (I through IX)
+  - Weight range
+  - Height range
   - Evolution status
   - Mega evolution capability
-- Beautiful card-based UI with Pokemon sprites
-- Detailed Pokemon information view
-- Responsive design for all screen sizes
+
+### Pokémon Details
+- Comprehensive stats visualization
+- Evolution chains with evolution methods
+- Complete move lists with details
+- Type effectiveness chart
+- Abilities and hidden abilities
+- SEO-optimized content with canonical URLs
+
+### Trading Card Game
+- View Pokémon trading cards
+- Interactive card display with animations
+- Card rarity and set information
+- Modal view for larger card images
+
+### UI Enhancements
+- Related Pokémon carousel for easy navigation
+- Type-themed color schemes for Pokémon pages
+- Animated transitions between pages
+- Dark mode support
 
 ## Technologies Used
 
-- React
-- TypeScript
-- Tailwind CSS
-- GraphQL (PokeAPI)
-- Intersection Observer API
+- **Frontend Framework**: React with TypeScript
+- **Styling**: Tailwind CSS for responsive design
+- **Routing**: React Router for navigation
+- **State Management**: React Hooks and Context API
+- **Data Fetching**: GraphQL with PokeAPI
+- **Performance Optimization**:
+  - Intersection Observer API for infinite scrolling
+  - React.memo for component memoization
+  - Debounced search inputs
+- **SEO**: React Helmet Async for metadata management
+- **Animations**: CSS transitions and transforms
 
 ## Getting Started
 
@@ -46,7 +71,27 @@ A modern Pokédex application built with React that features:
 
 ```
 src/
-├── components/     # React components
-├── types/         # TypeScript type definitions
-└── App.tsx        # Main application component
+├── components/           # React components
+│   ├── filters/          # Filter components and logic
+│   ├── PokemonPage.tsx   # Detailed Pokémon view
+│   ├── PokemonCards.tsx  # Trading card display
+│   ├── PokemonSeoContent.tsx # SEO-optimized content
+│   ├── RelatedPokemon.tsx # Related Pokémon carousel
+│   └── ...               # Other UI components
+├── hooks/               # Custom React hooks
+│   ├── usePokemon.ts    # Pokémon data fetching
+│   └── useUI.ts         # UI state management
+├── types/               # TypeScript type definitions
+│   └── pokemon.ts       # Pokémon-related types
+├── utils/               # Utility functions
+└── App.tsx              # Main application component
 ```
+
+## Recent Improvements
+
+- Added SEO optimization with canonical URLs
+- Restored and enhanced Trading Card Game section
+- Improved component styling for consistency
+- Added carousel for Related Pokémon section
+- Enhanced mobile responsiveness
+- Optimized performance for large Pokémon lists
