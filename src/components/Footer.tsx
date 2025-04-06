@@ -24,7 +24,7 @@ export const Footer = () => {
             <h3 className="text-xl font-bold mb-4">Data Sources</h3>
             <ul className="text-gray-300 text-sm space-y-2">
               <li>
-                <a href="https://beta.pokeapi.co/" target="_blank" rel="noopener noreferrer" className="hover:text-blue-300 transition-colors">
+                <a href="https://pokeapi.co/" target="_blank" rel="noopener noreferrer" className="hover:text-blue-300 transition-colors">
                   PokéAPI - The RESTful Pokémon API
                 </a>
               </li>

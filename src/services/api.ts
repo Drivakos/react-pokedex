@@ -1,8 +1,8 @@
 import { Pokemon, RawPokemonData, Filters, PokemonDetails } from '../types/pokemon';
 
 // Use environment variables for API endpoints
-const GRAPHQL_ENDPOINT = import.meta.env.VITE_API_GRAPHQL_URL || 'https://beta.pokeapi.co/graphql/v1beta';
-const REST_ENDPOINT = import.meta.env.VITE_API_REST_URL || import.meta.env.VITE_API_URL || 'https://beta.pokeapi.co/api/v2';
+const GRAPHQL_ENDPOINT = import.meta.env.VITE_API_GRAPHQL_URL || 'https://pokeapi.co/graphql/v1beta';
+const REST_ENDPOINT = import.meta.env.VITE_API_REST_URL || import.meta.env.VITE_API_URL || 'https://pokeapi.co/api/v2';
 
 // Validate API endpoints
 if (!GRAPHQL_ENDPOINT || !REST_ENDPOINT) {
