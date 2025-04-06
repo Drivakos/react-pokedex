@@ -184,7 +184,12 @@ const Login: React.FC = () => {
               </div>
             </div>
 
-            <div className="flex items-center justify-end">
+            <div className="flex items-center justify-between">
+              <div className="text-sm">
+                <Link to="/magic-link" className="font-medium text-red-600 hover:text-red-500">
+                  Use magic link
+                </Link>
+              </div>
               <div className="text-sm">
                 <Link to="/reset-password" className="font-medium text-red-600 hover:text-red-500">
                   Forgot your password?

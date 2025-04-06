@@ -31,7 +31,8 @@ if (fs.existsSync(dotenvPath)) {
 // Required environment variables for production
 const requiredEnvVars = [
   'VITE_SUPABASE_URL',
-  'VITE_SUPABASE_ANON_KEY'
+  'VITE_SUPABASE_ANON_KEY',
+  'VITE_SITE_URL'
 ];
 
 // Check for missing environment variables

@@ -7,6 +7,7 @@ import Profile from './components/auth/Profile';
 import AuthCallback from './components/auth/AuthCallback';
 import ResetPassword from './components/auth/ResetPassword';
 import ResetPasswordConfirm from './components/auth/ResetPasswordConfirm';
+import MagicLinkLogin from './components/auth/MagicLinkLogin';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 import Navigation from './components/Navigation';
 
@@ -20,6 +21,7 @@ function App() {
           <Route path="/pokemon/:id" element={<PokemonPage />} />
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<SignUp />} />
+          <Route path="/magic-link" element={<MagicLinkLogin />} />
           <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="/reset-password/confirm" element={<ResetPasswordConfirm />} />
           <Route path="/auth/callback" element={<AuthCallback />} />

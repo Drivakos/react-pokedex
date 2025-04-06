@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../hooks/useAuth';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { supabase } from '../../lib/supabase';
 
 const ResetPasswordConfirm: React.FC = () => {
   const [password, setPassword] = useState('');
@@ -8,14 +9,32 @@ const ResetPasswordConfirm: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [validResetLink, setValidResetLink] = useState(false);
   const { updatePassword, user } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
 
   useEffect(() => {
-    if (!user) {
-      setError('Password reset link is invalid or has expired. Please request a new one.');
-    }
-  }, [user]);
+    const checkResetToken = async () => {
+      try {
+        const hashParams = new URLSearchParams(location.hash.substring(1));
+        const type = hashParams.get('type');
+        
+        if (type === 'recovery') {
+          setValidResetLink(true);
+        } else if (!user) {
+          setError('Password reset link is invalid or has expired. Please request a new one.');
+        } else {
+          setValidResetLink(true);
+        }
+      } catch (err) {
+        console.error('Error processing reset password link:', err);
+        setError('Error processing reset password link. Please request a new one.');
+      }
+    };
+    
+    checkResetToken();
+  }, [location.hash, user]);
 
   const handlePasswordUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -30,13 +49,11 @@ const ResetPasswordConfirm: React.FC = () => {
       return;
     }
     
-    // Enhanced password security requirements
     if (password.length < 8) {
       setError('Password must be at least 8 characters long');
       return;
     }
     
-    // Check for password complexity
     const hasUpperCase = /[A-Z]/.test(password);
     const hasLowerCase = /[a-z]/.test(password);
     const hasNumbers = /[0-9]/.test(password);
@@ -117,7 +134,7 @@ const ResetPasswordConfirm: React.FC = () => {
           </div>
         )}
         
-        {user ? (
+        {validResetLink ? (
           <form className="mt-8 space-y-6" onSubmit={handlePasswordUpdate}>
             <div className="rounded-md shadow-sm -space-y-px">
               <div>

@@ -7,6 +7,9 @@ import {
   OAuthResponse
 } from '@supabase/supabase-js';
 import { supabase, Profile } from '../lib/supabase';
+import toast from 'react-hot-toast';
+
+const SITE_URL = import.meta.env.VITE_SITE_URL || window.location.origin;
 
 interface AuthContextType {
   session: Session | null;
@@ -16,6 +19,7 @@ interface AuthContextType {
   signUp: (email: string, password: string) => Promise<AuthResponse>;
   signIn: (email: string, password: string) => Promise<AuthResponse>;
   signInWithGoogle: () => Promise<OAuthResponse>;
+  signInWithMagicLink: (email: string) => Promise<{ error: AuthError | null }>;
   signOut: () => Promise<{ error: AuthError | null }>;
   resetPassword: (email: string) => Promise<{ error: AuthError | null }>;
   updatePassword: (password: string) => Promise<{ error: AuthError | null }>;
@@ -34,7 +38,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Get initial session
     supabase.auth.getSession().then(({ data: { session }, error }) => {
       if (error) {
         console.error('Error fetching session:', error);
@@ -53,15 +56,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setLoading(false);
     });
 
-    // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (_, session) => {
+      async (event, session) => {
+        const previousUser = user;
         setSession(session);
         setUser(session?.user ?? null);
         
         if (session?.user) {
           await fetchProfile(session.user.id);
+          
+          // Show toast notifications based on auth events
+          if (event === 'SIGNED_IN' && !previousUser) {
+            toast.success(`Welcome, ${session.user.email?.split('@')[0] || 'Trainer'}!`);
+          } else if (event === 'USER_UPDATED') {
+            toast.success('Your profile has been updated!');
+          }
         } else {
+          if (previousUser && event === 'SIGNED_OUT') {
+            toast.success('You have been signed out');
+          }
           setProfile(null);
         }
         
@@ -100,17 +113,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         email, 
         password,
         options: {
-          emailRedirectTo: `${window.location.origin}/auth/callback`
+          emailRedirectTo: `${SITE_URL}/auth/callback`
         }
       });
       
       if (response.error) {
         console.error('Sign up error:', response.error);
+        toast.error(response.error.message || 'Failed to sign up');
+      } else if (response.data.user?.identities?.length === 0) {
+        toast.error('This email is already registered');
+      } else {
+        toast.success('Check your email to confirm your account!');
       }
       
       return response;
     } catch (err) {
       console.error('Unexpected error during sign up:', err);
+      toast.error('An unexpected error occurred');
       throw err;
     }
   };
@@ -121,22 +140,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       if (response.error) {
         console.error('Sign in error:', response.error);
+        toast.error(response.error.message || 'Failed to sign in');
       }
       
       return response;
     } catch (err) {
       console.error('Unexpected error during sign in:', err);
+      toast.error('An unexpected error occurred');
       throw err;
     }
   };
 
   const signInWithGoogle = async () => {
-    const redirectUrl = `${window.location.origin}/auth/callback`;
-    
+    // Use the default Supabase redirect handling for Google OAuth
+    // This will use the redirect URL configured in Supabase dashboard
+    // which should match what's in Google Cloud Console
     const response = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: redirectUrl,
+        // Let Supabase handle the redirect URL
+        // This will use what's configured in the Supabase dashboard
       },
     });
     
@@ -149,11 +172,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       if (response.error) {
         console.error('Sign out error:', response.error);
+        toast.error(response.error.message || 'Failed to sign out');
       }
       
       return response;
     } catch (err) {
       console.error('Unexpected error during sign out:', err);
+      toast.error('An unexpected error occurred');
       throw err;
     }
   };
@@ -189,7 +214,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const resetPassword = async (email: string) => {
     try {
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/reset-password/confirm`,
+        redirectTo: `${SITE_URL}/reset-password/confirm`,
       });
       
       return { error };
@@ -210,6 +235,28 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const signInWithMagicLink = async (email: string) => {
+    try {
+      const { error } = await supabase.auth.signInWithOtp({
+        email,
+        options: {
+          emailRedirectTo: `${SITE_URL}/auth/callback`,
+        },
+      });
+      
+      if (error) {
+        toast.error(error.message || 'Failed to send magic link');
+      } else {
+        toast.success('Check your email for the magic link');
+      }
+      
+      return { error };
+    } catch (err) {
+      toast.error('An unexpected error occurred');
+      return { error: err as AuthError };
+    }
+  };
+
   const value = {
     session,
     user,
@@ -218,6 +265,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     signUp,
     signIn,
     signInWithGoogle,
+    signInWithMagicLink,
     signOut,
     resetPassword,
     updatePassword,
