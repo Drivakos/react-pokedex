@@ -43,7 +43,7 @@ const Navigation: React.FC = () => {
                   className="text-white hover:bg-red-700 px-3 py-2 rounded-md text-sm font-medium flex items-center"
                 >
                   <User className="h-4 w-4 mr-1" />
-                  Profile
+                  {user.user_metadata?.full_name || user.email?.split('@')[0] || 'Profile'}
                 </Link>
                 <button 
                   onClick={handleSignOut}
@@ -95,10 +95,11 @@ const Navigation: React.FC = () => {
               <>
                 <Link
                   to="/profile"
-                  className="text-white hover:bg-red-700 block px-3 py-2 rounded-md text-base font-medium"
+                  className="text-white hover:bg-red-700 block px-3 py-2 rounded-md text-base font-medium flex items-center"
                   onClick={() => setMobileMenuOpen(false)}
                 >
-                  Profile
+                  <User className="h-4 w-4 mr-2" />
+                  {user.user_metadata?.full_name || user.email?.split('@')[0] || 'Profile'}
                 </Link>
                 <button
                   onClick={handleSignOut}

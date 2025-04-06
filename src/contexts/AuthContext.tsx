@@ -67,13 +67,33 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           
           // Show toast notifications based on auth events
           if (event === 'SIGNED_IN' && !previousUser) {
-            toast.success(`Welcome, ${session.user.email?.split('@')[0] || 'Trainer'}!`);
+            const username = session.user.user_metadata?.full_name || session.user.email?.split('@')[0] || 'Trainer';
+            toast.success(`Welcome, ${username}!`, {
+              duration: 4000,
+              icon: '👋',
+              style: {
+                borderRadius: '10px',
+                background: '#22c55e',
+                color: '#fff',
+              },
+            });
           } else if (event === 'USER_UPDATED') {
-            toast.success('Your profile has been updated!');
+            toast.success('Your profile has been updated!', {
+              duration: 3000,
+              icon: '✅',
+            });
           }
         } else {
           if (previousUser && event === 'SIGNED_OUT') {
-            toast.success('You have been signed out');
+            toast.success('You have been signed out', {
+              duration: 3000,
+              icon: '👋',
+              style: {
+                borderRadius: '10px',
+                background: '#3b82f6',
+                color: '#fff',
+              },
+            });
           }
           setProfile(null);
         }
