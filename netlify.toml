@@ -38,7 +38,7 @@
     X-Content-Type-Options = "nosniff"
     Referrer-Policy = "strict-origin-when-cross-origin"
     Permissions-Policy = "camera=(), microphone=(), geolocation=()"
-    Content-Security-Policy = "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://raw.githubusercontent.com; font-src 'self' data:; connect-src 'self' https://kefcxvcbpadksfizrckw.supabase.co https://beta.pokeapi.co https://api.pokemontcg.io;"
+    Content-Security-Policy = "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://raw.githubusercontent.com; font-src 'self' data:; connect-src 'self' https://kefcxvcbpadksfizrckw.supabase.co https://beta.pokeapi.co https://api.pokemontcg.io https://pokeapi.co;"
     Access-Control-Allow-Origin = "*"
 
 # Make sure assets are never redirected
