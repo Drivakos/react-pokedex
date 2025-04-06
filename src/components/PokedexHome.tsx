@@ -89,6 +89,27 @@ const PokedexHome: React.FC = () => {
       <Helmet>
         <title>Pokédex</title>
         <meta name="description" content="A modern Pokédex web application" />
+        <link rel="canonical" href={window.location.origin} />
+        <meta property="article:published_time" content="2025-04-01T00:00:00Z" />
+        <meta property="article:modified_time" content="2025-04-07T00:00:00Z" />
+        <script type="application/ld+json">
+          {JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "WebPage",
+            "headline": "Pokédex",
+            "description": "A modern Pokédex web application",
+            "datePublished": "2025-04-01T00:00:00Z",
+            "dateModified": "2025-04-07T00:00:00Z",
+            "publisher": {
+              "@type": "Organization",
+              "name": "Pokédex",
+              "logo": {
+                "@type": "ImageObject",
+                "url": `${window.location.origin}/images/pokedex.svg`
+              }
+            }
+          })}
+        </script>
       </Helmet>
       
       <header className="mb-6">
@@ -339,6 +360,16 @@ const PokedexHome: React.FC = () => {
       </button>
       
       {detailModal}
+      <div className="container mx-auto px-4 py-4 mt-8">
+        <div className="text-sm text-gray-500 flex justify-between">
+          <div>
+            <span className="font-medium">Published:</span> April 1, 2025
+          </div>
+          <div>
+            <span className="font-medium">Last Modified:</span> April 7, 2025
+          </div>
+        </div>
+      </div>
       <Footer />
     </div>
   );

@@ -139,19 +139,23 @@ const PokemonPage: React.FC = () => {
   return (
     <div className="min-h-screen bg-gray-50">
       <Helmet>
-        <title>{pokemonDetails.name} | Pokémon #{formattedId} | Complete Pokédex Guide</title>
+        <title>{`${pokemonDetails.name} | Pokémon #${formattedId} | Complete Pokédex Guide`}</title>
         <meta name="description" content={`Complete guide to ${pokemonDetails.name}, a ${pokemonDetails.types.join('/')} type Pokémon. Learn about its biology, habitat, training tips, evolution methods, competitive strategies, and more.`} />
         <meta name="keywords" content={`${pokemonDetails.name}, Pokémon ${formattedId}, ${pokemonDetails.types.join(', ')} type, Pokédex, Pokémon guide, Pokémon evolution, Pokémon stats, ${pokemonDetails.name} moves, ${pokemonDetails.name} abilities`} />
+        <link rel="canonical" href={`${window.location.origin}/pokemon/${pokemonDetails.id}`} />
+        <meta property="article:published_time" content="2025-04-01T00:00:00Z" />
+        <meta property="article:modified_time" content="2025-04-07T00:00:00Z" />
+        <meta property="og:title" content={`${pokemonDetails.name} | Pokémon #${formattedId} | Complete Pokédex Guide`} />
+        <meta property="og:description" content={`Complete guide to ${pokemonDetails.name}, a ${pokemonDetails.types.join('/')} type Pokémon.`} />
         <meta property="og:url" content={`${window.location.origin}/pokemon/${pokemonDetails.id}`} />
         <meta property="og:type" content="article" />
+        <meta property="og:image" content={`https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${pokemonDetails.id}.png`} />
         <meta property="og:site_name" content="Pokédex" />
-        <link rel="canonical" href={`${window.location.origin}/pokemon/${pokemonDetails.id}`} />
-        {/* Twitter Card tags */}
         <meta name="twitter:card" content="summary_large_image" />
         <meta name="twitter:site" content="@pokedex" />
         <meta name="twitter:title" content={`${pokemonDetails.name.charAt(0).toUpperCase() + pokemonDetails.name.slice(1)} (#${formattedId}) | Pokédex`} />
         <meta name="twitter:description" content={`${pokemonDetails.name.charAt(0).toUpperCase() + pokemonDetails.name.slice(1)} is a ${pokemonDetails.types.join('/')} type Pokémon. Learn about its stats, abilities, evolutions, and more.`} />
-        <meta name="twitter:image" content={`${window.location.origin}/images/pokedex.svg`} />
+        <meta name="twitter:image" content={`https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${pokemonDetails.id}.png`} />
         <script type="application/ld+json">
           {(() => {
             // Format the Pokémon name once to reuse it
@@ -172,6 +176,8 @@ const PokemonPage: React.FC = () => {
               "@context": "https://schema.org",
               "@type": "VideoGame",
               "name": "Pokémon",
+              "datePublished": "2025-04-01T00:00:00Z",
+              "dateModified": "2025-04-07T00:00:00Z",
               "character": {
                 "@type": "Character",
                 "name": formattedName,
@@ -856,6 +862,15 @@ const PokemonPage: React.FC = () => {
       </div>
       <div className="container mx-auto px-4 py-8">
         {pokemonDetails && <PokemonSeoContent pokemon={pokemonDetails} />}
+        
+        <div className="text-sm text-gray-500 flex justify-between mt-6 mb-2">
+          <div>
+            <span className="font-medium">Published:</span> April 1, 2025
+          </div>
+          <div>
+            <span className="font-medium">Last Modified:</span> April 7, 2025
+          </div>
+        </div>
         
         <div className="mt-12">
           <h2 className="text-2xl font-bold mb-6">Pokémon Trading Cards</h2>
