@@ -1,7 +1,13 @@
 import { Pokemon, RawPokemonData, Filters, PokemonDetails } from '../types/pokemon';
 
-const GRAPHQL_ENDPOINT = 'https://beta.pokeapi.co/graphql/v1beta';
-const REST_ENDPOINT = 'https://pokeapi.co/api/v2';
+// Use environment variables for API endpoints
+const GRAPHQL_ENDPOINT = import.meta.env.VITE_API_GRAPHQL_URL || 'https://beta.pokeapi.co/graphql/v1beta';
+const REST_ENDPOINT = import.meta.env.VITE_API_REST_URL || import.meta.env.VITE_API_URL || 'https://pokeapi.co/api/v2';
+
+// Validate API endpoints
+if (!GRAPHQL_ENDPOINT || !REST_ENDPOINT) {
+  console.error('Missing required API endpoint environment variables');
+}
 
 /**
  * Builds GraphQL query conditions based on filters and search term

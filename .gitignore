@@ -14,22 +14,26 @@ lerna-debug.log*
 node_modules
 .pnp
 .pnp.js
+coverage
 
 # Production
 dist
 dist-ssr
 build
+*.local
+.netlify
 
 # Environment variables
 .env
 .env.local
 .env.*.local
+.env.production
+.env.development
 
 # Editor directories and files
 .idea
 .vscode
 !.vscode/extensions.json
-.DS_Store
 *.suo
 *.ntvs*
 *.njsproj
@@ -39,6 +43,10 @@ build
 *.swo
 
 # Debug
+.nyc_output
+.coverage
+.eslintcache
+.stylelintcache
 
 # Deployment config
 windsurf_deployment.yaml
@@ -54,3 +62,12 @@ Thumbs.db
 docs/graphql-schema.md
 src/schema/schema.json
 src/schema/schema-summary.json
+
+# Build info and stats
+dist/build-info.json
+dist/stats.html
+
+# AI tracking files
+tech_stack.md
+feature_log.md
+changelog.md

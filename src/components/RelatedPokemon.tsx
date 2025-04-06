@@ -162,8 +162,6 @@ const RelatedPokemon: React.FC<RelatedPokemonProps> = ({
     );
   }
 
-  // This useEffect has been moved to the top of the component to follow React's Rules of Hooks
-
   const scroll = (direction: 'left' | 'right') => {
     if (carouselRef.current) {
       const { scrollLeft, clientWidth } = carouselRef.current;
@@ -190,70 +188,74 @@ const RelatedPokemon: React.FC<RelatedPokemonProps> = ({
 
   return (
     <div className="mt-8">
-      <h2 className="text-2xl font-bold mb-6 text-gray-800 border-b pb-2">{title}</h2>
-      
-      <div className="relative">
-        {showControls && scrollPosition > 0 && (
-          <button 
-            onClick={() => scroll('left')} 
-            className="absolute left-0 top-1/2 -translate-y-1/2 z-10 bg-white/80 hover:bg-white rounded-full p-1 shadow-md"
-            aria-label="Scroll left"
-          >
-            <ChevronLeft size={24} />
-          </button>
-        )}
-        
-        <div 
-          ref={carouselRef}
-          className="flex overflow-x-auto pb-4 hide-scrollbar" 
-          data-component-name="RelatedPokemon"
-          onScroll={handleScroll}
-          style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
-        >
-          {pokemon.map((poke) => (
-            <Link 
-              key={poke.id} 
-              to={`/pokemon/${poke.id}`}
-              className="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow p-4 flex flex-col items-center flex-shrink-0 mx-2 first:ml-0 last:mr-0"
-              style={{ width: 'calc(50% - 16px)', maxWidth: '180px' }}
+      {pokemon.length > 0 ? (
+        <>
+          <h2 className="text-2xl font-bold mb-6 text-gray-800 border-b pb-2">{title}</h2>
+          
+          <div className="relative">
+            {showControls && scrollPosition > 0 && (
+              <button 
+                onClick={() => scroll('left')} 
+                className="absolute left-0 top-1/2 -translate-y-1/2 z-10 bg-white/80 hover:bg-white rounded-full p-1 shadow-md"
+                aria-label="Scroll left"
+              >
+                <ChevronLeft size={24} />
+              </button>
+            )}
+            
+            <div 
+              ref={carouselRef}
+              className="flex overflow-x-auto pb-4 hide-scrollbar" 
+              data-component-name="RelatedPokemon"
+              onScroll={handleScroll}
+              style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
             >
-              <div className="w-24 h-24 flex items-center justify-center">
-                <img 
-                  src={poke.sprites.front_default} 
-                  alt={poke.name} 
-                  className="w-full h-full object-contain"
-                />
-              </div>
-              <div className="mt-2 text-center">
-                <h3 className="font-semibold text-gray-800 capitalize">{poke.name}</h3>
-                <div className="flex justify-center gap-1 mt-1">
-                  {poke.types.map((type) => (
-                    <span 
-                      key={type} 
-                      className={`text-xs px-2 py-1 rounded-full capitalize text-white`}
-                      style={{
-                        backgroundColor: TYPE_COLORS[type] || '#A8A878'
-                      }}
-                    >
-                      {type}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            </Link>
-          ))}
-        </div>
-        
-        {showControls && carouselRef.current && scrollPosition < (carouselRef.current.scrollWidth - carouselRef.current.clientWidth - 10) && (
-          <button 
-            onClick={() => scroll('right')} 
-            className="absolute right-0 top-1/2 -translate-y-1/2 z-10 bg-white/80 hover:bg-white rounded-full p-1 shadow-md"
-            aria-label="Scroll right"
-          >
-            <ChevronRight size={24} />
-          </button>
-        )}
-      </div>
+              {pokemon.map((poke) => (
+                <Link 
+                  key={poke.id} 
+                  to={`/pokemon/${poke.id}`}
+                  className="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow p-4 flex flex-col items-center flex-shrink-0 mx-2 first:ml-0 last:mr-0"
+                  style={{ width: 'calc(50% - 16px)', maxWidth: '180px' }}
+                >
+                  <div className="w-24 h-24 flex items-center justify-center">
+                    <img 
+                      src={poke.sprites.front_default} 
+                      alt={poke.name} 
+                      className="w-full h-full object-contain"
+                    />
+                  </div>
+                  <div className="mt-2 text-center">
+                    <h3 className="font-semibold text-gray-800 capitalize">{poke.name}</h3>
+                    <div className="flex justify-center gap-1 mt-1">
+                      {poke.types.map((type) => (
+                        <span 
+                          key={type} 
+                          className={`text-xs px-2 py-1 rounded-full capitalize text-white`}
+                          style={{
+                            backgroundColor: TYPE_COLORS[type] || '#A8A878'
+                          }}
+                        >
+                          {type}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                </Link>
+              ))}
+            </div>
+            
+            {showControls && carouselRef.current && scrollPosition < (carouselRef.current.scrollWidth - carouselRef.current.clientWidth - 10) && (
+              <button 
+                onClick={() => scroll('right')} 
+                className="absolute right-0 top-1/2 -translate-y-1/2 z-10 bg-white/80 hover:bg-white rounded-full p-1 shadow-md"
+                aria-label="Scroll right"
+              >
+                <ChevronRight size={24} />
+              </button>
+            )}
+          </div>
+        </>
+      ) : null}
     </div>
   );
 };

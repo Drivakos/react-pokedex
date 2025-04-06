@@ -1,15 +1,22 @@
 {
-  "name": "vite-react-typescript-starter",
+  "name": "react-pokedex",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "tsc && vite build",
+    "build:prod": "node scripts/build-prod.js",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "analyze": "vite build --mode analyze",
+    "test": "echo \"No tests specified\" && exit 0",
+    "prepare": "npm run lint",
+    "postbuild": "echo \"Build completed successfully\"",
+    "deploy": "node scripts/deploy.js"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.49.4",
     "@types/react-helmet": "^6.1.11",
     "lucide-react": "^0.344.0",
     "react": "^18.3.1",
@@ -29,6 +36,7 @@
     "eslint-plugin-react-refresh": "^0.4.11",
     "globals": "^15.9.0",
     "postcss": "^8.4.35",
+    "rollup-plugin-visualizer": "^5.14.0",
     "tailwindcss": "^3.4.1",
     "typescript": "^5.5.3",
     "typescript-eslint": "^8.3.0",

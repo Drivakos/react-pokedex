@@ -9,6 +9,7 @@ import PokemonCards from './PokemonCards';
 import Footer from './Footer';
 import PokemonSeoContent from './PokemonSeoContent';
 import RelatedPokemon from './RelatedPokemon';
+import FavoritePokemon from './FavoritePokemon';
 
 // No need for hardcoded mapping anymore as we get species_id from the API
 
@@ -207,12 +208,16 @@ const PokemonPage: React.FC = () => {
       {/* Header */}
       <header className="bg-red-600 text-white py-4">
         <div className="container mx-auto px-4">
-          <div className="flex items-center">
-            <Link to="/" className="flex items-center text-white hover:text-gray-200 transition-colors">
-              <ArrowLeft size={20} className="mr-2" />
-              <span className="font-medium">Back to Pokédex</span>
-            </Link>
-          </div>
+            <div className="flex items-center space-x-4 mb-4">
+              <Link to="/" className="p-2 rounded-full bg-white shadow-sm hover:bg-gray-100 transition-colors">
+                <ArrowLeft className="h-6 w-6 text-gray-700" />
+              </Link>
+              <h1 className="text-3xl font-bold text-white capitalize">{pokemonDetails.name}</h1>
+              <span className="text-xl font-semibold text-white opacity-80">#{formattedId}</span>
+              <div className="ml-auto">
+                <FavoritePokemon pokemonId={pokemonDetails.id} />
+              </div>
+            </div>
         </div>
       </header>
 

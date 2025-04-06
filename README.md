@@ -5,6 +5,9 @@ A modern, feature-rich Pokédex application built with React, TypeScript, and Ta
 ## Features
 
 ### Core Features
+- User authentication with email/password and Google login
+- Personal favorites collection for registered users
+- User profiles with customizable avatars
 - Infinite scrolling through Pokémon database
 - Advanced filtering system with multiple criteria
 - Detailed Pokémon information pages
@@ -48,6 +51,8 @@ A modern, feature-rich Pokédex application built with React, TypeScript, and Ta
 - **Routing**: React Router for navigation
 - **State Management**: React Hooks and Context API
 - **Data Fetching**: GraphQL with PokeAPI
+- **Authentication**: Supabase Auth with Google OAuth integration
+- **Database**: Supabase PostgreSQL for user data and favorites
 - **Performance Optimization**:
   - Intersection Observer API for infinite scrolling
   - React.memo for component memoization
@@ -72,15 +77,26 @@ A modern, feature-rich Pokédex application built with React, TypeScript, and Ta
 ```
 src/
 ├── components/           # React components
+│   ├── auth/             # Authentication components
+│   │   ├── Login.tsx     # Login component
+│   │   ├── SignUp.tsx    # Sign-up component
+│   │   ├── Profile.tsx   # User profile component
+│   │   └── ProtectedRoute.tsx # Route protection component
 │   ├── filters/          # Filter components and logic
 │   ├── PokemonPage.tsx   # Detailed Pokémon view
 │   ├── PokemonCards.tsx  # Trading card display
 │   ├── PokemonSeoContent.tsx # SEO-optimized content
 │   ├── RelatedPokemon.tsx # Related Pokémon carousel
+│   ├── FavoritePokemon.tsx # Favorite toggle component
+│   ├── Navigation.tsx    # Navigation bar with auth links
 │   └── ...               # Other UI components
+├── contexts/            # React context providers
+│   └── AuthContext.tsx  # Authentication context
 ├── hooks/               # Custom React hooks
 │   ├── usePokemon.ts    # Pokémon data fetching
 │   └── useUI.ts         # UI state management
+├── lib/                 # Library integrations
+│   └── supabase.ts      # Supabase client configuration
 ├── types/               # TypeScript type definitions
 │   └── pokemon.ts       # Pokémon-related types
 ├── utils/               # Utility functions
@@ -89,6 +105,11 @@ src/
 
 ## Recent Improvements
 
+- Implemented user authentication with Supabase (email/password and Google login)
+- Added user profiles with customizable usernames and avatars
+- Created favorites system for registered users to save preferred Pokémon
+- Added protected routes for authenticated content
+- Integrated navigation with authentication state
 - Added SEO optimization with canonical URLs
 - Restored and enhanced Trading Card Game section
 - Improved component styling for consistency

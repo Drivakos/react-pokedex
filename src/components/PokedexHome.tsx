@@ -7,10 +7,10 @@ import { SearchBar } from './SearchBar';
 import { usePokemon } from '../hooks/usePokemon';
 import { useUI } from '../hooks/useUI';
 import Footer from './Footer';
-import FilterTabs from './filters/FilterTabs';
-import TypesFilter from './filters/TypesFilter';
-import MovesFilter from './filters/MovesFilter';
-import OtherFilters from './filters/OtherFilters';
+import { FilterTabs } from './filters/FilterTabs';
+import { TypesFilter } from './filters/TypesFilter';
+import { MovesFilter } from './filters/MovesFilter';
+import { OtherFilters } from './filters/OtherFilters';
 
 const PokedexHome: React.FC = () => {
   // Use our custom hooks

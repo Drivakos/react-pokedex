@@ -1,6 +1,7 @@
 [build]
-  command = "npm run build"
+  command = "npm run build:prod"
   publish = "dist"
+  ignore = "git diff --quiet $CACHED_COMMIT_REF $COMMIT_REF ./src/"
 
 [dev]
   command = "npm run dev"
@@ -37,7 +38,7 @@
     X-Content-Type-Options = "nosniff"
     Referrer-Policy = "strict-origin-when-cross-origin"
     Permissions-Policy = "camera=(), microphone=(), geolocation=()"
-    Content-Security-Policy = "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://raw.githubusercontent.com https://images.pokemontcg.io; font-src 'self'; connect-src 'self' https://pokeapi.co https://beta.pokeapi.co https://api.pokemontcg.io;"
+    Content-Security-Policy = "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://raw.githubusercontent.com; font-src 'self' data:; connect-src 'self' https://kefcxvcbpadksfizrckw.supabase.co https://beta.pokeapi.co;"
     Access-Control-Allow-Origin = "*"
 
 # Make sure assets are never redirected
@@ -47,9 +48,30 @@
   status = 200
   force = false
 
+# Redirect www to non-www version
+[[redirects]]
+  from = "https://www.react-pokedex.netlify.app/*"
+  to = "https://react-pokedex.netlify.app/:splat"
+  status = 301
+  force = true
+
 # Handle SPA routing for everything else
 [[redirects]]
   from = "/*"
   to = "/index.html"
   status = 200
   force = true
+
+# Enable brotli compression for better performance
+[build.processing]
+  skip_processing = false
+[build.processing.css]
+  bundle = true
+  minify = true
+[build.processing.js]
+  bundle = true
+  minify = true
+[build.processing.html]
+  pretty_urls = true
+[build.processing.images]
+  compress = true
