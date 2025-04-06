@@ -292,7 +292,7 @@ export const fetchPokemonDetails = async (id: number): Promise<PokemonDetails> =
     
     // Fetch abilities with descriptions
     const abilitiesPromises = pokemonData.abilities.map(async (ability: any) => {
-      const abilityResponse = await fetch(`https://pokeapi.co/api/v2/ability/${ability.ability.name}`);
+      const abilityResponse = await fetch(`${REST_ENDPOINT}/ability/${ability.ability.name}`);
       const abilityData = await abilityResponse.json();
       
       // Find English description
