@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useAuth } from '../../contexts/AuthContext';
+import { useAuth } from '../../hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
 
 const ResetPasswordConfirm: React.FC = () => {
@@ -40,7 +40,7 @@ const ResetPasswordConfirm: React.FC = () => {
     const hasUpperCase = /[A-Z]/.test(password);
     const hasLowerCase = /[a-z]/.test(password);
     const hasNumbers = /[0-9]/.test(password);
-    const hasSpecialChar = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password);
+    const hasSpecialChar = /[!@#$%^&*()_+\-=\[\]{};':"\|,.<>/?]/.test(password);
     
     if (!(hasUpperCase && hasLowerCase && hasNumbers)) {
       setError('Password must contain at least one uppercase letter, one lowercase letter, and one number');

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { TYPE_COLORS } from '../types/pokemon';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
@@ -32,25 +32,7 @@ const RelatedPokemon: React.FC<RelatedPokemonProps> = ({
   const [showControls, setShowControls] = useState(false);
   const carouselRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    fetchRelatedPokemon();
-  }, [pokemonId, pokemonType]);
-  
-  useEffect(() => {
-    // Check if we need to show carousel controls
-    const checkOverflow = () => {
-      if (carouselRef.current) {
-        const { scrollWidth, clientWidth } = carouselRef.current;
-        setShowControls(scrollWidth > clientWidth);
-      }
-    };
-
-    checkOverflow();
-    window.addEventListener('resize', checkOverflow);
-    return () => window.removeEventListener('resize', checkOverflow);
-  }, [pokemon]);
-
-  const fetchRelatedPokemon = async () => {
+  const fetchRelatedPokemon = useCallback(async () => {
     setLoading(true);
     setError(null);
     
@@ -107,21 +89,51 @@ const RelatedPokemon: React.FC<RelatedPokemonProps> = ({
           .map(([id]) => Number(id))
           .slice(0, limit);
       } else {
-        // Just get some random Pokemon
-        const baseId = pokemonId ? Math.max(1, pokemonId % 100) : 1;
-        for (let i = 0; i < limit; i++) {
-          const relatedId = ((baseId + i * 7) % 150) + 1; // Use prime number for distribution
-          if (relatedId !== pokemonId && pokemonData[relatedId]) {
-            relatedIds.push(relatedId);
+        // Get Pokemon with IDs close to the current one
+        const allIds = Object.keys(pokemonData).map(Number);
+        allIds.sort((a, b) => a - b);
+        
+        if (pokemonId) {
+          // Find the index of the current Pokemon
+          const currentIndex = allIds.indexOf(pokemonId);
+          
+          if (currentIndex !== -1) {
+            // Get Pokemon before and after the current one
+            const startIdx = Math.max(0, currentIndex - Math.floor(limit / 2));
+            const endIdx = Math.min(allIds.length, startIdx + limit);
+            
+            relatedIds = allIds.slice(startIdx, endIdx);
+            // Remove the current Pokemon from the list
+            relatedIds = relatedIds.filter(id => id !== pokemonId);
+            
+            // If we don't have enough Pokemon, add more from the beginning or end
+            if (relatedIds.length < limit) {
+              if (startIdx === 0) {
+                // Add more from the end
+                const additionalIds = allIds.slice(endIdx, endIdx + (limit - relatedIds.length));
+                relatedIds = [...relatedIds, ...additionalIds];
+              } else {
+                // Add more from the beginning
+                const additionalIds = allIds.slice(Math.max(0, startIdx - (limit - relatedIds.length)), startIdx);
+                relatedIds = [...additionalIds, ...relatedIds];
+              }
+            }
+          } else {
+            // Fallback: just get the first few Pokemon
+            relatedIds = allIds.slice(0, limit);
           }
+        } else {
+          // No pokemonId provided, just get random Pokemon
+          const shuffled = [...allIds].sort(() => 0.5 - Math.random());
+          relatedIds = shuffled.slice(0, limit);
         }
       }
       
-      // Create Pokemon objects with correct data
+      // Create Pokemon objects
       for (const id of relatedIds) {
         if (pokemonData[id]) {
           mockPokemon.push({
-            id: id,
+            id,
             name: pokemonData[id].name,
             types: pokemonData[id].types,
             sprites: {
@@ -132,13 +144,31 @@ const RelatedPokemon: React.FC<RelatedPokemonProps> = ({
       }
       
       setPokemon(mockPokemon);
-    } catch (err) {
-      console.error('Error fetching related Pokémon:', err);
-      setError('Failed to load related Pokémon data.');
+    } catch (error) {
+      console.error('Error fetching related Pokemon:', error);
+      setError('Failed to load related Pokémon');
     } finally {
       setLoading(false);
     }
-  };
+  }, [pokemonId, pokemonType, limit]);
+
+  useEffect(() => {
+    fetchRelatedPokemon();
+  }, [fetchRelatedPokemon]);
+  
+  useEffect(() => {
+    // Check if we need to show carousel controls
+    const checkOverflow = () => {
+      if (carouselRef.current) {
+        const { scrollWidth, clientWidth } = carouselRef.current;
+        setShowControls(scrollWidth > clientWidth);
+      }
+    };
+
+    checkOverflow();
+    window.addEventListener('resize', checkOverflow);
+    return () => window.removeEventListener('resize', checkOverflow);
+  }, [pokemon]);
 
   if (loading) {
     return (

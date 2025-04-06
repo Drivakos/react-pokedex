@@ -2,7 +2,7 @@ import { Pokemon, RawPokemonData, Filters, PokemonDetails } from '../types/pokem
 
 // Use environment variables for API endpoints
 const GRAPHQL_ENDPOINT = import.meta.env.VITE_API_GRAPHQL_URL || 'https://beta.pokeapi.co/graphql/v1beta';
-const REST_ENDPOINT = import.meta.env.VITE_API_REST_URL || import.meta.env.VITE_API_URL || 'https://pokeapi.co/api/v2';
+const REST_ENDPOINT = import.meta.env.VITE_API_REST_URL || import.meta.env.VITE_API_URL || 'https://beta.pokeapi.co/api/v2';
 
 // Validate API endpoints
 if (!GRAPHQL_ENDPOINT || !REST_ENDPOINT) {
@@ -312,13 +312,13 @@ export const fetchPokemonDetails = async (id: number): Promise<PokemonDetails> =
     // Process evolution chain with species IDs
     const evolutions = [];
     if (evolutionData) {
-      let evoData = evolutionData.chain;
+      const evoData = evolutionData.chain;
       
       // Fetch species data for the base form
       const baseSpeciesResponse = await fetch(`${REST_ENDPOINT}/pokemon-species/${evoData.species.name}`);
       const baseSpeciesData = await baseSpeciesResponse.json();
       
-      let evoDetails = {
+      const evoDetails = {
         species_name: evoData.species.name,
         species_id: baseSpeciesData.id,
         min_level: 1,

@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { useAuth } from '../../contexts/AuthContext';
+import React, { useState, useCallback } from 'react';
+import { useAuth } from '../../hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 
@@ -13,17 +13,7 @@ const Profile: React.FC = () => {
   const [favorites, setFavorites] = useState<number[]>([]);
   const navigate = useNavigate();
 
-  React.useEffect(() => {
-    if (profile?.username) {
-      setUsername(profile.username);
-    }
-    
-    if (user) {
-      fetchFavorites();
-    }
-  }, [profile, user]);
-
-  const fetchFavorites = async () => {
+  const fetchFavorites = useCallback(async () => {
     try {
       const { data, error } = await supabase
         .from('favorites')
@@ -40,7 +30,19 @@ const Profile: React.FC = () => {
     } catch (error) {
       console.error('Error fetching favorites:', error);
     }
-  };
+  }, [user]);
+
+  React.useEffect(() => {
+    if (profile?.username) {
+      setUsername(profile.username);
+    }
+    
+    if (user) {
+      fetchFavorites();
+    }
+  }, [profile, user, fetchFavorites]);
+
+
 
   const handleUpdateProfile = async (e: React.FormEvent) => {
     e.preventDefault();

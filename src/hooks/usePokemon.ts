@@ -19,7 +19,7 @@ export const usePokemon = () => {
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
   const [isSearching, setIsSearching] = useState(false);
   const loadingRef = useRef(false);
-  const searchTimeoutRef = useRef<number>();
+  const searchTimeoutRef = useRef<NodeJS.Timeout>();
   
   // State for selected Pokemon
   const [selectedPokemon, setSelectedPokemon] = useState<Pokemon | null>(null);
@@ -95,7 +95,7 @@ export const usePokemon = () => {
     };
 
     fetchInitialPokemon();
-  }, [debouncedSearchTerm, filters]);
+  }, [debouncedSearchTerm, filters, initialLoad]);
 
   // Load more Pokemon when scrolling
   const loadMorePokemon = useCallback(async () => {

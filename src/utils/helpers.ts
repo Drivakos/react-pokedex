@@ -30,7 +30,7 @@ export const getOfficialArtwork = (sprites: any): string => {
     return parsedSprites?.other?.['official-artwork']?.front_default || 
            parsedSprites?.front_default ||
            'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/0.png';
-  } catch (e) {
+  } catch {
     return 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/0.png';
   }
 };

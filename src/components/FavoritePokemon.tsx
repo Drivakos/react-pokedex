@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { useAuth } from '../contexts/AuthContext';
+import React, { useState, useEffect, useCallback } from 'react';
+import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../lib/supabase';
 import { Heart } from 'lucide-react';
 
@@ -12,13 +12,7 @@ const FavoritePokemon: React.FC<FavoritePokemonProps> = ({ pokemonId }) => {
   const [isFavorite, setIsFavorite] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    if (user) {
-      checkIfFavorite();
-    }
-  }, [user, pokemonId]);
-
-  const checkIfFavorite = async () => {
+  const checkIfFavorite = useCallback(async () => {
     try {
       const { data, error } = await supabase
         .from('favorites')
@@ -36,7 +30,13 @@ const FavoritePokemon: React.FC<FavoritePokemonProps> = ({ pokemonId }) => {
     } catch (error) {
       console.error('Error checking favorite status:', error);
     }
-  };
+  }, [user, pokemonId]);
+
+  useEffect(() => {
+    if (user) {
+      checkIfFavorite();
+    }
+  }, [user, checkIfFavorite]);
 
   const toggleFavorite = async () => {
     if (!user) {
