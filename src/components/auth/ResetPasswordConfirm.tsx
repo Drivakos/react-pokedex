@@ -74,18 +74,24 @@ const ResetPasswordConfirm: React.FC = () => {
       setMessage(null);
       setLoading(true);
       
+      // Call the updatePassword function from AuthContext
       const { error } = await updatePassword(password);
       
       if (error) {
+        console.error('Password update error:', error);
         throw error;
       }
       
+      // Password updated successfully
       setMessage('Password has been successfully updated!');
+      console.log('Password updated successfully, redirecting to login');
       
+      // Force a redirect to login page after a short delay
       setTimeout(() => {
-        navigate('/login');
-      }, 3000);
+        navigate('/login', { replace: true });
+      }, 2000);
     } catch (error: any) {
+      console.error('Password update failed:', error);
       setError(error.message || 'Failed to update password');
     } finally {
       setLoading(false);

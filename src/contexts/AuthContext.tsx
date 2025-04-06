@@ -172,18 +172,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const signInWithGoogle = async () => {
-    // Use the default Supabase redirect handling for Google OAuth
-    // This will use the redirect URL configured in Supabase dashboard
-    // which should match what's in Google Cloud Console
-    const response = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: {
-        // Let Supabase handle the redirect URL
-        // This will use what's configured in the Supabase dashboard
-      },
-    });
-    
-    return response;
+    try {
+      const response = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${SITE_URL}/auth/callback`,
+        },
+      });
+      
+      if (response.error) {
+        console.error('Google sign in error:', response.error);
+        toast.error(response.error.message || 'Failed to sign in with Google');
+      }
+      
+      return response;
+    } catch (err) {
+      console.error('Unexpected error during Google sign in:', err);
+      toast.error('An unexpected error occurred');
+      throw err;
+    }
   };
 
   const signOut = async () => {

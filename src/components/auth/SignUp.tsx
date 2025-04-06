@@ -184,7 +184,7 @@ const SignUp: React.FC = () => {
                 autoComplete="new-password"
                 required
                 className="appearance-none relative block w-full px-3 py-2 border-2 border-gray-300 rounded-lg placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-red-500 focus:border-red-500 focus:z-10 sm:text-sm"
-                placeholder="Your secret code"
+                placeholder="Your password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 disabled={loading}
@@ -199,7 +199,7 @@ const SignUp: React.FC = () => {
                 autoComplete="new-password"
                 required
                 className="appearance-none relative block w-full px-3 py-2 border-2 border-gray-300 rounded-lg placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-red-500 focus:border-red-500 focus:z-10 sm:text-sm"
-                placeholder="Confirm your secret code"
+                placeholder="Confirm your password"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 disabled={loading}
