@@ -9,8 +9,6 @@ import {
 import { supabase, Profile } from '../lib/supabase';
 import toast from 'react-hot-toast';
 
-const SITE_URL = import.meta.env.VITE_SITE_URL || window.location.origin;
-
 interface AuthContextType {
   session: Session | null;
   user: User | null;
@@ -38,23 +36,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session }, error }) => {
-      if (error) {
-        console.error('Error fetching session:', error);
+    const initAuth = async () => {
+      try {
+        const { data, error } = await supabase.auth.getSession();
+        if (error) throw error;
+        
+        setSession(data.session);
+        setUser(data.session?.user ?? null);
+        
+        if (data.session?.user) {
+          await fetchProfile(data.session.user.id);
+        }
+      } catch (err) {
+        console.error('Auth initialization error:', err);
+      } finally {
+        setLoading(false);
       }
-      
-      setSession(session);
-      setUser(session?.user ?? null);
-      
-      if (session?.user) {
-        fetchProfile(session.user.id);
-      }
-      
-      setLoading(false);
-    }).catch(err => {
-      console.error('Unexpected error during session fetch:', err);
-      setLoading(false);
-    });
+    };
+    
+    initAuth();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
@@ -65,46 +65,49 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (session?.user) {
           await fetchProfile(session.user.id);
           
-          // Show toast notifications based on auth events
           if (event === 'SIGNED_IN' && !previousUser) {
-            const username = session.user.user_metadata?.full_name || session.user.email?.split('@')[0] || 'Trainer';
-            toast.success(`Welcome, ${username}!`, {
-              duration: 4000,
-              icon: '👋',
-              style: {
-                borderRadius: '10px',
-                background: '#22c55e',
-                color: '#fff',
-              },
-            });
-          } else if (event === 'USER_UPDATED') {
-            toast.success('Your profile has been updated!', {
-              duration: 3000,
-              icon: '✅',
-            });
+            const username = session.user.user_metadata?.full_name || 
+                           session.user.email?.split('@')[0] || 
+                           'Trainer';
+            toast.success(`Welcome, ${username}!`);
           }
-        } else {
-          if (previousUser && event === 'SIGNED_OUT') {
-            toast.success('You have been signed out', {
-              duration: 3000,
-              icon: '👋',
-              style: {
-                borderRadius: '10px',
-                background: '#3b82f6',
-                color: '#fff',
-              },
-            });
-          }
+        } else if (previousUser && event === 'SIGNED_OUT') {
+          toast.success('You have been signed out');
           setProfile(null);
         }
         
         setLoading(false);
       }
     );
-    return () => {
-      subscription.unsubscribe();
-    };
-  }, []);
+    
+    return () => subscription.unsubscribe();
+  }, [user]);
+
+  const createProfile = async (userId: string) => {
+    try {
+      const { data: userData } = await supabase.auth.getUser();
+      if (!userData.user) return;
+      
+      const newProfile = {
+        id: userId,
+        username: userData.user.email?.split('@')[0] || `user_${Date.now().toString().slice(-6)}`,
+        avatar_url: userData.user.user_metadata?.avatar_url || null,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      };
+      
+      const { data, error } = await supabase
+        .from('profiles')
+        .insert([newProfile])
+        .select()
+        .single();
+        
+      if (error) throw error;
+      if (data) setProfile(data as Profile);
+    } catch (err) {
+      console.error('Profile creation error:', err);
+    }
+  };
 
   const fetchProfile = async (userId: string) => {
     try {
@@ -115,30 +118,31 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         .single();
 
       if (error) {
-        console.error('Error fetching profile:', error);
+        if (error.code === 'PGRST116') {
+          await createProfile(userId);
+        }
         return;
       }
       
-      if (data) {
-        setProfile(data as Profile);
-      }
+      if (data) setProfile(data as Profile);
     } catch (err) {
-      console.error('Unexpected error fetching profile:', err);
+      console.error('Profile fetch error:', err);
     }
   };
 
   const signUp = async (email: string, password: string) => {
     try {
+      const redirectUrl = `${window.location.origin}/auth/callback`;
+      
       const response = await supabase.auth.signUp({ 
         email, 
         password,
         options: {
-          emailRedirectTo: `${SITE_URL}/auth/callback`
+          emailRedirectTo: redirectUrl
         }
       });
       
       if (response.error) {
-        console.error('Sign up error:', response.error);
         toast.error(response.error.message || 'Failed to sign up');
       } else if (response.data.user?.identities?.length === 0) {
         toast.error('This email is already registered');
@@ -148,44 +152,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       return response;
     } catch (err) {
-      console.error('Unexpected error during sign up:', err);
       toast.error('An unexpected error occurred');
       throw err;
     }
   };
 
   const signIn = async (email: string, password: string) => {
-    try {
-      // Try to refresh session first to clear any stale session state
-      try {
-        await supabase.auth.refreshSession();
-      } catch (refreshErr) {
-        console.log('Session refresh before login:', refreshErr);
-      }
-      
+    try {      
       const response = await supabase.auth.signInWithPassword({ email, password });
       
       if (response.error) {
-        console.error('Sign in error:', response.error);
-        
         if (response.error.message.includes('Invalid login credentials')) {
-          toast.error('Invalid email or password', {
-            duration: 5000,
-            style: {
-              borderRadius: '10px',
-              background: '#ef4444',
-              color: '#fff',
-            },
-          });
+          toast.error('Invalid email or password');
         } else if (response.error.message.includes('Email not confirmed')) {
-          toast.error('Please confirm your email before logging in', {
-            duration: 5000,
-            style: {
-              borderRadius: '10px',
-              background: '#f97316',
-              color: '#fff',
-            },
-          });
+          toast.error('Please confirm your email before logging in');
         } else {
           toast.error(response.error.message || 'Failed to sign in');
         }
@@ -193,7 +173,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       return response;
     } catch (err) {
-      console.error('Unexpected error during sign in:', err);
       toast.error('An unexpected error occurred');
       throw err;
     }
@@ -201,28 +180,28 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const signInWithGoogle = async () => {
     try {
-      // Use the exact production URL for Google OAuth redirects
-      // This must match what's configured in your Supabase dashboard and Google OAuth settings
+      const redirectUrl = `${window.location.origin}/auth/callback`;
+      
       const response = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: import.meta.env.VITE_SITE_URL ? `${import.meta.env.VITE_SITE_URL}/auth/callback` : `${window.location.origin}/auth/callback`,
-          scopes: 'https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/userinfo.profile',
+          redirectTo: redirectUrl,
+          scopes: 'https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/userinfo.profile openid',
           queryParams: {
             access_type: 'offline',
-            prompt: 'consent'
+            prompt: 'consent',
           }
         },
       });
       
       if (response.error) {
-        console.error('Google sign in error:', response.error);
         toast.error(response.error.message || 'Failed to sign in with Google');
+      } else if (response.data.url) {
+        window.location.href = response.data.url;
       }
       
       return response;
     } catch (err) {
-      console.error('Unexpected error during Google sign in:', err);
       toast.error('An unexpected error occurred');
       throw err;
     }
@@ -233,13 +212,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const response = await supabase.auth.signOut();
       
       if (response.error) {
-        console.error('Sign out error:', response.error);
         toast.error(response.error.message || 'Failed to sign out');
       }
       
       return response;
     } catch (err) {
-      console.error('Unexpected error during sign out:', err);
       toast.error('An unexpected error occurred');
       throw err;
     }
@@ -258,16 +235,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         .select()
         .single();
 
-      if (error) {
-        return { data: null, error };
-      }
-
+      if (error) return { data: null, error };
       if (data) {
         setProfile(data as Profile);
         return { data: data as Profile, error: null };
-      } else {
-        return { data: null, error: new Error('No data returned from profile update') };
       }
+      return { data: null, error: new Error('No data returned from profile update') };
     } catch (err) {
       return { data: null, error: err as Error };
     }
@@ -275,31 +248,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const resetPassword = async (email: string) => {
     try {
-      const redirectUrl = import.meta.env.VITE_SITE_URL ? 
-        `${import.meta.env.VITE_SITE_URL}/reset-password/confirm` : 
-        `${window.location.origin}/reset-password/confirm`;
+      const redirectUrl = `${window.location.origin}/reset-password/confirm`;
       
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
         redirectTo: redirectUrl,
       });
       
       if (error) {
-        console.error('Reset password error:', error);
         toast.error(error.message || 'Failed to send reset password email');
       } else {
-        toast.success('Check your email for password reset instructions', {
-          duration: 5000,
-          style: {
-            borderRadius: '10px',
-            background: '#22c55e',
-            color: '#fff',
-          },
-        });
+        toast.success('Check your email for password reset instructions');
       }
       
       return { error };
     } catch (err) {
-      console.error('Unexpected error during password reset:', err);
       toast.error('An unexpected error occurred');
       return { error: err as AuthError };
     }
@@ -307,10 +269,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const updatePassword = async (password: string) => {
     try {
-      const { error } = await supabase.auth.updateUser({
-        password,
-      });
-      
+      const { error } = await supabase.auth.updateUser({ password });
+      if (!error) toast.success('Password updated successfully');
       return { error };
     } catch (err) {
       return { error: err as AuthError };
@@ -319,9 +279,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const signInWithMagicLink = async (email: string) => {
     try {
-      const redirectUrl = import.meta.env.VITE_SITE_URL ? 
-        `${import.meta.env.VITE_SITE_URL}/auth/callback` : 
-        `${window.location.origin}/auth/callback`;
+      const redirectUrl = `${window.location.origin}/auth/callback`;
       
       const { error } = await supabase.auth.signInWithOtp({
         email,
@@ -331,22 +289,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       });
       
       if (error) {
-        console.error('Magic link error:', error);
         toast.error(error.message || 'Failed to send magic link');
       } else {
-        toast.success('Check your email for the magic link', {
-          duration: 5000,
-          style: {
-            borderRadius: '10px',
-            background: '#22c55e',
-            color: '#fff',
-          },
-        });
+        toast.success('Check your email for the magic link');
       }
       
       return { error };
     } catch (err) {
-      console.error('Unexpected error during magic link login:', err);
       toast.error('An unexpected error occurred');
       return { error: err as AuthError };
     }
