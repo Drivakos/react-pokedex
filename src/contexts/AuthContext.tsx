@@ -1,4 +1,4 @@
-import React, { createContext, useState, useEffect } from 'react';
+import React, { createContext, useState, useEffect, useContext } from 'react';
 import { 
   Session, 
   User, 
@@ -6,13 +6,14 @@ import {
   AuthResponse,
   OAuthResponse
 } from '@supabase/supabase-js';
-import { supabase, Profile } from '../lib/supabase';
+import { supabase, Profile, Favorite } from '../lib/supabase';
 import toast from 'react-hot-toast';
 
 interface AuthContextType {
   session: Session | null;
   user: User | null;
   profile: Profile | null;
+  favorites: Favorite[];
   loading: boolean;
   signUp: (email: string, password: string) => Promise<AuthResponse>;
   signIn: (email: string, password: string) => Promise<AuthResponse>;
@@ -25,14 +26,26 @@ interface AuthContextType {
     data: Profile | null;
     error: any | null;
   }>;
+  addFavorite: (pokemonId: number) => Promise<void>;
+  removeFavorite: (pokemonId: number) => Promise<void>;
+  isFavorite: (pokemonId: number) => boolean;
 }
 
 export const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (context === undefined) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  return context;
+};
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [session, setSession] = useState<Session | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
+  const [favorites, setFavorites] = useState<Favorite[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -46,6 +59,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         
         if (data.session?.user) {
           await fetchProfile(data.session.user.id);
+          await fetchFavorites(data.session.user.id);
         }
       } catch (err) {
         console.error('Auth initialization error:', err);
@@ -64,6 +78,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         
         if (session?.user) {
           await fetchProfile(session.user.id);
+          await fetchFavorites(session.user.id);
           
           if (event === 'SIGNED_IN' && !previousUser) {
             const username = session.user.user_metadata?.full_name || 
@@ -74,6 +89,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         } else if (previousUser && event === 'SIGNED_OUT') {
           toast.success('You have been signed out');
           setProfile(null);
+          setFavorites([]);
         }
         
         setLoading(false);
@@ -301,10 +317,89 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const fetchFavorites = async (userId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('favorites')
+        .select('*')
+        .eq('user_id', userId);
+
+      if (error) {
+        console.error('Error fetching favorites:', error);
+        return;
+      }
+      
+      if (data) setFavorites(data as Favorite[]);
+    } catch (err) {
+      console.error('Favorites fetch error:', err);
+    }
+  };
+
+  const addFavorite = async (pokemonId: number) => {
+    if (!user) {
+      toast.error('You must be logged in to add favorites');
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('favorites')
+        .insert([{ user_id: user.id, pokemon_id: pokemonId }]);
+
+      if (error) {
+        if (error.code === '23505') {
+          toast.error('This Pokémon is already in your favorites');
+        } else {
+          toast.error('Failed to add to favorites');
+          console.error('Error adding favorite:', error);
+        }
+        return;
+      }
+
+      await fetchFavorites(user.id);
+      toast.success('Added to favorites!');
+    } catch (err) {
+      console.error('Error in addFavorite:', err);
+      toast.error('Failed to add to favorites');
+    }
+  };
+
+  const removeFavorite = async (pokemonId: number) => {
+    if (!user) {
+      toast.error('You must be logged in to remove favorites');
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('favorites')
+        .delete()
+        .eq('user_id', user.id)
+        .eq('pokemon_id', pokemonId);
+
+      if (error) {
+        toast.error('Failed to remove from favorites');
+        console.error('Error removing favorite:', error);
+        return;
+      }
+
+      setFavorites(favorites.filter(fav => fav.pokemon_id !== pokemonId));
+      toast.success('Removed from favorites');
+    } catch (err) {
+      console.error('Error in removeFavorite:', err);
+      toast.error('Failed to remove from favorites');
+    }
+  };
+
+  const isFavorite = (pokemonId: number): boolean => {
+    return favorites.some(fav => fav.pokemon_id === pokemonId);
+  };
+
   const value = {
     session,
     user,
     profile,
+    favorites,
     loading,
     signUp,
     signIn,
@@ -314,6 +409,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     resetPassword,
     updatePassword,
     updateProfile,
+    addFavorite,
+    removeFavorite,
+    isFavorite
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
