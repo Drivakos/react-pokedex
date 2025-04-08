@@ -11,40 +11,58 @@ const AuthCallback = () => {
   useEffect(() => {
     const handleAuthCallback = async () => {
       try {
-        // Get the current session
-        const { data, error } = await supabase.auth.getSession();
+        const queryParams = new URLSearchParams(window.location.search);
+        const errorParam = queryParams.get('error');
+        const errorDescription = queryParams.get('error_description');
         
-        if (error) {
-          console.error('Error during auth callback:', error);
-          setError('Unable to authenticate');
-          toast.error('Authentication failed: ' + error.message);
-          setTimeout(() => navigate('/login?error=Unable to authenticate'), 1500);
+        if (errorParam) {
+          console.error(`Auth provider returned error: ${errorParam}`, errorDescription);
+          setError(`Authentication failed: ${errorDescription || errorParam}`);
+          toast.error(`Login failed: ${errorDescription || errorParam}`);
+          setTimeout(() => navigate('/login', { replace: true }), 1500);
           return;
         }
         
-        // Check if we have a valid session
+        const { data, error } = await supabase.auth.getSession();
+        
+        if (error) {
+          console.error('Error retrieving session during auth callback:', error);
+          setError('Unable to authenticate');
+          toast.error('Authentication failed: ' + error.message);
+          setTimeout(() => navigate('/login?error=Unable to authenticate', { replace: true }), 1500);
+          return;
+        }
+        
         if (data.session) {
-          console.log('Auth callback successful, redirecting to profile');
+          console.log('Auth callback successful, session found:', { 
+            user_id: data.session.user.id,
+            provider: data.session.user.app_metadata?.provider || 'unknown',
+            expires_at: data.session.expires_at ? new Date(data.session.expires_at * 1000).toISOString() : 'unknown'
+          });
+          
           setIsProcessing(false);
           
-          // Force refresh auth state and redirect
-          await supabase.auth.refreshSession();
+          try {
+            await supabase.auth.refreshSession();
+            console.log('Session refreshed successfully');
+          } catch (refreshError) {
+            console.warn('Session refresh warning (non-critical):', refreshError);
+          }
           
-          // Add a delay to ensure state is updated before redirect
           setTimeout(() => {
             navigate('/profile', { replace: true });
           }, 1000);
         } else {
-          console.error('No session found during auth callback');
+          console.error('No session found during auth callback despite successful redirect');
           setError('Authentication failed');
           toast.error('No active session found');
-          setTimeout(() => navigate('/login?error=Authentication failed'), 1500);
+          setTimeout(() => navigate('/login?error=Authentication failed', { replace: true }), 1500);
         }
       } catch (err) {
         console.error('Unexpected error during auth callback:', err);
         setError('Authentication error');
         toast.error('An unexpected error occurred');
-        setTimeout(() => navigate('/login?error=Authentication error'), 1500);
+        setTimeout(() => navigate('/login?error=Authentication error', { replace: true }), 1500);
       }
     };
 

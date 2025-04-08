@@ -82,11 +82,6 @@ const ResetPasswordConfirm: React.FC = () => {
         throw error;
       }
       
-      // Password updated successfully
-      setMessage('Password has been successfully updated!');
-      console.log('Password updated successfully, redirecting to login');
-      
-      // Force a redirect to login page after a short delay
       setTimeout(() => {
         navigate('/login', { replace: true });
       }, 2000);

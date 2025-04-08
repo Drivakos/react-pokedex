@@ -156,11 +156,39 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const signIn = async (email: string, password: string) => {
     try {
+      // Try to refresh session first to clear any stale session state
+      try {
+        await supabase.auth.refreshSession();
+      } catch (refreshErr) {
+        console.log('Session refresh before login:', refreshErr);
+      }
+      
       const response = await supabase.auth.signInWithPassword({ email, password });
       
       if (response.error) {
         console.error('Sign in error:', response.error);
-        toast.error(response.error.message || 'Failed to sign in');
+        
+        if (response.error.message.includes('Invalid login credentials')) {
+          toast.error('Invalid email or password', {
+            duration: 5000,
+            style: {
+              borderRadius: '10px',
+              background: '#ef4444',
+              color: '#fff',
+            },
+          });
+        } else if (response.error.message.includes('Email not confirmed')) {
+          toast.error('Please confirm your email before logging in', {
+            duration: 5000,
+            style: {
+              borderRadius: '10px',
+              background: '#f97316',
+              color: '#fff',
+            },
+          });
+        } else {
+          toast.error(response.error.message || 'Failed to sign in');
+        }
       }
       
       return response;
@@ -173,10 +201,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const signInWithGoogle = async () => {
     try {
+      // Use the exact production URL for Google OAuth redirects
+      // This must match what's configured in your Supabase dashboard and Google OAuth settings
       const response = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${SITE_URL}/auth/callback`,
+          redirectTo: import.meta.env.VITE_SITE_URL ? `${import.meta.env.VITE_SITE_URL}/auth/callback` : `${window.location.origin}/auth/callback`,
+          scopes: 'https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/userinfo.profile',
+          queryParams: {
+            access_type: 'offline',
+            prompt: 'consent'
+          }
         },
       });
       
@@ -240,12 +275,32 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const resetPassword = async (email: string) => {
     try {
+      const redirectUrl = import.meta.env.VITE_SITE_URL ? 
+        `${import.meta.env.VITE_SITE_URL}/reset-password/confirm` : 
+        `${window.location.origin}/reset-password/confirm`;
+      
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${SITE_URL}/reset-password/confirm`,
+        redirectTo: redirectUrl,
       });
+      
+      if (error) {
+        console.error('Reset password error:', error);
+        toast.error(error.message || 'Failed to send reset password email');
+      } else {
+        toast.success('Check your email for password reset instructions', {
+          duration: 5000,
+          style: {
+            borderRadius: '10px',
+            background: '#22c55e',
+            color: '#fff',
+          },
+        });
+      }
       
       return { error };
     } catch (err) {
+      console.error('Unexpected error during password reset:', err);
+      toast.error('An unexpected error occurred');
       return { error: err as AuthError };
     }
   };
@@ -264,21 +319,34 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const signInWithMagicLink = async (email: string) => {
     try {
+      const redirectUrl = import.meta.env.VITE_SITE_URL ? 
+        `${import.meta.env.VITE_SITE_URL}/auth/callback` : 
+        `${window.location.origin}/auth/callback`;
+      
       const { error } = await supabase.auth.signInWithOtp({
         email,
         options: {
-          emailRedirectTo: `${SITE_URL}/auth/callback`,
+          emailRedirectTo: redirectUrl,
         },
       });
       
       if (error) {
+        console.error('Magic link error:', error);
         toast.error(error.message || 'Failed to send magic link');
       } else {
-        toast.success('Check your email for the magic link');
+        toast.success('Check your email for the magic link', {
+          duration: 5000,
+          style: {
+            borderRadius: '10px',
+            background: '#22c55e',
+            color: '#fff',
+          },
+        });
       }
       
       return { error };
     } catch (err) {
+      console.error('Unexpected error during magic link login:', err);
       toast.error('An unexpected error occurred');
       return { error: err as AuthError };
     }
