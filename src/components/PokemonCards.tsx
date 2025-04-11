@@ -21,6 +21,8 @@ interface PokemonCardsProps {
   pokemonId?: number;
 }
 
+const POKEMONTCG_API_KEY = import.meta.env.VITE_POKEMONTCG_API_KEY;
+
 const PokemonCards: React.FC<PokemonCardsProps> = ({ pokemonName, pokemonId }) => {
   const [cards, setCards] = useState<PokemonCard[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
@@ -324,7 +326,8 @@ const PokemonCards: React.FC<PokemonCardsProps> = ({ pokemonName, pokemonId }) =
 
 
         const exactMatchResponse = await fetch(
-          `https://api.pokemontcg.io/v2/cards?q=name:"${searchName}"&orderBy=set.releaseDate&pageSize=50`
+          `https://api.pokemontcg.io/v2/cards?q=name:"${searchName}"&orderBy=set.releaseDate&pageSize=50`,
+          { headers: { 'X-Api-Key': POKEMONTCG_API_KEY || '' } }
         );
 
         if (exactMatchResponse.ok) {
@@ -335,7 +338,8 @@ const PokemonCards: React.FC<PokemonCardsProps> = ({ pokemonName, pokemonId }) =
 
         if (allCards.length < 20) {
           const partialMatchResponse = await fetch(
-            `https://api.pokemontcg.io/v2/cards?q=name:*${searchName}*&orderBy=set.releaseDate&pageSize=50`
+            `https://api.pokemontcg.io/v2/cards?q=name:*${searchName}*&orderBy=set.releaseDate&pageSize=50`,
+            { headers: { 'X-Api-Key': POKEMONTCG_API_KEY || '' } }
           );
 
           if (partialMatchResponse.ok) {
@@ -347,7 +351,8 @@ const PokemonCards: React.FC<PokemonCardsProps> = ({ pokemonName, pokemonId }) =
 
         if (pokemonId) {
           const dexNumberResponse = await fetch(
-            `https://api.pokemontcg.io/v2/cards?q=nationalPokedexNumbers:${pokemonId}&orderBy=set.releaseDate&pageSize=50`
+            `https://api.pokemontcg.io/v2/cards?q=nationalPokedexNumbers:${pokemonId}&orderBy=set.releaseDate&pageSize=50`,
+            { headers: { 'X-Api-Key': POKEMONTCG_API_KEY || '' } }
           );
 
           if (dexNumberResponse.ok) {
@@ -382,7 +387,7 @@ const PokemonCards: React.FC<PokemonCardsProps> = ({ pokemonName, pokemonId }) =
     if (pokemonName) {
       fetchPokemonCards();
     }
-  }, [pokemonName, pokemonId, visibleCards]);
+  }, [pokemonName, pokemonId]);
 
   const openCardModal = (card: PokemonCard) => {
     setSelectedCard(card);
