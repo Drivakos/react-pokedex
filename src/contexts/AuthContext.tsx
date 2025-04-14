@@ -484,16 +484,28 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
 
     try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      
+      if (!sessionData.session) {
+        console.error('No active session found when adding favorite');
+        toast.error('Authentication error. Please sign in again.');
+        return;
+      }
+      
+      console.log('Adding favorite with user ID:', user.id);
+      
       const { error } = await supabase
         .from('favorites')
         .insert([{ user_id: user.id, pokemon_id: pokemonId }]);
 
       if (error) {
+        console.error('Error adding favorite:', error);
         if (error.code === '23505') {
           toast.error('This Pokémon is already in your favorites');
+        } else if (error.code === '42501' || error.message?.includes('permission denied')) {
+          toast.error('You don\'t have permission to add favorites. Please sign in again.');
         } else {
           toast.error('Failed to add to favorites');
-          console.error('Error adding favorite:', error);
         }
         return;
       }
@@ -513,6 +525,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
 
     try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      
+      if (!sessionData.session) {
+        console.error('No active session found when removing favorite');
+        toast.error('Authentication error. Please sign in again.');
+        return;
+      }
+      
+      console.log('Removing favorite with user ID:', user.id, 'and pokemon ID:', pokemonId);
       const { error } = await supabase
         .from('favorites')
         .delete()
@@ -520,8 +541,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         .eq('pokemon_id', pokemonId);
 
       if (error) {
-        toast.error('Failed to remove from favorites');
         console.error('Error removing favorite:', error);
+        if (error.code === '42501' || error.message?.includes('permission denied')) {
+          toast.error('You don\'t have permission to remove favorites. Please sign in again.');
+        } else {
+          toast.error('Failed to remove from favorites');
+        }
         return;
       }
 
