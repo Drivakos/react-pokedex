@@ -7,6 +7,7 @@ const Profile: React.FC = () => {
   const { user, profile, signOut, updateProfile } = useAuth();
   const [username, setUsername] = useState(profile?.username || '');
   const [loading, setLoading] = useState(false);
+  const [fetchingFavorites, setFetchingFavorites] = useState(true);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [avatar, setAvatar] = useState<File | null>(null);
@@ -14,33 +15,52 @@ const Profile: React.FC = () => {
   const navigate = useNavigate();
 
   const fetchFavorites = useCallback(async () => {
+    if (!user?.id) {
+      console.log('No user ID available for fetching favorites');
+      setFetchingFavorites(false);
+      return;
+    }
+
     try {
+      setFetchingFavorites(true);
+      console.log('Fetching favorites for user ID:', user.id);
       const { data, error } = await supabase
         .from('favorites')
         .select('pokemon_id')
-        .eq('user_id', user?.id);
+        .eq('user_id', user.id);
         
       if (error) {
-        throw error;
+        console.error('Supabase error fetching favorites:', error);
+        setFetchingFavorites(false);
+        return;
       }
       
       if (data) {
+        console.log('Favorites fetched successfully:', data.length);
         setFavorites(data.map(item => item.pokemon_id));
       }
     } catch (error) {
       console.error('Error fetching favorites:', error);
+    } finally {
+      setFetchingFavorites(false);
     }
-  }, [user]);
+  }, [user?.id]); // Only depend on user.id, not the entire user object
 
   React.useEffect(() => {
+    // Set username from profile when it's available
     if (profile?.username) {
       setUsername(profile.username);
     }
-    
-    if (user) {
+  }, [profile]);
+  
+  // Separate useEffect for fetchFavorites to avoid dependency issues
+  React.useEffect(() => {
+    // Only fetch favorites if user exists and not currently loading
+    if (user?.id && !loading) {
+      console.log('Profile component: calling fetchFavorites');
       fetchFavorites();
     }
-  }, [profile, user, fetchFavorites]);
+  }, [user?.id, fetchFavorites]);
 
 
 
@@ -291,7 +311,11 @@ const Profile: React.FC = () => {
           <div className="px-6 py-8">
             <h2 className="text-2xl font-bold text-gray-900 mb-6">Your Favorite Pokémon</h2>
             
-            {favorites.length === 0 ? (
+            {fetchingFavorites ? (
+              <div className="text-center py-8">
+                <p className="text-gray-500 mb-4">Loading your favorites...</p>
+              </div>
+            ) : favorites.length === 0 ? (
               <div className="text-center py-8">
                 <p className="text-gray-500 mb-4">You haven't added any Pokémon to your favorites yet.</p>
                 <button
