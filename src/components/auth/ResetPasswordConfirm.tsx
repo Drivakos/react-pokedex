@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../hooks/useAuth';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
+import toast from 'react-hot-toast';
 
 const ResetPasswordConfirm: React.FC = () => {
   const [password, setPassword] = useState('');
@@ -20,12 +21,19 @@ const ResetPasswordConfirm: React.FC = () => {
         const hashParams = new URLSearchParams(location.hash.substring(1));
         const type = hashParams.get('type');
         
+        console.log('Reset password hash parameters:', {
+          hash: location.hash,
+          type: type
+        });
+        
         if (type === 'recovery') {
           setValidResetLink(true);
-        } else if (!user) {
-          setError('Password reset link is invalid or has expired. Please request a new one.');
-        } else {
+        } else if (type === 'signup' || type === 'magiclink') {
+          navigate('/', { replace: true });
+        } else if (user) {
           setValidResetLink(true);
+        } else {
+          setError('Password reset link is invalid or has expired. Please request a new one.');
         }
       } catch (err) {
         console.error('Error processing reset password link:', err);
@@ -34,7 +42,7 @@ const ResetPasswordConfirm: React.FC = () => {
     };
     
     checkResetToken();
-  }, [location.hash, user]);
+  }, [location.hash, user, navigate]);
 
   const handlePasswordUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -57,7 +65,7 @@ const ResetPasswordConfirm: React.FC = () => {
     const hasUpperCase = /[A-Z]/.test(password);
     const hasLowerCase = /[a-z]/.test(password);
     const hasNumbers = /[0-9]/.test(password);
-    const hasSpecialChar = /[!@#$%^&*()_+\-=\[\]{};':"\|,.<>/?]/.test(password);
+    const hasSpecialChar = /[!@#$%^&*()_+\-=\[\]{};':"\|,.<>\/?]/.test(password);
     
     if (!(hasUpperCase && hasLowerCase && hasNumbers)) {
       setError('Password must contain at least one uppercase letter, one lowercase letter, and one number');
@@ -74,17 +82,18 @@ const ResetPasswordConfirm: React.FC = () => {
       setMessage(null);
       setLoading(true);
       
-      // Call the updatePassword function from AuthContext
       const { error } = await updatePassword(password);
       
       if (error) {
         console.error('Password update error:', error);
-        throw error;
+        setError(error.message || 'Failed to update password');
+        return;
       }
       
-      setTimeout(() => {
-        navigate('/login', { replace: true });
-      }, 2000);
+      setMessage('Password updated successfully! Redirecting to login...');
+      toast.success('Password has been reset successfully!');
+      
+      navigate('/login', { replace: true });
     } catch (error: any) {
       console.error('Password update failed:', error);
       setError(error.message || 'Failed to update password');

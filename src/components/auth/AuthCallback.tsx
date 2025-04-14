@@ -13,14 +13,27 @@ const AuthCallback = () => {
       try {
         const queryParams = new URLSearchParams(window.location.search);
         const code = queryParams.get('code');
-        
         const errorParam = queryParams.get('error');
         const errorDescription = queryParams.get('error_description');
         
+        const hashParams = new URLSearchParams(window.location.hash.substring(1));
+        const accessToken = hashParams.get('access_token');
+        const refreshToken = hashParams.get('refresh_token');
+        const type = hashParams.get('type');
+        
+        console.log('Auth callback received:', { 
+          code: code ? 'present' : 'absent',
+          type,
+          accessToken: accessToken ? 'present' : 'absent',
+          error: errorParam
+        });
+        
         if (errorParam) {
-          setError(`Authentication failed: ${errorDescription || errorParam}`);
+          const errorMessage = `Authentication failed: ${errorDescription || errorParam}`;
+          console.error(errorMessage);
+          setError(errorMessage);
           toast.error(`Login failed: ${errorDescription || errorParam}`);
-          setTimeout(() => navigate('/login', { replace: true }), 1500);
+          navigate('/login', { replace: true });
           return;
         }
         
@@ -28,26 +41,44 @@ const AuthCallback = () => {
           const { data, error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
           
           if (exchangeError) {
-            setError('Authentication failed');
+            console.error('Code exchange error:', exchangeError);
+            setError('Authentication failed - could not exchange code');
             toast.error(exchangeError.message || 'Failed to authenticate');
-            setTimeout(() => navigate('/login', { replace: true }), 1500);
+            navigate('/login', { replace: true });
             return;
           }
           
           if (data?.session) {
+            console.log('Successfully authenticated with session');
             setIsProcessing(false);
-            setTimeout(() => navigate('/profile', { replace: true }), 1000);
+            toast.success('Successfully signed in!');
+            navigate('/', { replace: true });
             return;
           }
         }
         
-        setError('Authentication failed');
+        if (type === 'recovery' || type === 'magiclink' || type === 'signup') {
+          console.log(`Processing ${type} authentication`);
+          setIsProcessing(false);
+          
+          if (type === 'recovery') {
+            return;
+          } else {
+            toast.success('Successfully signed in!');
+            navigate('/', { replace: true });
+            return;
+          }
+        }
+        
+        console.error('Authentication process failed - no valid auth method detected');
+        setError('Authentication failed - no valid method detected');
         toast.error('Authentication process failed');
-        setTimeout(() => navigate('/login', { replace: true }), 1500);
+        navigate('/login', { replace: true });
       } catch (err) {
+        console.error('Authentication callback error:', err);
         setError('Authentication error');
-        toast.error('An unexpected error occurred');
-        setTimeout(() => navigate('/login', { replace: true }), 1500);
+        toast.error('An unexpected error occurred during authentication');
+        navigate('/login', { replace: true });
       }
     };
 
