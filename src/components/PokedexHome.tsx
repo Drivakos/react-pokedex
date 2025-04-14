@@ -114,9 +114,9 @@ const PokedexHome: React.FC = () => {
       
       <header className="mb-6">
         <div className="flex flex-col md:flex-row md:items-center md:justify-center gap-4 md:gap-6 mb-6" data-component-name="PokedexHome">
-          <h1 className="text-3xl font-bold text-gray-800 md:w-1/5 md:flex md:items-center md:h-12" data-component-name="PokedexHome">Pokédex</h1>
+          {/* Heading removed - already in navigation */}
           
-          <div className="flex-1 max-w-2xl md:w-3/5 md:flex md:items-center" data-component-name="PokedexHome">
+          <div className="flex-1 max-w-2xl md:w-4/5 md:flex md:items-center" data-component-name="PokedexHome">
             <SearchBar 
               value={searchTerm}
               onChange={setSearchTerm}

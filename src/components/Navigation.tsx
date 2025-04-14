@@ -1,25 +1,19 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
-import { User, LogOut, Menu, X } from 'lucide-react';
+import { User, LogOut } from 'lucide-react';
 
 const Navigation: React.FC = () => {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const handleSignOut = async () => {
     try {
       await signOut();
       navigate('/');
-      setMobileMenuOpen(false);
     } catch (error) {
       console.error('Error signing out:', error);
     }
-  };
-
-  const toggleMobileMenu = () => {
-    setMobileMenuOpen(!mobileMenuOpen);
   };
 
   return (
@@ -34,7 +28,6 @@ const Navigation: React.FC = () => {
             </div>
           </div>
           
-          {/* Desktop menu */}
           <div className="hidden sm:ml-6 sm:flex sm:items-center">
             {user ? (
               <div className="flex items-center space-x-4">
@@ -54,81 +47,39 @@ const Navigation: React.FC = () => {
                 </button>
               </div>
             ) : (
-              <div className="flex items-center space-x-4">
+              <div className="flex items-center">
                 <Link 
                   to="/login" 
-                  className="text-white hover:bg-red-700 px-3 py-2 rounded-md text-sm font-medium"
+                  className="inline-flex items-center justify-center p-2 rounded-md text-white hover:bg-red-700 focus:outline-none"
+                  title="Sign In"
                 >
-                  Sign In
-                </Link>
-                <Link 
-                  to="/signup" 
-                  className="bg-white text-red-600 hover:bg-gray-100 px-3 py-2 rounded-md text-sm font-medium"
-                >
-                  Sign Up
+                  <User className="h-6 w-6" />
                 </Link>
               </div>
             )}
           </div>
           
-          {/* Mobile menu button */}
           <div className="flex items-center sm:hidden">
-            <button
-              onClick={toggleMobileMenu}
-              className="inline-flex items-center justify-center p-2 rounded-md text-white hover:bg-red-700 focus:outline-none"
-            >
-              {mobileMenuOpen ? (
-                <X className="h-6 w-6" />
-              ) : (
-                <Menu className="h-6 w-6" />
-              )}
-            </button>
-          </div>
-        </div>
-      </div>
-      
-      {/* Mobile menu */}
-      {mobileMenuOpen && (
-        <div className="sm:hidden">
-          <div className="pt-2 pb-3 space-y-1">
             {user ? (
-              <>
-                <Link
-                  to="/profile"
-                  className="text-white hover:bg-red-700 block px-3 py-2 rounded-md text-base font-medium flex items-center"
-                  onClick={() => setMobileMenuOpen(false)}
-                >
-                  <User className="h-4 w-4 mr-2" />
-                  {user.user_metadata?.full_name || user.email?.split('@')[0] || 'Profile'}
-                </Link>
-                <button
-                  onClick={handleSignOut}
-                  className="text-white hover:bg-red-700 block w-full text-left px-3 py-2 rounded-md text-base font-medium"
-                >
-                  Sign Out
-                </button>
-              </>
+              <Link 
+                to="/profile" 
+                className="inline-flex items-center justify-center p-2 rounded-md text-white hover:bg-red-700 focus:outline-none"
+                title="Profile"
+              >
+                <User className="h-6 w-6" />
+              </Link>
             ) : (
-              <>
-                <Link
-                  to="/login"
-                  className="text-white hover:bg-red-700 block px-3 py-2 rounded-md text-base font-medium"
-                  onClick={() => setMobileMenuOpen(false)}
-                >
-                  Sign In
-                </Link>
-                <Link
-                  to="/signup"
-                  className="text-white hover:bg-red-700 block px-3 py-2 rounded-md text-base font-medium"
-                  onClick={() => setMobileMenuOpen(false)}
-                >
-                  Sign Up
-                </Link>
-              </>
+              <Link 
+                to="/login" 
+                className="inline-flex items-center justify-center p-2 rounded-md text-white hover:bg-red-700 focus:outline-none"
+                title="Sign In"
+              >
+                <User className="h-6 w-6" />
+              </Link>
             )}
           </div>
         </div>
-      )}
+      </div>
     </nav>
   );
 };
