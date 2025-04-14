@@ -40,7 +40,6 @@ const FavoritePokemon: React.FC<FavoritePokemonProps> = ({ pokemonId }) => {
 
   const toggleFavorite = async () => {
     if (!user) {
-      // Redirect to login or show login modal
       window.location.href = '/login?redirect=' + window.location.pathname;
       return;
     }
@@ -49,7 +48,6 @@ const FavoritePokemon: React.FC<FavoritePokemonProps> = ({ pokemonId }) => {
       setLoading(true);
 
       if (isFavorite) {
-        // Remove from favorites
         const { error } = await supabase
           .from('favorites')
           .delete()
@@ -59,7 +57,6 @@ const FavoritePokemon: React.FC<FavoritePokemonProps> = ({ pokemonId }) => {
         if (error) throw error;
         setIsFavorite(false);
       } else {
-        // Add to favorites
         const { error } = await supabase
           .from('favorites')
           .insert({
@@ -82,10 +79,10 @@ const FavoritePokemon: React.FC<FavoritePokemonProps> = ({ pokemonId }) => {
     <button
       onClick={toggleFavorite}
       disabled={loading}
-      className={`flex items-center justify-center p-2 rounded-full transition-colors ${
+      className={`flex items-center justify-center p-2 transition-colors ${
         isFavorite 
-          ? 'bg-red-100 text-red-500 hover:bg-red-200' 
-          : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+          ? 'text-red-500 hover:text-red-600' 
+          : 'text-gray-500 hover:text-gray-700'
       } ${loading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
       aria-label={isFavorite ? 'Remove from favorites' : 'Add to favorites'}
     >
