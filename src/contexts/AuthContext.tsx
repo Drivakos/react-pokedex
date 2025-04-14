@@ -50,10 +50,31 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   useEffect(() => {
     const initAuth = async () => {
+      setLoading(true);
+      console.log('Initializing authentication...');
+      
       try {
+        // Try to get session from localStorage first for immediate UI update
+        const storedSession = localStorage.getItem('supabase.auth.token');
+        if (storedSession) {
+          try {
+            const parsedSession = JSON.parse(storedSession);
+            console.log('Found stored session:', parsedSession ? 'Valid' : 'Invalid');
+            // Use stored session data temporarily while we verify with server
+            if (parsedSession) {
+              setSession(parsedSession);
+              setUser(parsedSession.user);
+            }
+          } catch (e) {
+            console.error('Error parsing stored session:', e);
+          }
+        }
+        
+        // Always verify with server
         const { data, error } = await supabase.auth.getSession();
         if (error) throw error;
         
+        console.log('Server session check result:', data.session ? 'Active session' : 'No session');
         setSession(data.session);
         setUser(data.session?.user ?? null);
         
@@ -72,11 +93,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
+        console.log('Auth state changed:', event, session ? 'Session exists' : 'No session');
         const previousUser = user;
+        
         setSession(session);
         setUser(session?.user ?? null);
         
         if (session?.user) {
+          // Store session in localStorage for better persistence
+          localStorage.setItem('supabase.auth.token', JSON.stringify(session));
+          
           await fetchProfile(session.user.id);
           await fetchFavorites(session.user.id);
           
@@ -86,8 +112,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                            'Trainer';
             toast.success(`Welcome, ${username}!`);
           }
-        } else if (previousUser && event === 'SIGNED_OUT') {
-          toast.success('You have been signed out');
+        } else if (event === 'SIGNED_OUT') {
+          // Clear session from localStorage
+          localStorage.removeItem('supabase.auth.token');
+          
+          if (previousUser) {
+            toast.success('You have been signed out');
+          }
           setProfile(null);
           setFavorites([]);
         }
@@ -97,7 +128,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     );
     
     return () => subscription.unsubscribe();
-  }, [user]);
+  }, []);
 
   const createProfile = async (userId: string) => {
     try {

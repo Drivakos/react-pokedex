@@ -13,6 +13,8 @@ const supabaseOptions = {
     autoRefreshToken: true,
     persistSession: true,
     detectSessionInUrl: true,
+    // Use explicit type for flowType
+    storage: localStorage,
   },
   db: {
     schema: 'public',
@@ -29,7 +31,14 @@ const supabaseOptions = {
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, supabaseOptions);
 
 supabase.auth.onAuthStateChange((event, session) => {
-  // Silent auth state change handling for production
+  console.log('Auth state changed:', event, session ? 'User session exists' : 'No session');
+  
+  // Store session in localStorage for better persistence
+  if (session) {
+    localStorage.setItem('supabase.auth.token', JSON.stringify(session));
+  } else if (event === 'SIGNED_OUT') {
+    localStorage.removeItem('supabase.auth.token');
+  }
 });
 
 export async function ensureProfile(userId: string, email?: string): Promise<void> {
