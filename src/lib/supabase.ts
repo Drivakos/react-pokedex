@@ -9,11 +9,9 @@ if (!supabaseUrl || !supabaseAnonKey) {
 
 const supabaseOptions = {
   auth: {
-    storageKey: 'pokedex_auth_token',
     autoRefreshToken: true,
     persistSession: true,
     detectSessionInUrl: true,
-    // Use explicit type for flowType
     storage: localStorage,
   },
   db: {
@@ -33,11 +31,19 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, supabaseOptio
 supabase.auth.onAuthStateChange((event, session) => {
   console.log('Auth state changed:', event, session ? 'User session exists' : 'No session');
   
-  // Store session in localStorage for better persistence
-  if (session) {
-    localStorage.setItem('supabase.auth.token', JSON.stringify(session));
+  // Let Supabase handle session storage - no need to manually store
+  if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+    console.log('User signed in or token refreshed');
   } else if (event === 'SIGNED_OUT') {
+    console.log('User signed out, clearing any remaining auth data');
+    // Clear any remaining auth data
     localStorage.removeItem('supabase.auth.token');
+    localStorage.removeItem('access_token');
+    localStorage.removeItem('refresh_token');
+    localStorage.removeItem('expires_at');
+    localStorage.removeItem('expires_in');
+    localStorage.removeItem('provider_token');
+    localStorage.removeItem('provider_refresh_token');
   }
 });
 

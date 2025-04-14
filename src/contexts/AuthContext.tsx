@@ -54,36 +54,33 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.log('Initializing authentication...');
       
       try {
-        // Try to get session from localStorage first for immediate UI update
-        const storedSession = localStorage.getItem('supabase.auth.token');
-        if (storedSession) {
-          try {
-            const parsedSession = JSON.parse(storedSession);
-            console.log('Found stored session:', parsedSession ? 'Valid' : 'Invalid');
-            // Use stored session data temporarily while we verify with server
-            if (parsedSession) {
-              setSession(parsedSession);
-              setUser(parsedSession.user);
-            }
-          } catch (e) {
-            console.error('Error parsing stored session:', e);
-          }
-        }
-        
-        // Always verify with server
+        // Let Supabase handle session retrieval - this is the recommended approach
         const { data, error } = await supabase.auth.getSession();
         if (error) throw error;
         
         console.log('Server session check result:', data.session ? 'Active session' : 'No session');
-        setSession(data.session);
-        setUser(data.session?.user ?? null);
         
-        if (data.session?.user) {
+        if (data.session) {
+          setSession(data.session);
+          setUser(data.session.user);
+          
+          // Fetch profile and favorites data
           await fetchProfile(data.session.user.id);
           await fetchFavorites(data.session.user.id);
+        } else {
+          // No active session
+          setSession(null);
+          setUser(null);
+          setProfile(null);
+          setFavorites([]);
         }
       } catch (err) {
         console.error('Auth initialization error:', err);
+        // Reset state on error
+        setSession(null);
+        setUser(null);
+        setProfile(null);
+        setFavorites([]);
       } finally {
         setLoading(false);
       }
@@ -96,31 +93,59 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         console.log('Auth state changed:', event, session ? 'Session exists' : 'No session');
         const previousUser = user;
         
-        setSession(session);
-        setUser(session?.user ?? null);
-        
-        if (session?.user) {
-          // Store session in localStorage for better persistence
-          localStorage.setItem('supabase.auth.token', JSON.stringify(session));
-          
-          await fetchProfile(session.user.id);
-          await fetchFavorites(session.user.id);
-          
-          if (event === 'SIGNED_IN' && !previousUser) {
-            const username = session.user.user_metadata?.full_name || 
-                           session.user.email?.split('@')[0] || 
-                           'Trainer';
-            toast.success(`Welcome, ${username}!`);
-          }
-        } else if (event === 'SIGNED_OUT') {
-          // Clear session from localStorage
-          localStorage.removeItem('supabase.auth.token');
-          
-          if (previousUser) {
-            toast.success('You have been signed out');
-          }
-          setProfile(null);
-          setFavorites([]);
+        // Handle different auth events
+        switch (event) {
+          case 'SIGNED_IN':
+            console.log('User signed in event detected');
+            if (session) {
+              setSession(session);
+              setUser(session.user);
+              
+              // Ensure profile exists and fetch user data
+              await createProfile(session.user.id);
+              await fetchProfile(session.user.id);
+              await fetchFavorites(session.user.id);
+              
+              // Welcome message if this is a new login (not a refresh)
+              if (!previousUser) {
+                const username = session.user.user_metadata?.full_name || 
+                               session.user.user_metadata?.name ||
+                               session.user.email?.split('@')[0] || 
+                               'Trainer';
+                toast.success(`Welcome, ${username}!`);
+              }
+            }
+            break;
+            
+          case 'SIGNED_OUT':
+            console.log('User signed out event detected');
+            // Clear all states
+            setSession(null);
+            setUser(null);
+            setProfile(null);
+            setFavorites([]);
+            
+            // Only show toast if there was a previous user (not on initial load)
+            if (previousUser) {
+              toast.success('You have been signed out');
+            }
+            break;
+            
+          case 'TOKEN_REFRESHED':
+            console.log('Token refreshed event detected');
+            if (session) {
+              setSession(session);
+              setUser(session.user);
+            }
+            break;
+            
+          case 'USER_UPDATED':
+            console.log('User updated event detected');
+            if (session) {
+              setUser(session.user);
+              await fetchProfile(session.user.id);
+            }
+            break;
         }
         
         setLoading(false);
@@ -132,13 +157,42 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const createProfile = async (userId: string) => {
     try {
-      const { data: userData } = await supabase.auth.getUser();
-      if (!userData.user) return;
+      // First check if profile already exists to avoid duplicates
+      const { data: existingProfile, error: fetchError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .single();
+
+      // If profile exists, set it and return early
+      if (existingProfile && !fetchError) {
+        console.log('Profile already exists for user:', userId);
+        setProfile(existingProfile as Profile);
+        return;
+      }
       
+      // If error is not 'no rows returned', handle it
+      if (fetchError && fetchError.code !== 'PGRST116') {
+        console.error('Error checking for existing profile:', fetchError);
+        return;
+      }
+
+      console.log('Creating new profile for user:', userId);
+      
+      // Get current user data
+      const { data: userData } = await supabase.auth.getUser();
+      if (!userData.user) {
+        console.error('No user found when creating profile');
+        return;
+      }
+      
+      // Create new profile with all available user metadata
       const newProfile = {
         id: userId,
+        email: userData.user.email,
+        full_name: userData.user.user_metadata?.full_name || userData.user.user_metadata?.name,
         username: userData.user.email?.split('@')[0] || `user_${Date.now().toString().slice(-6)}`,
-        avatar_url: userData.user.user_metadata?.avatar_url || null,
+        avatar_url: userData.user.user_metadata?.avatar_url || userData.user.user_metadata?.picture,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       };
@@ -149,8 +203,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         .select()
         .single();
         
-      if (error) throw error;
-      if (data) setProfile(data as Profile);
+      if (error) {
+        console.error('Error creating profile:', error);
+        throw error;
+      }
+      
+      if (data) {
+        console.log('Profile created successfully:', data);
+        setProfile(data as Profile);
+      }
     } catch (err) {
       console.error('Profile creation error:', err);
     }
@@ -227,45 +288,95 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const signInWithGoogle = async () => {
     try {
+      // First refresh the session to prevent stale state issues
+      await supabase.auth.refreshSession();
+      
+      // Use dynamic redirect URL based on environment
       const redirectUrl = `${window.location.origin}/auth/callback`;
+      console.log('Google OAuth redirect URL:', redirectUrl);
       
       const response = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
           redirectTo: redirectUrl,
+          // Proper scopes for Google OAuth
           scopes: 'https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/userinfo.profile openid',
           queryParams: {
+            // Request offline access to get refresh token
             access_type: 'offline',
+            // Force consent screen to ensure refresh token
             prompt: 'consent',
           }
         },
       });
       
       if (response.error) {
+        console.error('Google OAuth error:', response.error);
         toast.error(response.error.message || 'Failed to sign in with Google');
-      } else if (response.data.url) {
+      } else if (response.data?.url) {
+        // Clear any old auth data before redirecting
+        localStorage.removeItem('supabase.auth.token');
+        
+        // Redirect to the OAuth provider
+        console.log('Redirecting to Google OAuth URL...');
         window.location.href = response.data.url;
+      } else {
+        console.error('No URL returned from OAuth provider');
+        toast.error('Failed to initialize Google login');
       }
       
       return response;
     } catch (err) {
-      toast.error('An unexpected error occurred');
+      console.error('Unexpected error during Google OAuth:', err);
+      toast.error('An unexpected error occurred during login');
       throw err;
     }
   };
 
   const signOut = async () => {
     try {
-      const response = await supabase.auth.signOut();
+      // Sign out from Supabase (this will clear the session)      
+      const { error } = await supabase.auth.signOut();
       
-      if (response.error) {
-        toast.error(response.error.message || 'Failed to sign out');
+      if (error) {
+        console.error('Error during sign out:', error);
+        toast.error(error.message || 'Failed to sign out');
+        return { error };
       }
       
-      return response;
+      // Clear all state
+      setSession(null);
+      setUser(null);
+      setProfile(null);
+      setFavorites([]);
+      
+      // Clear any legacy or custom localStorage items that might be causing issues
+      const authItemsToRemove = [
+        // Standard Supabase items
+        'supabase.auth.token',
+        // Custom stored items
+        'access_token',
+        'refresh_token',
+        'expires_at',
+        'expires_in',
+        'provider_token',
+        'provider_refresh_token',
+        'user'
+      ];
+      
+      authItemsToRemove.forEach(item => {
+        if (localStorage.getItem(item)) {
+          localStorage.removeItem(item);
+        }
+      });
+      
+      toast.success('You have been signed out');
+      
+      return { error: null };
     } catch (err) {
+      console.error('Unexpected error during sign out:', err);
       toast.error('An unexpected error occurred');
-      throw err;
+      return { error: err as AuthError };
     }
   };
 
