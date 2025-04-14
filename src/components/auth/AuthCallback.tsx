@@ -11,23 +11,32 @@ const AuthCallback = () => {
   useEffect(() => {
     const handleAuthCallback = async () => {
       try {
+        // Clear any previous auth state to avoid conflicts
+        console.log('Starting auth callback processing...');
+        
+        // Check for URL query parameters (code flow)
         const queryParams = new URLSearchParams(window.location.search);
         const code = queryParams.get('code');
         const errorParam = queryParams.get('error');
         const errorDescription = queryParams.get('error_description');
         
+        // Check for hash fragment parameters (implicit flow)
         const hashParams = new URLSearchParams(window.location.hash.substring(1));
         const accessToken = hashParams.get('access_token');
         const refreshToken = hashParams.get('refresh_token');
+        // We log these values for debugging but don't use them directly
         const type = hashParams.get('type');
         
         console.log('Auth callback received:', { 
           code: code ? 'present' : 'absent',
           type,
           accessToken: accessToken ? 'present' : 'absent',
+          refreshToken: refreshToken ? 'present' : 'absent',
+          hash: window.location.hash ? 'present' : 'absent',
           error: errorParam
         });
         
+        // Handle error in the callback
         if (errorParam) {
           const errorMessage = `Authentication failed: ${errorDescription || errorParam}`;
           console.error(errorMessage);
@@ -37,7 +46,9 @@ const AuthCallback = () => {
           return;
         }
         
+        // Handle code-based authentication (PKCE flow)
         if (code) {
+          console.log('Processing code-based authentication');
           const { data, error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
           
           if (exchangeError) {
@@ -49,7 +60,7 @@ const AuthCallback = () => {
           }
           
           if (data?.session) {
-            console.log('Successfully authenticated with session');
+            console.log('Successfully authenticated with code');
             setIsProcessing(false);
             toast.success('Successfully signed in!');
             navigate('/', { replace: true });
@@ -57,19 +68,62 @@ const AuthCallback = () => {
           }
         }
         
-        if (type === 'recovery' || type === 'magiclink' || type === 'signup') {
-          console.log(`Processing ${type} authentication`);
-          setIsProcessing(false);
+        // Handle hash-based authentication (implicit flow)
+        if (accessToken && refreshToken) {
+          console.log('Processing token-based authentication');
           
-          if (type === 'recovery') {
-            return;
-          } else {
-            toast.success('Successfully signed in!');
-            navigate('/', { replace: true });
+          try {
+            // Set the session manually
+            const { data, error } = await supabase.auth.setSession({
+              access_token: accessToken,
+              refresh_token: refreshToken
+            });
+            
+            if (error) {
+              console.error('Error setting session:', error);
+              throw error;
+            }
+            
+            if (data.session) {
+              console.log('Successfully set session from hash params');
+              localStorage.setItem('supabase.auth.token', JSON.stringify(data.session));
+              setIsProcessing(false);
+              toast.success('Successfully signed in!');
+              navigate('/', { replace: true });
+              return;
+            }
+          } catch (sessionError) {
+            console.error('Session setting error:', sessionError);
+            setError('Failed to set authentication session');
+            toast.error('Authentication failed');
+            navigate('/login', { replace: true });
             return;
           }
         }
         
+        // Handle special auth types
+        if (type === 'recovery' || type === 'magiclink' || type === 'signup') {
+          console.log(`Processing ${type} authentication`);
+          
+          // For recovery, we need to redirect to password reset
+          if (type === 'recovery') {
+            setIsProcessing(false);
+            navigate('/reset-password', { replace: true });
+            return;
+          } else {
+            // For other types, try to get the current session
+            const { data } = await supabase.auth.getSession();
+            if (data.session) {
+              console.log('Session found after special auth flow');
+              setIsProcessing(false);
+              toast.success('Successfully signed in!');
+              navigate('/', { replace: true });
+              return;
+            }
+          }
+        }
+        
+        // If we got here, no valid auth method was detected
         console.error('Authentication process failed - no valid auth method detected');
         setError('Authentication failed - no valid method detected');
         toast.error('Authentication process failed');
