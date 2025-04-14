@@ -1,11 +1,5 @@
 import React, { createContext, useState, useEffect, useContext } from 'react';
-import { 
-  Session, 
-  User, 
-  AuthError, 
-  AuthResponse,
-  OAuthResponse
-} from '@supabase/supabase-js';
+import { Session, User, AuthError, AuthResponse, OAuthResponse } from '@supabase/supabase-js';
 import { supabase, Profile, Favorite } from '../lib/supabase';
 import toast from 'react-hot-toast';
 
@@ -51,32 +45,39 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     const initAuth = async () => {
       setLoading(true);
-      console.log('Initializing authentication...');
-      
       try {
-        // Let Supabase handle session retrieval - this is the recommended approach
         const { data, error } = await supabase.auth.getSession();
         if (error) throw error;
         
-        console.log('Server session check result:', data.session ? 'Active session' : 'No session');
-        
         if (data.session) {
-          setSession(data.session);
-          setUser(data.session.user);
+          const expiresAt = data.session.expires_at || 0;
+          const now = Math.floor(Date.now() / 1000);
+          const timeToExpiry = expiresAt - now;
           
-          // Fetch profile and favorites data
-          await fetchProfile(data.session.user.id);
-          await fetchFavorites(data.session.user.id);
+          if (timeToExpiry < 600) {
+            const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
+            if (refreshError) throw refreshError;
+            
+            setSession(refreshData.session);
+            setUser(refreshData.session?.user ?? null);
+          } else {
+            setSession(data.session);
+            setUser(data.session.user);
+          }
+          
+
+          if (data.session.user) {
+            await fetchProfile(data.session.user.id);
+            await fetchFavorites(data.session.user.id);
+          }
         } else {
-          // No active session
           setSession(null);
           setUser(null);
           setProfile(null);
           setFavorites([]);
         }
       } catch (err) {
-        console.error('Auth initialization error:', err);
-        // Reset state on error
+      
         setSession(null);
         setUser(null);
         setProfile(null);
@@ -87,68 +88,75 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
     
     initAuth();
-
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        console.log('Auth state changed:', event, session ? 'Session exists' : 'No session');
         const previousUser = user;
         
-        // Handle different auth events
-        switch (event) {
-          case 'SIGNED_IN':
-            console.log('User signed in event detected');
-            if (session) {
-              setSession(session);
-              setUser(session.user);
-              
-              // Ensure profile exists and fetch user data
-              await createProfile(session.user.id);
-              await fetchProfile(session.user.id);
-              await fetchFavorites(session.user.id);
-              
-              // Welcome message if this is a new login (not a refresh)
-              if (!previousUser) {
-                const username = session.user.user_metadata?.full_name || 
-                               session.user.user_metadata?.name ||
-                               session.user.email?.split('@')[0] || 
-                               'Trainer';
-                toast.success(`Welcome, ${username}!`);
+        try {
+          switch (event) {
+            case 'SIGNED_IN':
+              if (session) {
+                setSession(session);
+                setUser(session.user);
+                setLoading(true);
+                
+                try {
+                  await Promise.all([
+                    createProfile(session.user.id),
+                    fetchProfile(session.user.id),
+                    fetchFavorites(session.user.id)
+                  ]);
+                  
+                  if (!previousUser) {
+                    const username = session.user.user_metadata?.full_name || 
+                                  session.user.user_metadata?.name ||
+                                  session.user.email?.split('@')[0] || 
+                                  'Trainer';
+                    toast.success(`Welcome, ${username}!`);
+                  }
+                } catch (error) {
+                  toast.error('Signed in, but error loading profile data');
+                } finally {
+                  setLoading(false);
+                }
               }
-            }
-            break;
-            
-          case 'SIGNED_OUT':
-            console.log('User signed out event detected');
-            // Clear all states
-            setSession(null);
-            setUser(null);
-            setProfile(null);
-            setFavorites([]);
-            
-            // Only show toast if there was a previous user (not on initial load)
-            if (previousUser) {
-              toast.success('You have been signed out');
-            }
-            break;
-            
-          case 'TOKEN_REFRESHED':
-            console.log('Token refreshed event detected');
-            if (session) {
-              setSession(session);
-              setUser(session.user);
-            }
-            break;
-            
-          case 'USER_UPDATED':
-            console.log('User updated event detected');
-            if (session) {
-              setUser(session.user);
-              await fetchProfile(session.user.id);
-            }
-            break;
+              break;
+              
+            case 'SIGNED_OUT':
+              setSession(null);
+              setUser(null);
+              setProfile(null);
+              setFavorites([]);
+              
+              if (previousUser) {
+                toast.success('You have been signed out');
+              }
+              break;
+              
+            case 'TOKEN_REFRESHED':
+              if (session) {
+                setSession(session);
+                setUser(session.user);
+                
+                const expiresAt = session.expires_at || 0;
+              }
+              break;
+              
+            case 'USER_UPDATED':
+              if (session) {
+                setUser(session.user);
+                await fetchProfile(session.user.id);
+              }
+              break;
+              
+            case 'PASSWORD_RECOVERY':
+              toast.success('Please follow the instructions to reset your password');
+              break;
+          }
+        } catch (err) {
+        } finally {
+          setLoading(false);
         }
-        
-        setLoading(false);
       }
     );
     
@@ -246,12 +254,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         email, 
         password,
         options: {
-          emailRedirectTo: redirectUrl
+          emailRedirectTo: redirectUrl,
+          data: {
+            signed_up_at: new Date().toISOString()
+          }
         }
       });
       
       if (response.error) {
-        toast.error(response.error.message || 'Failed to sign up');
+        if (response.error.message.includes('password')) {
+          toast.error('Password must be at least 6 characters');
+        } else if (response.error.message.includes('email')) {
+          toast.error('Please provide a valid email address');
+        } else {
+          toast.error(response.error.message || 'Failed to sign up');
+        }
       } else if (response.data.user?.identities?.length === 0) {
         toast.error('This email is already registered');
       } else {
@@ -260,20 +277,28 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       return response;
     } catch (err) {
+
       toast.error('An unexpected error occurred');
       throw err;
     }
   };
 
   const signIn = async (email: string, password: string) => {
-    try {      
-      const response = await supabase.auth.signInWithPassword({ email, password });
+    try {
+      localStorage.removeItem('supabase.auth.token');
+      
+      const response = await supabase.auth.signInWithPassword({ 
+        email, 
+        password
+      });
       
       if (response.error) {
         if (response.error.message.includes('Invalid login credentials')) {
           toast.error('Invalid email or password');
         } else if (response.error.message.includes('Email not confirmed')) {
           toast.error('Please confirm your email before logging in');
+        } else if (response.error.message.includes('rate limit')) {
+          toast.error('Too many login attempts. Please try again later.');
         } else {
           toast.error(response.error.message || 'Failed to sign in');
         }
@@ -281,6 +306,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       return response;
     } catch (err) {
+
       toast.error('An unexpected error occurred');
       throw err;
     }
@@ -299,35 +325,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         provider: 'google',
         options: {
           redirectTo: redirectUrl,
-          // Proper scopes for Google OAuth
           scopes: 'https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/userinfo.profile openid',
           queryParams: {
-            // Request offline access to get refresh token
             access_type: 'offline',
-            // Force consent screen to ensure refresh token
             prompt: 'consent',
           }
         },
       });
       
       if (response.error) {
-        console.error('Google OAuth error:', response.error);
         toast.error(response.error.message || 'Failed to sign in with Google');
       } else if (response.data?.url) {
-        // Clear any old auth data before redirecting
         localStorage.removeItem('supabase.auth.token');
-        
-        // Redirect to the OAuth provider
-        console.log('Redirecting to Google OAuth URL...');
         window.location.href = response.data.url;
       } else {
-        console.error('No URL returned from OAuth provider');
         toast.error('Failed to initialize Google login');
       }
       
       return response;
     } catch (err) {
-      console.error('Unexpected error during Google OAuth:', err);
       toast.error('An unexpected error occurred during login');
       throw err;
     }
@@ -410,16 +426,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
         redirectTo: redirectUrl,
+        captchaToken: undefined
       });
       
       if (error) {
-        toast.error(error.message || 'Failed to send reset password email');
+        if (error.message.includes('rate limit')) {
+          toast.error('Too many reset attempts. Please try again later.');
+        } else {
+          toast.success('If your email is registered, you will receive reset instructions shortly');
+        }
       } else {
         toast.success('Check your email for password reset instructions');
       }
       
       return { error };
     } catch (err) {
+
       toast.error('An unexpected error occurred');
       return { error: err as AuthError };
     }
@@ -437,23 +459,36 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const signInWithMagicLink = async (email: string) => {
     try {
+      localStorage.removeItem('supabase.auth.token');
+      
       const redirectUrl = `${window.location.origin}/auth/callback`;
       
       const { error } = await supabase.auth.signInWithOtp({
         email,
         options: {
           emailRedirectTo: redirectUrl,
+          shouldCreateUser: true,
+          data: {
+            last_magic_link_request: new Date().toISOString()
+          }
         },
       });
       
       if (error) {
-        toast.error(error.message || 'Failed to send magic link');
+        if (error.message.includes('rate limit')) {
+          toast.error('You have requested too many magic links. Please try again later.');
+        } else if (error.message.includes('not found')) {
+          toast.success('If your email is registered, you will receive a magic link shortly');
+        } else {
+          toast.error(error.message || 'Failed to send magic link');
+        }
       } else {
         toast.success('Check your email for the magic link');
       }
       
       return { error };
     } catch (err) {
+
       toast.error('An unexpected error occurred');
       return { error: err as AuthError };
     }
@@ -461,6 +496,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const fetchFavorites = async (userId: string) => {
     try {
+      const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
+      
+      if (refreshError) {
+        console.error('Failed to refresh session when fetching favorites:', refreshError);
+        return;
+      }
+      
+      if (!refreshData.session) {
+        console.error('No active session found when fetching favorites');
+        return;
+      }
+
+
       const { data, error } = await supabase
         .from('favorites')
         .select('*')
@@ -484,22 +532,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
 
     try {
-      const { data: sessionData } = await supabase.auth.getSession();
+
+      const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
       
-      if (!sessionData.session) {
-        console.error('No active session found when adding favorite');
-        toast.error('Authentication error. Please sign in again.');
+      if (refreshError) {
+            toast.error('Session expired. Please sign in again.');
         return;
       }
       
-      console.log('Adding favorite with user ID:', user.id);
+      if (!refreshData.session) {
+            toast.error('Authentication error. Please sign in again.');
+        return;
+      }
       
+      
+
       const { error } = await supabase
         .from('favorites')
         .insert([{ user_id: user.id, pokemon_id: pokemonId }]);
 
       if (error) {
-        console.error('Error adding favorite:', error);
+
         if (error.code === '23505') {
           toast.error('This Pokémon is already in your favorites');
         } else if (error.code === '42501' || error.message?.includes('permission denied')) {
@@ -513,7 +566,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       await fetchFavorites(user.id);
       toast.success('Added to favorites!');
     } catch (err) {
-      console.error('Error in addFavorite:', err);
       toast.error('Failed to add to favorites');
     }
   };
@@ -525,15 +577,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
 
     try {
-      const { data: sessionData } = await supabase.auth.getSession();
+
+      const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
       
-      if (!sessionData.session) {
-        console.error('No active session found when removing favorite');
-        toast.error('Authentication error. Please sign in again.');
+      if (refreshError) {
+            toast.error('Session expired. Please sign in again.');
         return;
       }
       
-      console.log('Removing favorite with user ID:', user.id, 'and pokemon ID:', pokemonId);
+      if (!refreshData.session) {
+            toast.error('Authentication error. Please sign in again.');
+        return;
+      }
+      
+      
+
       const { error } = await supabase
         .from('favorites')
         .delete()
@@ -541,7 +599,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         .eq('pokemon_id', pokemonId);
 
       if (error) {
-        console.error('Error removing favorite:', error);
         if (error.code === '42501' || error.message?.includes('permission denied')) {
           toast.error('You don\'t have permission to remove favorites. Please sign in again.');
         } else {
@@ -553,7 +610,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setFavorites(favorites.filter(fav => fav.pokemon_id !== pokemonId));
       toast.success('Removed from favorites');
     } catch (err) {
-      console.error('Error in removeFavorite:', err);
       toast.error('Failed to remove from favorites');
     }
   };
