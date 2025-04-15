@@ -13,6 +13,7 @@ const supabaseOptions = {
     persistSession: true,
     detectSessionInUrl: true,
     storage: localStorage,
+    flowType: 'pkce' as const,
   },
   db: {
     schema: 'public',
@@ -30,17 +31,29 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, supabaseOptio
 supabase.auth.onAuthStateChange((event, session) => {
   console.log('Auth state changed:', event, session ? 'User session exists' : 'No session');
   
-  if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
-    console.log('User signed in or token refreshed');
+  if (event === 'SIGNED_IN') {
+    if (session) {
+      localStorage.setItem('supabase.auth.token', JSON.stringify(session));
+    }
+  } else if (event === 'TOKEN_REFRESHED') {
+    if (session) {
+      localStorage.setItem('supabase.auth.token', JSON.stringify(session));
+    }
   } else if (event === 'SIGNED_OUT') {
-    console.log('User signed out, clearing any remaining auth data');
-    localStorage.removeItem('supabase.auth.token');
-    localStorage.removeItem('access_token');
-    localStorage.removeItem('refresh_token');
-    localStorage.removeItem('expires_at');
-    localStorage.removeItem('expires_in');
-    localStorage.removeItem('provider_token');
-    localStorage.removeItem('provider_refresh_token');
+    const authItems = [
+      'supabase.auth.token',
+      'access_token',
+      'refresh_token',
+      'expires_at',
+      'expires_in',
+      'provider_token',
+      'provider_refresh_token',
+      'sb-' + supabaseUrl.split('//')[1].split('.')[0] + '-auth-token'
+    ];
+    
+    authItems.forEach(item => {
+      localStorage.removeItem(item);
+    });
   }
 });
 

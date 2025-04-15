@@ -95,13 +95,11 @@ const TeamSelector: React.FC<TeamSelectorProps> = ({ pokemon, onClose }) => {
       await addPokemonToTeam(teamId, pokemon.id, position);
       toast.success(`Added ${pokemon.name} to your team!`);
       
-      // Update local state
       setTeamMembers(prev => ({
         ...prev,
         [teamId]: [...(prev[teamId] || []), position]
       }));
       
-      // Close the selector after a short delay
       setTimeout(() => {
         onClose();
       }, 1000);

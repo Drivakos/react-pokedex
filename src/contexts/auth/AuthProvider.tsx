@@ -1,13 +1,13 @@
 import React, { useState, useEffect, createContext, useContext } from 'react';
 import { Session, User } from '@supabase/supabase-js';
-import { supabase, Profile } from '../../lib/supabase';
+import { supabase, Profile, Favorite } from '../../lib/supabase';
+import toast from 'react-hot-toast';
 import { AuthMethods } from './AuthMethods';
 import { ProfileMethods } from './ProfileMethods';
 import { FavoritesMethods } from './FavoritesMethods';
 import { TeamsMethods } from './TeamsMethods';
 import { useSessionRefresher } from './useSessionRefresher';
 
-// AuthContext type
 export interface AuthContextType extends
   AuthMethods,
   ProfileMethods,
@@ -19,10 +19,8 @@ export interface AuthContextType extends
   loading: boolean;
 }
 
-// Create context
 export const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Custom hook for using auth context
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (context === undefined) {
@@ -31,18 +29,68 @@ export const useAuth = () => {
   return context;
 };
 
-// AuthProvider component
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  // Base state
   const [session, setSession] = useState<Session | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
-  
-  // Session refresher hook
   const { refreshSession } = useSessionRefresher();
+  const [favorites, setFavorites] = useState<Favorite[]>([]);
+  const [teams, setTeams] = useState<any[]>([]);
+  
+  const profileMethods = ProfileMethods({
+    user,
+    refreshSession,
+    setProfile
+  });
+  
+  const { createProfile, refreshProfile } = profileMethods;
+  
+  const favoritesMethods = FavoritesMethods({
+    user,
+    refreshSession,
+    favorites,
+    setFavorites
+  });
+  
+  const { fetchFavorites } = favoritesMethods;
+  
+  const teamsMethods = TeamsMethods({
+    user,
+    refreshSession,
+    teams,
+    setTeams
+  });
+  
+  const resetAuthState = () => {
+    setSession(null);
+    setUser(null);
+    setProfile(null);
+    setFavorites([]);
+    setTeams([]);
+  };
+  
+  const initProfile = async (userId: string) => {
+    try {
+      await createProfile(userId);
+      await refreshProfile(userId);
+      await fetchFavorites();
+      await teamsMethods.fetchTeams();
+    } catch (error) {
+      console.error("Profile initialization error:", error);
+    }
+  };
+  
+  const authMethods = AuthMethods({ 
+    setSession, 
+    setUser, 
+    resetAuthState,
+    createProfile,
+    refreshProfile,
+    fetchFavorites,
+    fetchTeams: teamsMethods.fetchTeams
+  });
 
-  // Initialize auth state
   useEffect(() => {
     const initAuth = async () => {
       setLoading(true);
@@ -51,20 +99,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (error) throw error;
         
         if (data.session) {
-          const expiresAt = data.session.expires_at || 0;
-          const now = Math.floor(Date.now() / 1000);
-          const timeToExpiry = expiresAt - now;
-          
-          if (timeToExpiry < 600) {
-            const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
-            if (refreshError) throw refreshError;
-            
-            setSession(refreshData.session);
-            setUser(refreshData.session?.user ?? null);
-          } else {
-            setSession(data.session);
-            setUser(data.session.user);
-          }
+          localStorage.setItem('supabase.auth.token', JSON.stringify(data.session));
+          setSession(data.session);
+          setUser(data.session.user);
 
           if (data.session.user) {
             await initProfile(data.session.user.id);
@@ -82,12 +119,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     
     initAuth();
     
-    // Auth state change subscription
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
+        console.log('Auth state changed:', event);
         const previousUser = user;
         
         try {
+          if (session) {
+            localStorage.setItem('supabase.auth.token', JSON.stringify(session));
+          } else if (event === 'SIGNED_OUT') {
+            localStorage.removeItem('supabase.auth.token');
+          }
+          
           switch (event) {
             case 'SIGNED_IN':
               if (session) {
@@ -150,74 +193,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
   }, [user]);
   
-  // Reset auth state helper
-  const resetAuthState = () => {
-    setSession(null);
-    setUser(null);
-    setProfile(null);
-    setFavorites([]);
-    setTeams([]);
-  };
-  
-  // Initialize profile helper
-  const initProfile = async (userId: string) => {
-    try {
-      await createProfile(userId);
-      await refreshProfile(userId);
-      await fetchFavorites();
-      await fetchTeams();
-    } catch (error) {
-      console.error("Profile initialization error:", error);
-    }
-  };
-  
-  // Import method implementations
-  const authMethods = AuthMethods({ 
-    setSession, 
-    setUser, 
-    resetAuthState,
-    createProfile,
-    refreshProfile,
-    fetchFavorites,
-    fetchTeams
-  });
-  
-  const profileMethods = ProfileMethods({
-    user,
-    refreshSession,
-    setProfile
-  });
-  
-  const [favorites, setFavorites] = useState([]);
-  const favoritesMethods = FavoritesMethods({
-    user,
-    refreshSession,
-    favorites,
-    setFavorites
-  });
-  
-  const [teams, setTeams] = useState([]);
-  const teamsMethods = TeamsMethods({
-    user,
-    refreshSession,
-    teams,
-    setTeams
-  });
-  
-  // Combine all context values
   const value = {
     session,
     user,
     profile,
     loading,
+    teams,
+    fetchTeams: teamsMethods.fetchTeams,
+    createTeam: teamsMethods.createTeam,
+    updateTeam: teamsMethods.updateTeam,
+    deleteTeam: teamsMethods.deleteTeam,
+    addPokemonToTeam: teamsMethods.addPokemonToTeam,
+    removePokemonFromTeam: teamsMethods.removePokemonFromTeam,
+    getTeamMembers: teamsMethods.getTeamMembers,
     ...authMethods,
     ...profileMethods,
-    ...favoritesMethods,
-    ...teamsMethods
+    ...favoritesMethods
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
 
-// Import toast
-import toast from 'react-hot-toast';
