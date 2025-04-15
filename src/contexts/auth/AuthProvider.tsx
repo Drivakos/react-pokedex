@@ -55,12 +55,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   
   const { fetchFavorites } = favoritesMethods;
   
+  // Ensure methods are properly initialized with correct context
   const teamsMethods = TeamsMethods({
     user,
     refreshSession,
     teams,
     setTeams
   });
+  
+  // Explicitly bind team methods to prevent context loss
+  const addPokemonToTeam = teamsMethods.addPokemonToTeam;
+  const removePokemonFromTeam = teamsMethods.removePokemonFromTeam;
+  const getTeamMembers = teamsMethods.getTeamMembers;
+  const fetchTeams = teamsMethods.fetchTeams;
+  const createTeam = teamsMethods.createTeam;
+  const updateTeam = teamsMethods.updateTeam;
+  const deleteTeam = teamsMethods.deleteTeam;
   
   const resetAuthState = () => {
     setSession(null);
@@ -199,13 +209,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     profile,
     loading,
     teams,
-    fetchTeams: teamsMethods.fetchTeams,
-    createTeam: teamsMethods.createTeam,
-    updateTeam: teamsMethods.updateTeam,
-    deleteTeam: teamsMethods.deleteTeam,
-    addPokemonToTeam: teamsMethods.addPokemonToTeam,
-    removePokemonFromTeam: teamsMethods.removePokemonFromTeam,
-    getTeamMembers: teamsMethods.getTeamMembers,
+    // Use locally bound function references
+    fetchTeams,
+    createTeam,
+    updateTeam,
+    deleteTeam,
+    addPokemonToTeam,
+    removePokemonFromTeam,
+    getTeamMembers,
     ...authMethods,
     ...profileMethods,
     ...favoritesMethods
