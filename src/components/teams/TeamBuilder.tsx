@@ -99,7 +99,8 @@ const TeamBuilder: React.FC<{
     const loadTeamMembers = async () => {
       const pokemonMap: Record<number, Record<number, Pokemon>> = {};
 
-      for (const team of teams) {
+      if (teams && Array.isArray(teams)) {
+        for (const team of teams) {
         const members = await getTeamMembers(team.id);
         
         pokemonMap[team.id] = {};
@@ -115,11 +116,12 @@ const TeamBuilder: React.FC<{
           }
         }
       }
+      }
 
       setTeamPokemon(pokemonMap);
     };
 
-    if (teams.length > 0) {
+    if (teams && Array.isArray(teams) && teams.length > 0) {
       loadTeamMembers();
     }
   }, [teams, getTeamMembers]);
@@ -321,7 +323,7 @@ const TeamBuilder: React.FC<{
         </div>
       )}
 
-      {teams.length === 0 && !isCreating ? (
+      {(!teams || !Array.isArray(teams) || teams.length === 0) && !isCreating ? (
         <div className="text-center py-12 bg-gray-50 rounded-xl border border-dashed border-gray-300">
           <Users size={48} className="mx-auto text-gray-400 mb-4" />
           <p className="text-gray-500 mb-5 text-lg">You don't have any teams yet.</p>
@@ -334,7 +336,7 @@ const TeamBuilder: React.FC<{
         </div>
       ) : (
         <div className="space-y-8">
-          {teams.map((team) => (
+          {teams && Array.isArray(teams) && teams.map((team) => (
             <div key={team.id} className="border border-gray-200 rounded-xl p-6 shadow-md hover:shadow-lg transition-all duration-300 bg-gradient-to-b from-white to-gray-50">
               {isEditing === team.id ? (
                 <div className="mb-5">
