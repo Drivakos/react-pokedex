@@ -1,7 +1,7 @@
 import { Pokemon, RawPokemonData, Filters, PokemonDetails } from '../types/pokemon';
 
 // Use environment variables for API endpoints
-const GRAPHQL_ENDPOINT = import.meta.env.VITE_API_GRAPHQL_URL || 'https://pokeapi.co/graphql/v1beta';
+const GRAPHQL_ENDPOINT = import.meta.env.VITE_API_GRAPHQL_URL || 'https://beta.pokeapi.co/graphql/v1beta';
 const REST_ENDPOINT = import.meta.env.VITE_API_REST_URL || import.meta.env.VITE_API_URL || 'https://pokeapi.co/api/v2';
 
 // Validate API endpoints
@@ -152,6 +152,13 @@ export const fetchPokemonData = async (
     const whereConditions = buildWhereConditions(searchTerm, filters);
     const typeAndCondition = buildTypeAndCondition(filters.types);
 
+    // Construct the where clause with proper conditions
+    const whereClause = [
+      whereConditions,
+      typeAndCondition,
+      `pokemon_v2_pokemonforms: { is_default: { _eq: true } }`
+    ].filter(Boolean).join(', ');
+
     const query = `
       query GetFilteredPokemon($limit: Int!, $offset: Int!) {
         pokemon_v2_pokemon(
@@ -159,11 +166,7 @@ export const fetchPokemonData = async (
           offset: $offset, 
           order_by: {id: asc}
           where: {
-            ${whereConditions}
-            ${typeAndCondition}
-            pokemon_v2_pokemonforms: { 
-              is_default: { _eq: true }
-            }
+            ${whereClause}
           }
         ) {
           id
@@ -209,16 +212,27 @@ export const fetchPokemonData = async (
       }
     `;
 
+    console.log('Fetching Pokemon data with params:', { limit, offset, searchTerm, filters });
     const response = await fetch(GRAPHQL_ENDPOINT, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ query, variables: { limit, offset } }),
     });
 
+    if (!response.ok) {
+      throw new Error(`GraphQL HTTP error! Status: ${response.status} ${response.statusText}`);
+    }
+
     const result = await response.json();
     
     if (result.errors) {
-      throw new Error(result.errors[0].message);
+      console.error('GraphQL errors:', JSON.stringify(result.errors));
+      throw new Error(`GraphQL error: ${result.errors[0]?.message || 'Unknown GraphQL error'}`);
+    }
+    
+    if (!result.data) {
+      console.error('No data returned from GraphQL:', result);
+      throw new Error('No data returned from GraphQL query');
     }
 
     const rawPokemon = result.data.pokemon_v2_pokemon as RawPokemonData[];
@@ -226,6 +240,14 @@ export const fetchPokemonData = async (
     return transformRawData(rawPokemon);
   } catch (error) {
     console.error('Error fetching Pokemon data:', error);
+    // Log more details about the error
+    if (error instanceof Error) {
+      console.error('Error name:', error.name);
+      console.error('Error message:', error.message);
+      console.error('Error stack:', error.stack);
+    } else {
+      console.error('Unknown error type:', typeof error);
+    }
     throw error;
   }
 };
@@ -406,6 +428,7 @@ export const fetchPokemonDetails = async (id: number): Promise<PokemonDetails> =
  */
 export const fetchFilterOptions = async () => {
   try {
+    console.log('Fetching filter options from:', GRAPHQL_ENDPOINT);
     const query = `
       query GetFilterOptions {
         types: pokemon_v2_type(where: {pokemon_v2_pokemontypes: {pokemon_v2_pokemon: {is_default: {_eq: true}}}}) {
@@ -426,10 +449,20 @@ export const fetchFilterOptions = async () => {
       body: JSON.stringify({ query }),
     });
 
+    if (!response.ok) {
+      throw new Error(`GraphQL HTTP error! Status: ${response.status} ${response.statusText}`);
+    }
+
     const result = await response.json();
     
     if (result.errors) {
-      throw new Error(result.errors[0].message);
+      console.error('GraphQL errors:', JSON.stringify(result.errors));
+      throw new Error(`GraphQL error: ${result.errors[0]?.message || 'Unknown GraphQL error'}`);
+    }
+
+    if (!result.data) {
+      console.error('No data returned from GraphQL:', result);
+      throw new Error('No data returned from GraphQL query');
     }
 
     return {
@@ -439,6 +472,14 @@ export const fetchFilterOptions = async () => {
     };
   } catch (error) {
     console.error('Error fetching filter options:', error);
+    // Log more details about the error
+    if (error instanceof Error) {
+      console.error('Error name:', error.name);
+      console.error('Error message:', error.message);
+      console.error('Error stack:', error.stack);
+    } else {
+      console.error('Unknown error type:', typeof error);
+    }
     throw error;
   }
 };
