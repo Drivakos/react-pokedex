@@ -309,7 +309,9 @@ const Profile: React.FC = () => {
         
         <div className="mt-8 bg-white shadow-md rounded-lg overflow-hidden">
           <div className="px-6 py-8">
-            <h2 className="text-2xl font-bold text-gray-900 mb-6">Your Favorite Pokémon</h2>
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-2xl font-bold text-gray-900">Your Favorite Pokémon</h2>
+            </div>
             
             {fetchingFavorites ? (
               <div className="text-center py-8">
@@ -347,6 +349,29 @@ const Profile: React.FC = () => {
                 ))}
               </div>
             )}
+          </div>
+        </div>
+        
+        <div className="mt-8 bg-white shadow-md rounded-lg overflow-hidden">
+          <div className="px-6 py-8">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-2xl font-bold text-gray-900">Your Pokémon Teams</h2>
+              <button
+                onClick={() => navigate('/teams')}
+                className="bg-blue-500 hover:bg-blue-600 text-white font-medium py-2 px-4 rounded-md flex items-center"
+              >
+                Manage Teams
+              </button>
+            </div>
+            <p className="text-gray-600 mb-4">Create and manage your Pokémon teams to build the perfect lineup.</p>
+            <div className="flex justify-center">
+              <button
+                onClick={() => navigate('/teams')}
+                className="bg-gray-100 hover:bg-gray-200 text-gray-800 font-medium py-3 px-6 rounded-md flex items-center justify-center w-full max-w-md"
+              >
+                Go to Team Builder
+              </button>
+            </div>
           </div>
         </div>
       </div>

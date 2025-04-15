@@ -68,17 +68,32 @@ export async function ensureProfile(userId: string, email?: string): Promise<voi
 
 export interface Profile {
   id: string;
-  username?: string | null;
-  full_name?: string | null;
-  avatar_url?: string | null;
-  email?: string | null;
-  updated_at?: string | null;
-  created_at?: string;
-};
+  username: string;
+  avatar_url?: string;
+  updated_at?: string;
+}
 
 export type Favorite = {
-  id: string;
+  id: number;
   user_id: string;
   pokemon_id: number;
-  created_at: string;
-};
+  created_at?: string;
+}
+
+export interface Team {
+  id: number;
+  user_id: string;
+  name: string;
+  description?: string;
+  created_at?: string;
+  updated_at?: string;
+  members?: TeamMember[];
+}
+
+export interface TeamMember {
+  id: number;
+  team_id: number;
+  pokemon_id: number;
+  position: number;
+  created_at?: string;
+}

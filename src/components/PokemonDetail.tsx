@@ -2,8 +2,10 @@ import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Pokemon } from '../types/pokemon';
 import { TYPE_COLORS } from '../types/pokemon';
-import { X, ExternalLink, ChevronDown, ChevronUp } from 'lucide-react';
+import { X, ExternalLink, ChevronDown, ChevronUp, Users } from 'lucide-react';
 import FavoritePokemon from './FavoritePokemon';
+import TeamSelector from './teams/TeamSelector';
+import { useAuth } from '../hooks/useAuth';
 
 interface PokemonDetailProps {
   pokemon: Pokemon;
@@ -11,6 +13,9 @@ interface PokemonDetailProps {
 }
 
 export const PokemonDetail: React.FC<PokemonDetailProps> = ({ pokemon, onClose }) => {
+  const { user } = useAuth();
+  const [showTeamSelector, setShowTeamSelector] = useState(false);
+  
   const handleOverlayClick = (e: React.MouseEvent<HTMLDivElement>) => {
     if (e.target === e.currentTarget) {
       onClose();
@@ -26,7 +31,18 @@ export const PokemonDetail: React.FC<PokemonDetailProps> = ({ pokemon, onClose }
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50" onClick={handleOverlayClick}>
       <div className="bg-white rounded-lg max-w-2xl w-full overflow-y-auto p-6 relative" style={{ maxHeight: movesExpanded || infoExpanded ? '90vh' : 'fit-content' }}>
         <div className="flex justify-between items-center absolute top-4 right-4 gap-2">
-          <FavoritePokemon pokemonId={pokemon.id} />
+          <div className="flex gap-2">
+            {user && (
+              <button
+                onClick={() => setShowTeamSelector(true)}
+                className="bg-green-500 hover:bg-green-600 text-white p-1.5 rounded-full"
+                title="Add to team"
+              >
+                <Users size={16} />
+              </button>
+            )}
+            <FavoritePokemon pokemonId={pokemon.id} />
+          </div>
           <button
             onClick={onClose}
             className="text-gray-500 hover:text-gray-700"
@@ -124,6 +140,15 @@ export const PokemonDetail: React.FC<PokemonDetailProps> = ({ pokemon, onClose }
           </div>
         </div>
       </div>
+      
+      {showTeamSelector && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-[60]" onClick={(e) => e.target === e.currentTarget && setShowTeamSelector(false)}>
+          <TeamSelector 
+            pokemon={pokemon} 
+            onClose={() => setShowTeamSelector(false)} 
+          />
+        </div>
+      )}
     </div>
   );
 };

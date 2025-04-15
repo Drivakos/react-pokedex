@@ -10,6 +10,7 @@ import ResetPasswordConfirm from './components/auth/ResetPasswordConfirm';
 import MagicLinkLogin from './components/auth/MagicLinkLogin';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 import Navigation from './components/Navigation';
+import TeamBuilder from './components/teams/TeamBuilder';
 
 function App() {
   return (
@@ -28,6 +29,11 @@ function App() {
           <Route path="/profile" element={
             <ProtectedRoute>
               <Profile />
+            </ProtectedRoute>
+          } />
+          <Route path="/teams" element={
+            <ProtectedRoute>
+              <TeamBuilder />
             </ProtectedRoute>
           } />
         </Routes>
