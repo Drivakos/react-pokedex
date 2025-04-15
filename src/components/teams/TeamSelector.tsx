@@ -48,15 +48,17 @@ const TeamSelector: React.FC<TeamSelectorProps> = ({ pokemon, onClose }) => {
     const loadTeamMembers = async () => {
       const membersMap: Record<number, number[]> = {};
 
-      for (const team of teams) {
-        const members = await getTeamMembers(team.id);
-        membersMap[team.id] = members.map(m => m.position);
+      if (teams && Array.isArray(teams)) {
+        for (const team of teams) {
+          const members = await getTeamMembers(team.id);
+          membersMap[team.id] = members.map(m => m.position);
+        }
       }
 
       setTeamMembers(membersMap);
     };
 
-    if (teams.length > 0) {
+    if (teams && Array.isArray(teams) && teams.length > 0) {
       loadTeamMembers();
     }
   }, [teams, getTeamMembers]);
@@ -243,14 +245,14 @@ const TeamSelector: React.FC<TeamSelectorProps> = ({ pokemon, onClose }) => {
         </button>
       )}
 
-      {teams.length === 0 && !isCreating ? (
+      {(!teams || !Array.isArray(teams) || teams.length === 0) && !isCreating ? (
         <div className="text-center py-4">
           <p className="text-gray-500">You don't have any teams yet.</p>
         </div>
       ) : (
         <div className="space-y-4">
           <h3 className="font-semibold">Select Team & Position</h3>
-          {teams.map((team) => (
+          {teams && Array.isArray(teams) && teams.map((team) => (
             <div key={team.id} className="border rounded-lg p-3">
               <h4 className="font-medium">{team.name}</h4>
               {team.description && <p className="text-sm text-gray-600 mb-2">{team.description}</p>}
