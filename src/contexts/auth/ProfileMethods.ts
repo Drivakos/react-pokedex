@@ -24,10 +24,8 @@ export const ProfileMethods = ({
   
   const createProfile = async (userId: string): Promise<void> => {
     try {
-      // Skip if no userId provided
       if (!userId) return;
 
-      // Check if profile already exists
       const { data: existingProfile, error: fetchError } = await supabase
         .from('profiles')
         .select('id')
@@ -40,10 +38,9 @@ export const ProfileMethods = ({
       }
       
       if (existingProfile) {
-        return; // Profile already exists
+        return;
       }
       
-      // Get user data
       const { data: userData } = await supabase.auth.getUser();
       
       if (!userData?.user) {
@@ -51,14 +48,12 @@ export const ProfileMethods = ({
         return;
       }
       
-      // Extract username from email or metadata
       const email = userData.user.email;
       const username = userData.user.user_metadata?.full_name || 
                       userData.user.user_metadata?.name || 
                       (email ? email.split('@')[0] : null) || 
                       `user_${userId.substring(0, 8)}`;
       
-      // Create new profile
       const { data, error } = await supabase
         .from('profiles')
         .insert({
@@ -77,7 +72,6 @@ export const ProfileMethods = ({
 
   const refreshProfile = async (userId: string): Promise<void> => {
     try {
-      // Skip if no userId provided
       if (!userId) return;
 
       const { data, error } = await supabase
@@ -107,13 +101,11 @@ export const ProfileMethods = ({
         return { data: null, error: new Error('Not authenticated') };
       }
       
-      // Refresh session before update
       const { success } = await refreshSession();
       if (!success) {
         return { data: null, error: new Error('Session refresh failed') };
       }
       
-      // Update profile
       const { data, error } = await supabase
         .from('profiles')
         .update({
@@ -129,7 +121,6 @@ export const ProfileMethods = ({
         return { data: null, error };
       }
       
-      // Update local state
       setProfile(data as Profile);
       toast.success('Profile updated successfully');
       

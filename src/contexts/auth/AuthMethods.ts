@@ -25,11 +25,12 @@ export interface AuthMethods {
 export const AuthMethods = ({
   setSession,
   setUser,
-  resetAuthState,
-  createProfile,
-  refreshProfile,
-  fetchFavorites,
-  fetchTeams
+  resetAuthState
+  // Commenting out unused parameters instead of removing them to maintain interface compatibility
+  // createProfile,
+  // refreshProfile,
+  // fetchFavorites,
+  // fetchTeams
 }: AuthMethodsProps): AuthMethods => {
   
   const signUp = async (email: string, password: string): Promise<AuthResponse> => {
@@ -66,6 +67,9 @@ export const AuthMethods = ({
       
       if (response.error) {
         toast.error(response.error.message);
+      } else if (response.data.session) {
+        setSession(response.data.session);
+        setUser(response.data.user);
       }
       
       return response;
@@ -78,8 +82,8 @@ export const AuthMethods = ({
   const signInWithGoogle = async (): Promise<OAuthResponse> => {
     try {
       await supabase.auth.refreshSession();
-      
       const redirectUrl = `${window.location.origin}/auth/callback`;
+      console.log('Google OAuth redirect URL:', redirectUrl);
       
       const response = await supabase.auth.signInWithOAuth({
         provider: 'google',
@@ -94,14 +98,17 @@ export const AuthMethods = ({
       });
       
       if (response.error) {
-        toast.error(response.error.message);
-      } else {
+        toast.error(response.error.message || 'Failed to sign in with Google');
+      } else if (response.data?.url) {
         localStorage.removeItem('supabase.auth.token');
+        window.location.href = response.data.url;
+      } else {
+        toast.error('Failed to initialize Google login');
       }
       
       return response;
     } catch (err) {
-      toast.error('An unexpected error occurred');
+      toast.error('An unexpected error occurred during login');
       throw err;
     }
   };
@@ -113,6 +120,8 @@ export const AuthMethods = ({
       if (error) {
         toast.error(error.message);
       } else {
+        setSession(null);
+        setUser(null);
         resetAuthState();
         
         const authItems = [

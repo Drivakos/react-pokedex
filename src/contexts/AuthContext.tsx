@@ -1,6 +1,6 @@
 import React, { createContext, useState, useEffect, useContext } from 'react';
 import { Session, User, AuthError, AuthResponse, OAuthResponse } from '@supabase/supabase-js';
-import { supabase, Profile, Favorite, Team, TeamMember } from '../lib/supabase';
+import { supabase, Profile, Favorite } from '../lib/supabase';
 import toast from 'react-hot-toast';
 
 interface AuthContextType {
@@ -8,7 +8,6 @@ interface AuthContextType {
   user: User | null;
   profile: Profile | null;
   favorites: Favorite[];
-  teams: Team[];
   loading: boolean;
   signUp: (email: string, password: string) => Promise<AuthResponse>;
   signIn: (email: string, password: string) => Promise<AuthResponse>;
@@ -24,15 +23,6 @@ interface AuthContextType {
   addFavorite: (pokemonId: number) => Promise<void>;
   removeFavorite: (pokemonId: number) => Promise<void>;
   isFavorite: (pokemonId: number) => boolean;
-  
-  // Team management
-  fetchTeams: () => Promise<void>;
-  createTeam: (name: string, description?: string) => Promise<Team | null>;
-  updateTeam: (teamId: number, name: string, description?: string) => Promise<void>;
-  deleteTeam: (teamId: number) => Promise<void>;
-  addPokemonToTeam: (teamId: number, pokemonId: number, position: number) => Promise<void>;
-  removePokemonFromTeam: (teamId: number, position: number) => Promise<void>;
-  getTeamMembers: (teamId: number) => Promise<TeamMember[]>;
 }
 
 export const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -50,7 +40,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [favorites, setFavorites] = useState<Favorite[]>([]);
-  const [teams, setTeams] = useState<Team[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -80,7 +69,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           if (data.session.user) {
             await fetchProfile(data.session.user.id);
             await fetchFavorites(data.session.user.id);
-            await fetchTeams();
           }
         } else {
           setSession(null);
@@ -116,8 +104,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                   await Promise.all([
                     createProfile(session.user.id),
                     fetchProfile(session.user.id),
-                    fetchFavorites(session.user.id),
-                    fetchTeams()
+                    fetchFavorites(session.user.id)
                   ]);
                   
                   if (!previousUser) {
@@ -631,370 +618,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return favorites.some(fav => fav.pokemon_id === pokemonId);
   };
 
-  const fetchTeams = async () => {
-    if (!user) {
-      return;
-    }
-
-    try {
-      const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
-      
-      if (refreshError) {
-        console.error('Failed to refresh session when fetching teams:', refreshError);
-        return;
-      }
-      
-      if (!refreshData.session) {
-        console.error('No active session found when fetching teams');
-        return;
-      }
-
-      const { data, error } = await supabase
-        .from('teams')
-        .select('*')
-        .eq('user_id', user.id);
-
-      if (error) {
-        console.error('Error fetching teams:', error);
-        return;
-      }
-      
-      if (data) setTeams(data as Team[]);
-    } catch (err) {
-      console.error('Teams fetch error:', err);
-    }
-  };
-
-  const createTeam = async (name: string, description?: string): Promise<Team | null> => {
-    if (!user) {
-      toast.error('You must be logged in to create a team');
-      return null;
-    }
-
-    try {
-      const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
-      
-      if (refreshError) {
-        toast.error('Session expired. Please sign in again.');
-        return null;
-      }
-      
-      if (!refreshData.session) {
-        toast.error('Authentication error. Please sign in again.');
-        return null;
-      }
-
-      const newTeam = {
-        user_id: user.id,
-        name,
-        description,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      };
-
-      const { data, error } = await supabase
-        .from('teams')
-        .insert([newTeam])
-        .select()
-        .single();
-
-      if (error) {
-        if (error.code === '42501' || error.message?.includes('permission denied')) {
-          toast.error('You don\'t have permission to create teams. Please sign in again.');
-        } else {
-          toast.error('Failed to create team');
-        }
-        return null;
-      }
-
-      await fetchTeams();
-      toast.success('Team created successfully!');
-      return data as Team;
-    } catch (err) {
-      toast.error('Failed to create team');
-      return null;
-    }
-  };
-
-  const updateTeam = async (teamId: number, name: string, description?: string): Promise<void> => {
-    if (!user) {
-      toast.error('You must be logged in to update a team');
-      return;
-    }
-
-    try {
-      const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
-      
-      if (refreshError) {
-        toast.error('Session expired. Please sign in again.');
-        return;
-      }
-      
-      if (!refreshData.session) {
-        toast.error('Authentication error. Please sign in again.');
-        return;
-      }
-
-      const updates = {
-        name,
-        description,
-        updated_at: new Date().toISOString()
-      };
-
-      const { error } = await supabase
-        .from('teams')
-        .update(updates)
-        .eq('id', teamId)
-        .eq('user_id', user.id);
-
-      if (error) {
-        if (error.code === '42501' || error.message?.includes('permission denied')) {
-          toast.error('You don\'t have permission to update this team. Please sign in again.');
-        } else {
-          toast.error('Failed to update team');
-        }
-        return;
-      }
-
-      await fetchTeams();
-      toast.success('Team updated successfully!');
-    } catch (err) {
-      toast.error('Failed to update team');
-    }
-  };
-
-  const deleteTeam = async (teamId: number): Promise<void> => {
-    if (!user) {
-      toast.error('You must be logged in to delete a team');
-      return;
-    }
-
-    try {
-      const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
-      
-      if (refreshError) {
-        toast.error('Session expired. Please sign in again.');
-        return;
-      }
-      
-      if (!refreshData.session) {
-        toast.error('Authentication error. Please sign in again.');
-        return;
-      }
-
-      const { error } = await supabase
-        .from('teams')
-        .delete()
-        .eq('id', teamId)
-        .eq('user_id', user.id);
-
-      if (error) {
-        if (error.code === '42501' || error.message?.includes('permission denied')) {
-          toast.error('You don\'t have permission to delete this team. Please sign in again.');
-        } else {
-          toast.error('Failed to delete team');
-        }
-        return;
-      }
-
-      setTeams(teams.filter(team => team.id !== teamId));
-      toast.success('Team deleted successfully!');
-    } catch (err) {
-      toast.error('Failed to delete team');
-    }
-  };
-
-  const addPokemonToTeam = async (teamId: number, pokemonId: number, position: number): Promise<void> => {
-    if (!user) {
-      toast.error('You must be logged in to add Pokémon to a team');
-      return;
-    }
-
-    try {
-      const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
-      
-      if (refreshError) {
-        toast.error('Session expired. Please sign in again.');
-        return;
-      }
-      
-      if (!refreshData.session) {
-        toast.error('Authentication error. Please sign in again.');
-        return;
-      }
-
-      // First check if the team belongs to the user
-      const { data: teamData, error: teamError } = await supabase
-        .from('teams')
-        .select('*')
-        .eq('id', teamId)
-        .eq('user_id', user.id)
-        .single();
-
-      if (teamError || !teamData) {
-        toast.error('Team not found or you don\'t have permission to modify it');
-        return;
-      }
-
-      // Check if there's already a Pokémon at this position
-      const { data: existingData, error: existingError } = await supabase
-        .from('team_members')
-        .select('*')
-        .eq('team_id', teamId)
-        .eq('position', position);
-
-      if (existingError) {
-        toast.error('Failed to check existing team members');
-        return;
-      }
-
-      // If there's a Pokémon at this position, update it
-      if (existingData && existingData.length > 0) {
-        const { error } = await supabase
-          .from('team_members')
-          .update({ pokemon_id: pokemonId })
-          .eq('team_id', teamId)
-          .eq('position', position);
-
-        if (error) {
-          toast.error('Failed to update Pokémon in team');
-          return;
-        }
-      } else {
-        // Otherwise, insert a new team member
-        const { error } = await supabase
-          .from('team_members')
-          .insert([{ team_id: teamId, pokemon_id: pokemonId, position }]);
-
-        if (error) {
-          if (error.code === '23505') {
-            toast.error('This position is already taken in the team');
-          } else if (error.code === '42501' || error.message?.includes('permission denied')) {
-            toast.error('You don\'t have permission to modify this team. Please sign in again.');
-          } else {
-            toast.error('Failed to add Pokémon to team');
-          }
-          return;
-        }
-      }
-
-      await fetchTeams();
-      toast.success('Pokémon added to team!');
-    } catch (err) {
-      toast.error('Failed to add Pokémon to team');
-    }
-  };
-
-  const removePokemonFromTeam = async (teamId: number, position: number): Promise<void> => {
-    if (!user) {
-      toast.error('You must be logged in to remove Pokémon from a team');
-      return;
-    }
-
-    try {
-      const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
-      
-      if (refreshError) {
-        toast.error('Session expired. Please sign in again.');
-        return;
-      }
-      
-      if (!refreshData.session) {
-        toast.error('Authentication error. Please sign in again.');
-        return;
-      }
-
-      // First check if the team belongs to the user
-      const { data: teamData, error: teamError } = await supabase
-        .from('teams')
-        .select('*')
-        .eq('id', teamId)
-        .eq('user_id', user.id)
-        .single();
-
-      if (teamError || !teamData) {
-        toast.error('Team not found or you don\'t have permission to modify it');
-        return;
-      }
-
-      const { error } = await supabase
-        .from('team_members')
-        .delete()
-        .eq('team_id', teamId)
-        .eq('position', position);
-
-      if (error) {
-        if (error.code === '42501' || error.message?.includes('permission denied')) {
-          toast.error('You don\'t have permission to modify this team. Please sign in again.');
-        } else {
-          toast.error('Failed to remove Pokémon from team');
-        }
-        return;
-      }
-
-      await fetchTeams();
-      toast.success('Pokémon removed from team!');
-    } catch (err) {
-      toast.error('Failed to remove Pokémon from team');
-    }
-  };
-
-  const getTeamMembers = async (teamId: number): Promise<TeamMember[]> => {
-    if (!user) {
-      toast.error('You must be logged in to view team members');
-      return [];
-    }
-
-    try {
-      const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
-      
-      if (refreshError) {
-        toast.error('Session expired. Please sign in again.');
-        return [];
-      }
-      
-      if (!refreshData.session) {
-        toast.error('Authentication error. Please sign in again.');
-        return [];
-      }
-
-      // First check if the team belongs to the user
-      const { data: teamData, error: teamError } = await supabase
-        .from('teams')
-        .select('*')
-        .eq('id', teamId)
-        .eq('user_id', user.id)
-        .single();
-
-      if (teamError || !teamData) {
-        toast.error('Team not found or you don\'t have permission to view it');
-        return [];
-      }
-
-      const { data, error } = await supabase
-        .from('team_members')
-        .select('*')
-        .eq('team_id', teamId)
-        .order('position', { ascending: true });
-
-      if (error) {
-        toast.error('Failed to fetch team members');
-        return [];
-      }
-
-      return data as TeamMember[];
-    } catch (err) {
-      toast.error('Failed to fetch team members');
-      return [];
-    }
-  };
-
   const value = {
     session,
     user,
     profile,
     favorites,
-    teams,
     loading,
     signUp,
     signIn,
@@ -1006,14 +634,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     updateProfile,
     addFavorite,
     removeFavorite,
-    isFavorite,
-    fetchTeams,
-    createTeam,
-    updateTeam,
-    deleteTeam,
-    addPokemonToTeam,
-    removePokemonFromTeam,
-    getTeamMembers
+    isFavorite
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
