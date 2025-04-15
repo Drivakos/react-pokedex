@@ -20,7 +20,6 @@ const supabaseOptions = {
   global: {
     headers: {
       'apikey': supabaseAnonKey,
-      'Authorization': `Bearer ${supabaseAnonKey}`,
       'X-Pokedex-Client': 'React-Pokedex-App',
     },
   },
@@ -31,12 +30,10 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, supabaseOptio
 supabase.auth.onAuthStateChange((event, session) => {
   console.log('Auth state changed:', event, session ? 'User session exists' : 'No session');
   
-  // Let Supabase handle session storage - no need to manually store
   if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
     console.log('User signed in or token refreshed');
   } else if (event === 'SIGNED_OUT') {
     console.log('User signed out, clearing any remaining auth data');
-    // Clear any remaining auth data
     localStorage.removeItem('supabase.auth.token');
     localStorage.removeItem('access_token');
     localStorage.removeItem('refresh_token');
@@ -65,7 +62,7 @@ export async function ensureProfile(userId: string, email?: string): Promise<voi
         });
     }
   } catch (error) {
-    // Silent error handling for production
+    console.error('Failed to ensure profile:', error);
   }
 }
 

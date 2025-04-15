@@ -154,6 +154,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               break;
           }
         } catch (err) {
+          return;
         } finally {
           setLoading(false);
         }
@@ -165,36 +166,35 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const createProfile = async (userId: string) => {
     try {
-      // First check if profile already exists to avoid duplicates
       const { data: existingProfile, error: fetchError } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', userId)
         .single();
 
-      // If profile exists, set it and return early
+
       if (existingProfile && !fetchError) {
-        console.log('Profile already exists for user:', userId);
+
         setProfile(existingProfile as Profile);
         return;
       }
       
-      // If error is not 'no rows returned', handle it
+
       if (fetchError && fetchError.code !== 'PGRST116') {
-        console.error('Error checking for existing profile:', fetchError);
+
         return;
       }
 
-      console.log('Creating new profile for user:', userId);
+
       
-      // Get current user data
+
       const { data: userData } = await supabase.auth.getUser();
       if (!userData.user) {
-        console.error('No user found when creating profile');
+
         return;
       }
       
-      // Create new profile with all available user metadata
+
       const newProfile = {
         id: userId,
         email: userData.user.email,
@@ -212,12 +212,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         .single();
         
       if (error) {
-        console.error('Error creating profile:', error);
+
         throw error;
       }
       
       if (data) {
-        console.log('Profile created successfully:', data);
+
         setProfile(data as Profile);
       }
     } catch (err) {
@@ -515,7 +515,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         .eq('user_id', userId);
 
       if (error) {
-        console.error('Error fetching favorites:', error);
+
         return;
       }
       
