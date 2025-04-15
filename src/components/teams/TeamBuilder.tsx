@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { Team } from '../../lib/supabase';
 import { Plus, X, Edit, Trash2, Save, Users } from 'lucide-react';
@@ -36,6 +36,52 @@ const TeamBuilder: React.FC<{
   const [loading, setLoading] = useState(true);
   const [selectedTeam, setSelectedTeam] = useState<number | null>(null);
   const [selectedPosition, setSelectedPosition] = useState<number | null>(null);
+
+  // Define handleAddPokemon first with useCallback to avoid it being used before declaration
+  const handleAddPokemon = useCallback(async (teamId: number, pokemonId: number, position: number) => {
+    await addPokemonToTeam(teamId, pokemonId, position);
+    
+    // Refresh team members
+    const members = await getTeamMembers(teamId);
+    setTeamPokemon((prev: Record<number, Record<number, Pokemon>>) => ({
+      ...prev,
+      [teamId]: members.reduce((acc, member) => ({ ...acc, [member.position]: prev[teamId]?.[member.position] }), {})
+    }));
+    
+    // Prefetch pokemon if not already loaded
+    const pokemonInState = teamPokemon[teamId]?.[position];
+    if (!pokemonInState) {
+      try {
+        const response = await fetch(`https://pokeapi.co/api/v2/pokemon/${pokemonId}`);
+        if (response.ok) {
+          const pokemon = await response.json();
+          setTeamPokemon(prev => ({
+            ...prev,
+            [teamId]: {
+              ...prev[teamId],
+              [position]: pokemon
+            }
+          }));
+        }
+      } catch (error) {
+        console.error(`Failed to fetch Pokémon ${pokemonId}:`, error);
+        toast.error(`Failed to add Pokémon to team: ${error}`);
+      }
+    }
+  }, [addPokemonToTeam, getTeamMembers, teamPokemon, setTeamPokemon]);
+
+  const handleRemovePokemon = useCallback(async (teamId: number, position: number) => {
+    await removePokemonFromTeam(teamId, position);
+    
+    // Update local state
+    setTeamPokemon(prev => {
+      const newPokemon = { ...prev };
+      if (newPokemon[teamId] && newPokemon[teamId][position]) {
+        delete newPokemon[teamId][position];
+      }
+      return newPokemon;
+    });
+  }, [removePokemonFromTeam]);
 
   useEffect(() => {
     const loadTeams = async () => {
@@ -84,7 +130,7 @@ const TeamBuilder: React.FC<{
       setSelectedTeam(null);
       setSelectedPosition(null);
     }
-  }, [selectedPokemon, selectedTeam, selectedPosition]);
+  }, [selectedPokemon, selectedTeam, selectedPosition, handleAddPokemon]);
 
   const handleCreateTeam = async () => {
     if (!newTeamName.trim()) {
@@ -122,48 +168,6 @@ const TeamBuilder: React.FC<{
     setIsEditing(team.id);
     setNewTeamName(team.name);
     setNewTeamDescription(team.description || '');
-  };
-
-  const handleAddPokemon = async (teamId: number, pokemonId: number, position: number) => {
-    await addPokemonToTeam(teamId, pokemonId, position);
-    
-    // Refresh team members
-    const members = await getTeamMembers(teamId);
-    setTeamPokemon((prev: Record<number, Record<number, Pokemon>>) => ({
-      ...prev,
-      [teamId]: members.reduce((acc, member) => ({ ...acc, [member.position]: prev[teamId]?.[member.position] }), {})
-    }));
-    
-    // Fetch the new Pokémon data
-    try {
-      const response = await fetch(`https://pokeapi.co/api/v2/pokemon/${pokemonId}`);
-      if (response.ok) {
-        const pokemonData = await response.json();
-        setTeamPokemon((prev: Record<number, Record<number, Pokemon>>) => ({
-          ...prev,
-          [teamId]: {
-            ...(prev[teamId] || {}),
-            [position]: pokemonData
-          }
-        }));
-      }
-    } catch (error) {
-      console.error(`Failed to fetch Pokémon ${pokemonId}:`, error);
-    }
-  };
-
-  const handleRemovePokemon = async (teamId: number, position: number) => {
-    await removePokemonFromTeam(teamId, position);
-    
-    // Update local state
-    setTeamPokemon((prev: Record<number, Record<number, Pokemon>>) => {
-      const newPokemon = { ...prev };
-      if (newPokemon[teamId] && newPokemon[teamId][position]) {
-        const { [position]: _, ...rest } = newPokemon[teamId];
-        newPokemon[teamId] = rest;
-      }
-      return newPokemon;
-    });
   };
 
   const selectPokemonForTeam = (teamId: number, position: number) => {

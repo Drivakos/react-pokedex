@@ -71,7 +71,7 @@ export const FavoritesMethods = ({
         if (error.code === '23505') {
           toast.error('This Pokémon is already in your favorites');
         } else if (error.code === '42501' || error.message?.includes('permission denied')) {
-          toast.error('You don\\'t have permission to add favorites. Please sign in again.');
+          toast.error("You don't have permission to add favorites. Please sign in again.");
         } else {
           toast.error('Failed to add to favorites');
         }
@@ -107,7 +107,7 @@ export const FavoritesMethods = ({
 
       if (error) {
         if (error.code === '42501' || error.message?.includes('permission denied')) {
-          toast.error('You don\\'t have permission to remove favorites. Please sign in again.');
+          toast.error("You don't have permission to remove favorites. Please sign in again.");
         } else {
           toast.error('Failed to remove from favorites');
         }
