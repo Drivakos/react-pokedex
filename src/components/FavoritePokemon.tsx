@@ -25,9 +25,13 @@ const FavoritePokemon: React.FC<FavoritePokemonProps> = ({ pokemonId }) => {
 
   useEffect(() => {
     if (user) {
-      checkIfFavorite();
+      const timeoutId = setTimeout(() => {
+        checkIfFavorite();
+      }, 300);
+      
+      return () => clearTimeout(timeoutId);
     }
-  }, [user, checkIfFavorite]);
+  }, [user?.id, pokemonId]);
 
   const toggleFavorite = async () => {
     if (!user) {

@@ -9,6 +9,7 @@ interface AuthContextType {
   profile: Profile | null;
   favorites: Favorite[];
   loading: boolean;
+  // Auth methods
   signUp: (email: string, password: string) => Promise<AuthResponse>;
   signIn: (email: string, password: string) => Promise<AuthResponse>;
   signInWithGoogle: () => Promise<OAuthResponse>;
@@ -16,13 +17,24 @@ interface AuthContextType {
   signOut: () => Promise<{ error: AuthError | null }>;
   resetPassword: (email: string) => Promise<{ error: AuthError | null }>;
   updatePassword: (password: string) => Promise<{ error: AuthError | null }>;
+  // Profile methods
   updateProfile: (profile: Partial<Profile>) => Promise<{
     data: Profile | null;
     error: any | null;
   }>;
+  // Favorites methods
   addFavorite: (pokemonId: number) => Promise<void>;
   removeFavorite: (pokemonId: number) => Promise<void>;
   isFavorite: (pokemonId: number) => boolean;
+  // Team methods
+  teams?: any[];
+  fetchTeams?: () => Promise<void>;
+  createTeam?: (name: string, description?: string) => Promise<any>;
+  updateTeam?: (teamId: number, name: string, description?: string) => Promise<void>;
+  deleteTeam?: (teamId: number) => Promise<void>;
+  addPokemonToTeam?: (teamId: number, pokemonId: number, position: number) => Promise<void>;
+  removePokemonFromTeam?: (teamId: number, position: number) => Promise<void>;
+  getTeamMembers?: (teamId: number) => Promise<any[]>;
 }
 
 export const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -40,6 +52,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [favorites, setFavorites] = useState<Favorite[]>([]);
+  const [teams, setTeams] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -138,7 +151,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 setSession(session);
                 setUser(session.user);
                 
+                // Log token expiration time for debugging
                 const expiresAt = session.expires_at || 0;
+                console.log('Token refreshed, expires at:', new Date(expiresAt * 1000).toLocaleString());
               }
               break;
               
@@ -365,29 +380,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setUser(null);
       setProfile(null);
       setFavorites([]);
-      
-      // Clear any legacy or custom localStorage items that might be causing issues
-      const authItemsToRemove = [
-        // Standard Supabase items
-        'supabase.auth.token',
-        // Custom stored items
-        'access_token',
-        'refresh_token',
-        'expires_at',
-        'expires_in',
-        'provider_token',
-        'provider_refresh_token',
-        'user'
-      ];
-      
-      authItemsToRemove.forEach(item => {
-        if (localStorage.getItem(item)) {
-          localStorage.removeItem(item);
-        }
-      });
+      setTeams([]);
       
       toast.success('You have been signed out');
-      
       return { error: null };
     } catch (err) {
       console.error('Unexpected error during sign out:', err);
@@ -618,12 +613,300 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return favorites.some(fav => fav.pokemon_id === pokemonId);
   };
 
+  // Team-related methods
+  const getTeams = async () => {
+    if (!user) {
+      console.log('getTeams: No user found');
+      return [];
+    }
+    
+    try {
+      console.log(`getTeams: Fetching teams for user ${user.id}`);
+      
+      // Check if the teams table exists by making a small query first
+      const { error: tableCheckError } = await supabase
+        .from('teams')
+        .select('count')
+        .limit(1);
+        
+      if (tableCheckError) {
+        console.error('getTeams: Error checking teams table:', tableCheckError);
+        toast.error('Database error: Teams feature unavailable');
+        return [];
+      }
+      
+      // Proceed with the main query
+      const { data, error } = await supabase
+        .from('teams')
+        .select('*')
+        .eq('user_id', user.id);
+
+      if (error) {
+        console.error('getTeams: Error fetching teams:', error);
+        toast.error('Could not load your teams');
+        return [];
+      }
+      
+      console.log(`getTeams: Successfully fetched ${data?.length || 0} teams`);
+      return data || [];
+    } catch (err) {
+      console.error('getTeams: Unexpected error:', err);
+      toast.error('Failed to load teams');
+      return [];
+    }
+  };
+
+  const fetchTeams = async () => {
+    if (!user) {
+      console.log('fetchTeams: No user available');
+      return;
+    }
+    
+    try {
+      console.log('fetchTeams: Fetching teams...');
+      const teamsData = await getTeams();
+      console.log(`fetchTeams: Setting teams state with ${teamsData.length} teams`);
+      setTeams(teamsData);
+    } catch (err) {
+      console.error('fetchTeams: Error updating teams state:', err);
+      // Even if there's an error, set with empty array to avoid UI getting stuck
+      setTeams([]);
+    }
+  };
+
+  const createTeam = async (name: string, description?: string) => {
+    if (!user) {
+      toast.error('You must be logged in to create a team');
+      return null;
+    }
+
+    try {
+      // CRITICAL: Always refresh the session before database operations
+      const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
+      
+      if (refreshError) {
+        toast.error('Session expired. Please sign in again.');
+        return null;
+      }
+      
+      if (!refreshData.session) {
+        toast.error('Authentication error. Please sign in again.');
+        return null;
+      }
+      
+      console.log(`Creating team "${name}" for user ${user.id}`);
+      
+      const newTeam = {
+        user_id: user.id,
+        name,
+        description,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      };
+
+      // Insert the new team with fresh session token
+      const { data, error } = await supabase
+        .from('teams')
+        .insert([newTeam])
+        .select()
+        .single();
+
+      if (error) {
+        // Handle specific error codes
+        if (error.code === '42501' || error.message?.includes('permission denied')) {
+          toast.error('Permission denied: Your user account does not have access to create teams.');
+        } else if (error.code === '23505') { 
+          toast.error('Team name already exists');
+        } else {
+          toast.error('Failed to create team: ' + error.message);
+        }
+        return null;
+      }
+
+      if (!data) {
+        toast.error('Failed to create team: No data returned');
+        return null;
+      }
+
+      // Update the teams list
+      await fetchTeams();
+      
+      toast.success('Team created successfully!');
+      return data;
+    } catch (err) {
+      console.error('Unexpected error during team creation:', err);
+      toast.error('Failed to create team');
+      return null;
+    }
+  };
+
+  const addPokemonToTeam = async (teamId: number, pokemonId: number, position: number) => {
+    if (!user) {
+      toast.error('You must be logged in to add Pokémon to a team');
+      return;
+    }
+
+    try {
+      // First check if the position is already taken
+      const { data: existingData, error: existingError } = await supabase
+        .from('team_members')
+        .select('*')
+        .eq('team_id', teamId)
+        .eq('position', position);
+
+      if (existingError) {
+        toast.error('Failed to check existing team members');
+        return;
+      }
+
+      // If there's a Pokémon at this position, update it
+      if (existingData && existingData.length > 0) {
+        const { error } = await supabase
+          .from('team_members')
+          .update({ pokemon_id: pokemonId })
+          .eq('team_id', teamId)
+          .eq('position', position);
+
+        if (error) {
+          toast.error('Failed to update Pokémon in team');
+          return;
+        }
+      } else {
+        // Otherwise, insert a new team member
+        const { error } = await supabase
+          .from('team_members')
+          .insert([{ team_id: teamId, pokemon_id: pokemonId, position }]);
+
+        if (error) {
+          toast.error('Failed to add Pokémon to team');
+          return;
+        }
+      }
+
+      await fetchTeams();
+      toast.success('Pokémon added to team!');
+    } catch (err) {
+      toast.error('Failed to add Pokémon to team');
+    }
+  };
+
+  const removePokemonFromTeam = async (teamId: number, position: number) => {
+    if (!user) {
+      toast.error('You must be logged in to remove Pokémon from a team');
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('team_members')
+        .delete()
+        .eq('team_id', teamId)
+        .eq('position', position);
+
+      if (error) {
+        toast.error('Failed to remove Pokémon from team');
+        return;
+      }
+
+      await fetchTeams();
+      toast.success('Pokémon removed from team!');
+    } catch (err) {
+      toast.error('Failed to remove Pokémon from team');
+    }
+  };
+
+  const updateTeam = async (teamId: number, name: string, description?: string) => {
+    if (!user) {
+      toast.error('You must be logged in to update a team');
+      return;
+    }
+
+    try {
+      const updates = {
+        name,
+        description,
+        updated_at: new Date().toISOString()
+      };
+
+      const { error } = await supabase
+        .from('teams')
+        .update(updates)
+        .eq('id', teamId)
+        .eq('user_id', user.id);
+
+      if (error) {
+        toast.error('Failed to update team');
+        return;
+      }
+
+      await fetchTeams();
+      toast.success('Team updated successfully!');
+    } catch (err) {
+      toast.error('Failed to update team');
+    }
+  };
+
+  const deleteTeam = async (teamId: number) => {
+    if (!user) {
+      toast.error('You must be logged in to delete a team');
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('teams')
+        .delete()
+        .eq('id', teamId)
+        .eq('user_id', user.id);
+
+      if (error) {
+        toast.error('Failed to delete team');
+        return;
+      }
+
+      await fetchTeams();
+      toast.success('Team deleted successfully!');
+    } catch (err) {
+      toast.error('Failed to delete team');
+    }
+  };
+
+  const getTeamMembers = async (teamId: number) => {
+    if (!user) {
+      return [];
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from('team_members')
+        .select('*')
+        .eq('team_id', teamId);
+
+      if (error) {
+        console.error('Failed to fetch team members:', error);
+        return [];
+      }
+
+      return data || [];
+    } catch (err) {
+      console.error('Failed to fetch team members:', err);
+      return [];
+    }
+  };
+
+  useEffect(() => {
+    if (user) {
+      fetchTeams();
+    }
+  }, [user]);
+
   const value = {
     session,
     user,
     profile,
     favorites,
     loading,
+    // Auth methods
     signUp,
     signIn,
     signInWithGoogle,
@@ -632,9 +915,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     resetPassword,
     updatePassword,
     updateProfile,
+    // Favorites methods
     addFavorite,
     removeFavorite,
-    isFavorite
+    isFavorite,
+    // Team methods
+    teams,
+    fetchTeams,
+    createTeam,
+    updateTeam,
+    deleteTeam,
+    addPokemonToTeam,
+    removePokemonFromTeam,
+    getTeamMembers
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

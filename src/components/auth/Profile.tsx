@@ -44,23 +44,22 @@ const Profile: React.FC = () => {
     } finally {
       setFetchingFavorites(false);
     }
-  }, [user?.id]); // Only depend on user.id, not the entire user object
+  }, [user?.id]);
 
   React.useEffect(() => {
-    // Set username from profile when it's available
     if (profile?.username) {
       setUsername(profile.username);
     }
   }, [profile]);
   
-  // Separate useEffect for fetchFavorites to avoid dependency issues
   React.useEffect(() => {
-    // Only fetch favorites if user exists and not currently loading
     if (user?.id && !loading) {
       console.log('Profile component: calling fetchFavorites');
       fetchFavorites();
+    } else if (!user?.id) {
+      setFetchingFavorites(false);
     }
-  }, [user?.id, fetchFavorites]);
+  }, [user?.id, fetchFavorites, loading]);
 
 
 
@@ -72,22 +71,15 @@ const Profile: React.FC = () => {
       setError(null);
       setMessage(null);
       
-
-      
-      // Update profile
       const { error: updateError } = await updateProfile({ username });
       
       if (updateError) {
         console.error('Profile update error:', updateError);
         throw updateError;
       }
-      
 
-      
-      // Upload avatar if selected
       if (avatar) {
         try {
-          // Generate a secure filename with UUID
           const fileExt = avatar.name.split('.').pop()?.toLowerCase();
           const validExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
           
@@ -95,33 +87,27 @@ const Profile: React.FC = () => {
             throw new Error('Invalid file extension');
           }
           
-          // Create a unique filename with timestamp to prevent overwriting
           const timestamp = Date.now();
           const randomString = Math.random().toString(36).substring(2, 10);
           const fileName = `${user?.id}-${timestamp}-${randomString}.${fileExt}`;
           const filePath = `avatars/${fileName}`;
-          
-          // Set content type explicitly for security
           const contentType = `image/${fileExt === 'jpg' ? 'jpeg' : fileExt}`;
-          
           const { error: uploadError } = await supabase.storage
             .from('avatars')
             .upload(filePath, avatar, {
               contentType,
               cacheControl: '3600',
-              upsert: false // Prevent overwriting existing files
+              upsert: false
             });
             
           if (uploadError) {
             throw uploadError;
           }
           
-          // Get public URL
           const { data: { publicUrl } } = supabase.storage
             .from('avatars')
             .getPublicUrl(filePath);
             
-          // Update profile with avatar URL
           const { error: avatarUpdateError } = await updateProfile({ avatar_url: publicUrl });
           
           if (avatarUpdateError) {
@@ -154,21 +140,18 @@ const Profile: React.FC = () => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
       
-      // Validate file type
       const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
       if (!allowedTypes.includes(file.type)) {
         setError('Invalid file type. Please upload a JPEG, PNG, GIF, or WebP image.');
         return;
       }
       
-      // Validate file size (max 2MB)
       const maxSize = 2 * 1024 * 1024; // 2MB
       if (file.size > maxSize) {
         setError('File is too large. Maximum size is 2MB.');
         return;
       }
       
-      // Clear any previous errors
       if (error) setError(null);
       
       setAvatar(file);

@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
-import { useAuth } from '../../contexts/AuthContext';
-import { Team } from '../../lib/supabase';
+import React, { useState, useEffect, useCallback } from 'react';
+import { useAuth } from '../../hooks/useAuth';
+import { Team, supabase } from '../../lib/supabase';
+import { checkSession, withSession } from '../../lib/auth-helpers';
 import { Plus, X, Check } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -22,7 +23,16 @@ interface TeamSelectorProps {
 }
 
 const TeamSelector: React.FC<TeamSelectorProps> = ({ pokemon, onClose }) => {
-  const { user, teams, fetchTeams, createTeam, addPokemonToTeam, getTeamMembers } = useAuth();
+  const auth = useAuth();
+  const { user, teams, fetchTeams, getTeamMembers } = auth;
+  
+  const addPokemonToTeam = useCallback(async (teamId: number, pokemonId: number, position: number) => {
+    if (!auth.addPokemonToTeam || typeof auth.addPokemonToTeam !== 'function') {
+      console.error('addPokemonToTeam is not available or not a function:', auth.addPokemonToTeam);
+      return;
+    }
+    return auth.addPokemonToTeam(teamId, pokemonId, position);
+  }, [auth]);
   const [loading, setLoading] = useState(true);
   const [teamMembers, setTeamMembers] = useState<Record<number, number[]>>({});
   const [isCreating, setIsCreating] = useState(false);
@@ -32,118 +42,281 @@ const TeamSelector: React.FC<TeamSelectorProps> = ({ pokemon, onClose }) => {
   const [selectedPosition, setSelectedPosition] = useState<number | null>(null);
   const [addingToTeam, setAddingToTeam] = useState(false);
 
+
+  // Track if we've already fetched data to prevent multiple fetches
+  const hasInitiallyFetched = React.useRef(false);
+  
+  // Load data just once when the component mounts (modal opens)
   useEffect(() => {
-    const loadTeams = async () => {
-      setLoading(true);
-      await fetchTeams();
-      setLoading(false);
-    };
-
-    if (user) {
-      loadTeams();
-    }
-  }, [user, fetchTeams]);
-
-  useEffect(() => {
-    const loadTeamMembers = async () => {
-      const membersMap: Record<number, number[]> = {};
-
-      if (teams && Array.isArray(teams)) {
-        for (const team of teams) {
-          const members = await getTeamMembers(team.id);
-          membersMap[team.id] = members.map(m => m.position);
+    // Only fetch if we haven't already
+    if (!hasInitiallyFetched.current) {
+      const fetchInitialData = async () => {
+        setLoading(true);
+        console.log('TeamSelector: Initial data fetch on modal open');
+        
+        try {
+          // Step 1: Fetch teams if we have a user
+          if (user && typeof fetchTeams === 'function') {
+            await fetchTeams();
+            
+            // Step 2: Fetch team members only after teams are loaded
+            // This ensures we use the freshly loaded teams
+            if (teams && teams.length > 0 && typeof getTeamMembers === 'function') {
+              const members: Record<number, number[]> = {};
+              
+              for (const team of teams) {
+                const teamMembers = await getTeamMembers(team.id);
+                members[team.id] = teamMembers.map(member => member.pokemon_id);
+              }
+              
+              setTeamMembers(members);
+            }
+          }
+        } catch (error) {
+          console.error('Error in initial data fetch:', error);
+          toast.error('Failed to load teams data');
+        } finally {
+          setLoading(false);
+          hasInitiallyFetched.current = true;
         }
-      }
-
-      setTeamMembers(membersMap);
-    };
-
-    if (teams && Array.isArray(teams) && teams.length > 0) {
-      loadTeamMembers();
+      };
+      
+      fetchInitialData();
     }
-  }, [teams, getTeamMembers]);
+  }, [user, fetchTeams, teams, getTeamMembers]); // Including dependencies to satisfy linter
 
-  const handleCreateTeam = async () => {
-    if (!newTeamName.trim()) {
-      toast.error('Team name is required');
+  // Direct Supabase access for diagnostics
+  const directCreateTeam = async () => {
+    if (!user || !user.id) {
+      toast.error('Not logged in');
+      return null;
+    }
+    
+    console.log('Attempting direct team creation with proper session...');
+    
+    // Using our auth    // Session wrapper for database operations
+    const result = await withSession(async () => {
+      try {
+        // Create the team with valid session from withSession helper
+        const { data, error } = await supabase
+          .from('teams')
+          .insert([{
+            user_id: user.id,
+            name: newTeamName,
+            description: newTeamDescription || null,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          }])
+          .select()
+          .single();
+        
+        console.log('Direct team creation response:', { data, error });
+        
+        if (error) {
+          console.error('Direct team creation error:', error);
+          
+          if (error.code === '42501' || error.message?.includes('permission denied')) {
+            toast.error('Permission denied: Row Level Security is blocking this operation.');
+          } else if (error.code === '23505') {
+            toast.error('Team name already exists');
+          } else {
+            toast.error(`Failed to create team: ${error.message}`);
+          }
+          return { data: null, error };
+        }
+        
+        if (data) {
+          // Successfully created team
+          toast.success('Team created successfully!');
+          
+          // Clear the form
+          setNewTeamName('');
+          setNewTeamDescription('');
+          setIsCreating(false);
+          
+          // Auto-select the new team
+          setSelectedTeam(data.id);
+          
+          // Fetch teams to update the UI
+          if (auth?.fetchTeams) {
+            await auth.fetchTeams();
+          } else if (typeof fetchTeams === 'function') {
+            await fetchTeams();
+          }
+        }
+        
+        return { data, error: null };
+      } catch (err) {
+        console.error('Direct team creation exception:', err);
+        toast.error('An unexpected error occurred');
+        return { data: null, error: err };
+      }
+    });
+    
+    return result?.data || null;
+  };
+
+  const handleCreateTeam = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!newTeamName) {
+      toast.error('Please enter a team name');
       return;
     }
-
-    setAddingToTeam(true);
+    
     try {
-      const team = await createTeam(newTeamName, newTeamDescription);
-      if (team) {
-        setIsCreating(false);
-        setNewTeamName('');
-        setNewTeamDescription('');
-        setSelectedTeam(team.id);
+      setIsCreating(true);
+      
+      // Check that we have a valid session
+      const sessionValid = await checkSession();
+      if (!sessionValid) {
+        toast.error('Please sign in again to create a team');
+        return;
       }
+      
+      if (auth?.createTeam && typeof auth.createTeam === 'function') {
+        // Use the auth context method with our freshly refreshed session
+        const team = await auth.createTeam(newTeamName, newTeamDescription);
+        
+        if (team) {
+          setIsCreating(false);
+          setNewTeamName('');
+          setNewTeamDescription('');
+          toast.success('Team created successfully!');
+        }
+      } else {
+        // Fall back to direct create if auth context method not available
+        await directCreateTeam();
+      }
+    } catch (error) {
+      console.error('Failed to create team:', error);
+      toast.error('Failed to create team: ' + (error instanceof Error ? error.message : 'Unknown error'));
     } finally {
-      setAddingToTeam(false);
+      setIsCreating(false);
     }
   };
 
-  const handleAddToTeam = async (teamId: number, position: number) => {
-    if (!user) {
-      toast.error('You must be logged in to add Pokémon to a team');
-      return;
-    }
-
+  const handleAddPokemon = async (teamId: number, position: number) => {
     setSelectedTeam(teamId);
     setSelectedPosition(position);
     setAddingToTeam(true);
-
+    
     try {
-      await addPokemonToTeam(teamId, pokemon.id, position);
-      toast.success(`Added ${pokemon.name} to your team!`);
+      // Check that we have a valid session before adding the Pokémon
+      const sessionValid = await checkSession();
+      if (!sessionValid) {
+        toast.error('Please sign in again to add Pokémon to your team');
+        return;
+      }
       
-      setTeamMembers(prev => ({
-        ...prev,
-        [teamId]: [...(prev[teamId] || []), position]
-      }));
+      let success = false;
       
-      setTimeout(() => {
+      if (typeof addPokemonToTeam === 'function') {
+        await addPokemonToTeam(teamId, pokemon.id, position);
+        success = true;
+      } else {
+        // Fallback to direct database access if the context method isn't available
+        const result = await withSession(async () => {
+          const { error } = await supabase
+            .from('team_members')
+            .upsert({
+              team_id: teamId,
+              pokemon_id: pokemon.id,
+              position: position,
+              created_at: new Date().toISOString()
+            });
+            
+          if (error) {
+            console.error('Direct add to team error:', error);
+            return { error };
+          }
+          
+          return { data: true, error: null };
+        });
+        
+        success = result && !result.error;
+      }
+      
+      if (success) {
+        // Update local state immediately for UI feedback
+        setTeamMembers(prev => {
+          const updatedMembers = { ...prev };
+          
+          // Initialize array for team if it doesn't exist
+          if (!updatedMembers[teamId]) {
+            updatedMembers[teamId] = [];
+          }
+          
+          // Add the position to the taken positions array
+          // Since we store position numbers in this array, not pokemon IDs
+          if (!updatedMembers[teamId].includes(position)) {
+            updatedMembers[teamId] = [...updatedMembers[teamId], position];
+          }
+          
+          return updatedMembers;
+        });
+        
+        toast.success(`Added ${pokemon.name} to team!`);
         onClose();
-      }, 1000);
+      } else {
+        toast.error('Failed to add Pokémon to team');
+      }
     } catch (error) {
-      console.error('Failed to add Pokémon to team:', error);
+      console.error('Error adding Pokémon to team:', error);
+      toast.error('Failed to add Pokémon to team');
     } finally {
       setAddingToTeam(false);
     }
   };
 
   const renderPositionSelector = (team: Team) => {
+    // Get positions that are already taken in this team
     const takenPositions = teamMembers[team.id] || [];
+    console.log('Taken positions for team', team.id, ':', takenPositions);
     
     return (
-      <div className="grid grid-cols-3 sm:grid-cols-6 gap-2 mt-2">
-        {[1, 2, 3, 4, 5, 6].map((position) => {
-          const isTaken = takenPositions.includes(position);
-          const isSelected = selectedTeam === team.id && selectedPosition === position;
-          
-          return (
-            <button
-              key={`team-${team.id}-pos-${position}`}
-              className={`w-12 h-12 rounded-lg flex items-center justify-center border ${
-                isTaken 
-                  ? 'bg-gray-200 cursor-not-allowed' 
-                  : isSelected
-                    ? 'bg-green-100 border-green-500'
-                    : 'bg-white hover:bg-blue-50 cursor-pointer'
-              }`}
-              disabled={isTaken || addingToTeam}
-              onClick={() => !isTaken && handleAddToTeam(team.id, position)}
-            >
-              {isTaken ? (
-                <X size={16} className="text-gray-500" />
-              ) : isSelected ? (
-                <Check size={16} className="text-green-500" />
-              ) : (
-                position
-              )}
-            </button>
-          );
-        })}
+      <div className="mt-3">
+        <p className="text-sm text-gray-600 mb-2">Select a position for this Pokémon on your team:</p>
+        <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
+          {[1, 2, 3, 4, 5, 6].map((position) => {
+            const isTaken = takenPositions.includes(position);
+            const isSelected = selectedTeam === team.id && selectedPosition === position;
+            
+            return (
+              <button
+                key={position}
+                className={`
+                  py-2 px-2 rounded-md flex flex-col items-center justify-center transition-all
+                  ${isTaken ? 'bg-gray-200 text-gray-500 cursor-not-allowed' : 
+                    isSelected ? 'bg-green-500 text-white ring-2 ring-green-300' : 
+                    'bg-gray-100 hover:bg-gray-200 hover:shadow-sm'}
+                `}
+                onClick={() => {
+                  if (!isTaken && !addingToTeam) {
+                    setSelectedTeam(team.id);
+                    setSelectedPosition(position);
+                    handleAddPokemon(team.id, position);
+                  }
+                }}
+                disabled={isTaken || addingToTeam}
+                title={isTaken ? 'This position is already taken' : `Add to position ${position}`}
+              >
+                <div className="text-xs mb-1">
+                  {isTaken ? 'Taken' : 'Position'}
+                </div>
+                <div className="font-semibold">
+                  {isTaken ? (
+                    <X size={16} />
+                  ) : isSelected ? (
+                    <Check size={16} />
+                  ) : (
+                    position
+                  )}
+                </div>
+              </button>
+            );
+          })}
+        </div>
       </div>
     );
   };
@@ -248,17 +421,22 @@ const TeamSelector: React.FC<TeamSelectorProps> = ({ pokemon, onClose }) => {
       {(!teams || !Array.isArray(teams) || teams.length === 0) && !isCreating ? (
         <div className="text-center py-4">
           <p className="text-gray-500">You don't have any teams yet.</p>
+          <p className="text-gray-500 mt-2">Create a team to add this Pokémon!</p>
         </div>
       ) : (
         <div className="space-y-4">
-          <h3 className="font-semibold">Select Team & Position</h3>
-          {teams && Array.isArray(teams) && teams.map((team) => (
-            <div key={team.id} className="border rounded-lg p-3">
-              <h4 className="font-medium">{team.name}</h4>
-              {team.description && <p className="text-sm text-gray-600 mb-2">{team.description}</p>}
-              {renderPositionSelector(team)}
-            </div>
-          ))}
+          {teams && Array.isArray(teams) && teams.length > 0 && (
+            <>
+              <h3 className="font-semibold">Select Team & Position</h3>
+              {teams.map((team) => (
+                <div key={team.id} className="border rounded-lg p-3">
+                  <h4 className="font-medium">{team.name}</h4>
+                  {team.description && <p className="text-sm text-gray-600 mb-2">{team.description}</p>}
+                  {renderPositionSelector(team)}
+                </div>
+              ))}
+            </>
+          )}
         </div>
       )}
     </div>

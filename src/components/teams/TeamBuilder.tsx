@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useAuth } from '../../contexts/AuthContext';
+import { useAuth } from '../../hooks/useAuth';
 import { Team } from '../../lib/supabase';
 import { Plus, X, Edit, Trash2, Save, Users } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -39,9 +39,20 @@ const TeamBuilder: React.FC<{
 
   // Define handleAddPokemon first with useCallback to avoid it being used before declaration
   const handleAddPokemon = useCallback(async (teamId: number, pokemonId: number, position: number) => {
+    if (!addPokemonToTeam || typeof addPokemonToTeam !== 'function') {
+      console.error('addPokemonToTeam is not available or not a function');
+      toast.error('Failed to add Pokémon to team: System error');
+      return;
+    }
+    
     await addPokemonToTeam(teamId, pokemonId, position);
     
     // Refresh team members
+    if (!getTeamMembers || typeof getTeamMembers !== 'function') {
+      console.error('getTeamMembers is not available or not a function');
+      return;
+    }
+    
     const members = await getTeamMembers(teamId);
     setTeamPokemon((prev: Record<number, Record<number, Pokemon>>) => ({
       ...prev,
@@ -71,6 +82,12 @@ const TeamBuilder: React.FC<{
   }, [addPokemonToTeam, getTeamMembers, teamPokemon, setTeamPokemon]);
 
   const handleRemovePokemon = useCallback(async (teamId: number, position: number) => {
+    if (!removePokemonFromTeam || typeof removePokemonFromTeam !== 'function') {
+      console.error('removePokemonFromTeam is not available or not a function');
+      toast.error('Failed to remove Pokémon from team: System error');
+      return;
+    }
+    
     await removePokemonFromTeam(teamId, position);
     
     // Update local state
@@ -85,6 +102,12 @@ const TeamBuilder: React.FC<{
 
   useEffect(() => {
     const loadTeams = async () => {
+      if (!fetchTeams || typeof fetchTeams !== 'function') {
+        console.error('fetchTeams is not available or not a function');
+        setLoading(false);
+        return;
+      }
+      
       setLoading(true);
       await fetchTeams();
       setLoading(false);
@@ -97,6 +120,11 @@ const TeamBuilder: React.FC<{
 
   useEffect(() => {
     const loadTeamMembers = async () => {
+      if (!getTeamMembers || typeof getTeamMembers !== 'function') {
+        console.error('getTeamMembers is not available or not a function');
+        return;
+      }
+      
       const pokemonMap: Record<number, Record<number, Pokemon>> = {};
 
       if (teams && Array.isArray(teams)) {
@@ -139,12 +167,26 @@ const TeamBuilder: React.FC<{
       toast.error('Team name is required');
       return;
     }
-
-    const team = await createTeam(newTeamName, newTeamDescription);
-    if (team) {
+    
+    if (!createTeam || typeof createTeam !== 'function') {
+      console.error('createTeam is not available or not a function');
+      toast.error('Failed to create team: System error');
+      return;
+    }
+    
+    try {
+      setIsCreating(true);
+      const team = await createTeam(newTeamName, newTeamDescription);
+      
+      if (team) {
+        setIsCreating(false);
+        setNewTeamName('');
+        setNewTeamDescription('');
+      }
+    } catch (error) {
+      console.error('Error creating team:', error);
+      toast.error('Failed to create team');
       setIsCreating(false);
-      setNewTeamName('');
-      setNewTeamDescription('');
     }
   };
 
@@ -153,14 +195,31 @@ const TeamBuilder: React.FC<{
       toast.error('Team name is required');
       return;
     }
-
-    await updateTeam(teamId, newTeamName, newTeamDescription);
-    setIsEditing(null);
-    setNewTeamName('');
-    setNewTeamDescription('');
+    
+    if (!updateTeam || typeof updateTeam !== 'function') {
+      console.error('updateTeam is not available or not a function');
+      toast.error('Failed to update team: System error');
+      return;
+    }
+    
+    try {
+      await updateTeam(teamId, newTeamName, newTeamDescription);
+      setIsEditing(null);
+      setNewTeamName('');
+      setNewTeamDescription('');
+    } catch (error) {
+      console.error('Error updating team:', error);
+      toast.error('Failed to update team');
+    }
   };
 
   const handleDeleteTeam = async (teamId: number) => {
+    if (!deleteTeam || typeof deleteTeam !== 'function') {
+      console.error('deleteTeam is not available or not a function');
+      toast.error('Failed to delete team: System error');
+      return;
+    }
+    
     if (window.confirm('Are you sure you want to delete this team?')) {
       await deleteTeam(teamId);
     }

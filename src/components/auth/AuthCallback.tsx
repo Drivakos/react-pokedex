@@ -1,13 +1,15 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { supabase } from '../../lib/supabase';
 import toast from 'react-hot-toast';
+import { useAuth } from '../../hooks/useAuth';
+import authService from '../../services/auth.service';
 
 export const AuthCallback = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { refreshSession } = useAuth();
 
   useEffect(() => {
     const type = searchParams.get('type');
@@ -32,7 +34,7 @@ export const AuthCallback = () => {
         }
 
         if (code) {
-          const { data, error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
+          const { data, error: exchangeError } = await authService.exchangeCodeForSession(code);
 
           if (exchangeError) {
             console.error('Code exchange error:', exchangeError);
@@ -44,7 +46,7 @@ export const AuthCallback = () => {
 
           if (data?.session) {
             console.log('Successfully authenticated with code');
-            localStorage.setItem('supabase.auth.token', JSON.stringify(data.session));
+            await refreshSession();
             toast.success('Successfully signed in!');
             navigate('/', { replace: true });
             return;
@@ -53,7 +55,7 @@ export const AuthCallback = () => {
 
         if (accessToken && refreshToken) {
           try {
-            const { data, error } = await supabase.auth.setSession({
+            const { data, error } = await authService.setSession({
               access_token: accessToken,
               refresh_token: refreshToken
             });
@@ -65,7 +67,7 @@ export const AuthCallback = () => {
 
             if (data.session) {
               console.log('Successfully set session from hash params');
-              localStorage.setItem('supabase.auth.token', JSON.stringify(data.session));
+              await refreshSession();
               toast.success('Successfully signed in!');
               navigate('/', { replace: true });
               return;
@@ -87,17 +89,17 @@ export const AuthCallback = () => {
             return;
           }
 
-          const { data } = await supabase.auth.getSession();
+          const session = await authService.getSession();
 
-          if (data.session) {
-            console.log('Session exists, setting in context:', data.session.user?.email);
+          if (session) {
+            console.log('Session exists, setting in context:', session.user?.email);
             
-            localStorage.setItem('supabase.auth.token', JSON.stringify(data.session));
+            await refreshSession();
 
-            const username = data.session.user?.user_metadata?.full_name ||
-                             data.session.user?.user_metadata?.name ||
-                             data.session.user?.email?.split('@')[0] ||
-                             'User';
+            const username = session.user?.user_metadata?.full_name ||
+                            session.user?.user_metadata?.name ||
+                            session.user?.email?.split('@')[0] ||
+                            'User';
 
             toast.success(`Welcome, ${username}!`);
             navigate('/');
@@ -108,7 +110,7 @@ export const AuthCallback = () => {
         setError('An unexpected error occurred');
         toast.error('Authentication failed. Please try again.');
 
-        await supabase.auth.signOut();
+        await authService.signOut();
         navigate('/');
       } finally {
         setLoading(false);

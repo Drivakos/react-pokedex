@@ -60,6 +60,8 @@ export default defineConfig(({ mode }) => {
     },
   },
   server: {
+    port: 64444,
+    strictPort: true,
     headers: {
       'X-Robots-Tag': 'index, follow',
       'X-Content-Type-Options': 'nosniff',

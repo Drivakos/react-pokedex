@@ -21,24 +21,24 @@ const supabaseOptions = {
   global: {
     headers: {
       'apikey': supabaseAnonKey,
+      'Content-Type': 'application/json',
       'X-Pokedex-Client': 'React-Pokedex-App',
     },
+    fetch: fetch.bind(globalThis) // Ensure consistent fetch implementation
   },
+  realtime: {
+    params: {
+      eventsPerSecond: 10
+    }
+  }
 };
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, supabaseOptions);
 
-supabase.auth.onAuthStateChange((event, session) => {
-  console.log('Auth state changed:', event, session ? 'User session exists' : 'No session');
-  
+// Setup basic auth state change listener - following Supabase docs exactly
+supabase.auth.onAuthStateChange((event) => {
   if (event === 'SIGNED_IN') {
-    if (session) {
-      localStorage.setItem('supabase.auth.token', JSON.stringify(session));
-    }
-  } else if (event === 'TOKEN_REFRESHED') {
-    if (session) {
-      localStorage.setItem('supabase.auth.token', JSON.stringify(session));
-    }
+    console.log('User signed in');
   } else if (event === 'SIGNED_OUT') {
     const authItems = [
       'supabase.auth.token',
@@ -54,6 +54,13 @@ supabase.auth.onAuthStateChange((event, session) => {
     authItems.forEach(item => {
       localStorage.removeItem(item);
     });
+  }
+});
+
+// Initial session check - follows Supabase documentation pattern
+supabase.auth.getSession().then(({ data }) => {
+  if (data.session) {
+    console.log('Initial session exists');
   }
 });
 
