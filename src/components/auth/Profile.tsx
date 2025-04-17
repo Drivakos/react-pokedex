@@ -2,6 +2,8 @@ import React, { useState, useCallback } from 'react';
 import { useAuth } from '../../hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
+import { X } from 'lucide-react';
+import toast from 'react-hot-toast';
 
 const Profile: React.FC = () => {
   const { user, profile, signOut, updateProfile } = useAuth();
@@ -60,6 +62,37 @@ const Profile: React.FC = () => {
       setFetchingFavorites(false);
     }
   }, [user?.id, fetchFavorites, loading]);
+
+  const removeFavorite = async (pokemonId: number) => {
+    if (!user?.id) {
+      toast.error('You must be logged in to remove favorites');
+      return;
+    }
+
+    try {
+      // Optimistically update the UI
+      setFavorites(prev => prev.filter(id => id !== pokemonId));
+      
+      // Delete from database
+      const { error } = await supabase
+        .from('favorites')
+        .delete()
+        .match({ user_id: user.id, pokemon_id: pokemonId });
+      
+      if (error) {
+        console.error('Error removing favorite:', error);
+        // Restore the favorite if there was an error
+        setFavorites(prev => [...prev, pokemonId]);
+        toast.error('Failed to remove from favorites');
+        return;
+      }
+      
+      toast.success('Removed from favorites');
+    } catch (error) {
+      console.error('Error removing favorite:', error);
+      toast.error('Something went wrong');
+    }
+  };
 
 
 
@@ -315,10 +348,25 @@ const Profile: React.FC = () => {
                 {favorites.map((pokemonId) => (
                   <div 
                     key={pokemonId}
-                    onClick={() => navigate(`/pokemon/${pokemonId}`)}
-                    className="bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow p-4 flex flex-col items-center cursor-pointer"
+                    className="bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow p-4 flex flex-col items-center relative"
                   >
-                    <div className="w-20 h-20 flex items-center justify-center">
+                    {/* Remove favorite button */}
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        removeFavorite(pokemonId);
+                      }}
+                      className="absolute top-1 right-1 bg-red-500 text-white p-1 rounded-full hover:bg-red-600 transition-colors"
+                      aria-label="Remove from favorites"
+                    >
+                      <X size={14} />
+                    </button>
+                    
+                    {/* Pokemon image (clickable to navigate) */}
+                    <div 
+                      className="w-20 h-20 flex items-center justify-center cursor-pointer"
+                      onClick={() => navigate(`/pokemon/${pokemonId}`)}
+                    >
                       <img 
                         src={`https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${pokemonId}.png`}
                         alt={`Pokémon #${pokemonId}`}

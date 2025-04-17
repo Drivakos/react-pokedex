@@ -123,7 +123,11 @@ export const fetchPokemonById = async (id: number): Promise<Pokemon> => {
     const result = await response.json();
     
     if (result.errors) {
-      throw new Error(result.errors[0].message);
+      console.error('GraphQL errors for ID', id, result.errors);
+      const message = result.errors
+        .map((e: any) => e.message)
+        .join('; ');
+      throw new Error(message);
     }
 
     const rawPokemon = result.data.pokemon_v2_pokemon_by_pk as RawPokemonData;
@@ -212,7 +216,6 @@ export const fetchPokemonData = async (
       }
     `;
 
-    console.log('Fetching Pokemon data with params:', { limit, offset, searchTerm, filters });
     const response = await fetch(GRAPHQL_ENDPOINT, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -280,17 +283,46 @@ export const transformSinglePokemon = (p: RawPokemonData): Pokemon => {
 };
 
 /**
- * Fetches detailed Pokemon data from the REST API
+ * Simple in-memory cache for Pokemon details
+ */
+const pokemonDetailsCache: Record<number, PokemonDetails> = {};
+
+/**
+ * Fetches detailed Pokemon data from the REST API with caching and retries
  */
 export const fetchPokemonDetails = async (id: number): Promise<PokemonDetails> => {
+  // Return cached data if available
+  if (pokemonDetailsCache[id]) {
+    return pokemonDetailsCache[id];
+  }
+  
   try {
-    // Fetch basic Pokemon data
-    const pokemonResponse = await fetch(`${REST_ENDPOINT}/pokemon/${id}`);
-    const pokemonData = await pokemonResponse.json();
+    // Helper function to retry fetches
+    const fetchWithRetry = async (url: string, retries = 2) => {
+      let lastError;
+      for (let i = 0; i <= retries; i++) {
+        try {
+          const response = await fetch(url);
+          if (!response.ok) {
+            throw new Error(`HTTP error! Status: ${response.status}`);
+          }
+          return await response.json();
+        } catch (err) {
+          lastError = err;
+          // Wait before retrying (exponential backoff)
+          if (i < retries) {
+            await new Promise(r => setTimeout(r, 500 * Math.pow(2, i)));
+          }
+        }
+      }
+      throw lastError;
+    };
+    
+    // Fetch basic Pokemon data with retries
+    const pokemonData = await fetchWithRetry(`${REST_ENDPOINT}/pokemon/${id}`);
     
     // Fetch species data for evolution chain and flavor text
-    const speciesResponse = await fetch(`${REST_ENDPOINT}/pokemon-species/${id}`);
-    const speciesData = await speciesResponse.json();
+    const speciesData = await fetchWithRetry(`${REST_ENDPOINT}/pokemon-species/${id}`);
     
     // Fetch evolution chain data
     let evolutionData = null;
@@ -390,7 +422,7 @@ export const fetchPokemonDetails = async (id: number): Promise<PokemonDetails> =
       }
     }
     
-    return {
+    const details: PokemonDetails = {
       id: pokemonData.id,
       name: pokemonData.name,
       height: pokemonData.height,
@@ -417,9 +449,50 @@ export const fetchPokemonDetails = async (id: number): Promise<PokemonDetails> =
       base_experience: pokemonData.base_experience,
       has_evolutions: evolutions.length > 1
     };
+    
+    // Cache the result
+    pokemonDetailsCache[id] = details;
+    return details;
+    
   } catch (error) {
     console.error(`Error fetching detailed Pokemon data for ID ${id}:`, error);
-    throw error;
+    
+    // Create a minimal Pokemon detail object when API fails
+    // This prevents the entire application from breaking
+    const fallbackDetails: PokemonDetails = {
+      id: id,
+      name: `pokemon-${id}`,
+      height: 0,
+      weight: 0,
+      types: [],
+      moves: [],
+      generation: 'unknown',
+      abilities: [],
+      stats: {
+        hp: 0,
+        attack: 0,
+        defense: 0,
+        special_attack: 0,
+        special_defense: 0,
+        speed: 0
+      },
+      sprites: {
+        front_default: '',
+        back_default: '',
+        front_shiny: '',
+        back_shiny: '',
+        official_artwork: ''
+      },
+      flavor_text: 'Data unavailable',
+      genera: '',
+      evolution_chain: [],
+      base_experience: 0,
+      has_evolutions: false
+    };
+    
+    // Cache the fallback details to prevent repeated API calls for the same failed ID
+    pokemonDetailsCache[id] = fallbackDetails;
+    return fallbackDetails;
   }
 };
 

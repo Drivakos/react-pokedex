@@ -5,6 +5,7 @@ import { Plus, X, Edit, Trash2, Save, Users } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { TYPE_COLORS } from '../../types/pokemon';
 import { formatName, getOfficialArtwork } from '../../utils/helpers';
+import PokemonImage from '../common/PokemonImage';
 
 interface Pokemon {
   id: number;
@@ -27,8 +28,10 @@ const TeamBuilder: React.FC<{
   onClose?: () => void;
   selectedPokemon?: Pokemon | null;
 }> = ({ onClose, selectedPokemon }) => {
-  const { user, teams, fetchTeams, createTeam, updateTeam, deleteTeam, addPokemonToTeam, removePokemonFromTeam, getTeamMembers } = useAuth();
+  const { user, teams, fetchTeams, createTeam, updateTeam, deleteTeam, addPokemonToTeam, removePokemonFromTeam, getTeamMembers, favorites } = useAuth();
   const [teamPokemon, setTeamPokemon] = useState<Record<number, Record<number, Pokemon>>>({});
+  const [poolDetails, setPoolDetails] = useState<Pokemon[]>([]);
+  const [selectedPoolPokemon, setSelectedPoolPokemon] = useState<Pokemon | null>(null);
   const [isCreating, setIsCreating] = useState(false);
   const [isEditing, setIsEditing] = useState<number | null>(null);
   const [newTeamName, setNewTeamName] = useState('');
@@ -155,6 +158,27 @@ const TeamBuilder: React.FC<{
   }, [teams, getTeamMembers]);
 
   useEffect(() => {
+    const loadPool = async () => {
+      const ids = favorites.map(f => f.pokemon_id);
+      if (selectedPokemon && !ids.includes(selectedPokemon.id)) ids.unshift(selectedPokemon.id);
+      const details: Pokemon[] = [];
+      for (const id of ids) {
+        try {
+          const res = await fetch(`https://pokeapi.co/api/v2/pokemon/${id}`);
+          if (res.ok) {
+            const data = await res.json();
+            details.push(data);
+          }
+        } catch (e) {
+          console.error('TeamBuilder: load pool failed', id, e);
+        }
+      }
+      setPoolDetails(details);
+    };
+    if (favorites?.length || selectedPokemon) loadPool();
+  }, [favorites, selectedPokemon]);
+
+  useEffect(() => {
     if (selectedPokemon && selectedTeam !== null && selectedPosition !== null) {
       handleAddPokemon(selectedTeam, selectedPokemon.id, selectedPosition);
       setSelectedTeam(null);
@@ -253,10 +277,12 @@ const TeamBuilder: React.FC<{
         {pokemon ? (
           <>
             <div className="relative w-full">
-              <img 
-                src={getOfficialArtwork(pokemon.sprites) || (pokemon as any).sprites?.front_default} 
-                alt={formatName(pokemon.name)} 
-                className="w-full h-auto drop-shadow-md transform transition-transform duration-300 hover:scale-110" 
+              <PokemonImage 
+                pokemon={pokemon}
+                fallbackId={pokemon.id}
+                alt={formatName(pokemon.name)}
+                size="lg" 
+                className="w-full h-auto drop-shadow-md transform transition-transform duration-300 hover:scale-110"
               />
               <button 
                 className="absolute -top-1 -right-1 bg-red-500 hover:bg-red-600 text-white rounded-full p-1 shadow-md transition-colors"
@@ -378,6 +404,24 @@ const TeamBuilder: React.FC<{
             >
               <Plus size={16} className="mr-2" /> Create Team
             </button>
+          </div>
+        </div>
+      )}
+
+      {poolDetails.length > 0 && (
+        <div className="mb-6">
+          <h3 className="text-lg font-semibold mb-2">Pool</h3>
+          <div className="flex space-x-2 overflow-x-auto p-2 bg-gray-50 rounded-lg">
+            {poolDetails.map((p) => (
+              <div
+                key={p.id}
+                className={`p-2 bg-white rounded shadow flex flex-col items-center cursor-pointer ${selectedPoolPokemon?.id === p.id ? 'ring-2 ring-blue-500' : ''}`}
+                onClick={() => setSelectedPoolPokemon(p)}
+              >
+                <img src={getOfficialArtwork(p)} alt={p.name} className="h-12 w-12 object-contain" />
+                <span className="text-xs mt-1 capitalize">{p.name}</span>
+              </div>
+            ))}
           </div>
         </div>
       )}

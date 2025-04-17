@@ -1,4 +1,9 @@
 {
+  "compilerOptions": {
+    "paths": {
+      "@hello-pangea/dnd": ["node_modules/@hello-pangea/dnd"]
+    }
+  },
   "files": [],
   "references": [
     { "path": "./tsconfig.app.json" },

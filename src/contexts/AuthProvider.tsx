@@ -41,6 +41,7 @@ interface AuthContextType {
   deleteTeam: (teamId: number) => Promise<void>;
   addPokemonToTeam: (teamId: number, pokemonId: number, position: number) => Promise<void>;
   removePokemonFromTeam: (teamId: number, position: number) => Promise<void>;
+  movePokemonPosition: (teamId: number, sourcePosition: number, destPosition: number) => Promise<void>;
   getTeamMembers: (teamId: number) => Promise<any[]>;
 }
 
@@ -503,6 +504,88 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const movePokemonPosition = async (teamId: number, sourcePosition: number, destPosition: number) => {
+    if (!user) {
+      toast.error('You must be logged in to rearrange Pokémon');
+      return;
+    }
+    
+    // Get all team members to find Pokémon at source and possibly destination positions
+    const members = await getTeamMembers(teamId);
+    const sourceMember = members.find(m => m.position === sourcePosition);
+    const destMember = members.find(m => m.position === destPosition);
+    
+    if (!sourceMember) {
+      toast.error('No Pokémon found at the source position');
+      return;
+    }
+    
+    const sourcePokemonId = sourceMember.pokemon_id;
+    const destPokemonId = destMember?.pokemon_id;
+    
+    try {
+      // Start a transaction-like sequence of operations
+      const result = await withAuthSession(async () => {
+        // First, we'll delete both positions to avoid constraint violations
+        // Delete source position
+        const { error: deleteSourceError } = await supabase
+          .from('team_members')
+          .delete()
+          .eq('team_id', teamId)
+          .eq('position', sourcePosition);
+          
+        if (deleteSourceError) {
+          throw deleteSourceError;
+        }
+        
+        // If there's a Pokémon at the destination, delete it too
+        if (destMember) {
+          const { error: deleteDestError } = await supabase
+            .from('team_members')
+            .delete()
+            .eq('team_id', teamId)
+            .eq('position', destPosition);
+            
+          if (deleteDestError) {
+            throw deleteDestError;
+          }
+        }
+        
+        // Now let's insert both Pokémon in their new positions
+        // Add the source Pokémon to the destination position
+        const { error: insertSourceError } = await supabase
+          .from('team_members')
+          .insert([{ team_id: teamId, pokemon_id: sourcePokemonId, position: destPosition }]);
+          
+        if (insertSourceError) {
+          throw insertSourceError;
+        }
+        
+        // If there was a Pokémon at the destination, move it to the source position
+        if (destPokemonId) {
+          const { error: insertDestError } = await supabase
+            .from('team_members')
+            .insert([{ team_id: teamId, pokemon_id: destPokemonId, position: sourcePosition }]);
+            
+          if (insertDestError) {
+            throw insertDestError;
+          }
+        }
+        
+        return true;
+      });
+
+      if (result.data) {
+        // Refresh teams data after the move is complete
+        await fetchTeams();
+        console.log(`Successfully swapped Pokémon between positions ${sourcePosition} and ${destPosition}`);
+      }
+    } catch (error) {
+      console.error('Error swapping Pokémon positions:', error);
+      toast.error('Failed to rearrange Pokémon. Please try again.');
+    }
+  };
+
   const getTeamMembers = async (teamId: number) => {
     if (!user) {
       return [];
@@ -558,6 +641,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     deleteTeam,
     addPokemonToTeam,
     removePokemonFromTeam,
+    movePokemonPosition,
     getTeamMembers
   };
 

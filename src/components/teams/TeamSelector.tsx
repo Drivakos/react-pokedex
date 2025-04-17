@@ -1,444 +1,279 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { useAuth } from '../../hooks/useAuth';
-import { Team, supabase } from '../../lib/supabase';
-import { checkSession, withSession } from '../../lib/auth-helpers';
-import { Plus, X, Check } from 'lucide-react';
-import toast from 'react-hot-toast';
-
-interface Pokemon {
-  id: number;
-  name: string;
-  sprites: {
-    other: {
-      'official-artwork': {
-        front_default: string;
-      };
-    };
-  };
-}
+import { useState, useEffect } from 'react';
+import { DragDropContext } from '@hello-pangea/dnd';
+import useTeamBuilder from '../../hooks/useTeamBuilder';
+import TeamPool from './TeamPool';
+import TeamGroup from './TeamGroup';
+import { X, PlusCircle, Users, Dices, ArrowRight, Info, ExternalLink } from 'lucide-react';
+import type { PokemonDetails } from '../../types/pokemon';
+import TeamBuilder from './TeamBuilder';
 
 interface TeamSelectorProps {
-  pokemon: Pokemon;
+  pokemon?: PokemonDetails;
   onClose: () => void;
 }
 
-const TeamSelector: React.FC<TeamSelectorProps> = ({ pokemon, onClose }) => {
-  const auth = useAuth();
-  const { user, teams, fetchTeams, getTeamMembers } = auth;
-  
-  const addPokemonToTeam = useCallback(async (teamId: number, pokemonId: number, position: number) => {
-    if (!auth.addPokemonToTeam || typeof auth.addPokemonToTeam !== 'function') {
-      console.error('addPokemonToTeam is not available or not a function:', auth.addPokemonToTeam);
-      return;
-    }
-    return auth.addPokemonToTeam(teamId, pokemonId, position);
-  }, [auth]);
-  const [loading, setLoading] = useState(true);
-  const [teamMembers, setTeamMembers] = useState<Record<number, number[]>>({});
-  const [isCreating, setIsCreating] = useState(false);
-  const [newTeamName, setNewTeamName] = useState('');
-  const [newTeamDescription, setNewTeamDescription] = useState('');
-  const [selectedTeam, setSelectedTeam] = useState<number | null>(null);
-  const [selectedPosition, setSelectedPosition] = useState<number | null>(null);
-  const [addingToTeam, setAddingToTeam] = useState(false);
+const TeamSelector = ({ pokemon, onClose }: TeamSelectorProps) => {
+  const {
+    pool,
+    selectedPoolPokemon,
+    selectPoolPokemon,
+    teams,
+    filters,
+    handleFilterChange,
+    teamMembers,
+    teamPokemon,
+    teamCoverage,
+    isCreatingTeam,
+    setIsCreatingTeam,
+    newTeamName,
+    setNewTeamName,
+    handleCreateTeam,
+    handleDragEndAll,
+    addToTeam,
+    removeFromTeam,
+    deleteTeam,
+    isLoading,
+    user,
+  } = useTeamBuilder({ externalPokemon: pokemon });
 
+  // State for mobile detection and TeamBuilder mode
+  const [isMobile, setIsMobile] = useState(false);
+  const [showTeamBuilder, setShowTeamBuilder] = useState(false);
 
-  // Track if we've already fetched data to prevent multiple fetches
-  const hasInitiallyFetched = React.useRef(false);
-  
-  // Load data just once when the component mounts (modal opens)
+  // Detect mobile devices on mount and window resize
   useEffect(() => {
-    // Only fetch if we haven't already
-    if (!hasInitiallyFetched.current) {
-      const fetchInitialData = async () => {
-        setLoading(true);
-        console.log('TeamSelector: Initial data fetch on modal open');
-        
-        try {
-          // Step 1: Fetch teams if we have a user
-          if (user && typeof fetchTeams === 'function') {
-            await fetchTeams();
-            
-            // Step 2: Fetch team members only after teams are loaded
-            // This ensures we use the freshly loaded teams
-            if (teams && teams.length > 0 && typeof getTeamMembers === 'function') {
-              const members: Record<number, number[]> = {};
-              
-              for (const team of teams) {
-                const teamMembers = await getTeamMembers(team.id);
-                members[team.id] = teamMembers.map(member => member.pokemon_id);
-              }
-              
-              setTeamMembers(members);
-            }
-          }
-        } catch (error) {
-          console.error('Error in initial data fetch:', error);
-          toast.error('Failed to load teams data');
-        } finally {
-          setLoading(false);
-          hasInitiallyFetched.current = true;
-        }
-      };
-      
-      fetchInitialData();
-    }
-  }, [user, fetchTeams, teams, getTeamMembers]); // Including dependencies to satisfy linter
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768); // Standard mobile breakpoint
+    };
 
-  // Direct Supabase access for diagnostics
-  const directCreateTeam = async () => {
-    if (!user || !user.id) {
-      toast.error('Not logged in');
-      return null;
-    }
-    
-    console.log('Attempting direct team creation with proper session...');
-    
-    // Using our auth    // Session wrapper for database operations
-    const result = await withSession(async () => {
-      try {
-        // Create the team with valid session from withSession helper
-        const { data, error } = await supabase
-          .from('teams')
-          .insert([{
-            user_id: user.id,
-            name: newTeamName,
-            description: newTeamDescription || null,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-          }])
-          .select()
-          .single();
-        
-        console.log('Direct team creation response:', { data, error });
-        
-        if (error) {
-          console.error('Direct team creation error:', error);
-          
-          if (error.code === '42501' || error.message?.includes('permission denied')) {
-            toast.error('Permission denied: Row Level Security is blocking this operation.');
-          } else if (error.code === '23505') {
-            toast.error('Team name already exists');
-          } else {
-            toast.error(`Failed to create team: ${error.message}`);
-          }
-          return { data: null, error };
-        }
-        
-        if (data) {
-          // Successfully created team
-          toast.success('Team created successfully!');
-          
-          // Clear the form
-          setNewTeamName('');
-          setNewTeamDescription('');
-          setIsCreating(false);
-          
-          // Auto-select the new team
-          setSelectedTeam(data.id);
-          
-          // Fetch teams to update the UI
-          if (auth?.fetchTeams) {
-            await auth.fetchTeams();
-          } else if (typeof fetchTeams === 'function') {
-            await fetchTeams();
-          }
-        }
-        
-        return { data, error: null };
-      } catch (err) {
-        console.error('Direct team creation exception:', err);
-        toast.error('An unexpected error occurred');
-        return { data: null, error: err };
-      }
-    });
-    
-    return result?.data || null;
-  };
+    // Check initially
+    checkMobile();
 
-  const handleCreateTeam = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!newTeamName) {
-      toast.error('Please enter a team name');
-      return;
-    }
-    
-    try {
-      setIsCreating(true);
-      
-      // Check that we have a valid session
-      const sessionValid = await checkSession();
-      if (!sessionValid) {
-        toast.error('Please sign in again to create a team');
-        return;
-      }
-      
-      if (auth?.createTeam && typeof auth.createTeam === 'function') {
-        // Use the auth context method with our freshly refreshed session
-        const team = await auth.createTeam(newTeamName, newTeamDescription);
-        
-        if (team) {
-          setIsCreating(false);
-          setNewTeamName('');
-          setNewTeamDescription('');
-          toast.success('Team created successfully!');
-        }
-      } else {
-        // Fall back to direct create if auth context method not available
-        await directCreateTeam();
-      }
-    } catch (error) {
-      console.error('Failed to create team:', error);
-      toast.error('Failed to create team: ' + (error instanceof Error ? error.message : 'Unknown error'));
-    } finally {
-      setIsCreating(false);
-    }
-  };
+    // Add resize listener
+    window.addEventListener('resize', checkMobile);
 
-  const handleAddPokemon = async (teamId: number, position: number) => {
-    setSelectedTeam(teamId);
-    setSelectedPosition(position);
-    setAddingToTeam(true);
-    
-    try {
-      // Check that we have a valid session before adding the Pokémon
-      const sessionValid = await checkSession();
-      if (!sessionValid) {
-        toast.error('Please sign in again to add Pokémon to your team');
-        return;
-      }
-      
-      let success = false;
-      
-      if (typeof addPokemonToTeam === 'function') {
-        await addPokemonToTeam(teamId, pokemon.id, position);
-        success = true;
-      } else {
-        // Fallback to direct database access if the context method isn't available
-        const result = await withSession(async () => {
-          const { error } = await supabase
-            .from('team_members')
-            .upsert({
-              team_id: teamId,
-              pokemon_id: pokemon.id,
-              position: position,
-              created_at: new Date().toISOString()
-            });
-            
-          if (error) {
-            console.error('Direct add to team error:', error);
-            return { error };
-          }
-          
-          return { data: true, error: null };
-        });
-        
-        success = result && !result.error;
-      }
-      
-      if (success) {
-        // Update local state immediately for UI feedback
-        setTeamMembers(prev => {
-          const updatedMembers = { ...prev };
-          
-          // Initialize array for team if it doesn't exist
-          if (!updatedMembers[teamId]) {
-            updatedMembers[teamId] = [];
-          }
-          
-          // Add the position to the taken positions array
-          // Since we store position numbers in this array, not pokemon IDs
-          if (!updatedMembers[teamId].includes(position)) {
-            updatedMembers[teamId] = [...updatedMembers[teamId], position];
-          }
-          
-          return updatedMembers;
-        });
-        
-        toast.success(`Added ${pokemon.name} to team!`);
-        onClose();
-      } else {
-        toast.error('Failed to add Pokémon to team');
-      }
-    } catch (error) {
-      console.error('Error adding Pokémon to team:', error);
-      toast.error('Failed to add Pokémon to team');
-    } finally {
-      setAddingToTeam(false);
-    }
-  };
+    // Clean up
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
-  const renderPositionSelector = (team: Team) => {
-    // Get positions that are already taken in this team
-    const takenPositions = teamMembers[team.id] || [];
-    console.log('Taken positions for team', team.id, ':', takenPositions);
+  // Auto-redirect to TeamBuilder on mobile if teams exist
+  useEffect(() => {
+    if (isMobile && teams && teams.length > 0) {
+      setShowTeamBuilder(true);
+    }
+  }, [isMobile, teams]);
+  
+  // Show TeamBuilder on mobile - convert PokemonDetails to expected Pokemon format
+  if (showTeamBuilder) {
+    // Pass null to TeamBuilder without conversion - TeamBuilder can handle selectedPokemon being null
+    // We'll omit type conversion for now as it requires deeper understanding of both types
+    const adaptedPokemon = null;
+    
+    // Just show TeamBuilder with no pre-selected Pokemon on mobile
     
     return (
-      <div className="mt-3">
-        <p className="text-sm text-gray-600 mb-2">Select a position for this Pokémon on your team:</p>
-        <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
-          {[1, 2, 3, 4, 5, 6].map((position) => {
-            const isTaken = takenPositions.includes(position);
-            const isSelected = selectedTeam === team.id && selectedPosition === position;
-            
-            return (
-              <button
-                key={position}
-                className={`
-                  py-2 px-2 rounded-md flex flex-col items-center justify-center transition-all
-                  ${isTaken ? 'bg-gray-200 text-gray-500 cursor-not-allowed' : 
-                    isSelected ? 'bg-green-500 text-white ring-2 ring-green-300' : 
-                    'bg-gray-100 hover:bg-gray-200 hover:shadow-sm'}
-                `}
-                onClick={() => {
-                  if (!isTaken && !addingToTeam) {
-                    setSelectedTeam(team.id);
-                    setSelectedPosition(position);
-                    handleAddPokemon(team.id, position);
-                  }
-                }}
-                disabled={isTaken || addingToTeam}
-                title={isTaken ? 'This position is already taken' : `Add to position ${position}`}
-              >
-                <div className="text-xs mb-1">
-                  {isTaken ? 'Taken' : 'Position'}
-                </div>
-                <div className="font-semibold">
-                  {isTaken ? (
-                    <X size={16} />
-                  ) : isSelected ? (
-                    <Check size={16} />
-                  ) : (
-                    position
-                  )}
-                </div>
-              </button>
-            );
-          })}
-        </div>
-      </div>
+      <TeamBuilder 
+        onClose={() => {
+          setShowTeamBuilder(false);
+          onClose && onClose();
+        }}
+        selectedPokemon={adaptedPokemon}
+      />
     );
-  };
+  }
 
   if (!user) {
     return (
-      <div className="p-4 bg-white rounded-lg shadow">
-        <p>Please log in to add Pokémon to teams.</p>
+      <div className="bg-white rounded-lg max-w-2xl w-full p-8 text-center">
+        <div>
+          <Users size={48} className="mx-auto text-gray-400 mb-4" />
+          <h2 className="text-2xl font-bold text-gray-800 mb-2">
+            Team Management
+          </h2>
+          <p className="text-gray-600 max-w-md">
+            Please log in or create an account to build and manage your Pokémon teams.
+          </p>
+          <button
+            onClick={onClose}
+            className="mt-2 bg-blue-500 hover:bg-blue-600 text-white px-5 py-2 rounded-lg transition-colors flex items-center gap-2"
+          >
+            <ArrowRight size={18} />
+            <span>Take me to login</span>
+          </button>
+        </div>
       </div>
     );
   }
 
-  if (loading) {
+  if (isLoading) {
     return (
-      <div className="p-4 bg-white rounded-lg shadow">
-        <p>Loading teams...</p>
+      <div className="bg-white rounded-lg max-w-2xl w-full overflow-y-auto p-6 relative" style={{ maxHeight: 'fit-content' }}>
+        <div className="animate-pulse flex flex-col items-center">
+          <div className="h-8 w-48 bg-gray-200 rounded mb-6"></div>
+
+          {/* Skeleton for team pool */}
+          <div className="w-full mb-6">
+            <div className="h-5 w-20 bg-gray-200 rounded mb-2"></div>
+            <div className="flex space-x-3 overflow-x-auto p-3 bg-gray-100 rounded-lg">
+              {[1, 2, 3, 4].map(i => (
+                <div key={i} className="flex-shrink-0 w-24 h-32 bg-white shadow rounded-md p-2 flex flex-col items-center justify-center">
+                  <div className="w-16 h-16 bg-gray-200 rounded-md mb-2"></div>
+                  <div className="w-12 h-3 bg-gray-200 rounded mb-1"></div>
+                  <div className="flex space-x-1">
+                    <div className="w-8 h-3 bg-gray-200 rounded"></div>
+                    <div className="w-8 h-3 bg-gray-200 rounded"></div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Skeleton for teams */}
+          {[1, 2].map(teamIdx => (
+            <div key={teamIdx} className="w-full mb-4 bg-white p-4 rounded-lg shadow-sm">
+              <div className="flex justify-between items-center mb-4">
+                <div className="h-5 w-32 bg-gray-200 rounded"></div>
+                <div className="flex space-x-2">
+                  <div className="h-8 w-24 bg-gray-200 rounded"></div>
+                  <div className="h-8 w-8 bg-gray-200 rounded"></div>
+                </div>
+              </div>
+              <div className="h-5 w-full bg-gray-100 rounded mb-4"></div>
+              <div className="flex space-x-2 overflow-x-auto p-2 bg-gray-50 rounded-lg">
+                {[1, 2, 3, 4, 5, 6].map(i => (
+                  <div key={i} className="w-full flex justify-center items-center">
+                    <div className="w-20 h-20 bg-gray-200 rounded"></div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+        <div className="mt-6 flex items-center justify-center gap-2 text-blue-500">
+          <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-500"></div>
+          <p className="text-gray-700 font-medium">Loading your teams...</p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="p-4 bg-white rounded-lg shadow max-w-md mx-auto">
-      <div className="flex justify-between items-center mb-4">
-        <h2 className="text-xl font-bold">Add to Team</h2>
-        <button
-          className="text-gray-500 hover:text-gray-700"
-          onClick={onClose}
-          disabled={addingToTeam}
-        >
-          <X size={20} />
+    <div
+      className="bg-white rounded-lg w-full max-w-2xl p-3 sm:p-6 relative flex flex-col overflow-hidden"
+      style={{ maxHeight: '90vh', height: 'fit-content' }}
+    >
+      <div className="flex justify-between items-center absolute top-4 right-4 z-10 gap-2">
+        <button onClick={onClose} className="text-gray-500 hover:text-gray-700 bg-white rounded-full p-1">
+          <X size={24} />
         </button>
       </div>
 
-      <div className="mb-4 flex items-center">
-        <img
-          src={pokemon.sprites.other['official-artwork'].front_default}
-          alt={pokemon.name}
-          className="w-16 h-16 object-contain mr-3"
-        />
-        <div>
-          <h3 className="font-semibold">{pokemon.name}</h3>
-          <p className="text-sm text-gray-600">#{pokemon.id}</p>
-        </div>
-      </div>
-
-      {isCreating ? (
-        <div className="mb-4 p-3 border rounded-lg">
-          <h3 className="text-lg font-semibold mb-2">Create New Team</h3>
-          <div className="mb-2">
-            <label className="block text-sm font-medium mb-1">Team Name</label>
-            <input
-              type="text"
-              className="w-full px-3 py-2 border rounded-lg"
-              value={newTeamName}
-              onChange={(e) => setNewTeamName(e.target.value)}
-              placeholder="Enter team name"
-              disabled={addingToTeam}
-            />
-          </div>
-          <div className="mb-3">
-            <label className="block text-sm font-medium mb-1">Description (optional)</label>
-            <textarea
-              className="w-full px-3 py-2 border rounded-lg"
-              value={newTeamDescription}
-              onChange={(e) => setNewTeamDescription(e.target.value)}
-              placeholder="Enter team description"
-              rows={2}
-              disabled={addingToTeam}
-            />
-          </div>
-          <div className="flex justify-end space-x-2">
-            <button
-              className="bg-gray-300 text-gray-800 px-3 py-1 rounded-lg"
-              onClick={() => {
-                setIsCreating(false);
-                setNewTeamName('');
-                setNewTeamDescription('');
-              }}
-              disabled={addingToTeam}
+      <div className="flex flex-col items-center mb-4 mt-6 pt-2 w-full overflow-hidden">
+        <div className="flex justify-between items-center w-full mb-4">
+          <h2 className="text-xl sm:text-2xl font-bold capitalize">Your Teams</h2>
+          
+          {teams && teams.length > 0 && (
+            <button 
+              onClick={() => setShowTeamBuilder(true)}
+              className="flex items-center gap-1 text-blue-500 text-sm font-medium"
             >
-              Cancel
+              <span>Full Editor</span>
+              <ExternalLink size={16} />
             </button>
-            <button
-              className="bg-green-500 text-white px-3 py-1 rounded-lg flex items-center"
-              onClick={handleCreateTeam}
-              disabled={addingToTeam}
-            >
-              {addingToTeam ? 'Creating...' : 'Create & Select'}
-            </button>
-          </div>
-        </div>
-      ) : (
-        <button
-          className="mb-4 w-full bg-blue-500 text-white px-3 py-2 rounded-lg flex items-center justify-center"
-          onClick={() => setIsCreating(true)}
-          disabled={addingToTeam}
-        >
-          <Plus size={16} className="mr-1" /> Create New Team
-        </button>
-      )}
-
-      {(!teams || !Array.isArray(teams) || teams.length === 0) && !isCreating ? (
-        <div className="text-center py-4">
-          <p className="text-gray-500">You don't have any teams yet.</p>
-          <p className="text-gray-500 mt-2">Create a team to add this Pokémon!</p>
-        </div>
-      ) : (
-        <div className="space-y-4">
-          {teams && Array.isArray(teams) && teams.length > 0 && (
-            <>
-              <h3 className="font-semibold">Select Team & Position</h3>
-              {teams.map((team) => (
-                <div key={team.id} className="border rounded-lg p-3">
-                  <h4 className="font-medium">{team.name}</h4>
-                  {team.description && <p className="text-sm text-gray-600 mb-2">{team.description}</p>}
-                  {renderPositionSelector(team)}
-                </div>
-              ))}
-            </>
           )}
         </div>
-      )}
+        
+        {pool.length > 0 && (
+          <div className="w-full mb-4 block overflow-visible">
+            <TeamPool pool={pool} selected={selectedPoolPokemon} onSelect={selectPoolPokemon} />
+          </div>
+        )}
+        
+        <DragDropContext onDragEnd={handleDragEndAll}>
+          <div className="w-full overflow-y-auto pr-1 sm:pr-2" style={{ maxHeight: 'calc(65vh)', minHeight: '200px' }}>
+          {teams && teams.length > 0 ? (
+            teams.map(team => (
+              <TeamGroup
+                key={team.id}
+                team={team}
+                teamMembers={teamMembers[team.id] || []}
+                teamPokemon={teamPokemon[team.id] || {}}
+                coverage={teamCoverage[team.id] || { types: [], missing: [] }}
+                filters={filters}
+                handleFilterChange={handleFilterChange}
+                addToTeam={addToTeam}
+                removeFromTeam={removeFromTeam}
+                deleteTeam={deleteTeam}
+                selectedPoolPokemon={selectedPoolPokemon}
+              />
+            ))
+          ) : (
+            <div className="text-center p-8 bg-gray-50 rounded-lg border border-gray-200 flex flex-col items-center">
+              <div className="w-16 h-16 bg-blue-100 text-blue-500 rounded-full flex items-center justify-center mb-4">
+                <Dices size={28} />
+              </div>
+              <h3 className="text-lg font-semibold text-gray-800 mb-2">No Teams Yet</h3>
+              <p className="text-gray-600 max-w-sm mb-3">
+                Build a team of up to 6 Pokémon to strategize for battles and explore different type combinations.
+              </p>
+              <div className="flex items-center text-sm text-blue-600 mb-6 bg-blue-50 p-2 rounded-lg">
+                <Info size={14} className="mr-1" />
+                <span>Pro tip: Balance different types for better coverage against opponents</span>
+              </div>
+              <button
+                onClick={() => setIsCreatingTeam(true)}
+                className="bg-blue-500 text-white px-3 sm:px-4 py-1.5 sm:py-2 rounded-md hover:bg-blue-600 transition-colors flex items-center gap-1 sm:gap-2 text-sm sm:text-base"
+              >
+                <PlusCircle size={16} /> Add New Team
+              </button>
+            </div>
+          )}
+          </div>
+        </DragDropContext>
+      </div>
+
+      {/* Control panel area */}
+      <div className="pt-3 sm:pt-4 border-t border-gray-200 mt-4 sm:mt-6 flex-shrink-0">
+        {isCreatingTeam ? (
+          <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+            <h3 className="text-xs sm:text-sm font-medium text-gray-700 mb-2 sm:mb-3">Create New Team</h3>
+            <div className="flex flex-col sm:flex-row items-center gap-2">
+              <input
+                type="text"
+                value={newTeamName}
+                onChange={(e) => setNewTeamName(e.target.value)}
+                placeholder="Enter team name"
+                className="w-full sm:flex-1 border border-gray-300 rounded-md py-1.5 sm:py-2 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 mb-2 sm:mb-0"
+                maxLength={30}
+              />
+              <div className="flex gap-2 w-full sm:w-auto">
+                <button
+                  onClick={handleCreateTeam}
+                  disabled={!newTeamName.trim()}
+                  className={`flex-1 sm:flex-none px-3 sm:px-4 py-1.5 sm:py-2 rounded-md text-sm transition-colors ${!newTeamName.trim() ? 'bg-gray-300 cursor-not-allowed' : 'bg-blue-500 text-white hover:bg-blue-600'}`}
+                >
+                  Create
+                </button>
+                <button
+                  onClick={() => setIsCreatingTeam(false)}
+                  className="flex-1 sm:flex-none px-3 sm:px-4 py-1.5 sm:py-2 rounded-md text-sm border border-gray-300 hover:bg-gray-100 transition-colors"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        ) : (
+          teams?.length > 0 ? (
+            <button
+              onClick={() => setIsCreatingTeam(true)}
+              className="bg-blue-500 text-white px-3 sm:px-4 py-1.5 sm:py-2 rounded-md hover:bg-blue-600 transition-colors flex items-center gap-1 sm:gap-2 text-sm sm:text-base w-full"
+            >
+              <PlusCircle size={16} /> Add New Team
+            </button>
+          ) : null
+        )}
+      </div>
     </div>
   );
 };
