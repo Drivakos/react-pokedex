@@ -4,7 +4,7 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
+    "dev": "vite --port 64444",
     "build": "tsc && vite build",
     "build:prod": "node scripts/build-prod.js",
     "lint": "eslint .",
