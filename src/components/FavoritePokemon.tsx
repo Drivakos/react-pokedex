@@ -18,20 +18,14 @@ const FavoritePokemon: React.FC<FavoritePokemonProps> = ({ pokemonId }) => {
       return;
     }
 
-    // Use the context's isFavorite function
-    console.log(`Checking if Pokémon #${pokemonId} is favorite for user ${user.id}`);
     setIsFavorite(isFavorite(pokemonId));
   }, [user, pokemonId, isFavorite]);
 
   useEffect(() => {
     if (user) {
-      const timeoutId = setTimeout(() => {
-        checkIfFavorite();
-      }, 300);
-      
-      return () => clearTimeout(timeoutId);
+      checkIfFavorite();
     }
-  }, [user?.id, pokemonId]);
+  }, [user, checkIfFavorite]);
 
   const toggleFavorite = async () => {
     if (!user) {

@@ -1,4 +1,4 @@
-import React, { createContext, useState, useEffect, useContext } from 'react';
+import React, { createContext, useState, useEffect, useContext, useCallback, useMemo } from 'react';
 import { Session, User, AuthError } from '@supabase/supabase-js';
 import { Profile, Favorite } from '../lib/supabase';
 import authService, { withAuthSession } from '../services/auth.service';
@@ -12,8 +12,6 @@ interface AuthContextType {
   favorites: Favorite[];
   teams: any[];
   loading: boolean;
-  
-  // Auth methods
   refreshSession: () => Promise<Session | null>;
   signUp: (email: string, password: string) => Promise<any>;
   signIn: (email: string, password: string) => Promise<any>;
@@ -22,27 +20,21 @@ interface AuthContextType {
   signOut: () => Promise<{ error: AuthError | null }>;
   resetPassword: (email: string) => Promise<{ error: AuthError | null }>;
   updatePassword: (password: string) => Promise<{ error: AuthError | null }>;
-  
-  // Profile methods
   updateProfile: (profile: Partial<Profile>) => Promise<{
     data: Profile | null;
     error: any | null;
   }>;
-  
-  // Favorites methods
   addFavorite: (pokemonId: number) => Promise<void>;
   removeFavorite: (pokemonId: number) => Promise<void>;
   isFavorite: (pokemonId: number) => boolean;
-  
-  // Team methods
-  fetchTeams: () => Promise<void>;
+  fetchTeams: (userId: string) => Promise<void>;
   createTeam: (name: string, description?: string) => Promise<any>;
   updateTeam: (teamId: number, name: string, description?: string) => Promise<void>;
   deleteTeam: (teamId: number) => Promise<void>;
   addPokemonToTeam: (teamId: number, pokemonId: number, position: number) => Promise<void>;
   removePokemonFromTeam: (teamId: number, position: number) => Promise<void>;
   movePokemonPosition: (teamId: number, sourcePosition: number, destPosition: number) => Promise<void>;
-  getTeamMembers: (teamId: number) => Promise<any[]>;
+  getTeamMembers: (teamId: number) => Promise<{ data: any[] | null; error: any | null }>;
 }
 
 export const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -63,103 +55,40 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [teams, setTeams] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const initAuth = async () => {
-      setLoading(true);
-      try {
-        const session = await authService.getSession();
-        
-        if (session) {
-          setSession(session);
-          setUser(session.user);
-          
-          if (session.user) {
-            const userProfile = await authService.fetchProfile(session.user.id);
-            if (userProfile) {
-              setProfile(userProfile);
-            }
-            
-            await fetchFavorites(session.user.id);
-            await fetchTeams();
-          }
-        } else {
-          setSession(null);
-          setUser(null);
-          setProfile(null);
-          setFavorites([]);
-          setTeams([]);
-        }
-      } catch (err) {
-        setSession(null);
-        setUser(null);
-        setProfile(null);
-        setFavorites([]);
-        setTeams([]);
-      } finally {
-        setLoading(false);
+  const fetchTeams = useCallback(async (userId: string) => {
+    if (!userId) {
+      console.error('User ID is required to fetch teams');
+      return;
+    }
+  
+    const { data, error } = await supabase
+      .from('teams')
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false });
+  
+    if (error) {
+      console.error('Error fetching teams:', error);
+      return;
+    }
+    setTeams(data || []);
+  }, []);
+
+  const fetchFavorites = useCallback(async (userId: string) => {
+    const result = await withAuthSession(async () => {
+      const { data, error } = await supabase
+        .from('favorites')
+        .select('*')
+        .eq('user_id', userId);
+  
+      if (error || !Array.isArray(data)) {
+        return [];
       }
-    };
-    
-    initAuth();
-    
-    const { data: { subscription } } = authService.onAuthStateChange(
-      async (event, session) => {
-        try {
-          switch (event) {
-            case 'SIGNED_IN':
-              if (session) {
-                setSession(session);
-                setUser(session.user);
-                
-                if (session.user) {
-                  const userProfile = await authService.fetchProfile(session.user.id);
-                  if (userProfile) {
-                    setProfile(userProfile);
-                  } else {
-                    await authService.ensureProfile(session.user.id, session.user.email);
-                    const newProfile = await authService.fetchProfile(session.user.id);
-                    setProfile(newProfile);
-                  }
-                  
-                  await fetchFavorites(session.user.id);
-                  await fetchTeams();
-                }
-              }
-              break;
-              
-            case 'TOKEN_REFRESHED':
-              if (session) {
-                setSession(session);
-                setUser(session.user);
-              }
-              break;
-              
-            case 'USER_UPDATED':
-              if (session) {
-                setSession(session);
-                setUser(session.user);
-              }
-              break;
-              
-            case 'SIGNED_OUT':
-              setSession(null);
-              setUser(null);
-              setProfile(null);
-              setFavorites([]);
-              setTeams([]);
-              break;
-          }
-        } catch (err) {
-          return;
-        } finally {
-          setLoading(false);
-        }
-      }
-    );
-    
-    return () => {
-      subscription.unsubscribe();
-    };
+  
+      return data as Favorite[] || [];
+    });
+  
+    setFavorites(result);
   }, []);
 
   const signUp = async (email: string, password: string) => {
@@ -200,32 +129,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       ...updates,
       id: user.id
     });
-    
+
     if (updatedProfile) {
       setProfile(updatedProfile);
       return { data: updatedProfile, error: null };
     }
-    
+
     return { data: null, error: new Error('Failed to update profile') };
-  };
-
-  const fetchFavorites = async (userId: string) => {
-    const result = await withAuthSession(async () => {
-      const { data, error } = await supabase
-        .from('favorites')
-        .select('*')
-        .eq('user_id', userId);
-
-      if (error) {
-        return [];
-      }
-
-      return data as Favorite[];
-    });
-    
-    if (result.data) {
-      setFavorites(result.data);
-    }
   };
 
   const addFavorite = async (pokemonId: number) => {
@@ -240,16 +150,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         .insert([{ user_id: user.id, pokemon_id: pokemonId }]);
 
       if (error) {
-        if (error.code === '23505') {
-          toast.error('This Pokémon is already in your favorites');
-        } else if (error.code === '42501' || error.message?.includes('permission denied')) {
-          toast.error('You don\'t have permission to add favorites. Please sign in again.');
-        } else {
-          toast.error('Failed to add to favorites');
-        }
         return false;
       }
-      
+
       return true;
     });
 
@@ -264,26 +167,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       toast.error('You must be logged in to remove favorites');
       return;
     }
-
+  
+    if (!Array.isArray(favorites)) {
+      toast.error('Favorites data is not in the correct format');
+      return;
+    }
+  
     const result = await withAuthSession(async () => {
       const { error } = await supabase
         .from('favorites')
         .delete()
         .eq('user_id', user.id)
         .eq('pokemon_id', pokemonId);
-
+  
       if (error) {
-        if (error.code === '42501' || error.message?.includes('permission denied')) {
-          toast.error('You don\'t have permission to remove favorites. Please sign in again.');
-        } else {
-          toast.error('Failed to remove from favorites');
-        }
+        toast.error('Failed to remove from favorites');
         return false;
       }
-      
+  
       return true;
     });
-
+  
     if (result.data) {
       setFavorites(favorites.filter(fav => fav.pokemon_id !== pokemonId));
       toast.success('Removed from favorites');
@@ -291,32 +195,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const isFavorite = (pokemonId: number): boolean => {
-    return favorites.some(fav => fav.pokemon_id === pokemonId);
-  };
-
-  const fetchTeams = async () => {
-    if (!user) {
-      setTeams([]);
-      return;
-    }
-
-    const result = await withAuthSession(async () => {
-      const { data, error } = await supabase
-        .from('teams')
-        .select('*, team_members(*)')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false });
-
-      if (error) {
-        return [];
-      }
-
-      return data;
-    });
-
-    if (result.data) {
-      setTeams(result.data);
-    }
+    return Array.isArray(favorites) && favorites.some(fav => fav.pokemon_id === pokemonId);
   };
 
   const createTeam = async (name: string, description?: string) => {
@@ -341,18 +220,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         .single();
 
       if (error) {
-        if (error.code === '42501' || error.message?.includes('permission denied')) {
-          toast.error('Permission denied: Your user account does not have access to create teams.');
-        } else if (error.code === '23505') { 
-          toast.error('Team name already exists');
-        } else {
-          toast.error('Failed to create team: ' + error.message);
-        }
-        return null;
-      }
-
-      if (!data) {
-        toast.error('Failed to create team: No data returned');
+        toast.error('Failed to create team: ' + error.message);
         return null;
       }
 
@@ -360,11 +228,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     });
 
     if (result.data) {
-      await fetchTeams();
+      await fetchTeams(user.id);
       toast.success('Team created successfully!');
       return result.data;
     }
-    
+
     return null;
   };
 
@@ -391,12 +259,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         toast.error('Failed to update team');
         return false;
       }
-      
+
       return true;
     });
 
     if (result.data) {
-      await fetchTeams();
+      await fetchTeams(user.id);
       toast.success('Team updated successfully!');
     }
   };
@@ -418,12 +286,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         toast.error('Failed to delete team');
         return false;
       }
-      
+
       return true;
     });
 
     if (result.data) {
-      await fetchTeams();
+      await fetchTeams(user.id);
       toast.success('Team deleted successfully!');
     }
   };
@@ -467,12 +335,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           return false;
         }
       }
-      
+
       return true;
     });
 
     if (result.data) {
-      await fetchTeams();
+      await fetchTeams(user.id);
       toast.success('Pokémon added to team!');
     }
   };
@@ -494,12 +362,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         toast.error('Failed to remove Pokémon from team');
         return false;
       }
-      
+
       return true;
     });
 
     if (result.data) {
-      await fetchTeams();
+      await fetchTeams(user.id);
       toast.success('Pokémon removed from team!');
     }
   };
@@ -509,118 +377,178 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       toast.error('You must be logged in to rearrange Pokémon');
       return;
     }
-    
-    // Get all team members to find Pokémon at source and possibly destination positions
-    const members = await getTeamMembers(teamId);
-    const sourceMember = members.find(m => m.position === sourcePosition);
-    const destMember = members.find(m => m.position === destPosition);
-    
+
+    const { data: membersData, error: membersError } = await getTeamMembers(teamId);
+
+    if (membersError) {
+      toast.error(`Failed to fetch team members: ${membersError.message}`);
+      return;
+    }
+
+    if (!membersData) {
+      toast.error('No team members data received.');
+      return;
+    }
+
+    const sourceMember = membersData.find((m: { position: number }) => m.position === sourcePosition);
+    const destMember = membersData.find((m: { position: number }) => m.position === destPosition);
+
     if (!sourceMember) {
       toast.error('No Pokémon found at the source position');
       return;
     }
-    
+
     const sourcePokemonId = sourceMember.pokemon_id;
     const destPokemonId = destMember?.pokemon_id;
-    
+
     try {
-      // Start a transaction-like sequence of operations
       const result = await withAuthSession(async () => {
-        // First, we'll delete both positions to avoid constraint violations
-        // Delete source position
         const { error: deleteSourceError } = await supabase
           .from('team_members')
           .delete()
           .eq('team_id', teamId)
           .eq('position', sourcePosition);
-          
+
         if (deleteSourceError) {
           throw deleteSourceError;
         }
-        
-        // If there's a Pokémon at the destination, delete it too
+
         if (destMember) {
           const { error: deleteDestError } = await supabase
             .from('team_members')
             .delete()
             .eq('team_id', teamId)
             .eq('position', destPosition);
-            
+
           if (deleteDestError) {
             throw deleteDestError;
           }
         }
-        
-        // Now let's insert both Pokémon in their new positions
-        // Add the source Pokémon to the destination position
+
         const { error: insertSourceError } = await supabase
           .from('team_members')
           .insert([{ team_id: teamId, pokemon_id: sourcePokemonId, position: destPosition }]);
-          
+
         if (insertSourceError) {
           throw insertSourceError;
         }
-        
-        // If there was a Pokémon at the destination, move it to the source position
+
         if (destPokemonId) {
           const { error: insertDestError } = await supabase
             .from('team_members')
             .insert([{ team_id: teamId, pokemon_id: destPokemonId, position: sourcePosition }]);
-            
+
           if (insertDestError) {
             throw insertDestError;
           }
         }
-        
+
         return true;
       });
 
       if (result.data) {
-        // Refresh teams data after the move is complete
-        await fetchTeams();
+        await fetchTeams(user.id);
         console.log(`Successfully swapped Pokémon between positions ${sourcePosition} and ${destPosition}`);
       }
-    } catch (error) {
-      console.error('Error swapping Pokémon positions:', error);
+    } catch (err: any) {
+      console.error('Error swapping Pokémon positions:', err);
       toast.error('Failed to rearrange Pokémon. Please try again.');
     }
   };
 
-  const getTeamMembers = async (teamId: number) => {
+  const getTeamMembers = async (
+    teamId: number
+  ): Promise<{ data: any[] | null; error: any | null }> => {
     if (!user) {
-      return [];
+      return { data: [], error: null };
     }
 
-    const result = await withAuthSession(async () => {
-      const { data, error } = await supabase
-        .from('team_members')
-        .select('*')
-        .eq('team_id', teamId);
+    try {
+      const result = await withAuthSession(async () => {
+        const { data, error } = await supabase
+          .from('team_members')
+          .select('*')
+          .eq('team_id', teamId);
 
-      if (error) {
-        return [];
+        if (error) {
+          return { data: null, error };
+        }
+
+        return { data, error: null };
+      });
+
+      if (result?.error) {
+        throw result.error;
       }
 
-      return data || [];
-    });
-
-    return result.data || [];
+      return result?.data || { data: null, error: new Error('Unexpected result structure from withAuthSession') };
+    } catch (err: any) {
+      console.error('Error fetching team members:', err);
+      return { data: null, error: err };
+    }
   };
 
   useEffect(() => {
-    if (user) {
-      fetchTeams();
-    }
-  }, [user]);
+    const initAuth = async () => {
+      setLoading(true);
+      try {
+        const session = await authService.getSession();
+        if (session) {
+          setSession(session);
+          setUser(session.user);
+          if (session.user) {
+            const userProfile = await authService.fetchProfile(session.user.id);
+            setProfile(userProfile);
+            await fetchFavorites(session.user.id); // Ensure user.id is available
+            await fetchTeams(session.user.id); // Ensure user.id is available
+          }
+        } else {
+          setSession(null);
+          setUser(null);
+          setProfile(null);
+          setFavorites([]);
+          setTeams([]);
+        }
+      } catch (err) {
+        setSession(null);
+        setUser(null);
+        setProfile(null);
+        setFavorites([]);
+        setTeams([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+  
+    initAuth();
+  
+    const { data: { subscription } } = authService.onAuthStateChange(async (event, session) => {
+      if (event === 'SIGNED_IN' && session?.user) {
+        setSession(session);
+        setUser(session.user);
+        const userProfile = await authService.fetchProfile(session.user.id);
+        setProfile(userProfile || null);
+        await fetchFavorites(session.user.id);
+        await fetchTeams(session.user.id);
+      } else if (['SIGNED_OUT'].includes(event)) {
+        setSession(null);
+        setUser(null);
+        setProfile(null);
+        setFavorites([]);
+        setTeams([]);
+      }
+    });
+  
+    return () => subscription.unsubscribe();
+  }, [fetchFavorites, fetchTeams]);
 
-  const value = {
+  const value = useMemo(() => ({
     session,
     user,
     profile,
     favorites,
     teams,
     loading,
-    // Auth methods
     refreshSession: authService.refreshSession.bind(authService),
     signUp,
     signIn,
@@ -630,11 +558,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     resetPassword,
     updatePassword,
     updateProfile,
-    // Favorites methods
     addFavorite,
     removeFavorite,
     isFavorite,
-    // Team methods
     fetchTeams,
     createTeam,
     updateTeam,
@@ -643,7 +569,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     removePokemonFromTeam,
     movePokemonPosition,
     getTeamMembers
-  };
+  }), [session, user, profile, favorites, teams, loading]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };

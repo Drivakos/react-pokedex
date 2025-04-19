@@ -36,23 +36,17 @@ const TeamSelector = ({ pokemon, onClose }: TeamSelectorProps) => {
     user,
   } = useTeamBuilder({ externalPokemon: pokemon });
 
-  // State for mobile detection and TeamBuilder mode
   const [isMobile, setIsMobile] = useState(false);
   const [showTeamBuilder, setShowTeamBuilder] = useState(false);
 
-  // Detect mobile devices on mount and window resize
   useEffect(() => {
     const checkMobile = () => {
-      setIsMobile(window.innerWidth < 768); // Standard mobile breakpoint
+      setIsMobile(window.innerWidth < 768);
     };
 
-    // Check initially
     checkMobile();
-
-    // Add resize listener
     window.addEventListener('resize', checkMobile);
 
-    // Clean up
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
@@ -63,14 +57,8 @@ const TeamSelector = ({ pokemon, onClose }: TeamSelectorProps) => {
     }
   }, [isMobile, teams]);
   
-  // Show TeamBuilder on mobile - convert PokemonDetails to expected Pokemon format
   if (showTeamBuilder) {
-    // Pass null to TeamBuilder without conversion - TeamBuilder can handle selectedPokemon being null
-    // We'll omit type conversion for now as it requires deeper understanding of both types
     const adaptedPokemon = null;
-    
-    // Just show TeamBuilder with no pre-selected Pokemon on mobile
-    
     return (
       <TeamBuilder 
         onClose={() => {

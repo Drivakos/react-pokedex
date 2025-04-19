@@ -6,129 +6,17 @@ import PokemonSearch from './search/PokemonSearch';
 import PokemonDetailView from './PokemonDetailView';
 import { toast } from 'react-hot-toast';
 import { Team } from '../../lib/supabase';
-
-// No need to import TeamMember if we're not using it directly
-
-// This is our UI representation of a Pokemon in a team slot
-interface PokemonTeamMember {
-  id: number;
-  name: string;
-  types: {
-    type: {
-      name: string;
-    };
-  }[];
-}
-
-// Define TeamWithPokemon for the team display component
-interface TeamWithPokemon {
-  id: number;
-  user_id: string;
-  name: string;
-  description?: string;
-  created_at?: string;
-  members: Record<number, PokemonTeamMember | null>;
-}
-
-// Define Pokemon interface for search and detail views
-interface PokemonDetails {
-  id: number;
-  name: string;
-  sprites: any; // Using any for flexibility
-  types: {
-    type: {
-      name: string;
-    };
-  }[];
-  moves: {
-    move: {
-      name: string;
-    };
-  }[];
-  abilities: {
-    ability: {
-      name: string;
-    };
-  }[];
-}
-
-// Helper functions to format Pokémon data types for UI display
-
-// Helper functions to format Pokémon data
-const formatType = (typeObj: any): { type: { name: string } } => {
-  if (typeof typeObj === 'string') {
-    return { type: { name: typeObj } };
-  } else if (typeObj && typeObj.type && typeObj.type.name) {
-    return { type: { name: typeObj.type.name } };
-  } else {
-    return { type: { name: 'unknown' } };
-  }
-};
-
-const formatMove = (moveObj: any): { move: { name: string } } => {
-  if (typeof moveObj === 'string') {
-    return { move: { name: moveObj } };
-  } else if (moveObj && moveObj.move && moveObj.move.name) {
-    return { move: { name: moveObj.move.name } };
-  } else if (moveObj && moveObj.name) {
-    return { move: { name: moveObj.name } };
-  } else {
-    return { move: { name: 'unknown' } };
-  }
-};
-
-const formatAbility = (abilityObj: any): { ability: { name: string } } => {
-  if (typeof abilityObj === 'string') {
-    return { ability: { name: abilityObj } };
-  } else if (abilityObj && abilityObj.ability && abilityObj.ability.name) {
-    return { ability: { name: abilityObj.ability.name } };
-  } else if (abilityObj && abilityObj.name) {
-    return { ability: { name: abilityObj.name } };
-  } else {
-    return { ability: { name: 'unknown' } };
-  }
-};
-
-// Adapts Pokemon data from the search format to the internal PokemonDetails format
-const adaptFromSearchPokemon = (searchPokemon: any): PokemonDetails => {
-  if (!searchPokemon) return {
-    id: 0,
-    name: 'Unknown',
-    types: [],
-    moves: [],
-    abilities: [],
-    sprites: {}
-  };
-  
-  return {
-    id: searchPokemon.id,
-    name: searchPokemon.name,
-    types: Array.isArray(searchPokemon.types) ? searchPokemon.types.map(formatType) : [],
-    sprites: searchPokemon.sprites || {},
-    abilities: Array.isArray(searchPokemon.abilities) ? searchPokemon.abilities.map(formatAbility) : [],
-    moves: Array.isArray(searchPokemon.moves) ? searchPokemon.moves.map(formatMove) : []
-  };
-};
-
-// Create a PokemonTeamMember object from a PokemonDetails - used in multiple places
-const createPokemonTeamMember = (pokemon: PokemonDetails): PokemonTeamMember => {
-  return {
-    id: pokemon.id,
-    name: pokemon.name,
-    types: pokemon.types
-  };
-};
-
-
+import { PokemonDetails } from '../../types/pokemon';
+import { TeamWithPokemon } from '../../types/teams';
+import { adaptToPokemonDetails, createPokemonTeamMember } from '../../utils/pokemonAdapters';
 
 /**
  * TeamBuilder component - provides a UI for creating and managing Pokemon teams
  */
 const TeamBuilder: React.FC = () => {
-  // State from custom hook
   const {
     teams,
-    teamPokemon, // This is the teamPokemon from the hook
+    teamPokemon,
     isLoading,
     error,
     loadTeamMembers,
@@ -140,7 +28,6 @@ const TeamBuilder: React.FC = () => {
     loadFavoritePool
   } = useTeams();
 
-  // Local UI state
   const [selectedTeam, setSelectedTeam] = useState<Team | null>(null);
   const [isFormOpen, setIsFormOpen] = useState<boolean>(false);
   const [editingTeam, setEditingTeam] = useState<Team | null>(null);
@@ -148,16 +35,13 @@ const TeamBuilder: React.FC = () => {
   const [favoritesPokemon, setFavoritesPokemon] = useState<PokemonDetails[]>([]);
   const [isLoadingFavorites, setIsLoadingFavorites] = useState(false);
   const [activePosition, setActivePosition] = useState<number | null>(null);
-  // We're using teamPokemon from the hook, so we don't need to declare it here
 
-  // Load team members when a team is selected - only when needed
   useEffect(() => {
     if (selectedTeam && (!teamPokemon[selectedTeam.id] || Object.keys(teamPokemon[selectedTeam.id] || {}).length === 0)) {
       loadTeamMembers(selectedTeam.id);
     }
   }, [selectedTeam, loadTeamMembers, teamPokemon]);
 
-  // Function to directly load Pokemon from PokeAPI as a fallback
   const loadDirectPokemon = useCallback(async () => {
     try {
       console.log('🚀 TeamBuilder - Loading Pokemon directly from API...');
@@ -169,16 +53,13 @@ const TeamBuilder: React.FC = () => {
           const response = await fetch(`https://pokeapi.co/api/v2/pokemon/${id}`);
           const data = await response.json();
           
-          // Convert to PokemonDetails format
-          const pokemonDetails: PokemonDetails = adaptFromSearchPokemon(data);
+          const pokemonDetails: PokemonDetails = adaptToPokemonDetails(data);
           results.push(pokemonDetails);
-          console.log(`🚀 TeamBuilder - Loaded Pokemon ${data.name}`);
         } catch (err) {
           console.error(`🔴 TeamBuilder - Error loading Pokemon ${id}:`, err);
         }
       }
       
-      console.log(`🚀 TeamBuilder - Loaded ${results.length} Pokemon directly`);
       setFavoritesPokemon(results);
       setIsLoadingFavorites(false);
     } catch (error) {
@@ -187,7 +68,6 @@ const TeamBuilder: React.FC = () => {
     }
   }, []);
 
-  // Load favorites pool - only once on mount
   useEffect(() => {
     if (!isLoading && !isLoadingFavorites && favoritesPokemon.length === 0) {
       console.log('🚀 TeamBuilder - Loading favorite pool on mount...');
@@ -195,28 +75,28 @@ const TeamBuilder: React.FC = () => {
       
       loadFavoritePool()
         .then(pokemonPool => {
-          console.log(`🚀 TeamBuilder - Loaded ${pokemonPool.length} favorites`);
-          
-          // Convert each Pokemon to PokemonDetails format
-          const formattedPool = pokemonPool.map((pokemon: any) => adaptFromSearchPokemon(pokemon));
+          const formattedPool = pokemonPool.map((pokemon: any) => adaptToPokemonDetails(pokemon));
           
           if (formattedPool.length > 0) {
             setFavoritesPokemon(formattedPool);
             setIsLoadingFavorites(false);
           } else {
-            // If no favorites, load directly from API as a fallback
-            loadDirectPokemon();
+            loadDirectPokemon().then(r => {
+              setIsLoadingFavorites(false);
+              return r;
+            });
           }
         })
         .catch(error => {
           console.error('🔴 TeamBuilder - Error loading favorites:', error);
-          // Fallback to direct loading
-          loadDirectPokemon();
+          loadDirectPokemon().then(r => {
+            setIsLoadingFavorites(false);
+            return r;
+          });
         });
     }
   }, [isLoading, loadFavoritePool, loadDirectPokemon, favoritesPokemon.length, isLoadingFavorites]);
 
-  // Debug teams data
   useEffect(() => {
     if (teams) {
       console.log(`🚀 TeamBuilder - Teams data updated, ${teams.length} teams available:`, 
@@ -226,7 +106,6 @@ const TeamBuilder: React.FC = () => {
     }
   }, [teams]);
 
-  // Debug teamPokemon data
   useEffect(() => {
     console.log('🚀 TeamBuilder - teamPokemon data updated:', 
       Object.keys(teamPokemon).map(teamId => 
@@ -234,7 +113,6 @@ const TeamBuilder: React.FC = () => {
       ));
   }, [teamPokemon]);
 
-  // Error feedback
   useEffect(() => {
     if (error) {
       console.error('🔴 TeamBuilder - Error from useTeams:', error);
@@ -244,13 +122,11 @@ const TeamBuilder: React.FC = () => {
 
   const handleTeamSelect = useCallback((team: any) => {
     console.log(`🚀 TeamBuilder - handleTeamSelect called for team ${team.id}`);
-    // Check if same team is already selected to avoid unnecessary re-renders
     if (!selectedTeam || selectedTeam.id !== team.id) {
       console.log(`🚀 TeamBuilder - Setting selectedTeam to ${team.id}: ${team.name}`); 
       setSelectedTeam(team);
       setActivePosition(null);
       
-      // Force load team members if not already loaded
       if (teamPokemon[team.id] === undefined && loadTeamMembers) {
         console.log(`🚀 TeamBuilder - Forcing loadTeamMembers for team ${team.id}`);
         loadTeamMembers(team.id);
@@ -277,7 +153,6 @@ const TeamBuilder: React.FC = () => {
   }, [updateExistingTeam]);
 
   const handleDeleteTeam = useCallback(async (teamId: number) => {
-    // Confirm deletion
     if (!window.confirm('Are you sure you want to delete this team?')) {
       return;
     }
@@ -289,62 +164,20 @@ const TeamBuilder: React.FC = () => {
   }, [deleteExistingTeam, selectedTeam]);
 
   const handleAddPokemon = useCallback(async (teamId: number, pokemonId: number, position: number) => {
-    await addPokemonToTeam(teamId, pokemonId, position);
+    await addPokemonToTeam(teamId, pokemonId, position); 
   }, [addPokemonToTeam]);
 
   const handleRemovePokemon = useCallback(async (teamId: number, position: number) => {
     await removeFromTeam(teamId, position);
   }, [removeFromTeam]);
 
-  const handlePokemonSelect = useCallback((pokemon: PokemonDetails) => {
-    console.log('🚀 TeamBuilder - Selected Pokemon:', pokemon);
-    setSelectedPokemon(pokemon);
-  }, []);
-
-  const handleAddCurrentPokemon = useCallback(async () => {
-    if (!selectedTeam || !selectedPokemon || activePosition === null) {
-      console.log('🚀 TeamBuilder - Cannot add Pokemon, missing data', {
-        hasTeam: !!selectedTeam,
-        hasPokemon: !!selectedPokemon,
-        position: activePosition
-      });
-      return;
+  const handlePokemonSelect = useCallback((pokemon: PokemonDetails) => { 
+    if (selectedTeam && activePosition !== null && pokemon && pokemon.id) {
+      handleAddPokemon(selectedTeam.id, pokemon.id, activePosition);
+    } else {
+      toast.error('Please select a team and an empty slot first!');
     }
-    
-    try {
-      // Create the team member data for display
-      const pokemonTeamMember = createPokemonTeamMember(selectedPokemon);
-      
-      console.log(`🚀 TeamBuilder - Adding Pokemon ${pokemonTeamMember.name} to team ${selectedTeam.id} at position ${activePosition}`);
-      
-      // Send to backend API
-      await addPokemonToTeam(selectedTeam.id, selectedPokemon.id, activePosition);
-      
-      toast.success(`${pokemonTeamMember.name} added to team ${selectedTeam.name}!`);
-      
-      // Reset selection
-      setActivePosition(null);
-    } catch (error) {
-      console.error('🔴 TeamBuilder - Error adding Pokemon to team:', error);
-      toast.error('Failed to add Pokémon to team');
-    }
-  }, [selectedTeam, selectedPokemon, activePosition, addPokemonToTeam]);
-
-  // Effect to automatically add the selected Pokemon to the team when both a Pokemon and position are selected
-  useEffect(() => {
-    if (selectedPokemon && activePosition !== null) {
-      // Add a small delay to make the UI interaction feel better
-      const timeoutId = setTimeout(() => {
-        console.log('🚀 TeamBuilder - Auto-adding Pokemon to selected position', { 
-          pokemon: selectedPokemon.name, 
-          position: activePosition 
-        });
-        handleAddCurrentPokemon();
-      }, 300);
-      
-      return () => clearTimeout(timeoutId);
-    }
-  }, [selectedPokemon, activePosition, handleAddCurrentPokemon]);
+  }, [selectedTeam, activePosition, handleAddPokemon]);
 
   return (
     <div className="flex flex-col lg:flex-row w-full gap-4 p-4 max-h-screen">
@@ -446,9 +279,8 @@ const TeamBuilder: React.FC = () => {
         <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow">
           <div className="flex flex-col justify-between mt-4 gap-4">
             <PokemonSearch
-              initialPool={favoritesPokemon as any}
-              selectedPokemon={selectedPokemon as any}
-              onPokemonSelect={(pokemon: any) => handlePokemonSelect(pokemon)}
+              initialPool={favoritesPokemon}
+              onPokemonSelect={handlePokemonSelect}
               isLoadingInitialPool={isLoadingFavorites}
             />
           </div>
@@ -479,9 +311,8 @@ const TeamBuilder: React.FC = () => {
         {selectedPokemon && (
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow flex-grow overflow-auto" style={{ maxHeight: '80vh' }}>
             <PokemonDetailView
-              pokemon={selectedPokemon as any}
+              pokemon={selectedPokemon}
               onClose={() => setSelectedPokemon(null)}
-              onAdd={selectedTeam && activePosition !== null ? handleAddCurrentPokemon : undefined}
               canAddToTeam={!!selectedTeam && activePosition !== null}
             />
           </div>

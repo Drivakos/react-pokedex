@@ -1,5 +1,4 @@
 import React, { memo } from 'react';
-import type { PokemonDetails } from '../../types/pokemon';
 
 interface PokemonImageProps {
   pokemon: any;
@@ -10,7 +9,6 @@ interface PokemonImageProps {
 }
 
 const PokemonImage: React.FC<PokemonImageProps> = ({ pokemon, fallbackId, alt, size = 'md', className = '' }) => {
-  // Use a single, reliable sprite source - the regular sprites are the most consistently available
   const id = pokemon?.id || fallbackId || 0;
   const spriteUrl = `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${id}.png`;
 
@@ -28,7 +26,6 @@ const PokemonImage: React.FC<PokemonImageProps> = ({ pokemon, fallbackId, alt, s
         className="object-contain w-full h-full"
         loading="lazy"
         onError={(e) => {
-          // If image fails to load, replace with broken image UI
           e.currentTarget.style.display = 'none';
           e.currentTarget.parentElement?.classList.add('bg-gray-100', 'rounded-md');
           e.currentTarget.insertAdjacentHTML('afterend', 
@@ -39,7 +36,6 @@ const PokemonImage: React.FC<PokemonImageProps> = ({ pokemon, fallbackId, alt, s
   );
 };
 
-// Simple memoization based on ID
 export default memo(PokemonImage, (prevProps, nextProps) => {
   const prevId = prevProps.pokemon?.id || prevProps.fallbackId;
   const nextId = nextProps.pokemon?.id || nextProps.fallbackId;
