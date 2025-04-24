@@ -75,20 +75,29 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const fetchFavorites = useCallback(async (userId: string) => {
-    const result = await withAuthSession(async () => {
+    try {
+
       const { data, error } = await supabase
         .from('favorites')
         .select('*')
         .eq('user_id', userId);
-  
-      if (error || !Array.isArray(data)) {
-        return [];
+      
+      if (error) {
+        console.error('Error fetching favorites:', error);
+        return;
       }
-  
-      return data as Favorite[] || [];
-    });
-  
-    setFavorites(result);
+      
+      if (Array.isArray(data)) {
+
+        setFavorites(data);
+      } else {
+        console.error('Unexpected favorites data format:', data);
+        setFavorites([]);
+      }
+    } catch (err) {
+      console.error('Error in fetchFavorites:', err);
+      setFavorites([]);
+    }
   }, []);
 
   const signUp = async (email: string, password: string) => {
@@ -138,12 +147,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return { data: null, error: new Error('Failed to update profile') };
   };
 
-  const addFavorite = async (pokemonId: number) => {
-    if (!user) {
-      toast.error('You must be logged in to add favorites');
-      return;
-    }
+  const isFavorite = useCallback((pokemonId: number): boolean => {
+    return favorites.some(favorite => favorite.pokemon_id === pokemonId);
+  }, [favorites]);
 
+  const addFavorite = async (pokemonId: number) => {
     // First check if the Pokemon is already in favorites
     if (isFavorite(pokemonId)) {
       console.log(`Pokemon #${pokemonId} already in favorites, skipping add`);
@@ -151,78 +159,104 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return;
     }
 
-    const result = await withAuthSession(async () => {
-      const { error } = await supabase
-        .from('favorites')
-        .insert([{ user_id: user.id, pokemon_id: pokemonId }]);
-
-      if (error) {
-        console.error('Error adding favorite:', error);
-        // Check if this is a duplicate entry error
-        if (error.code === '23505' || error.message?.includes('duplicate') || error.status === 409) {
-          console.log('This Pokemon is already in favorites');
-          return true; // Still consider this a success
-        }
-        return false;
+    try {
+      if (!user) {
+        toast.error('You must be logged in to add favorites');
+        return;
       }
 
-      return true;
-    });
+      // Check if this Pokemon is already in favorites
+      if (favorites.some(fav => fav.pokemon_id === pokemonId)) {
+        toast.success('This Pokémon is already in your favorites');
+        return;
+      }
 
-    if (result.data) {
-      // Optimistically update the local state immediately before fetching from server
-      setFavorites(prev => {
-        // Check if this Pokemon is already in favorites to avoid duplicates
-        if (!prev.some(fav => fav.pokemon_id === pokemonId)) {
-          return [...prev, { user_id: user.id, pokemon_id: pokemonId }];
+      // Optimistically update UI first
+      const newFavorite = { user_id: user.id, pokemon_id: pokemonId, id: Date.now() };
+      setFavorites(prev => [...prev, newFavorite as Favorite]);
+
+      const { data, error } = await supabase
+        .from('favorites')
+        .insert([
+          { user_id: user.id, pokemon_id: pokemonId }
+        ])
+        .select()
+        .single();
+
+      if (error) {
+        // If there's an error, revert the optimistic update
+        setFavorites(prev => prev.filter(fav => fav.pokemon_id !== pokemonId));
+        
+        // If we get a unique violation error, the favorite already exists
+        if (error.code === '23505') {
+          toast.success('This Pokémon is already in your favorites');
+          // Refresh favorites to ensure UI is correct
+          await fetchFavorites(user.id);
+          return;
         }
-        return prev;
-      });
-      
-      // Then refresh from server to ensure consistency
-      await fetchFavorites(user.id);
-      toast.success('Added to favorites!');
+        console.error('Error adding favorite:', error);
+        toast.error('Failed to add favorite');
+        return;
+      }
+
+      if (data) {
+        // Force a complete refresh instead of partial updates
+        await fetchFavorites(user.id);
+        toast.success('Added to favorites');
+      }
+    } catch (error: any) {
+      console.error('Error in addFavorite:', error.message);
+      toast.error('An error occurred');
+      // Refresh to ensure UI is correct
+      if (user) await fetchFavorites(user.id);
     }
   };
 
   const removeFavorite = async (pokemonId: number) => {
-    if (!user) {
-      toast.error('You must be logged in to remove favorites');
-      return;
-    }
-  
-    if (!Array.isArray(favorites)) {
-      toast.error('Favorites data is not in the correct format');
-      return;
-    }
-  
-    const result = await withAuthSession(async () => {
+    try {
+      if (!user) {
+        toast.error('You must be logged in to remove favorites');
+        return;
+      }
+
+      // Find the favorite to remove
+      const favoriteToRemove = favorites.find(fav => fav.pokemon_id === pokemonId);
+      if (!favoriteToRemove) {
+        toast.error('This Pokémon is not in your favorites');
+        return;
+      }
+
+      // Optimistically update UI first
+
+      setFavorites(prev => prev.filter(fav => fav.pokemon_id !== pokemonId));
+
       const { error } = await supabase
         .from('favorites')
         .delete()
-        .eq('user_id', user.id)
-        .eq('pokemon_id', pokemonId);
-  
-      if (error) {
-        toast.error('Failed to remove from favorites');
-        return false;
-      }
-  
-      return true;
-    });
-  
-    if (result.data) {
-      // Optimistically update the state before fetching from server
-      setFavorites(favorites.filter(fav => fav.pokemon_id !== pokemonId));
-      
-      // Then fetch from server for consistency
-      await fetchFavorites(user.id);
-      toast.success('Removed from favorites');
-    }
-  };
+        .eq('id', favoriteToRemove.id);
 
-  const isFavorite = (pokemonId: number): boolean => {
-    return Array.isArray(favorites) && favorites.some(fav => fav.pokemon_id === pokemonId);
+      if (error) {
+        // If there's an error, revert the optimistic update
+        setFavorites(prev => {
+          // If the favorite isn't already in the list, add it back
+          if (!prev.some(fav => fav.id === favoriteToRemove.id)) {
+            return [...prev, favoriteToRemove];
+          }
+          return prev;
+        });
+        
+        console.error('Error removing favorite:', error);
+        toast.error('Failed to remove favorite');
+        return;
+      }
+
+      toast.success('Removed from favorites');
+    } catch (error: any) {
+      console.error('Error in removeFavorite:', error.message);
+      toast.error('An error occurred');
+      // Refresh to ensure UI is correct
+      if (user) await fetchFavorites(user.id);
+    }
   };
 
   const createTeam = async (name: string, description?: string) => {
