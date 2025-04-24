@@ -140,6 +140,7 @@ const TeamGroup: React.FC<TeamGroupProps> = ({
               ref={provided.innerRef}
               {...provided.droppableProps}
               className="flex space-x-2 overflow-x-auto p-2 bg-gray-50 rounded-lg"
+              key={`team-${team.id}-members-${teamMembers.length}-pokemon-${Object.keys(teamPokemon).length}`}
             >
               {positions.map((pos, idx) => {
                 const hasPokemon = teamMembers.includes(pos);

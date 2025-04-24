@@ -33,6 +33,7 @@ const PokemonDetailView: React.FC<PokemonDetailViewProps> = ({ pokemon, onClose,
   const safeStats: PokemonStats = pokemon?.stats || { hp: 0, attack: 0, defense: 0, special_attack: 0, special_defense: 0, speed: 0 };
 
   useEffect(() => {
+    let isMounted = true;
     const fetchAbilityDescriptions = async () => {
       if (!pokemon || !safeAbilities.length) return;
 
@@ -48,23 +49,33 @@ const PokemonDetailView: React.FC<PokemonDetailViewProps> = ({ pokemon, onClose,
         }
       }
 
-      setAbilityDescriptions(descriptions);
+      if (isMounted) {
+        setAbilityDescriptions(descriptions);
+      }
     };
 
     const calculateTypeEffectiveness = async () => {
       if (!pokemon || !safeTypes.length) return;
+      
+      let isMounted = true;
+      const controller = new AbortController();
+      
+      try {
+        const typeData = await Promise.all(safeTypes.map(async (typeName) => {
+          try {
+            if (!typeName) return null;
 
-      const typeData = await Promise.all(safeTypes.map(async (typeName) => {
-        try {
-          if (!typeName) return null;
-
-          const response = await fetch(`https://pokeapi.co/api/v2/type/${typeName}`);
-          return await response.json();
-        } catch (error) {
-          console.error(`Error fetching type data for ${typeName || 'unknown'}:`, error);
-          return null;
-        }
-      }));
+            const response = await fetch(`https://pokeapi.co/api/v2/type/${typeName}`, {
+              signal: controller.signal
+            });
+            return await response.json();
+          } catch (error: any) {
+            if (error.name !== 'AbortError') {
+              console.error(`Error fetching type data for ${typeName || 'unknown'}:`, error);
+            }
+            return null;
+          }
+        }));
 
       const damageRelations = {
         doubleDamageFrom: new Map<string, number>(),
@@ -142,12 +153,26 @@ const PokemonDetailView: React.FC<PokemonDetailViewProps> = ({ pokemon, onClose,
         finalEffectiveness.noDamage.push(type);
       });
 
-      setTypeEffectiveness(finalEffectiveness);
+      if (isMounted) {
+        setTypeEffectiveness(finalEffectiveness);
+      }
+    } catch (error) {
+      console.error('Error calculating type effectiveness:', error);
+    }
+    
+    return () => {
+      isMounted = false;
+      controller.abort();
     };
+  };
 
     fetchAbilityDescriptions();
     calculateTypeEffectiveness();
-  }, [pokemon]);
+    
+    return () => {
+      isMounted = false;
+    };
+  }, [pokemon, safeAbilities, safeTypes]);
 
   return (
     <div className="w-full p-4 md:p-6 overflow-auto" style={{ maxHeight: 'calc(80vh - 2rem)' }}>
@@ -219,19 +244,15 @@ const PokemonDetailView: React.FC<PokemonDetailViewProps> = ({ pokemon, onClose,
 
           <div className="mb-6 grid gap-2">
             {Object.entries(safeStats).map(([statName, value]) => (
-              <div key={statName} className="grid grid-cols-12 items-center gap-2">
-                <span className="font-medium col-span-4 capitalize">
-                  {statName === 'special-attack' ? 'Sp. Atk' :
-                    statName === 'special-defense' ? 'Sp. Def' :
-                      statName}
-                </span>
-                <span className="col-span-1 font-semibold">{value}</span>
-                <div className="col-span-7 h-2 bg-gray-200 rounded-full overflow-hidden">
-                  <div
-                    className={`h-full ${getStatColor(statName, value)}`}
-                    style={{ width: `${Math.min(100, (value / 200) * 100)}%` }}
-                  />
+              <div key={statName} className="flex items-center mb-2">
+                <div className="w-24 text-sm capitalize">{statName.replace('_', ' ')}:</div>
+                <div className="flex-1 bg-gray-200 rounded-full h-2.5 mx-2">
+                  <div 
+                    className={`${getStatColor(statName.replace('_', '-'), value)} h-2.5 rounded-full`}
+                    style={{ width: `${Math.min(100, (value / 255) * 100)}%` }}
+                  ></div>
                 </div>
+                <div className="w-8 text-xs font-medium">{value}</div>
               </div>
             ))}
           </div>

@@ -12,7 +12,6 @@ export interface FavoritesMethods {
   fetchFavorites: () => Promise<void>;
   addFavorite: (pokemonId: number) => Promise<void>;
   removeFavorite: (pokemonId: number) => Promise<void>;
-  isFavorite: (pokemonId: number) => boolean;
 }
 
 export const FavoritesMethods = ({
@@ -122,14 +121,9 @@ export const FavoritesMethods = ({
     }
   };
 
-  const isFavorite = (pokemonId: number): boolean => {
-    return favorites.some(fav => fav.pokemon_id === pokemonId);
-  };
-
   return {
     fetchFavorites,
     addFavorite,
-    removeFavorite,
-    isFavorite
+    removeFavorite
   };
 };

@@ -14,20 +14,30 @@ const FavoritePokemon: React.FC<FavoritePokemonProps> = ({ pokemonId }) => {
 
   const checkIfFavorite = useCallback(() => {
     if (!user) {
-      console.log('No user available, cannot check favorites');
+      setIsFavorite(false); 
       return;
     }
-
-    setIsFavorite(isFavorite(pokemonId));
-  }, [user, pokemonId, isFavorite]);
+    const isCurrentlyFavorite = isFavorite(pokemonId);
+    console.log(`Checking if Pokemon #${pokemonId} is favorite: ${isCurrentlyFavorite}`);
+    setIsFavorite(isCurrentlyFavorite); 
+  }, [user, pokemonId, isFavorite]); 
 
   useEffect(() => {
     if (user) {
       checkIfFavorite();
+    } else {
+      setIsFavorite(false); 
     }
-  }, [user, checkIfFavorite]);
+  }, [user, pokemonId, checkIfFavorite]); 
 
-  const toggleFavorite = async () => {
+  const toggleFavorite = async (event: React.MouseEvent<HTMLButtonElement>) => { 
+    event.stopPropagation(); 
+    
+    // Prevent action if still loading from a previous click
+    if (loading) {
+      return;
+    }
+
     if (!user) {
       toast.error('Please log in to add favorites');
       window.location.href = '/login?redirect=' + window.location.pathname;
@@ -50,8 +60,13 @@ const FavoritePokemon: React.FC<FavoritePokemonProps> = ({ pokemonId }) => {
     } catch (error) {
       console.error('Error toggling favorite:', error);
       toast.error('Could not update favorites');
+      // If there was an error, recheck the state
+      checkIfFavorite();
     } finally {
-      setLoading(false);
+      // Add a small delay before setting loading to false to prevent rapid clicking
+      setTimeout(() => {
+        setLoading(false);
+      }, 300);
     }
   };
 

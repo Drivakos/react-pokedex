@@ -58,15 +58,16 @@ const TeamSelector = ({ pokemon, onClose }: TeamSelectorProps) => {
   }, [isMobile, teams]);
   
   if (showTeamBuilder) {
-    const adaptedPokemon = null;
     return (
-      <TeamBuilder 
-        onClose={() => {
-          setShowTeamBuilder(false);
-          onClose && onClose();
-        }}
-        selectedPokemon={adaptedPokemon}
-      />
+      <div className="bg-white rounded-lg max-w-2xl w-full overflow-y-auto relative">
+        <TeamBuilder 
+          onClose={() => {
+            setShowTeamBuilder(false);
+            onClose && onClose();
+          }}
+          selectedPokemon={pokemon}
+        />
+      </div>
     );
   }
 

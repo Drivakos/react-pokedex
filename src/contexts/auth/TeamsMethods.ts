@@ -1,3 +1,4 @@
+import React from 'react';
 import { supabase, Team, TeamMember } from '../../lib/supabase';
 import toast from 'react-hot-toast';
 
@@ -5,7 +6,7 @@ type TeamsMethodsProps = {
   user: any;
   refreshSession: () => Promise<any>;
   teams: Team[];
-  setTeams: (teams: Team[]) => void;
+  setTeams: React.Dispatch<React.SetStateAction<Team[]>>;
 };
 
 export interface TeamsMethods {
@@ -16,12 +17,13 @@ export interface TeamsMethods {
   addPokemonToTeam: (teamId: number, pokemonId: number, position: number) => Promise<void>;
   removePokemonFromTeam: (teamId: number, position: number) => Promise<void>;
   getTeamMembers: (teamId: number) => Promise<TeamMember[]>;
+  movePokemonPosition: (teamId: number, sourcePosition: number, destPosition: number) => Promise<void>;
 }
 
 export const TeamsMethods = ({
   user,
   refreshSession,
-  teams,
+  teams, // Note: 'teams' prop is not directly used in local state updates below, but retained for potential future use or other methods.
   setTeams
 }: TeamsMethodsProps): TeamsMethods => {
   
@@ -89,7 +91,8 @@ export const TeamsMethods = ({
         return null;
       }
 
-      await fetchTeams();
+      // Update local state directly
+      setTeams((currentTeams: Team[]) => [...currentTeams, data as Team]); 
       toast.success('Team created successfully!');
       return data as Team;
     } catch (err) {
@@ -132,7 +135,10 @@ export const TeamsMethods = ({
         return;
       }
 
-      await fetchTeams();
+      // Update local state directly
+      setTeams((currentTeams: Team[]) => currentTeams.map((t: Team) => 
+        t.id === teamId ? { ...t, name, description, updated_at: updates.updated_at } : t
+      )); 
       toast.success('Team updated successfully!');
     } catch (err) {
       toast.error('Failed to update team');
@@ -167,7 +173,8 @@ export const TeamsMethods = ({
         return;
       }
 
-      setTeams(teams.filter(team => team.id !== teamId));
+      // Update local state directly
+      setTeams((currentTeams: Team[]) => currentTeams.filter((t: Team) => t.id !== teamId)); 
       toast.success('Team deleted successfully!');
     } catch (err) {
       toast.error('Failed to delete team');
@@ -242,7 +249,6 @@ export const TeamsMethods = ({
         }
       }
 
-      await fetchTeams();
       toast.success('Pokémon added to team!');
     } catch (err) {
       toast.error('Failed to add Pokémon to team');
@@ -290,7 +296,6 @@ export const TeamsMethods = ({
         return;
       }
 
-      await fetchTeams();
       toast.success('Pokémon removed from team!');
     } catch (err) {
       toast.error('Failed to remove Pokémon from team');
@@ -341,6 +346,68 @@ export const TeamsMethods = ({
     }
   };
 
+  const movePokemonPosition = async (teamId: number, sourcePosition: number, destPosition: number): Promise<void> => {
+    if (!user) {
+      toast.error('You must be logged in to modify team positions');
+      return;
+    }
+
+    if (sourcePosition === destPosition) {
+      console.log('Source and destination positions are the same, no action needed.');
+      return; // No need to proceed if positions are identical
+    }
+
+    try {
+      const { success, session } = await refreshSession();
+      if (!success || !session) return;
+
+      // Verify team ownership
+      const { data: teamData, error: teamError } = await supabase
+        .from('teams')
+        .select('id')
+        .eq('id', teamId)
+        .eq('user_id', user.id)
+        .single();
+
+      if (teamError || !teamData) {
+        toast.error('Team not found or you don\'t have permission.');
+        return;
+      }
+
+      // Use an RPC function for atomicity (assuming 'swap_team_member_positions' exists)
+      const { error: rpcError } = await supabase.rpc('swap_team_member_positions', {
+        p_team_id: teamId,
+        p_position1: sourcePosition,
+        p_position2: destPosition
+      });
+
+      if (rpcError) {
+          // Basic fallback if RPC doesn't exist or fails for other reasons
+          console.warn('RPC swap_team_member_positions failed or does not exist, attempting manual swap:', rpcError);
+          toast.error(`Failed to move Pokémon: ${rpcError.message}`);
+          // NOTE: Manual swap logic here would be complex and prone to race conditions.
+          // It's highly recommended to implement the RPC function in Supabase.
+          // Example placeholder for manual (less safe) swap:
+          // 1. Fetch both members
+          // 2. Update member at source to a temporary position (e.g., -1)
+          // 3. Update member at dest to source position
+          // 4. Update member at temp position to dest position
+          // This requires careful error handling.
+          return;
+      }
+
+      console.log(`Successfully swapped positions ${sourcePosition} and ${destPosition} for team ${teamId}`);
+      toast.success('Pokémon positions swapped!');
+
+      // Optionally, refetch teams or team members if the local state needs update
+      // Consider if the UI consuming this needs immediate reflection of the swap.
+
+    } catch (err: any) {
+      console.error('Error moving Pokémon position:', err);
+      toast.error(`An unexpected error occurred: ${err.message}`);
+    }
+  };
+
   return {
     fetchTeams,
     createTeam,
@@ -348,6 +415,7 @@ export const TeamsMethods = ({
     deleteTeam,
     addPokemonToTeam,
     removePokemonFromTeam,
-    getTeamMembers
+    getTeamMembers,
+    movePokemonPosition
   };
 };

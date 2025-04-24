@@ -20,11 +20,21 @@ const TeamPool = ({ pool, selected, onSelect }: TeamPoolProps) => {
   const filteredPool = useMemo(() => {
     return pool.filter(p => 
       p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      p.types.some(type => type.toLowerCase().includes(searchTerm.toLowerCase()))
+      p.types.some(t => {
+        // Handle both string types and object types with type property
+        if (typeof t === 'string') {
+          return t.toLowerCase().includes(searchTerm.toLowerCase());
+        } else if (t && typeof t === 'object') {
+          // Handle both {type: {name: string}} and {type: string} formats
+          const typeName = t.type?.name || t.type || '';
+          return String(typeName).toLowerCase().includes(searchTerm.toLowerCase());
+        }
+        return false;
+      })
     );
   }, [pool, searchTerm]);
 
-  const totalPages = Math.ceil(filteredPool.length / itemsPerPage);
+  const totalPages = Math.max(1, Math.ceil(filteredPool.length / itemsPerPage));
   const pageStart = (currentPage - 1) * itemsPerPage;
   const currentItems = filteredPool.slice(pageStart, pageStart + itemsPerPage);
 

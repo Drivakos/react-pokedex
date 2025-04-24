@@ -144,12 +144,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return;
     }
 
+    // First check if the Pokemon is already in favorites
+    if (isFavorite(pokemonId)) {
+      console.log(`Pokemon #${pokemonId} already in favorites, skipping add`);
+      toast.success('Already in favorites');
+      return;
+    }
+
     const result = await withAuthSession(async () => {
       const { error } = await supabase
         .from('favorites')
         .insert([{ user_id: user.id, pokemon_id: pokemonId }]);
 
       if (error) {
+        console.error('Error adding favorite:', error);
+        // Check if this is a duplicate entry error
+        if (error.code === '23505' || error.message?.includes('duplicate') || error.status === 409) {
+          console.log('This Pokemon is already in favorites');
+          return true; // Still consider this a success
+        }
         return false;
       }
 
@@ -157,6 +170,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     });
 
     if (result.data) {
+      // Optimistically update the local state immediately before fetching from server
+      setFavorites(prev => {
+        // Check if this Pokemon is already in favorites to avoid duplicates
+        if (!prev.some(fav => fav.pokemon_id === pokemonId)) {
+          return [...prev, { user_id: user.id, pokemon_id: pokemonId }];
+        }
+        return prev;
+      });
+      
+      // Then refresh from server to ensure consistency
       await fetchFavorites(user.id);
       toast.success('Added to favorites!');
     }
@@ -189,7 +212,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     });
   
     if (result.data) {
+      // Optimistically update the state before fetching from server
       setFavorites(favorites.filter(fav => fav.pokemon_id !== pokemonId));
+      
+      // Then fetch from server for consistency
+      await fetchFavorites(user.id);
       toast.success('Removed from favorites');
     }
   };

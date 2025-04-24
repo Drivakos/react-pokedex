@@ -4,32 +4,41 @@ import { DropResult } from '@hello-pangea/dnd';
 import { usePokemon } from '../hooks/usePokemon';
 import type { PokemonDetails } from '../types/pokemon';
 
-// Removed DropResult import due to bundler resolution issues
-
 interface UseTeamBuilderParams {
   externalPokemon?: PokemonDetails;
 }
 
 const useTeamBuilder = ({ externalPokemon }: UseTeamBuilderParams) => {
-  const { teams, favorites, user, fetchTeams, createTeam, removePokemonFromTeam, addPokemonToTeam, movePokemonPosition, deleteTeam: removeTeam } = useAuth();
+  const { 
+    teams, 
+    favorites, 
+    user, 
+    fetchTeams, 
+    createTeam, 
+    removePokemonFromTeam, 
+    addPokemonToTeam, 
+    movePokemonPosition, 
+    deleteTeam: removeTeam, 
+    loading: authLoading
+  } = useAuth();
   const { filters, handleFilterChange, getPokemonDetails } = usePokemon();
 
   const [teamMembers, setTeamMembers] = useState<Record<number, number[]>>({});
   const [teamPokemon, setTeamPokemon] = useState<Record<number, Record<number, number>>>({});
-  const [favoriteDetails, setFavoriteDetails] = useState<PokemonDetails[]>([]);
+  const [pokemonCache, setPokemonCache] = useState<PokemonDetails[]>([]);
   const [teamCoverage, setTeamCoverage] = useState<Record<number, { types: string[]; missing: string[] }>>({});
   const [isCreatingTeam, setIsCreatingTeam] = useState(false);
   const [newTeamName, setNewTeamName] = useState('');
   const [selectedPoolPokemon, setSelectedPoolPokemon] = useState<PokemonDetails | null>(null);
+  const isLoading = authLoading || !teams || !user; 
 
-  const isLoading = !teams || !user;
 
-  // Fetch teams on user load
   useEffect(() => {
-    if (user) fetchTeams();
-  }, [user, fetchTeams]);
+    if (!authLoading && user && user.id) { 
+      fetchTeams(user.id);
+    }
+  }, [user, authLoading, fetchTeams]);
 
-  // Process team members mapping
   useEffect(() => {
     if (user && teams?.length) {
       const membersMap: Record<number, number[]> = {};
@@ -50,32 +59,45 @@ const useTeamBuilder = ({ externalPokemon }: UseTeamBuilderParams) => {
     }
   }, [user, teams]);
 
-  // Load pool details
+  // Load Pokemon details and cache them
+  const ensurePokemonLoaded = useCallback(async (pokemonId: number): Promise<PokemonDetails | null> => {
+    // Check if already in cache
+    const existing = pokemonCache.find(p => p.id === pokemonId);
+    if (existing) {
+      return existing;
+    }
+    
+    try {
+      const details = await getPokemonDetails(pokemonId);
+      setPokemonCache(prev => [...prev, details]);
+      return details;
+    } catch (e) {
+      console.error('useTeamBuilder: failed to load Pokemon details', pokemonId, e);
+      return null;
+    }
+  }, [pokemonCache, getPokemonDetails]);
+  
   useEffect(() => {
     const loadPool = async () => {
+      if (!Array.isArray(favorites)) {
+        return;
+      }
       const ids = favorites.map(f => f.pokemon_id);
       if (externalPokemon && !ids.includes(externalPokemon.id)) ids.unshift(externalPokemon.id);
-      const details: PokemonDetails[] = [];
-      for (const id of ids) {
-        try {
-          details.push(await getPokemonDetails(id));
-        } catch (e) {
-          console.error('useTeamBuilder: failed load pool', id, e);
-        }
-      }
-      setFavoriteDetails(details);
+      
+      // Load Pokemon details in parallel
+      const promises = ids.map(id => ensurePokemonLoaded(id));
+      await Promise.all(promises);
     };
     loadPool();
-  }, [favorites, externalPokemon, getPokemonDetails]);
+  }, [favorites, externalPokemon, ensurePokemonLoaded]);
 
-  // Fetch coverage types
   const fetchCoverage = useCallback(async () => {
     const coverageMap: Record<number, { types: string[]; missing: string[] }> = {};
     for (const [teamIdStr, posMap] of Object.entries(teamPokemon)) {
       const typesSet = new Set<string>();
       const teamId = parseInt(teamIdStr, 10);
       
-      // Skip if this team has no positions yet
       if (Object.keys(posMap).length === 0) {
         coverageMap[teamId] = { types: [], missing: [] };
         continue;
@@ -92,12 +114,10 @@ const useTeamBuilder = ({ externalPokemon }: UseTeamBuilderParams) => {
             }
           } catch (e) {
             console.error(`useTeamBuilder: coverage error for ID ${id}`, e);
-            // Continue with other Pokémon even if one fails
           }
         }
       }
       
-      // Use cached data if we couldn't fetch new data
       if (!hasValidData && teamCoverage[teamId]) {
         coverageMap[teamId] = { ...teamCoverage[teamId] };
       } else {
@@ -109,7 +129,6 @@ const useTeamBuilder = ({ externalPokemon }: UseTeamBuilderParams) => {
 
   useEffect(() => {
     if (teams?.length && Object.keys(teamPokemon).length > 0) {
-      // Add debouncing to prevent too many calls
       const timer = setTimeout(() => {
         fetchCoverage();
       }, 300);
@@ -117,64 +136,51 @@ const useTeamBuilder = ({ externalPokemon }: UseTeamBuilderParams) => {
     }
   }, [teams, teamPokemon, fetchCoverage]);
 
-  // Select pool pokemon
   const selectPoolPokemon = useCallback((p: PokemonDetails) => {
     setSelectedPoolPokemon(p);
   }, []);
 
-  // Create new team
   const handleCreateTeam = useCallback(async () => {
     if (!newTeamName) return;
     try {
       await createTeam(newTeamName);
       setNewTeamName('');
       setIsCreatingTeam(false);
-      fetchTeams();
     } catch (e) {
       console.error('useTeamBuilder: create team error', e);
     }
-  }, [createTeam, fetchTeams, newTeamName]);
+  }, [createTeam, newTeamName]);
 
-  // Drag and drop handler - completely rewritten for reliable position mapping
   const handleDragEndAll = useCallback((result: DropResult) => {
     const { source, destination } = result;
     
-    // Return if no destination or same position
     if (!destination || 
         (source.droppableId === destination.droppableId && source.index === destination.index)) {
       return;
     }
     
-    // Only handle reordering within the same team
     if (source.droppableId === destination.droppableId && source.droppableId.startsWith('team-')) {
-      // Extract team ID from the droppableId
       const teamId = parseInt(source.droppableId.replace('team-', ''), 10);
       
       try {
-        // Parse the source position directly from the draggableId (most reliable method)
-        // Format: "team-{teamId}-pos-{position}"
         const sourceIdMatch = result.draggableId.match(/team-\d+-pos-(\d+)/);
         if (!sourceIdMatch || !sourceIdMatch[1]) {
           throw new Error(`Invalid draggable ID format: ${result.draggableId}`);
         }
         const sourcePos = parseInt(sourceIdMatch[1], 10);
         
-        // Create a map of visible index to position
         const visiblePositions = [...(teamMembers[teamId] || [])].sort((a, b) => a - b);
         
-        // Get destination position from the index
         if (destination.index >= visiblePositions.length) {
           throw new Error(`Destination index ${destination.index} is out of bounds for team ${teamId}`);
         }
         
         const destPos = visiblePositions[destination.index];
         
-        // Skip if invalid positions or same position
         if (!destPos || sourcePos === destPos) {
           return;
         }
         
-        // Get the Pokémon ID at the source position
         const pokemonId = teamPokemon[teamId]?.[sourcePos];
         if (!pokemonId) {
           throw new Error(`No Pokémon found at position ${sourcePos} in team ${teamId}`);
@@ -182,37 +188,28 @@ const useTeamBuilder = ({ externalPokemon }: UseTeamBuilderParams) => {
         
         console.log(`Moving Pokémon ${pokemonId} from position ${sourcePos} to ${destPos} in team ${teamId}`);
         
-        // Optimistically update the UI
         setTeamPokemon(prev => {
           if (!prev[teamId]) return prev;
           
           const updatedTeam = { ...prev[teamId] };
           
-          // Move Pokémon from source to destination
           delete updatedTeam[sourcePos];
           updatedTeam[destPos] = pokemonId;
           
           return { ...prev, [teamId]: updatedTeam };
         });
         
-        // Update the database
         movePokemonPosition(teamId, sourcePos, destPos).catch(error => {
           console.error('Error updating database:', error);
-          // On failure, revert by refreshing data
-          fetchTeams();
         });
         
       } catch (error) {
         console.error('Drag and drop error:', error);
-        // Refresh teams to ensure consistency
-        fetchTeams();
       }
     }
-  }, [teamMembers, teamPokemon, movePokemonPosition, fetchTeams]);
+  }, [teamMembers, teamPokemon, movePokemonPosition]);
 
-  // Add pokemon to team
   const addToTeam = useCallback(async (teamId: number) => {
-    // Prioritize the selected Pokemon from the pool over the external Pokemon
     const target = selectedPoolPokemon || externalPokemon;
     if (!target) return;
     
@@ -220,9 +217,13 @@ const useTeamBuilder = ({ externalPokemon }: UseTeamBuilderParams) => {
     if (!emptyPos) return;
     
     try {
+      // Ensure we have the full Pokemon details before adding
+      if (!pokemonCache.some(p => p.id === target.id)) {
+        await ensurePokemonLoaded(target.id);
+      }
+      
       await addPokemonToTeam(teamId, target.id, emptyPos);
       
-      // Update local state for immediate feedback
       setTeamMembers(prev => ({
         ...prev,
         [teamId]: [...(prev[teamId] || []), emptyPos]
@@ -235,19 +236,14 @@ const useTeamBuilder = ({ externalPokemon }: UseTeamBuilderParams) => {
           [emptyPos]: target.id
         }
       }));
-      
-      // Refresh data from server
-      fetchTeams();
     } catch (e) {
       console.error('useTeamBuilder: add to team error', e);
     }
-  }, [addPokemonToTeam, selectedPoolPokemon, externalPokemon, teamMembers, fetchTeams]);
+  }, [addPokemonToTeam, selectedPoolPokemon, externalPokemon, teamMembers]);
 
-  // Remove pokemon from team
   const removeFromTeam = useCallback(async (teamId: number, position: number) => {
     try {
       await removePokemonFromTeam(teamId, position);
-      // Update local members and pokemon state
       setTeamMembers(prev => ({
         ...prev,
         [teamId]: prev[teamId]?.filter(p => p !== position) || []
@@ -265,16 +261,14 @@ const useTeamBuilder = ({ externalPokemon }: UseTeamBuilderParams) => {
     }
   }, [removePokemonFromTeam]);
 
-  // Delete team
   const handleDeleteTeam = useCallback(async (teamId: number) => {
     await removeTeam(teamId);
-    fetchTeams();
-  }, [removeTeam, fetchTeams]);
+  }, [removeTeam]);
 
   return {
     isLoading,
     user,
-    pool: favoriteDetails,
+    pool: pokemonCache,
     selectedPoolPokemon,
     selectPoolPokemon,
     teams,
@@ -292,6 +286,7 @@ const useTeamBuilder = ({ externalPokemon }: UseTeamBuilderParams) => {
     addToTeam,
     removeFromTeam,
     deleteTeam: handleDeleteTeam,
+    ensurePokemonLoaded,
   };
 };
 
