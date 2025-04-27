@@ -4,6 +4,8 @@ import TypeFilter from './TypeFilter';
 import SearchResults from './SearchResults';
 import { PokemonDetails, PokemonMove, PokemonAbility } from '../../../types/pokemon'; 
 import { Info } from 'lucide-react';
+import { useAuth } from '../../../hooks/useAuth';
+import { fetchMultiplePokemonDetails } from '../../../services/api';
 
 interface PokemonSearchProps {
   initialPool?: PokemonDetails[];
@@ -24,9 +26,22 @@ const PokemonSearch: React.FC<PokemonSearchProps> = ({
   const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [infoVisible, setInfoVisible] = useState(false);
+  const [favoritePokemon, setFavoritePokemon] = useState<PokemonDetails[]>([]);
+  const [loadingFavorites, setLoadingFavorites] = useState(false);
+  const [showingFavorites, setShowingFavorites] = useState(true);
+  const { user, favorites } = useAuth();
   const itemsPerPage = 20;
 
   const filteredPool = useMemo(() => {
+    if (showingFavorites && favoritePokemon.length > 0 && searchTerm === '' && selectedTypes.length === 0) {
+      return favoritePokemon;
+    }
+    
+    // Once user filters or searches, switch to normal pool
+    if (showingFavorites && (searchTerm !== '' || selectedTypes.length > 0)) {
+      setShowingFavorites(false);
+    }
+    
     if (!initialPool || initialPool.length === 0) return [];
     
     return initialPool.filter(pokemon => {
@@ -42,7 +57,7 @@ const PokemonSearch: React.FC<PokemonSearchProps> = ({
       
       return matchesSearch && matchesTypes;
     });
-  }, [initialPool, searchTerm, selectedTypes]);
+  }, [initialPool, searchTerm, selectedTypes, favoritePokemon, showingFavorites]);
 
   const totalPages = Math.ceil(filteredPool.length / itemsPerPage);
   const paginatedResults = useMemo(() => {
@@ -51,19 +66,53 @@ const PokemonSearch: React.FC<PokemonSearchProps> = ({
   }, [filteredPool, currentPage, itemsPerPage]);
 
   useEffect(() => {
+    const loadFavorites = async () => {
+      if (!user || favorites.length === 0) {
+        setFavoritePokemon([]);
+        return;
+      }
+      
+      try {
+        setLoadingFavorites(true);
+        // Extract Pokémon IDs from favorites
+        const favoriteIds = favorites.map(fav => fav.pokemon_id);
+        
+        // Fetch details for favorite Pokémon
+        const favoriteDetails = await fetchMultiplePokemonDetails(favoriteIds);
+        setFavoritePokemon(favoriteDetails);
+      } catch (error) {
+        console.error('Error loading favorites:', error);
+      } finally {
+        setLoadingFavorites(false);
+      }
+    };
+    
+    loadFavorites();
+  }, [user, favorites]);
+  
+  useEffect(() => {
     setCurrentPage(1);
   }, [searchTerm, selectedTypes]);
 
   const handleSearch = (term: string) => {
     setSearchTerm(term);
+    if (term !== '' && showingFavorites) {
+      setShowingFavorites(false);
+    }
   };
 
   const handleTypeToggle = (type: string) => {
-    setSelectedTypes(prev => 
-      prev.includes(type)
+    setSelectedTypes(prev => {
+      const newTypes = prev.includes(type)
         ? prev.filter(t => t !== type)
-        : [...prev, type]
-    );
+        : [...prev, type];
+      
+      if (newTypes.length > 0 && showingFavorites) {
+        setShowingFavorites(false);
+      }
+      
+      return newTypes;
+    });
   };
 
   const handlePageChange = (page: number) => {
@@ -86,7 +135,9 @@ const PokemonSearch: React.FC<PokemonSearchProps> = ({
         </div>
         
         <div className="text-sm text-gray-500">
-          {filteredPool.length} Pokémon found
+          {showingFavorites && favoritePokemon.length > 0 ? 
+            `Showing ${favoritePokemon.length} favorites` : 
+            `${filteredPool.length} Pokémon found`}
         </div>
       </div>
       
@@ -116,7 +167,7 @@ const PokemonSearch: React.FC<PokemonSearchProps> = ({
         currentPage={currentPage}
         totalPages={totalPages}
         onPageChange={handlePageChange}
-        isLoading={isLoading || isLoadingInitialPool}
+        isLoading={isLoading || isLoadingInitialPool || loadingFavorites}
       />
     </div>
   );

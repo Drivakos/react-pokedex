@@ -4,7 +4,7 @@ import { useAuth } from '../hooks/useAuth';
 import { User, LogOut } from 'lucide-react';
 
 const Navigation: React.FC = () => {
-  const { user, signOut } = useAuth();
+  const { user, profile, signOut } = useAuth();
   const navigate = useNavigate();
 
   const handleSignOut = async () => {
@@ -42,7 +42,7 @@ const Navigation: React.FC = () => {
                   className="text-white hover:bg-white/20 px-3 py-2 rounded-full text-sm font-medium flex items-center transition-colors duration-200"
                 >
                   <User className="h-4 w-4 mr-1" />
-                  {user.user_metadata?.full_name || user.email?.split('@')[0] || 'Profile'}
+                  {profile?.username || user.user_metadata?.full_name || user.email?.split('@')[0] || 'Profile'}
                 </Link>
                 <button 
                   onClick={handleSignOut}

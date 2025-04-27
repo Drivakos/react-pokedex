@@ -4,28 +4,66 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import { X } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { Team } from '../../lib/supabase';
 
 const Profile: React.FC = () => {
-  const { user, profile, signOut, updateProfile } = useAuth();
+  const { user, profile, signOut } = useAuth();
   const [username, setUsername] = useState(profile?.username || '');
   const [loading, setLoading] = useState(false);
   const [fetchingFavorites, setFetchingFavorites] = useState(true);
+  const [fetchingTeams, setFetchingTeams] = useState(true); // Added missing state
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [avatar, setAvatar] = useState<File | null>(null);
   const [favorites, setFavorites] = useState<number[]>([]);
+  const [teams, setTeams] = useState<Team[]>([]);
   const navigate = useNavigate();
 
-  const fetchFavorites = useCallback(async () => {
+  const fetchTeams = useCallback(async () => {
     if (!user?.id) {
-      console.log('No user ID available for fetching favorites');
-      setFetchingFavorites(false);
+      console.log('No user ID available, will fetch teams when ID is available');
+      setTeams([]);
+      setFetchingTeams(false);
       return;
     }
 
     try {
+      console.log('Fetching teams for user ID:', user.id);
+      setFetchingTeams(true);
+      const { data, error } = await supabase
+        .from('teams')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Error fetching teams:', error);
+        setTeams([]);
+        setFetchingTeams(false);
+        return;
+      }
+
+      console.log('Teams fetched successfully:', data?.length || 0, 'teams found');
+      setTeams(data || []);
+      setFetchingTeams(false);
+    } catch (err) {
+      console.error('Exception fetching teams:', err);
+      setTeams([]);
+      setFetchingTeams(false);
+    }
+  }, [user?.id]);
+
+  const fetchFavorites = useCallback(async () => {
+    if (!user?.id) {
+      console.log('No user ID available, will fetch favorites when ID is available');
+      setFavorites([]);
+      setFetchingFavorites(false);
+      return;
+    }
+    
+    console.log('Fetching favorites for user ID:', user.id);
+
+    try {
       setFetchingFavorites(true);
-      console.log('Fetching favorites for user ID:', user.id);
       const { data, error } = await supabase
         .from('favorites')
         .select('pokemon_id')
@@ -38,7 +76,6 @@ const Profile: React.FC = () => {
       }
       
       if (data) {
-        console.log('Favorites fetched successfully:', data.length);
         setFavorites(data.map(item => item.pokemon_id));
       }
     } catch (error) {
@@ -56,12 +93,54 @@ const Profile: React.FC = () => {
   
   React.useEffect(() => {
     if (user?.id && !loading) {
-      console.log('Profile component: calling fetchFavorites');
       fetchFavorites();
     } else if (!user?.id) {
-      setFetchingFavorites(false);
+      setFavorites([]);
+      setTeams([]);
     }
   }, [user?.id, fetchFavorites, loading]);
+
+  React.useEffect(() => {
+    console.log('Profile component: User state changed, current user ID:', user?.id);
+    
+    // Only attempt to fetch data if we have a valid user ID
+    if (user?.id) {
+      console.log('Valid user ID detected, fetching profile data...');
+      fetchFavorites();
+      fetchTeams();
+    } else {
+      // Reset states if no user
+      console.log('No valid user ID, resetting state');
+      setFavorites([]);
+      setTeams([]);
+      setFetchingFavorites(false);
+      setFetchingTeams(false);
+    }
+  }, [user?.id, fetchFavorites, fetchTeams]);
+  
+  React.useEffect(() => {
+    if (!user?.id) return;
+    
+    console.log('Setting up real-time subscription for teams');
+    const subscription = supabase
+      .channel('public:teams')
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'teams',
+        filter: `user_id=eq.${user.id}`
+      }, (payload) => {
+        console.log('Team change detected:', payload);
+        // Refresh teams when changes are detected
+        fetchTeams();
+      })
+      .subscribe();
+      
+    return () => {
+      console.log('Cleaning up team subscription');
+      supabase.removeChannel(subscription);
+    };
+  }, [user?.id, fetchTeams]);
 
   const removeFavorite = async (pokemonId: number) => {
     if (!user?.id) {
@@ -70,10 +149,8 @@ const Profile: React.FC = () => {
     }
 
     try {
-      // Optimistically update the UI
       setFavorites(prev => prev.filter(id => id !== pokemonId));
       
-      // Delete from database
       const { error } = await supabase
         .from('favorites')
         .delete()
@@ -81,7 +158,6 @@ const Profile: React.FC = () => {
       
       if (error) {
         console.error('Error removing favorite:', error);
-        // Restore the favorite if there was an error
         setFavorites(prev => [...prev, pokemonId]);
         toast.error('Failed to remove from favorites');
         return;
@@ -94,68 +170,55 @@ const Profile: React.FC = () => {
     }
   };
 
-
-
   const handleUpdateProfile = async (e: React.FormEvent) => {
     e.preventDefault();
+    setLoading(true);
+    setError(null);
+    setMessage(null);
     
-    try {
-      setLoading(true);
-      setError(null);
-      setMessage(null);
-      
-      const { error: updateError } = await updateProfile({ username });
-      
-      if (updateError) {
-        console.error('Profile update error:', updateError);
-        throw updateError;
-      }
-
-      if (avatar) {
-        try {
-          const fileExt = avatar.name.split('.').pop()?.toLowerCase();
-          const validExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
-          
-          if (!fileExt || !validExtensions.includes(fileExt)) {
-            throw new Error('Invalid file extension');
-          }
-          
-          const timestamp = Date.now();
-          const randomString = Math.random().toString(36).substring(2, 10);
-          const fileName = `${user?.id}-${timestamp}-${randomString}.${fileExt}`;
-          const filePath = `avatars/${fileName}`;
-          const contentType = `image/${fileExt === 'jpg' ? 'jpeg' : fileExt}`;
-          const { error: uploadError } = await supabase.storage
-            .from('avatars')
-            .upload(filePath, avatar, {
-              contentType,
-              cacheControl: '3600',
-              upsert: false
-            });
-            
-          if (uploadError) {
-            throw uploadError;
-          }
-          
-          const { data: { publicUrl } } = supabase.storage
-            .from('avatars')
-            .getPublicUrl(filePath);
-            
-          const { error: avatarUpdateError } = await updateProfile({ avatar_url: publicUrl });
-          
-          if (avatarUpdateError) {
-            throw avatarUpdateError;
-          }
-        } catch (err: any) {
-          throw new Error(`Avatar upload failed: ${err.message}`);
+    if (profile && profile.username === username) {
+      setMessage('No changes to update');
+      setLoading(false);
+      return;
+    }
+    
+    if (username && (!profile || profile.username !== username)) {
+      try {
+        const { data: existingProfile } = await supabase
+          .from('profiles')
+          .select('id')
+          .eq('id', user?.id)
+          .maybeSingle();
+        
+        let updateResult;
+        
+        if (existingProfile) {
+          updateResult = await supabase
+            .from('profiles')
+            .update({ username })
+            .eq('id', user?.id);
+        } else {
+          updateResult = await supabase
+            .from('profiles')
+            .insert({ id: user?.id, username });
         }
+        
+        if (updateResult.error) {
+          console.error('Profile update error:', updateResult.error);
+          setError(`Profile update failed: ${updateResult.error.message || 'Unknown error'}`);
+          setLoading(false);
+          return;
+        }
+        
+        setMessage('Profile updated successfully!');
+      } catch (err: any) {
+        console.error('Username update exception:', err);
+        setError(`Username update exception: ${err.message || 'Unknown error'}`);
+      } finally {
+        setLoading(false);
       }
-      
-      setMessage('Profile updated successfully!');
-    } catch (error: any) {
-      console.error('Profile update failed:', error);
-      setError(error.message || 'Failed to update profile');
-    } finally {
+    } else {
+      setMessage('No changes to update');
       setLoading(false);
     }
   };
@@ -169,27 +232,7 @@ const Profile: React.FC = () => {
     }
   };
 
-  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      const file = e.target.files[0];
-      
-      const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
-      if (!allowedTypes.includes(file.type)) {
-        setError('Invalid file type. Please upload a JPEG, PNG, GIF, or WebP image.');
-        return;
-      }
-      
-      const maxSize = 2 * 1024 * 1024; // 2MB
-      if (file.size > maxSize) {
-        setError('File is too large. Maximum size is 2MB.');
-        return;
-      }
-      
-      if (error) setError(null);
-      
-      setAvatar(file);
-    }
-  };
+
 
   if (!user) {
     return (
@@ -256,19 +299,11 @@ const Profile: React.FC = () => {
               <div className="md:col-span-1">
                 <div className="flex flex-col items-center">
                   <div className="w-32 h-32 rounded-full overflow-hidden bg-gray-100 mb-4">
-                    {profile?.avatar_url ? (
-                      <img 
-                        src={profile.avatar_url} 
-                        alt={profile.username || 'User avatar'} 
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center bg-blue-100 text-blue-500">
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                        </svg>
-                      </div>
-                    )}
+                    <div className="w-full h-full flex items-center justify-center bg-blue-100 text-blue-500">
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                      </svg>
+                    </div>
                   </div>
                   
                   <div className="text-center">
@@ -294,19 +329,7 @@ const Profile: React.FC = () => {
                     />
                   </div>
                   
-                  <div className="mb-6">
-                    <label htmlFor="avatar" className="block text-sm font-medium text-gray-700 mb-1">
-                      Profile Picture
-                    </label>
-                    <input
-                      type="file"
-                      id="avatar"
-                      accept="image/*"
-                      onChange={handleAvatarChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                      disabled={loading}
-                    />
-                  </div>
+
                   
                   <div>
                     <button
@@ -345,6 +368,9 @@ const Profile: React.FC = () => {
               </div>
             ) : (
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                <div className="col-span-full mb-2 pb-2 border-b border-gray-200">
+                  <p className="text-gray-700 text-sm">These are your favorite Pokémon. Click on any card to view details or remove favorites with the X button.</p>
+                </div>
                 {favorites.map((pokemonId) => (
                   <div 
                     key={pokemonId}
@@ -364,7 +390,7 @@ const Profile: React.FC = () => {
                     
                     {/* Pokemon image (clickable to navigate) */}
                     <div 
-                      className="w-20 h-20 flex items-center justify-center cursor-pointer"
+                      className="w-20 h-20 flex items-center justify-center cursor-pointer relative"
                       onClick={() => navigate(`/pokemon/${pokemonId}`)}
                     >
                       <img 
@@ -394,15 +420,49 @@ const Profile: React.FC = () => {
                 Manage Teams
               </button>
             </div>
-            <p className="text-gray-600 mb-4">Create and manage your Pokémon teams to build the perfect lineup.</p>
-            <div className="flex justify-center">
-              <button
-                onClick={() => navigate('/teams')}
-                className="bg-gray-100 hover:bg-gray-200 text-gray-800 font-medium py-3 px-6 rounded-md flex items-center justify-center w-full max-w-md"
-              >
-                Go to Team Builder
-              </button>
-            </div>
+            {fetchingTeams ? (
+              <div className="text-center py-8">
+                <p className="text-gray-500 mb-4">Loading your teams...</p>
+              </div>
+            ) : teams.length === 0 ? (
+              <div>
+                <p className="text-gray-600 mb-4">You haven't created any teams yet. Start building your perfect lineup!</p>
+                <div className="flex justify-center">
+                  <button
+                    onClick={() => navigate('/teams')}
+                    className="bg-gray-100 hover:bg-gray-200 text-gray-800 font-medium py-3 px-6 rounded-md flex items-center justify-center w-full max-w-md"
+                  >
+                    Go to Team Builder
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+                  {teams.map((team) => (
+                    <div 
+                      key={team.id} 
+                      onClick={() => navigate(`/teams?teamId=${team.id}`)}
+                      className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow cursor-pointer"
+                    >
+                      <h3 className="font-bold text-lg mb-2">{team.name}</h3>
+                      <p className="text-gray-600 text-sm mb-3">{team.description || 'No description'}</p>
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm text-gray-500">Created: {team.created_at ? new Date(team.created_at).toLocaleDateString() : 'N/A'}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <div className="flex justify-center">
+                  <button
+                    onClick={() => navigate('/teams')}
+                    className="bg-gray-100 hover:bg-gray-200 text-gray-800 font-medium py-3 px-6 rounded-md flex items-center justify-center w-full max-w-md"
+                  >
+                    Go to Team Builder
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>

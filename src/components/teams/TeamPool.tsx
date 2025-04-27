@@ -92,8 +92,8 @@ const TeamPool = ({ pool, selected, onSelect }: TeamPoolProps) => {
       </div>
     ) : (
       <>
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2 mb-3">
-          {currentItems.map(p => (
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2 mb-3" key="pokemon-grid">
+          {currentItems.map((p, index) => (
             <div
               key={p.id}
               className={`p-2 bg-white border rounded-lg flex flex-col items-center cursor-pointer transition-all duration-200 hover:shadow-md ${selected?.id === p.id ? 'ring-2 ring-blue-500 shadow-md transform scale-105' : 'hover:scale-105'}`}
@@ -114,9 +114,9 @@ const TeamPool = ({ pool, selected, onSelect }: TeamPoolProps) => {
               </div>
               <span className="text-xs mt-1 capitalize font-medium truncate w-full text-center">{p.name}</span>
               <div className="flex flex-wrap justify-center gap-1 mt-1">
-                {p.types.map(type => (
+                {p.types.map((type, typeIndex) => (
                   <span
-                    key={type}
+                    key={`${p.id}-${type}-${typeIndex}`}
                     className={`${TYPE_COLORS[type] || 'bg-gray-300'} text-white text-xs px-1 py-0.5 rounded capitalize`}
                   >
                     {type}

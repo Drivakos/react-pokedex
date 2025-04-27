@@ -284,33 +284,70 @@ export class AuthService {
    * @returns The created/updated profile or null
    */
   async updateProfile(profile: Partial<Profile>): Promise<Profile | null> {
-    // Ensure we have a fresh session
-    await this.refreshSession();
+    console.log('Starting profile update with data:', profile);
     
     try {
-      // Get the current user
-      const { data: userData } = await supabase.auth.getUser();
-      if (!userData.user) return null;
+      // Ensure we have a fresh session
+      const session = await this.refreshSession();
+      if (!session || !session.user) {
+        console.error('No active session for profile update');
+        toast.error('You must be logged in to update your profile');
+        return null;
+      }
       
+      // Prepare update data
       const updates = {
         ...profile,
-        id: profile.id || userData.user.id,
-        updated_at: new Date().toISOString()
+        id: profile.id || session.user.id
       };
       
-      const { data, error } = await supabase
-        .from('profiles')
-        .upsert(updates)
-        .select()
-        .single();
-        
-      if (error) throw error;
+      console.log('Sending profile update to Supabase:', updates);
       
+      // First check if profile exists
+      const { data: existingProfile, error: fetchError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', updates.id)
+        .single();
+      
+      if (fetchError && fetchError.code !== 'PGRST116') { // PGRST116 is the error code for not found
+        console.error('Error checking if profile exists:', fetchError);
+        throw fetchError;
+      }
+      
+      let result;
+      
+      // If profile exists, update it, otherwise insert it
+      if (existingProfile) {
+        console.log('Profile exists, updating...');
+        result = await supabase
+          .from('profiles')
+          .update(updates)
+          .eq('id', updates.id)
+          .select()
+          .single();
+      } else {
+        console.log('Profile does not exist, creating new profile...');
+        result = await supabase
+          .from('profiles')
+          .insert(updates)
+          .select()
+          .single();
+      }
+      
+      const { data, error } = result;
+      
+      if (error) {
+        console.error('Supabase error during profile update:', error);
+        throw error;
+      }
+      
+      console.log('Profile updated successfully:', data);
       toast.success('Profile updated successfully');
       return data as Profile;
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error updating profile:', error);
-      toast.error('Failed to update profile');
+      toast.error(error.message || 'Failed to update profile');
       return null;
     }
   }
@@ -334,8 +371,8 @@ export class AuthService {
           .from('profiles')
           .insert({
             id: userId,
-            email: email,
-            updated_at: new Date().toISOString()
+            email: email
+            // Removed updated_at as it doesn't exist in the schema
           });
       }
     } catch (error) {

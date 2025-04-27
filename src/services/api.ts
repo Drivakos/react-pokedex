@@ -1,4 +1,4 @@
-import { Pokemon, RawPokemonData, Filters, PokemonDetails } from '../types/pokemon';
+import { Pokemon, RawPokemonData, Filters, PokemonDetails, PokemonStats, PokemonMove, PokemonAbility, PokemonSprites } from '../types/pokemon';
 
 // Use environment variables for API endpoints
 const GRAPHQL_ENDPOINT = import.meta.env.VITE_API_GRAPHQL_URL || 'https://beta.pokeapi.co/graphql/v1beta';
@@ -499,6 +499,287 @@ export const fetchPokemonDetails = async (id: number): Promise<PokemonDetails> =
 /**
  * Fetches available filter options (types, moves, generations)
  */
+/**
+ * Fetches multiple Pokemon details in a single GraphQL query
+ * This is much more efficient than multiple REST calls
+ */
+export const fetchMultiplePokemonDetails = async (pokemonIds: number[]): Promise<PokemonDetails[]> => {
+  if (!pokemonIds.length) return [];
+  
+  try {
+    console.log(`Fetching ${pokemonIds.length} Pokemon with GraphQL batch query`);
+    
+    // Check if we already have any of these Pokemon in the cache
+    const uncachedIds = [];
+    const cachedPokemon: PokemonDetails[] = [];
+    const standardIds: number[] = [];
+    
+    // Filter out special form IDs that need special handling
+    for (const id of pokemonIds) {
+      if (pokemonDetailsCache[id]) {
+        // If it's already cached, use the cache
+        cachedPokemon.push(pokemonDetailsCache[id]);
+      } else if (id >= 10000) {
+        // Special form Pokémon IDs (>= 10000) need special handling
+        // We'll deal with these separately with the REST API
+        uncachedIds.push(id);
+      } else {
+        // Standard Pokémon IDs can be fetched with GraphQL
+        standardIds.push(id);
+        uncachedIds.push(id);
+      }
+    }
+    
+    // If all Pokémon are cached, return immediately
+    if (uncachedIds.length === 0) {
+      console.log('All requested Pokémon were in cache');
+      return cachedPokemon;
+    }
+    
+    // Only proceed with GraphQL if we have standard IDs to fetch
+    let fetchedPokemon: PokemonDetails[] = [];
+    
+    if (standardIds.length > 0) {
+      // Format IDs for the GraphQL query
+      const idList = JSON.stringify(standardIds);
+      
+      const query = `
+        query GetMultiplePokemon {
+          pokemon_v2_pokemon(where: {id: {_in: ${idList}}}) {
+          id
+          name
+          height
+          weight
+          base_experience
+          pokemon_v2_pokemonabilities {
+            is_hidden
+            pokemon_v2_ability {
+              name
+              pokemon_v2_abilityflavortexts(where: {language_id: {_eq: 9}}, limit: 1) {
+                flavor_text
+              }
+            }
+          }
+          pokemon_v2_pokemonstats {
+            base_stat
+            pokemon_v2_stat {
+              name
+            }
+          }
+          pokemon_v2_pokemonsprites {
+            sprites
+          }
+          pokemon_v2_pokemontypes {
+            pokemon_v2_type {
+              name
+            }
+          }
+          pokemon_v2_pokemonmoves(limit: 20) {
+            pokemon_v2_move {
+              name
+            }
+            level
+            pokemon_v2_movelearnmethod {
+              name
+            }
+          }
+          pokemon_v2_pokemonspecy {
+            pokemon_v2_pokemonspeciesflavortexts(where: {language_id: {_eq: 9}}, limit: 1) {
+              flavor_text
+            }
+            pokemon_v2_generation {
+              name
+            }
+            pokemon_v2_evolutionchain {
+              pokemon_v2_pokemonspecies {
+                id
+                name
+                evolves_from_species_id
+              }
+            }
+            genera: pokemon_v2_pokemonspeciesnames(where: {language_id: {_eq: 9}}) {
+              genus
+            }
+          }
+        }
+      }
+    `;
+
+      const response = await fetch(GRAPHQL_ENDPOINT, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`GraphQL HTTP error! Status: ${response.status}`);
+      }
+
+      const result = await response.json();
+      
+      if (result.errors) {
+        console.error('GraphQL errors for batch Pokémon query:', result.errors);
+        throw new Error(result.errors[0]?.message || 'Unknown GraphQL error');
+      }
+
+      const pokemonData = result.data.pokemon_v2_pokemon;
+      console.log(`Successfully fetched ${pokemonData.length} Pokémon with GraphQL`);      
+      
+      // Transform the GraphQL data to PokemonDetails format
+      fetchedPokemon = pokemonData.map((pokemon: any) => {
+      // Process abilities
+      const abilities: PokemonAbility[] = pokemon.pokemon_v2_pokemonabilities.map((a: any) => ({
+        name: a.pokemon_v2_ability.name,
+        is_hidden: a.is_hidden,
+        description: a.pokemon_v2_ability.pokemon_v2_abilityflavortexts[0]?.flavor_text || ''
+      }));
+
+      // Process stats
+      const stats: PokemonStats = {
+        hp: 0,
+        attack: 0,
+        defense: 0,
+        special_attack: 0,
+        special_defense: 0,
+        speed: 0
+      };
+
+      pokemon.pokemon_v2_pokemonstats.forEach((s: any) => {
+        const statName = s.pokemon_v2_stat.name.replace('-', '_') as keyof PokemonStats;
+        if (statName in stats) {
+          stats[statName] = s.base_stat;
+        }
+      });
+
+      // Process sprites - Fix JSON parsing error
+      let parsedSprites;
+      const spritesData = pokemon.pokemon_v2_pokemonsprites[0]?.sprites;
+      
+      try {
+        // Check if it's already an object or needs parsing
+        if (typeof spritesData === 'string') {
+          parsedSprites = JSON.parse(spritesData);
+        } else if (typeof spritesData === 'object') {
+          parsedSprites = spritesData;
+        } else {
+          // Default empty object if sprites data is null/undefined
+          parsedSprites = {};
+        }
+      } catch (error) {
+        console.error('Error parsing sprites data:', error, 'for Pokémon:', pokemon.id);
+        parsedSprites = {};
+      }
+      
+      const sprites: PokemonSprites = {
+        front_default: parsedSprites.front_default || '',
+        back_default: parsedSprites.back_default || '',
+        front_shiny: parsedSprites.front_shiny || '',
+        back_shiny: parsedSprites.back_shiny || '',
+        official_artwork: parsedSprites.other?.['official-artwork']?.front_default || ''
+      };
+
+      // Process types
+      const types = pokemon.pokemon_v2_pokemontypes.map(
+        (t: any) => t.pokemon_v2_type.name
+      );
+
+      // Process moves
+      const moves: PokemonMove[] = pokemon.pokemon_v2_pokemonmoves.map((m: any) => ({
+        name: m.pokemon_v2_move.name,
+        learned_at_level: m.level || 0,
+        learn_method: m.pokemon_v2_movelearnmethod?.name || 'unknown'
+      }));
+
+      // Process evolution chain
+      const speciesData = pokemon.pokemon_v2_pokemonspecy;
+      const evolutionData = speciesData.pokemon_v2_evolutionchain?.pokemon_v2_pokemonspecies || [];
+      
+      const evolutions = evolutionData.map((evo: any) => ({
+        id: evo.id,
+        name: evo.name,
+        evolves_from: evo.evolves_from_species_id
+      }));
+
+      // Process flavor text
+      const flavorTextEntry = speciesData.pokemon_v2_pokemonspeciesflavortexts[0];
+      const flavorText = flavorTextEntry ? flavorTextEntry.flavor_text : '';
+
+      // Create the full PokemonDetails object
+      const details: PokemonDetails = {
+        id: pokemon.id,
+        name: pokemon.name,
+        height: pokemon.height,
+        weight: pokemon.weight,
+        types,
+        abilities,
+        stats,
+        sprites,
+        moves,
+        flavor_text: flavorText,
+        genera: speciesData.genera[0]?.genus || '',
+        generation: speciesData.pokemon_v2_generation?.name || '',
+        evolution_chain: evolutions,
+        base_experience: pokemon.base_experience,
+        has_evolutions: evolutions.length > 1
+      };
+
+      // Cache the result
+      pokemonDetailsCache[pokemon.id] = details;
+      return details;
+    });
+
+    }
+    
+    // For special form Pokémon IDs (>= 10000), fetch individually with REST API
+    const specialFormIds = uncachedIds.filter(id => id >= 10000);
+    if (specialFormIds.length > 0) {
+      console.log(`Fetching ${specialFormIds.length} special form Pokémon with REST API`);
+      const specialFormResults = await Promise.all(
+        specialFormIds.map(id => {
+          // For these special forms, convert the ID to the base ID for the species
+          // For example, Alolan forms (10xxx) should use the base form species
+          const baseId = Math.floor(id % 1000); // Extract the base Pokémon ID
+          
+          return fetchPokemonDetails(baseId)
+            .then(baseData => {
+              // Create a modified version with special form ID
+              const formData: PokemonDetails = {...baseData, id: id};
+              // Cache the special form data
+              pokemonDetailsCache[id] = formData;
+              return formData;
+            })
+            .catch(err => {
+              console.error(`Failed to fetch special form Pokémon ${id}:`, err);
+              return null;
+            });
+        })
+      );
+      
+      // Add successfully fetched special forms to our results
+      fetchedPokemon = [...fetchedPokemon, ...specialFormResults.filter(Boolean) as PokemonDetails[]];
+    }
+    
+    // Combine cached and fetched Pokémon and sort by original ID order
+    const allPokemon = [...cachedPokemon, ...fetchedPokemon];
+    
+    // Sort by the original order of IDs
+    return pokemonIds.map(id => 
+      allPokemon.find(p => p.id === id) || pokemonDetailsCache[id]
+    ).filter(Boolean) as PokemonDetails[];
+    
+  } catch (error) {
+    console.error('Error fetching multiple Pokémon details:', error);
+    
+    // Fall back to individual REST API calls when GraphQL fails
+    console.log('Falling back to individual REST API calls...');
+    const results = await Promise.all(
+      pokemonIds.map(id => fetchPokemonDetails(id).catch(() => null))
+    );
+    
+    return results.filter(Boolean) as PokemonDetails[];
+  }
+};
+
 export const fetchFilterOptions = async () => {
   try {
     console.log('Fetching filter options from:', GRAPHQL_ENDPOINT);

@@ -1,4 +1,4 @@
-import React, { createContext, useState, useEffect, useContext, useCallback, useMemo } from 'react';
+import React, { createContext, useState, useEffect, useContext, useCallback, useMemo, useRef } from 'react';
 import { Session, User, AuthError } from '@supabase/supabase-js';
 import { Profile, Favorite } from '../lib/supabase';
 import authService, { withAuthSession } from '../services/auth.service';
@@ -54,13 +54,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [favorites, setFavorites] = useState<Favorite[]>([]);
   const [teams, setTeams] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  
+  // Use refs to track data loading state - prevents re-renders and infinite loops
+  const dataLoadedRef = useRef({
+    teams: false,
+    favorites: false,
+    profile: false
+  });
 
   const fetchTeams = useCallback(async (userId: string) => {
+    // Skip if already loaded or missing user ID
+    if (dataLoadedRef.current.teams) {
+      console.log('Teams already loaded, skipping fetch');
+      return;
+    }
+    
     if (!userId) {
       console.error('User ID is required to fetch teams');
       return;
     }
-  
+    
+    console.log('Fetching teams (one-time operation)');
     const { data, error } = await supabase
       .from('teams')
       .select('*')
@@ -71,12 +85,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.error('Error fetching teams:', error);
       return;
     }
+    
     setTeams(data || []);
+    dataLoadedRef.current.teams = true; // Mark as loaded
+    console.log('Teams loaded successfully:', data?.length || 0, 'teams');
   }, []);
 
   const fetchFavorites = useCallback(async (userId: string) => {
+    // Skip if already loaded or missing user ID
+    if (dataLoadedRef.current.favorites) {
+      console.log('Favorites already loaded, skipping fetch');
+      return;
+    }
+    
+    if (!userId) {
+      console.error('User ID is required to fetch favorites');
+      return;
+    }
+    
     try {
-
+      console.log('Fetching favorites (one-time operation)');
       const { data, error } = await supabase
         .from('favorites')
         .select('*')
@@ -88,8 +116,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
       
       if (Array.isArray(data)) {
-
         setFavorites(data);
+        dataLoadedRef.current.favorites = true; // Mark as loaded
+        console.log('Favorites loaded successfully:', data.length, 'favorites');
       } else {
         console.error('Unexpected favorites data format:', data);
         setFavorites([]);
@@ -549,68 +578,105 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  // Use a ref to track initialization to avoid duplicate setup
+  const hasInitializedRef = useRef(false);
+  
+  // Get session and init auth state
+  const refreshSession = useCallback(async () => {
+    console.log('Refreshing auth session...');
+    const session = await authService.getSession();
+    return session;
+  }, []);
+  
   useEffect(() => {
     const initAuth = async () => {
+      // Only run once
+      if (hasInitializedRef.current) {
+        console.log('Auth already initialized, skipping');
+        return;
+      }
+      
+      hasInitializedRef.current = true;
+      console.log('Initializing auth...');
       setLoading(true);
+      
       try {
-        const session = await authService.getSession();
+        const session = await refreshSession();
         if (session) {
+          console.log('Session found during initialization');
           setSession(session);
           setUser(session.user);
-          if (session.user) {
+          
+          if (session.user?.id) {
+            console.log('Fetching user data on initialization');
             const userProfile = await authService.fetchProfile(session.user.id);
-            setProfile(userProfile);
-            await fetchFavorites(session.user.id); // Ensure user.id is available
-            await fetchTeams(session.user.id); // Ensure user.id is available
+            setProfile(userProfile || null);
+            dataLoadedRef.current.profile = true;
+            
+            // Fetch favorites and teams just once
+            await fetchFavorites(session.user.id);
+            await fetchTeams(session.user.id);
           }
-        } else {
-          setSession(null);
-          setUser(null);
-          setProfile(null);
-          setFavorites([]);
-          setTeams([]);
         }
       } catch (err) {
-        setSession(null);
-        setUser(null);
-        setProfile(null);
-        setFavorites([]);
-        setTeams([]);
+        console.error('Error during auth initialization:', err);
       } finally {
         setLoading(false);
       }
-    };
-  
-    initAuth();
-  
-    const { data: { subscription } } = authService.onAuthStateChange(async (event, session) => {
-      if (event === 'SIGNED_IN' && session?.user) {
+      
+      // Set up auth state change listener
+      const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
+        console.log(`Auth state changed: ${event}`);
         setSession(session);
-        setUser(session.user);
-        const userProfile = await authService.fetchProfile(session.user.id);
-        setProfile(userProfile || null);
-        await fetchFavorites(session.user.id);
-        await fetchTeams(session.user.id);
-      } else if (['SIGNED_OUT'].includes(event)) {
-        setSession(null);
-        setUser(null);
-        setProfile(null);
-        setFavorites([]);
-        setTeams([]);
-      }
-    });
-  
-    return () => subscription.unsubscribe();
-  }, [fetchFavorites, fetchTeams]);
-
-  const value = useMemo(() => ({
+        setUser(session?.user || null);
+        
+        if (event === 'SIGNED_IN' && session?.user?.id) {
+          console.log('User signed in, loading profile data');
+          const profile = await authService.fetchProfile(session.user.id);
+          setProfile(profile || null);
+          
+          // Reset data loaded state on sign in to ensure fresh data
+          dataLoadedRef.current = {
+            teams: false,
+            favorites: false,
+            profile: true
+          };
+          
+          // Fetch fresh data
+          await fetchFavorites(session.user.id);
+          await fetchTeams(session.user.id);
+        } else if (event === 'SIGNED_OUT') {
+          console.log('User signed out, clearing all data');
+          setProfile(null);
+          setFavorites([]);
+          setTeams([]);
+          
+          // Reset data loaded state
+          dataLoadedRef.current = {
+            teams: false,
+            favorites: false,
+            profile: false
+          };
+        }
+      });
+      
+      return () => {
+        console.log('Cleaning up auth listener');
+        authListener.subscription.unsubscribe();
+      };
+    };
+    
+    initAuth();
+  }, [refreshSession, fetchFavorites, fetchTeams]);
+      // Create context value
+  const contextValue = useMemo(() => ({
     session,
     user,
     profile,
     favorites,
     teams,
     loading,
-    refreshSession: authService.refreshSession.bind(authService),
+    refreshSession,
     signUp,
     signIn,
     signInWithGoogle,
@@ -630,7 +696,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     removePokemonFromTeam,
     movePokemonPosition,
     getTeamMembers
-  }), [session, user, profile, favorites, teams, loading]);
+  }), [session, user, profile, favorites, teams, loading, refreshSession, signUp, signIn, 
+       signInWithGoogle, signInWithMagicLink, signOut, resetPassword, updatePassword, updateProfile,
+       addFavorite, removeFavorite, isFavorite, fetchTeams, createTeam, updateTeam, deleteTeam,
+       addPokemonToTeam, removePokemonFromTeam, movePokemonPosition, getTeamMembers]);
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  return <AuthContext.Provider value={contextValue}>{children}</AuthContext.Provider>;
 };

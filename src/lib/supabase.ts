@@ -24,7 +24,7 @@ const supabaseOptions = {
       'Content-Type': 'application/json',
       'X-Pokedex-Client': 'React-Pokedex-App',
     },
-    fetch: fetch.bind(globalThis) // Ensure consistent fetch implementation
+    fetch: fetch.bind(globalThis)
   },
   realtime: {
     params: {
@@ -35,10 +35,8 @@ const supabaseOptions = {
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, supabaseOptions);
 
-// Setup basic auth state change listener - following Supabase docs exactly
 supabase.auth.onAuthStateChange((event) => {
   if (event === 'SIGNED_IN') {
-    console.log('User signed in');
   } else if (event === 'SIGNED_OUT') {
     const authItems = [
       'supabase.auth.token',
