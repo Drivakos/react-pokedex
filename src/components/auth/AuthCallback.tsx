@@ -35,6 +35,12 @@ export const AuthCallback = () => {
           return;
         }
 
+        // Handle password recovery FIRST - before any session checks
+        if (type === 'recovery') {
+          navigate('/reset-password/confirm', { replace: true });
+          return;
+        }
+
         // PKCE Flow - code parameter in query string
         if (code) {
           const { data, error: exchangeError } = await authService.exchangeCodeForSession(code);
@@ -47,12 +53,6 @@ export const AuthCallback = () => {
           }
 
           if (data?.session) {
-            // Check if this is a recovery session
-            if (type === 'recovery') {
-              navigate('/reset-password/confirm', { replace: true });
-              return;
-            }
-            
             // Regular authentication flow
             await refreshSession();
             toast.success('Successfully signed in!');
@@ -74,12 +74,6 @@ export const AuthCallback = () => {
             }
 
             if (data.session) {
-              // Check if this is a recovery session
-              if (type === 'recovery') {
-                navigate('/reset-password/confirm', { replace: true });
-                return;
-              }
-              
               // Regular authentication flow
               await refreshSession();
               toast.success('Successfully signed in!');
@@ -94,22 +88,8 @@ export const AuthCallback = () => {
           }
         }
 
-        // Handle specific type-based flows
-        if (type === 'recovery' || type === 'magiclink' || type === 'signup') {
-          if (type === 'recovery') {
-            // For recovery type, check if we have a valid session
-            const session = await authService.getSession();
-            if (session) {
-              navigate('/reset-password/confirm', { replace: true });
-            } else {
-              setError('Password reset link is invalid or has expired');
-              toast.error('Password reset link is invalid or has expired');
-              navigate('/reset-password', { replace: true });
-            }
-            return;
-          }
-
-          // Handle other types (magiclink, signup)
+        // Handle specific type-based flows (magiclink, signup)
+        if (type === 'magiclink' || type === 'signup') {
           const session = await authService.getSession();
 
           if (session) {
@@ -122,8 +102,25 @@ export const AuthCallback = () => {
 
             toast.success(`Welcome, ${username}!`);
             navigate('/');
+          } else {
+            // No session found, redirect to login
+            toast.error('Authentication session not found');
+            navigate('/login', { replace: true });
           }
+          return;
         }
+
+        // If no specific handling matched, check for any valid session
+        const session = await authService.getSession();
+        if (session) {
+          await refreshSession();
+          toast.success('Successfully signed in!');
+          navigate('/', { replace: true });
+        } else {
+          // No session found, redirect to login
+          navigate('/login', { replace: true });
+        }
+
       } catch (err) {
         setError('An unexpected error occurred');
         toast.error('Authentication failed. Please try again.');
@@ -136,7 +133,7 @@ export const AuthCallback = () => {
     };
 
     handleAuthCallback();
-  }, [navigate]);
+  }, [navigate, searchParams]);
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50">
