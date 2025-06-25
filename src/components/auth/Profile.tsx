@@ -10,7 +10,6 @@ const Profile: React.FC = () => {
   const [fetchingFavorites, setFetchingFavorites] = useState(true);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [avatar, setAvatar] = useState<File | null>(null);
   const [favorites, setFavorites] = useState<number[]>([]);
   const navigate = useNavigate();
 
@@ -71,6 +70,10 @@ const Profile: React.FC = () => {
       setError(null);
       setMessage(null);
       
+      console.log('Updating profile with:', { username });
+      console.log('Current user:', user);
+      console.log('Current profile:', profile);
+      
       const { error: updateError } = await updateProfile({ username });
       
       if (updateError) {
@@ -78,46 +81,6 @@ const Profile: React.FC = () => {
         throw updateError;
       }
 
-      if (avatar) {
-        try {
-          const fileExt = avatar.name.split('.').pop()?.toLowerCase();
-          const validExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
-          
-          if (!fileExt || !validExtensions.includes(fileExt)) {
-            throw new Error('Invalid file extension');
-          }
-          
-          const timestamp = Date.now();
-          const randomString = Math.random().toString(36).substring(2, 10);
-          const fileName = `${user?.id}-${timestamp}-${randomString}.${fileExt}`;
-          const filePath = `avatars/${fileName}`;
-          const contentType = `image/${fileExt === 'jpg' ? 'jpeg' : fileExt}`;
-          const { error: uploadError } = await supabase.storage
-            .from('avatars')
-            .upload(filePath, avatar, {
-              contentType,
-              cacheControl: '3600',
-              upsert: false
-            });
-            
-          if (uploadError) {
-            throw uploadError;
-          }
-          
-          const { data: { publicUrl } } = supabase.storage
-            .from('avatars')
-            .getPublicUrl(filePath);
-            
-          const { error: avatarUpdateError } = await updateProfile({ avatar_url: publicUrl });
-          
-          if (avatarUpdateError) {
-            throw avatarUpdateError;
-          }
-        } catch (err: any) {
-          throw new Error(`Avatar upload failed: ${err.message}`);
-        }
-      }
-      
       setMessage('Profile updated successfully!');
     } catch (error: any) {
       console.error('Profile update failed:', error);
@@ -133,28 +96,6 @@ const Profile: React.FC = () => {
       navigate('/');
     } catch (error: any) {
       setError(error.message || 'Failed to sign out');
-    }
-  };
-
-  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      const file = e.target.files[0];
-      
-      const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
-      if (!allowedTypes.includes(file.type)) {
-        setError('Invalid file type. Please upload a JPEG, PNG, GIF, or WebP image.');
-        return;
-      }
-      
-      const maxSize = 2 * 1024 * 1024; // 2MB
-      if (file.size > maxSize) {
-        setError('File is too large. Maximum size is 2MB.');
-        return;
-      }
-      
-      if (error) setError(null);
-      
-      setAvatar(file);
     }
   };
 
@@ -230,10 +171,12 @@ const Profile: React.FC = () => {
                         className="w-full h-full object-cover"
                       />
                     ) : (
-                      <div className="w-full h-full flex items-center justify-center bg-blue-100 text-blue-500">
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                        </svg>
+                      <div className="w-full h-full flex items-center justify-center bg-blue-50">
+                        <img 
+                          src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/65.png"
+                          alt="Pokemon Trainer Avatar"
+                          className="w-24 h-24 object-contain"
+                        />
                       </div>
                     )}
                   </div>
@@ -256,20 +199,6 @@ const Profile: React.FC = () => {
                       id="username"
                       value={username}
                       onChange={(e) => setUsername(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                      disabled={loading}
-                    />
-                  </div>
-                  
-                  <div className="mb-6">
-                    <label htmlFor="avatar" className="block text-sm font-medium text-gray-700 mb-1">
-                      Profile Picture
-                    </label>
-                    <input
-                      type="file"
-                      id="avatar"
-                      accept="image/*"
-                      onChange={handleAvatarChange}
                       className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                       disabled={loading}
                     />
