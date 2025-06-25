@@ -131,69 +131,60 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        console.log('Auth state changed:', event);
-        const previousUser = user;
+        if (event === 'SIGNED_IN' && session) {
+          localStorage.setItem('supabase.auth.token', JSON.stringify(session));
+        } else if (event === 'SIGNED_OUT') {
+          localStorage.removeItem('supabase.auth.token');
+        }
         
-        try {
-          if (session) {
-            localStorage.setItem('supabase.auth.token', JSON.stringify(session));
-          } else if (event === 'SIGNED_OUT') {
-            localStorage.removeItem('supabase.auth.token');
-          }
-          
-          switch (event) {
-            case 'SIGNED_IN':
-              if (session) {
-                setSession(session);
-                setUser(session.user);
-                setLoading(true);
-                
-                await initProfile(session.user.id);
-                
-                if (!previousUser) {
-                  const username = session.user.user_metadata?.full_name || 
+        switch (event) {
+          case 'SIGNED_IN':
+            if (session) {
+              setSession(session);
+              setUser(session.user);
+              setLoading(true);
+              
+              await initProfile(session.user.id);
+              
+              const username = session.user.user_metadata?.full_name || 
                               session.user.user_metadata?.name ||
                               session.user.email?.split('@')[0] ||
                               'User';
                               
-                  if (username) {
-                    window.setTimeout(() => {
-                      toast.success(`Welcome, ${username}!`);
-                    }, 500);
-                  }
-                }
-                
-                setLoading(false);
+              if (username) {
+                window.setTimeout(() => {
+                  toast.success(`Welcome, ${username}!`);
+                }, 500);
               }
-              break;
               
-            case 'SIGNED_OUT':
-              resetAuthState();
-              toast.success('You have been signed out');
-              break;
-              
-            case 'TOKEN_REFRESHED':
-              if (session) {
-                setSession(session);
-                setUser(session.user);
+              setLoading(false);
+            }
+            break;
+            
+          case 'SIGNED_OUT':
+            resetAuthState();
+            toast.success('You have been signed out');
+            break;
+            
+          case 'TOKEN_REFRESHED':
+            if (session) {
+              setSession(session);
+              setUser(session.user);
+            }
+            break;
+            
+          case 'USER_UPDATED':
+            if (session) {
+              setSession(session);
+              setUser(session.user);
+              if (session.user) {
+                await refreshProfile(session.user.id);
               }
-              break;
-              
-            case 'USER_UPDATED':
-              if (session) {
-                setSession(session);
-                setUser(session.user);
-                if (session.user) {
-                  await refreshProfile(session.user.id);
-                }
-              }
-              break;
-              
-            default:
-              break;
-          }
-        } catch (err) {
-          console.error(`Error handling auth state change '${event}':`, err);
+            }
+            break;
+            
+          default:
+            break;
         }
       }
     );
@@ -224,4 +215,3 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
-

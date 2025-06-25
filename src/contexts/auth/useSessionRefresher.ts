@@ -20,7 +20,6 @@ export const useSessionRefresher = () => {
       
       // If there's no active session, return early
       if (!currentSession) {
-        console.log('No active session to refresh');
         return { success: false, session: null };
       }
       
@@ -31,11 +30,9 @@ export const useSessionRefresher = () => {
       
       // Only refresh if needed (< 10 mins to expiry)
       if (timeToExpiry > 600) {
-        console.log('Session still valid, no refresh needed');
         return { success: true, session: currentSession };
       }
       
-      console.log('Refreshing session...');
       const refreshedSession = await authService.refreshSession();
       
       if (!refreshedSession) {

@@ -52,7 +52,6 @@ const TeamSelector: React.FC<TeamSelectorProps> = ({ pokemon, onClose }) => {
     if (!hasInitiallyFetched.current) {
       const fetchInitialData = async () => {
         setLoading(true);
-        console.log('TeamSelector: Initial data fetch on modal open');
         
         try {
           // Step 1: Fetch teams if we have a user
@@ -92,8 +91,6 @@ const TeamSelector: React.FC<TeamSelectorProps> = ({ pokemon, onClose }) => {
       return null;
     }
     
-    console.log('Attempting direct team creation with proper session...');
-    
     // Using our auth    // Session wrapper for database operations
     const result = await withSession(async () => {
       try {
@@ -109,8 +106,6 @@ const TeamSelector: React.FC<TeamSelectorProps> = ({ pokemon, onClose }) => {
           }])
           .select()
           .single();
-        
-        console.log('Direct team creation response:', { data, error });
         
         if (error) {
           console.error('Direct team creation error:', error);
@@ -272,7 +267,6 @@ const TeamSelector: React.FC<TeamSelectorProps> = ({ pokemon, onClose }) => {
   const renderPositionSelector = (team: Team) => {
     // Get positions that are already taken in this team
     const takenPositions = teamMembers[team.id] || [];
-    console.log('Taken positions for team', team.id, ':', takenPositions);
     
     return (
       <div className="mt-3">

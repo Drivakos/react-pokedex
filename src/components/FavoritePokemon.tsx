@@ -14,12 +14,10 @@ const FavoritePokemon: React.FC<FavoritePokemonProps> = ({ pokemonId }) => {
 
   const checkIfFavorite = useCallback(() => {
     if (!user) {
-      console.log('No user available, cannot check favorites');
       return;
     }
 
     // Use the context's isFavorite function
-    console.log(`Checking if Pokémon #${pokemonId} is favorite for user ${user.id}`);
     setIsFavorite(isFavorite(pokemonId));
   }, [user, pokemonId, isFavorite]);
 
@@ -42,14 +40,11 @@ const FavoritePokemon: React.FC<FavoritePokemonProps> = ({ pokemonId }) => {
 
     try {
       setLoading(true);
-      console.log(`Toggling favorite status for Pokemon #${pokemonId}`);
 
       if (isFavorited) {
-        console.log('Removing from favorites');
         await removeFavorite(pokemonId);
         setIsFavorite(false);
       } else {
-        console.log('Adding to favorites');
         await addFavorite(pokemonId);
         setIsFavorite(true);
       }

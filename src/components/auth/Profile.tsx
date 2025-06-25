@@ -15,31 +15,28 @@ const Profile: React.FC = () => {
 
   const fetchFavorites = useCallback(async () => {
     if (!user?.id) {
-      console.log('No user ID available for fetching favorites');
       setFetchingFavorites(false);
       return;
     }
 
     try {
       setFetchingFavorites(true);
-      console.log('Fetching favorites for user ID:', user.id);
       const { data, error } = await supabase
         .from('favorites')
         .select('pokemon_id')
         .eq('user_id', user.id);
         
       if (error) {
-        console.error('Supabase error fetching favorites:', error);
+        setError(error.message || 'Failed to fetch favorites');
         setFetchingFavorites(false);
         return;
       }
       
       if (data) {
-        console.log('Favorites fetched successfully:', data.length);
         setFavorites(data.map(item => item.pokemon_id));
       }
     } catch (error) {
-      console.error('Error fetching favorites:', error);
+      setError(error.message || 'Failed to fetch favorites');
     } finally {
       setFetchingFavorites(false);
     }
@@ -53,7 +50,6 @@ const Profile: React.FC = () => {
   
   React.useEffect(() => {
     if (user?.id && !loading) {
-      console.log('Profile component: calling fetchFavorites');
       fetchFavorites();
     } else if (!user?.id) {
       setFetchingFavorites(false);
@@ -70,20 +66,14 @@ const Profile: React.FC = () => {
       setError(null);
       setMessage(null);
       
-      console.log('Updating profile with:', { username });
-      console.log('Current user:', user);
-      console.log('Current profile:', profile);
-      
       const { error: updateError } = await updateProfile({ username });
       
       if (updateError) {
-        console.error('Profile update error:', updateError);
         throw updateError;
       }
 
       setMessage('Profile updated successfully!');
     } catch (error: any) {
-      console.error('Profile update failed:', error);
       setError(error.message || 'Failed to update profile');
     } finally {
       setLoading(false);

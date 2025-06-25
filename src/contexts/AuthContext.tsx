@@ -153,7 +153,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 
                 // Log token expiration time for debugging
                 const expiresAt = session.expires_at || 0;
-                console.log('Token refreshed, expires at:', new Date(expiresAt * 1000).toLocaleString());
               }
               break;
               
@@ -334,7 +333,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       // Use dynamic redirect URL based on environment
       const redirectUrl = `${window.location.origin}/auth/callback`;
-      console.log('Google OAuth redirect URL:', redirectUrl);
       
       const response = await supabase.auth.signInWithOAuth({
         provider: 'google',
@@ -616,13 +614,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Team-related methods
   const getTeams = async () => {
     if (!user) {
-      console.log('getTeams: No user found');
       return [];
     }
     
     try {
-      console.log(`getTeams: Fetching teams for user ${user.id}`);
-      
       // Check if the teams table exists by making a small query first
       const { error: tableCheckError } = await supabase
         .from('teams')
@@ -647,7 +642,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return [];
       }
       
-      console.log(`getTeams: Successfully fetched ${data?.length || 0} teams`);
       return data || [];
     } catch (err) {
       console.error('getTeams: Unexpected error:', err);
@@ -658,14 +652,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const fetchTeams = async () => {
     if (!user) {
-      console.log('fetchTeams: No user available');
       return;
     }
     
     try {
-      console.log('fetchTeams: Fetching teams...');
       const teamsData = await getTeams();
-      console.log(`fetchTeams: Setting teams state with ${teamsData.length} teams`);
       setTeams(teamsData);
     } catch (err) {
       console.error('fetchTeams: Error updating teams state:', err);
@@ -693,8 +684,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         toast.error('Authentication error. Please sign in again.');
         return null;
       }
-      
-      console.log(`Creating team "${name}" for user ${user.id}`);
       
       const newTeam = {
         user_id: user.id,

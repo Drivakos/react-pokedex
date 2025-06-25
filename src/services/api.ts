@@ -212,7 +212,6 @@ export const fetchPokemonData = async (
       }
     `;
 
-    console.log('Fetching Pokemon data with params:', { limit, offset, searchTerm, filters });
     const response = await fetch(GRAPHQL_ENDPOINT, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -428,7 +427,6 @@ export const fetchPokemonDetails = async (id: number): Promise<PokemonDetails> =
  */
 export const fetchFilterOptions = async () => {
   try {
-    console.log('Fetching filter options from:', GRAPHQL_ENDPOINT);
     const query = `
       query GetFilterOptions {
         types: pokemon_v2_type(where: {pokemon_v2_pokemontypes: {pokemon_v2_pokemon: {is_default: {_eq: true}}}}) {

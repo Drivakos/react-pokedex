@@ -54,12 +54,11 @@ export const ProfileMethods = ({
                       (email ? email.split('@')[0] : null) || 
                       `user_${userId.substring(0, 8)}`;
       
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from('profiles')
         .insert({
           id: userId,
-          username,
-          updated_at: new Date().toISOString()
+          username
         });
         
       if (error) {
@@ -108,10 +107,7 @@ export const ProfileMethods = ({
       
       const { data, error } = await supabase
         .from('profiles')
-        .update({
-          ...updates,
-          updated_at: new Date().toISOString()
-        })
+        .update(updates)
         .eq('id', user.id)
         .select()
         .single();

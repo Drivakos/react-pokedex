@@ -36,10 +36,11 @@ const supabaseOptions = {
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, supabaseOptions);
 
 // Setup basic auth state change listener - following Supabase docs exactly
-supabase.auth.onAuthStateChange((event) => {
-  if (event === 'SIGNED_IN') {
-    console.log('User signed in');
-  } else if (event === 'SIGNED_OUT') {
+supabase.auth.onAuthStateChange((event, session) => {
+  if (session) {
+    // User signed in - no debug log needed
+  } else {
+    // User signed out - no debug log needed
     const authItems = [
       'supabase.auth.token',
       'access_token',
@@ -57,12 +58,22 @@ supabase.auth.onAuthStateChange((event) => {
   }
 });
 
-// Initial session check - follows Supabase documentation pattern
-supabase.auth.getSession().then(({ data }) => {
-  if (data.session) {
-    console.log('Initial session exists');
+// Initialize session
+const initializeSession = async () => {
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
+      // No session - no debug log needed
+      return;
+    }
+
+    if (session) {
+      // Initial session exists - no debug log needed
+    }
+  } catch (error) {
+    console.error('Error initializing session:', error);
   }
-});
+};
 
 export async function ensureProfile(userId: string, email?: string): Promise<void> {
   try {
@@ -90,7 +101,6 @@ export interface Profile {
   id: string;
   username: string;
   avatar_url?: string;
-  updated_at?: string;
 }
 
 export type Favorite = {

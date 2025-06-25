@@ -291,16 +291,11 @@ export class AuthService {
       // Get the current user
       const { data: userData } = await supabase.auth.getUser();
       if (!userData.user) return null;
-      
-      const updates = {
-        ...profile,
-        id: profile.id || userData.user.id,
-        updated_at: new Date().toISOString()
-      };
-      
+
       const { data, error } = await supabase
         .from('profiles')
-        .upsert(updates)
+        .update(profile)
+        .eq('id', userData.user.id)
         .select()
         .single();
         
