@@ -1,8 +1,8 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth } from '../../hooks/useAuth';
 import { Team, TeamMember, supabase } from '../../lib/supabase';
 import { checkSession, withSession } from '../../lib/auth-helpers';
-import { Plus, X, Check } from 'lucide-react';
+import { Plus, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 interface Pokemon {
@@ -33,128 +33,79 @@ const TeamSelector: React.FC<TeamSelectorProps> = ({ pokemon, onClose }) => {
     }
     return auth.addPokemonToTeam(teamId, pokemonId, position);
   }, [auth]);
+  
   const [loading, setLoading] = useState(true);
   const [teamMembers, setTeamMembers] = useState<Record<number, number[]>>({});
   const [teamMemberDetails, setTeamMemberDetails] = useState<Record<number, TeamMember[]>>({});
   const [isCreating, setIsCreating] = useState(false);
   const [newTeamName, setNewTeamName] = useState('');
   const [newTeamDescription, setNewTeamDescription] = useState('');
-  const [selectedTeam, setSelectedTeam] = useState<number | null>(null);
-  const [selectedPosition, setSelectedPosition] = useState<number | null>(null);
-  const [addingToTeam, setAddingToTeam] = useState(false);
 
+  // Track if we've fetched data to prevent infinite loops
+  const hasFetchedTeams = useRef(false);
+  const hasFetchedMembers = useRef(false);
 
-  // Track if we've already fetched data to prevent multiple fetches
-  const hasInitiallyFetched = React.useRef(false);
-  
-  // Load data just once when the component mounts (modal opens)
+  // Load data ONCE when the component mounts (modal opens)
   useEffect(() => {
-    // Only fetch if we haven't already
-    if (!hasInitiallyFetched.current) {
-      const fetchInitialData = async () => {
-        setLoading(true);
-        
-        try {
-          // Step 1: Fetch teams if we have a user
-          if (user && typeof fetchTeams === 'function') {
-            await fetchTeams();
-            
-            // Step 2: Fetch team members only after teams are loaded
-            // This ensures we use the freshly loaded teams
-            if (teams && teams.length > 0 && typeof getTeamMembers === 'function') {
-              const members: Record<number, number[]> = {};
-              const memberDetails: Record<number, TeamMember[]> = {};
-              
-              for (const team of teams) {
-                const teamMembers = await getTeamMembers(team.id);
-                // Store the positions that are taken, not pokemon IDs
-                members[team.id] = teamMembers.map(member => member.position);
-                memberDetails[team.id] = teamMembers;
-              }
-              
-              setTeamMembers(members);
-              setTeamMemberDetails(memberDetails);
-            }
-          }
-        } catch (error) {
-          console.error('Error in initial data fetch:', error);
-          toast.error('Failed to load teams data');
-        } finally {
-          setLoading(false);
-          hasInitiallyFetched.current = true;
-        }
-      };
+    const fetchInitialData = async () => {
+      if (hasFetchedTeams.current) return; // Prevent multiple fetches
       
+      setLoading(true);
+      
+      try {
+        // Step 1: Fetch teams fresh when modal opens
+        if (user && typeof fetchTeams === 'function') {
+          console.log('🔄 Fetching teams...');
+          await fetchTeams();
+          hasFetchedTeams.current = true;
+        }
+      } catch (error) {
+        console.error('Error fetching teams:', error);
+        toast.error('Failed to load teams');
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    // Only fetch if we have a user and haven't fetched yet
+    if (user && !hasFetchedTeams.current) {
       fetchInitialData();
     }
-  }, [user, fetchTeams, teams, getTeamMembers]); // Including dependencies to satisfy linter
+  }, [user]); // Only depend on user, not fetchTeams
 
-  // Direct Supabase access for diagnostics
-  const directCreateTeam = async () => {
-    if (!user || !user.id) {
-      toast.error('Not logged in');
-      return null;
-    }
-    
-    // Using our auth    // Session wrapper for database operations
-    const result = await withSession(async () => {
-      try {
-        // Create the team with valid session from withSession helper
-        const { data, error } = await supabase
-          .from('teams')
-          .insert([{
-            user_id: user.id,
-            name: newTeamName,
-            description: newTeamDescription || null,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-          }])
-          .select()
-          .single();
-        
-        if (error) {
-          console.error('Direct team creation error:', error);
+  // Fetch team members ONCE after teams are loaded
+  useEffect(() => {
+    const fetchTeamMembers = async () => {
+      if (hasFetchedMembers.current) return; // Prevent multiple fetches
+      
+      if (teams && teams.length > 0 && typeof getTeamMembers === 'function') {
+        try {
+          console.log('🔄 Fetching team members for', teams.length, 'teams...');
+          const members: Record<number, number[]> = {};
+          const memberDetails: Record<number, TeamMember[]> = {};
           
-          if (error.code === '42501' || error.message?.includes('permission denied')) {
-            toast.error('Permission denied: Row Level Security is blocking this operation.');
-          } else if (error.code === '23505') {
-            toast.error('Team name already exists');
-          } else {
-            toast.error(`Failed to create team: ${error.message}`);
+          for (const team of teams) {
+            const teamMembers = await getTeamMembers(team.id);
+            // Store the positions that are taken, not pokemon IDs
+            members[team.id] = teamMembers.map(member => member.position);
+            memberDetails[team.id] = teamMembers;
           }
-          return { data: null, error };
+          
+          setTeamMembers(members);
+          setTeamMemberDetails(memberDetails);
+          hasFetchedMembers.current = true;
+          console.log('✅ Team members fetched successfully');
+        } catch (error) {
+          console.error('Error fetching team members:', error);
         }
-        
-        if (data) {
-          // Successfully created team
-          toast.success('Team created successfully!');
-          
-          // Clear the form
-          setNewTeamName('');
-          setNewTeamDescription('');
-          setIsCreating(false);
-          
-          // Auto-select the new team
-          setSelectedTeam(data.id);
-          
-          // Fetch teams to update the UI
-          if (auth?.fetchTeams) {
-            await auth.fetchTeams();
-          } else if (typeof fetchTeams === 'function') {
-            await fetchTeams();
-          }
-        }
-        
-        return { data, error: null };
-      } catch (err) {
-        console.error('Direct team creation exception:', err);
-        toast.error('An unexpected error occurred');
-        return { data: null, error: err };
       }
-    });
-    
-    return result?.data || null;
-  };
+    };
+
+    // Only fetch if we have teams and haven't fetched members yet
+    if (teams && teams.length > 0 && !hasFetchedMembers.current) {
+      fetchTeamMembers();
+    }
+  }, [teams]); // Only depend on teams, not getTeamMembers
 
   const handleCreateTeam = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -185,8 +136,7 @@ const TeamSelector: React.FC<TeamSelectorProps> = ({ pokemon, onClose }) => {
           toast.success('Team created successfully!');
         }
       } else {
-        // Fall back to direct create if auth context method not available
-        await directCreateTeam();
+        toast.error('Team creation is not available');
       }
     } catch (error) {
       console.error('Failed to create team:', error);
@@ -197,10 +147,7 @@ const TeamSelector: React.FC<TeamSelectorProps> = ({ pokemon, onClose }) => {
   };
 
   const handleAddPokemon = async (teamId: number, position: number) => {
-    setSelectedTeam(teamId);
-    setSelectedPosition(position);
-    setAddingToTeam(true);
-    
+    console.log('➕ Adding Pokémon to team:', teamId, 'position:', position, 'pokemon:', pokemon.name);
     try {
       // Check that we have a valid session before adding the Pokémon
       const sessionValid = await checkSession();
@@ -211,37 +158,22 @@ const TeamSelector: React.FC<TeamSelectorProps> = ({ pokemon, onClose }) => {
       
       let success = false;
       
-      if (typeof addPokemonToTeam === 'function') {
+      try {
         await addPokemonToTeam(teamId, pokemon.id, position);
         success = true;
-      } else {
-        // Fallback to direct database access if the context method isn't available
-        const result = await withSession(async () => {
-          const { error } = await supabase
-            .from('team_members')
-            .upsert({
-              team_id: teamId,
-              pokemon_id: pokemon.id,
-              position: position,
-              created_at: new Date().toISOString()
-            });
-            
-          if (error) {
-            console.error('Direct add to team error:', error);
-            return { error };
-          }
-          
-          return { data: true, error: null };
-        });
-        
-        success = result && !result.error;
+        console.log('✅ Add Pokemon successful');
+      } catch (error) {
+        console.error('❌ Error in addPokemonToTeam:', error);
+        success = false;
       }
       
       if (success) {
+        console.log('🔄 Refreshing team members after add');
         // Refresh team members from database to get accurate state
         if (typeof getTeamMembers === 'function') {
           try {
             const freshTeamMembers = await getTeamMembers(teamId);
+            console.log('🔄 Fresh team members after add:', freshTeamMembers);
             setTeamMembers(prev => ({
               ...prev,
               [teamId]: freshTeamMembers.map(member => member.position)
@@ -263,12 +195,11 @@ const TeamSelector: React.FC<TeamSelectorProps> = ({ pokemon, onClose }) => {
     } catch (error) {
       console.error('Error adding Pokémon to team:', error);
       toast.error('Failed to add Pokémon to team');
-    } finally {
-      setAddingToTeam(false);
     }
   };
 
   const handleRemovePokemon = async (teamId: number, position: number) => {
+    console.log('🗑️ Removing Pokémon from team:', teamId, 'position:', position);
     try {
       // Check that we have a valid session before removing the Pokémon
       const sessionValid = await checkSession();
@@ -280,9 +211,11 @@ const TeamSelector: React.FC<TeamSelectorProps> = ({ pokemon, onClose }) => {
       let success = false;
       
       if (typeof removePokemonFromTeam === 'function') {
+        console.log('🔧 Using auth context removePokemonFromTeam method');
         await removePokemonFromTeam(teamId, position);
         success = true;
       } else {
+        console.log('🔧 Using direct database access fallback');
         // Fallback to direct database access if the context method isn't available
         const result = await withSession(async () => {
           const { error } = await supabase
@@ -300,13 +233,18 @@ const TeamSelector: React.FC<TeamSelectorProps> = ({ pokemon, onClose }) => {
         });
         
         success = result && !result.error;
+        if (!success) {
+          console.error('❌ Direct removal failed:', result?.error);
+        }
       }
       
       if (success) {
+        console.log('✅ Removal successful, refreshing team members');
         // Refresh team members from database to get accurate state
         if (typeof getTeamMembers === 'function') {
           try {
             const freshTeamMembers = await getTeamMembers(teamId);
+            console.log('🔄 Fresh team members:', freshTeamMembers);
             setTeamMembers(prev => ({
               ...prev,
               [teamId]: freshTeamMembers.map(member => member.position)
@@ -346,7 +284,6 @@ const TeamSelector: React.FC<TeamSelectorProps> = ({ pokemon, onClose }) => {
         <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
           {[1, 2, 3, 4, 5, 6].map((position) => {
             const isTaken = takenPositions.includes(position);
-            const isSelected = selectedTeam === team.id && selectedPosition === position;
             const pokemonAtPosition = getPokemonAtPosition(position);
             
             return (
@@ -355,24 +292,20 @@ const TeamSelector: React.FC<TeamSelectorProps> = ({ pokemon, onClose }) => {
                 className={`
                   py-2 px-2 rounded-md flex flex-col items-center justify-center transition-all relative
                   ${isTaken ? 'bg-blue-50 border-2 border-blue-200 hover:bg-blue-100' : 
-                    isSelected ? 'bg-green-500 text-white ring-2 ring-green-300' : 
                     'bg-gray-100 hover:bg-gray-200 hover:shadow-sm'}
                 `}
                 onClick={() => {
-                  if (!isTaken && !addingToTeam) {
-                    setSelectedTeam(team.id);
-                    setSelectedPosition(position);
+                  if (!isTaken) {
                     handleAddPokemon(team.id, position);
                   }
                 }}
-                disabled={isTaken || addingToTeam}
                 title={isTaken ? 'This position is taken - click X to remove' : `Add to position ${position}`}
               >
                 {isTaken && pokemonAtPosition ? (
                   <>
                     {/* Remove button */}
-                    <button
-                      className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center hover:bg-red-600 z-10"
+                    <div
+                      className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center hover:bg-red-600 z-10 cursor-pointer"
                       onClick={(e) => {
                         e.stopPropagation();
                         handleRemovePokemon(team.id, position);
@@ -380,7 +313,7 @@ const TeamSelector: React.FC<TeamSelectorProps> = ({ pokemon, onClose }) => {
                       title="Remove Pokemon"
                     >
                       <X size={12} />
-                    </button>
+                    </div>
                     {/* Pokemon sprite */}
                     <img
                       src={`https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${pokemonAtPosition.pokemon_id}.png`}
@@ -395,11 +328,7 @@ const TeamSelector: React.FC<TeamSelectorProps> = ({ pokemon, onClose }) => {
                       Position
                     </div>
                     <div className="font-semibold">
-                      {isSelected ? (
-                        <Check size={16} />
-                      ) : (
-                        position
-                      )}
+                      {position}
                     </div>
                   </>
                 )}
@@ -434,7 +363,6 @@ const TeamSelector: React.FC<TeamSelectorProps> = ({ pokemon, onClose }) => {
         <button
           className="text-gray-500 hover:text-gray-700"
           onClick={onClose}
-          disabled={addingToTeam}
         >
           <X size={20} />
         </button>
@@ -463,7 +391,6 @@ const TeamSelector: React.FC<TeamSelectorProps> = ({ pokemon, onClose }) => {
               value={newTeamName}
               onChange={(e) => setNewTeamName(e.target.value)}
               placeholder="Enter team name"
-              disabled={addingToTeam}
             />
           </div>
           <div className="mb-3">
@@ -474,7 +401,6 @@ const TeamSelector: React.FC<TeamSelectorProps> = ({ pokemon, onClose }) => {
               onChange={(e) => setNewTeamDescription(e.target.value)}
               placeholder="Enter team description"
               rows={2}
-              disabled={addingToTeam}
             />
           </div>
           <div className="flex justify-end space-x-2">
@@ -485,16 +411,14 @@ const TeamSelector: React.FC<TeamSelectorProps> = ({ pokemon, onClose }) => {
                 setNewTeamName('');
                 setNewTeamDescription('');
               }}
-              disabled={addingToTeam}
             >
               Cancel
             </button>
             <button
               className="bg-green-500 text-white px-3 py-1 rounded-lg flex items-center"
               onClick={handleCreateTeam}
-              disabled={addingToTeam}
             >
-              {addingToTeam ? 'Creating...' : 'Create & Select'}
+              Create & Select
             </button>
           </div>
         </div>
@@ -502,7 +426,6 @@ const TeamSelector: React.FC<TeamSelectorProps> = ({ pokemon, onClose }) => {
         <button
           className="mb-4 w-full bg-blue-500 text-white px-3 py-2 rounded-lg flex items-center justify-center"
           onClick={() => setIsCreating(true)}
-          disabled={addingToTeam}
         >
           <Plus size={16} className="mr-1" /> Create New Team
         </button>
