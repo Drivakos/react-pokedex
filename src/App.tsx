@@ -25,6 +25,7 @@ function App() {
           <Route path="/magic-link" element={<MagicLinkLogin />} />
           <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="/reset-password/confirm" element={<ResetPasswordConfirm />} />
+          <Route path="/auth/update-password" element={<ResetPasswordConfirm />} />
           <Route path="/auth/callback" element={<AuthCallback />} />
           <Route path="/profile" element={
             <ProtectedRoute>

@@ -18,31 +18,42 @@ const ResetPasswordConfirm: React.FC = () => {
   useEffect(() => {
     const checkResetToken = async () => {
       try {
+        // Check both query params and hash params for recovery type
+        const searchParams = new URLSearchParams(location.search);
         const hashParams = new URLSearchParams(location.hash.substring(1));
-        const type = hashParams.get('type');
         
-        console.log('Reset password hash parameters:', {
-          hash: location.hash,
-          type: type
-        });
+        const queryType = searchParams.get('type');
+        const hashType = hashParams.get('type');
+        const type = queryType || hashType;
         
-        if (type === 'recovery') {
+        // Check if we have a valid session (meaning user came from auth callback or direct email link)
+        const { data: { session } } = await supabase.auth.getSession();
+        
+        // Handle different scenarios for password reset access
+        if (type === 'recovery' && session) {
           setValidResetLink(true);
+        } else if (type === 'recovery' && !session) {
+          setError('Password reset session has expired. Please request a new reset link.');
+        } else if (location.pathname === '/auth/update-password' && session) {
+          // Direct access from Supabase email link
+          setValidResetLink(true);
+        } else if (location.pathname === '/auth/update-password' && !session) {
+          setError('Password reset session has expired. Please request a new reset link.');
         } else if (type === 'signup' || type === 'magiclink') {
           navigate('/', { replace: true });
-        } else if (user) {
+        } else if (user && session) {
+          // User is already logged in and has a valid session
           setValidResetLink(true);
         } else {
           setError('Password reset link is invalid or has expired. Please request a new one.');
         }
       } catch (err) {
-        console.error('Error processing reset password link:', err);
         setError('Error processing reset password link. Please request a new one.');
       }
     };
     
     checkResetToken();
-  }, [location.hash, user, navigate]);
+  }, [location.search, location.hash, location.pathname, user, navigate]);
 
   const handlePasswordUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -85,7 +96,6 @@ const ResetPasswordConfirm: React.FC = () => {
       const { error } = await updatePassword(password);
       
       if (error) {
-        console.error('Password update error:', error);
         setError(error.message || 'Failed to update password');
         return;
       }
@@ -95,7 +105,6 @@ const ResetPasswordConfirm: React.FC = () => {
       
       navigate('/login', { replace: true });
     } catch (error: any) {
-      console.error('Password update failed:', error);
       setError(error.message || 'Failed to update password');
     } finally {
       setLoading(false);

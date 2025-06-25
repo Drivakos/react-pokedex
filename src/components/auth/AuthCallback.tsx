@@ -12,7 +12,6 @@ export const AuthCallback = () => {
   const { refreshSession } = useAuth();
 
   useEffect(() => {
-    const type = searchParams.get('type');
     const handleAuthCallback = async () => {
       try {
         const queryParams = new URLSearchParams(window.location.search);
@@ -24,20 +23,23 @@ export const AuthCallback = () => {
         const accessToken = hashParams.get('access_token');
         const refreshToken = hashParams.get('refresh_token');
 
+        // Check for type parameter first to determine the flow type
+        const type = searchParams.get('type');
+        
+        // Handle error cases first
         if (errorParam) {
           const errorMessage = `Authentication failed: ${errorDescription || errorParam}`;
-          console.error(errorMessage);
           setError(errorMessage);
           toast.error(`Login failed: ${errorDescription || errorParam}`);
           navigate('/login', { replace: true });
           return;
         }
 
+        // PKCE Flow - code parameter in query string
         if (code) {
           const { data, error: exchangeError } = await authService.exchangeCodeForSession(code);
 
           if (exchangeError) {
-            console.error('Code exchange error:', exchangeError);
             setError('Authentication failed - could not exchange code');
             toast.error(exchangeError.message || 'Failed to authenticate');
             navigate('/login', { replace: true });
@@ -45,7 +47,13 @@ export const AuthCallback = () => {
           }
 
           if (data?.session) {
-            console.log('Successfully authenticated with code');
+            // Check if this is a recovery session
+            if (type === 'recovery') {
+              navigate('/reset-password/confirm', { replace: true });
+              return;
+            }
+            
+            // Regular authentication flow
             await refreshSession();
             toast.success('Successfully signed in!');
             navigate('/', { replace: true });
@@ -53,6 +61,7 @@ export const AuthCallback = () => {
           }
         }
 
+        // Implicit Flow - access_token and refresh_token in hash
         if (accessToken && refreshToken) {
           try {
             const { data, error } = await authService.setSession({
@@ -61,19 +70,23 @@ export const AuthCallback = () => {
             });
 
             if (error) {
-              console.error('Error setting session:', error);
               throw error;
             }
 
             if (data.session) {
-              console.log('Successfully set session from hash params');
+              // Check if this is a recovery session
+              if (type === 'recovery') {
+                navigate('/reset-password/confirm', { replace: true });
+                return;
+              }
+              
+              // Regular authentication flow
               await refreshSession();
               toast.success('Successfully signed in!');
               navigate('/', { replace: true });
               return;
             }
           } catch (sessionError) {
-            console.error('Session setting error:', sessionError);
             setError('Failed to set authentication session');
             toast.error('Authentication failed');
             navigate('/login', { replace: true });
@@ -81,19 +94,25 @@ export const AuthCallback = () => {
           }
         }
 
+        // Handle specific type-based flows
         if (type === 'recovery' || type === 'magiclink' || type === 'signup') {
-          console.log(`Processing ${type} authentication`);
-
           if (type === 'recovery') {
-            navigate('/reset-password/confirm');
+            // For recovery type, check if we have a valid session
+            const session = await authService.getSession();
+            if (session) {
+              navigate('/reset-password/confirm', { replace: true });
+            } else {
+              setError('Password reset link is invalid or has expired');
+              toast.error('Password reset link is invalid or has expired');
+              navigate('/reset-password', { replace: true });
+            }
             return;
           }
 
+          // Handle other types (magiclink, signup)
           const session = await authService.getSession();
 
           if (session) {
-            console.log('Session exists, setting in context:', session.user?.email);
-            
             await refreshSession();
 
             const username = session.user?.user_metadata?.full_name ||
@@ -106,7 +125,6 @@ export const AuthCallback = () => {
           }
         }
       } catch (err) {
-        console.error('Auth callback error:', err);
         setError('An unexpected error occurred');
         toast.error('Authentication failed. Please try again.');
 
