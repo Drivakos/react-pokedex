@@ -10,7 +10,7 @@ import ResetPasswordConfirm from './components/auth/ResetPasswordConfirm';
 import MagicLinkLogin from './components/auth/MagicLinkLogin';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 import Navigation from './components/Navigation';
-import TeamBuilder from './components/teams/TeamBuilder';
+import Teams from './components/teams/Teams';
 
 function App() {
   return (
@@ -34,7 +34,7 @@ function App() {
           } />
           <Route path="/teams" element={
             <ProtectedRoute>
-              <TeamBuilder />
+              <Teams />
             </ProtectedRoute>
           } />
         </Routes>
