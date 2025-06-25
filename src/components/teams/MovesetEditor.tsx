@@ -123,6 +123,29 @@ const MovesetEditor: React.FC<MovesetEditorProps> = ({ pokemon, teamId, onBack }
   const [hasGenderDifference, setHasGenderDifference] = useState(false);
   const [activeTab, setActiveTab] = useState<'moves' | 'stats' | 'details'>('moves');
 
+  // Comprehensive competitive held items list
+  const competitiveItems = [
+    // Choice Items
+    'choice-band', 'choice-scarf', 'choice-specs',
+    // Life Orb & Damage Boosters
+    'life-orb', 'expert-belt', 'muscle-band', 'wise-glasses', 'scope-lens',
+    // Defensive Items
+    'leftovers', 'rocky-helmet', 'assault-vest', 'eviolite', 'heavy-duty-boots',
+    // Focus Items
+    'focus-sash', 'focus-band',
+    // Status & Utility
+    'flame-orb', 'toxic-orb', 'black-sludge', 'shed-shell', 'air-balloon',
+    'weakness-policy', 'bright-powder', 'kings-rock', 'razor-claw',
+    // Common Berries
+    'sitrus-berry', 'oran-berry', 'lum-berry', 'chesto-berry', 'pecha-berry',
+    'rawst-berry', 'aspear-berry', 'persim-berry', 'cheri-berry',
+    'liechi-berry', 'ganlon-berry', 'salac-berry', 'petaya-berry', 'apicot-berry',
+    // Weather & Terrain
+    'heat-rock', 'damp-rock', 'smooth-rock', 'icy-rock'
+  ];
+
+  const filteredItems = availableItems;
+
   // Common Pokemon natures
   const commonNatures = [
     'hardy', 'lonely', 'brave', 'adamant', 'naughty',
@@ -130,14 +153,6 @@ const MovesetEditor: React.FC<MovesetEditorProps> = ({ pokemon, teamId, onBack }
     'timid', 'hasty', 'serious', 'jolly', 'naive',
     'modest', 'mild', 'quiet', 'bashful', 'rash',
     'calm', 'gentle', 'sassy', 'careful', 'quirky'
-  ];
-
-  // Common held items
-  const commonItems = [
-    'leftovers', 'choice-band', 'choice-scarf', 'choice-specs',
-    'life-orb', 'focus-sash', 'assault-vest', 'rocky-helmet',
-    'heavy-duty-boots', 'eviolite', 'air-balloon', 'weakness-policy',
-    'expert-belt', 'muscle-band', 'wise-glasses', 'scope-lens'
   ];
 
   useEffect(() => {
@@ -165,9 +180,11 @@ const MovesetEditor: React.FC<MovesetEditorProps> = ({ pokemon, teamId, onBack }
           }));
         }
         
-        // Set available natures and items
+        // Set available natures
         setAvailableNatures(commonNatures.map(name => ({ name })));
-        setAvailableItems(commonItems);
+        
+        // Set competitive items list
+        setAvailableItems(competitiveItems);
         
         // Load saved build from localStorage
         const savedBuild = localStorage.getItem(`build_${teamId}_${pokemon.id}`);
@@ -196,38 +213,58 @@ const MovesetEditor: React.FC<MovesetEditorProps> = ({ pokemon, teamId, onBack }
     toast.success(`Complete build saved for ${formatName(pokemon.name)}!`);
   };
 
-  const handleIVChange = (stat: keyof PokemonBuild['ivs'], value: number) => {
+  const validateAndFormatInput = (value: string, min: number, max: number): number => {
+    const num = parseInt(value, 10);
+    if (isNaN(num)) return min;
+    return Math.max(min, Math.min(max, num));
+  };
+
+  const handleIVChange = (stat: keyof PokemonBuild['ivs'], value: string) => {
+    const formattedValue = validateAndFormatInput(value, 0, 31);
+    // IVs can be 31 for all stats - no total limit needed
+    if (formattedValue !== parseInt(value, 10) && value !== '') {
+      toast.error('IVs must be between 0 and 31');
+    }
+    
     setPokemonBuild(prev => ({
       ...prev,
       ivs: {
         ...prev.ivs,
-        [stat]: Math.max(0, Math.min(31, value))
+        [stat]: formattedValue
       }
     }));
   };
 
-  const handleEVChange = (stat: keyof PokemonBuild['evs'], value: number) => {
-    const currentEVTotal = Object.values(pokemonBuild.evs).reduce((sum, ev) => sum + ev, 0) - pokemonBuild.evs[stat];
-    const maxAllowed = Math.min(252, 510 - currentEVTotal);
+  const handleEVChange = (stat: keyof PokemonBuild['evs'], value: string) => {
+    const newValue = validateAndFormatInput(value, 0, 252);
+    const evs = { ...pokemonBuild.evs };
+    const currentTotal = Object.values(evs).reduce((sum, ev) => sum + ev, 0);
+    const remainingEVs = 510 - (currentTotal - evs[stat]);
+    
+    // Don't allow if it would exceed 510 total
+    const finalValue = Math.min(newValue, remainingEVs);
+    
+    if (newValue > remainingEVs) {
+      toast.error(`Only ${remainingEVs} EVs remaining (510 total limit)`);
+    } else if (finalValue !== parseInt(value, 10) && value !== '') {
+      toast.error('EVs must be between 0 and 252');
+    }
     
     setPokemonBuild(prev => ({
       ...prev,
       evs: {
         ...prev.evs,
-        [stat]: Math.max(0, Math.min(maxAllowed, value))
+        [stat]: finalValue
       }
     }));
   };
 
   const formatStatName = (stat: string) => {
-    return stat.split('-').map(word => 
-      word === 'hp' ? 'HP' : word.charAt(0).toUpperCase() + word.slice(1)
-    ).join(' ');
+    return stat.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
   };
 
-  const getEVTotal = () => {
-    return Object.values(pokemonBuild.evs).reduce((sum, ev) => sum + ev, 0);
-  };
+  const totalEVs = Object.values(pokemonBuild.evs).reduce((sum, ev) => sum + ev, 0);
+  const remainingEVs = 510 - totalEVs;
 
   // Rest of existing code for move handling...
   const loadMoveDetails = async (moveName: string): Promise<MoveDetails | null> => {
@@ -432,6 +469,20 @@ const MovesetEditor: React.FC<MovesetEditorProps> = ({ pokemon, teamId, onBack }
           )}
         </div>
 
+        {/* Move Selector */}
+        {showMoveSelector && (
+          <div className="bg-white rounded-xl p-6 shadow-lg mb-8">
+            <h2 className="text-xl font-bold text-gray-800 mb-4">Available Moves</h2>
+            <MovesFilter
+              availableMoves={availableMoves}
+              selectedMoves={selectedMoves}
+              searchTerm={searchTerm}
+              onSearchChange={setSearchTerm}
+              onMoveToggle={handleMoveToggle}
+            />
+          </div>
+        )}
+
         {/* Build Customization */}
         <div className="mb-8">
           <div className="flex items-center justify-between mb-4">
@@ -466,7 +517,8 @@ const MovesetEditor: React.FC<MovesetEditorProps> = ({ pokemon, teamId, onBack }
                       min="0"
                       max="31"
                       value={pokemonBuild.ivs[stat as keyof PokemonBuild['ivs']]}
-                      onChange={(e) => handleIVChange(stat as keyof PokemonBuild['ivs'], parseInt(e.target.value, 10) || 0)}
+                      onChange={(e) => handleIVChange(stat as keyof PokemonBuild['ivs'], e.target.value)}
+                      onBlur={(e) => handleIVChange(stat as keyof PokemonBuild['ivs'], e.target.value)}
                       className="w-16 p-1 border border-gray-300 rounded text-center"
                     />
                   </div>
@@ -482,13 +534,14 @@ const MovesetEditor: React.FC<MovesetEditorProps> = ({ pokemon, teamId, onBack }
                       min="0"
                       max="252"
                       value={pokemonBuild.evs[stat as keyof PokemonBuild['evs']]}
-                      onChange={(e) => handleEVChange(stat as keyof PokemonBuild['evs'], parseInt(e.target.value, 10) || 0)}
+                      onChange={(e) => handleEVChange(stat as keyof PokemonBuild['evs'], e.target.value)}
+                      onBlur={(e) => handleEVChange(stat as keyof PokemonBuild['evs'], e.target.value)}
                       className="w-16 p-1 border border-gray-300 rounded text-center"
                     />
                   </div>
                 ))}
               </div>
-              <p className="text-gray-600 text-xs mt-2">Total EVs: {getEVTotal()}</p>
+              <p className="text-gray-600 text-xs mt-2">Total EVs: {totalEVs} / 510 ({remainingEVs} remaining)</p>
             </div>
           ) : (
             <div className="bg-white rounded-xl p-6 shadow-lg">
@@ -533,27 +586,13 @@ const MovesetEditor: React.FC<MovesetEditorProps> = ({ pokemon, teamId, onBack }
                 className="w-full p-2 border border-gray-300 rounded text-gray-800"
               >
                 <option value="">No Item</option>
-                {availableItems.map((item) => (
+                {filteredItems.map((item) => (
                   <option key={item} value={item}>{formatName(item)}</option>
                 ))}
               </select>
             </div>
           )}
         </div>
-
-        {/* Move Selector */}
-        {showMoveSelector && (
-          <div className="bg-white rounded-xl p-6 shadow-lg">
-            <h2 className="text-xl font-bold text-gray-800 mb-4">Available Moves</h2>
-            <MovesFilter
-              availableMoves={availableMoves}
-              selectedMoves={selectedMoves}
-              searchTerm={searchTerm}
-              onSearchChange={setSearchTerm}
-              onMoveToggle={handleMoveToggle}
-            />
-          </div>
-        )}
       </div>
     </div>
   );
