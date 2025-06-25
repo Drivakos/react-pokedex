@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { useAuth } from '../../hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
@@ -8,8 +8,8 @@ const Profile: React.FC = () => {
   const [username, setUsername] = useState(profile?.username || '');
   const [loading, setLoading] = useState(false);
   const [fetchingFavorites, setFetchingFavorites] = useState(true);
-  const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [message, setMessage] = useState<string | null>(null);
   const [favorites, setFavorites] = useState<number[]>([]);
   const navigate = useNavigate();
 
@@ -35,20 +35,14 @@ const Profile: React.FC = () => {
       if (data) {
         setFavorites(data.map(item => item.pokemon_id));
       }
-    } catch (error) {
-      setError(error.message || 'Failed to fetch favorites');
+    } catch (error: any) {
+      setError((error as Error).message || 'Failed to fetch favorites');
     } finally {
       setFetchingFavorites(false);
     }
   }, [user?.id]);
 
-  React.useEffect(() => {
-    if (profile?.username) {
-      setUsername(profile.username);
-    }
-  }, [profile]);
-  
-  React.useEffect(() => {
+  useEffect(() => {
     if (user?.id && !loading) {
       fetchFavorites();
     } else if (!user?.id) {
@@ -56,7 +50,9 @@ const Profile: React.FC = () => {
     }
   }, [user?.id, fetchFavorites, loading]);
 
-
+  useEffect(() => {
+    setUsername(profile?.username || '');
+  }, [profile?.username]);
 
   const handleUpdateProfile = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -74,7 +70,7 @@ const Profile: React.FC = () => {
 
       setMessage('Profile updated successfully!');
     } catch (error: any) {
-      setError(error.message || 'Failed to update profile');
+      setError((error as Error).message || 'Failed to update profile');
     } finally {
       setLoading(false);
     }
@@ -85,7 +81,7 @@ const Profile: React.FC = () => {
       await signOut();
       navigate('/');
     } catch (error: any) {
-      setError(error.message || 'Failed to sign out');
+      setError((error as Error).message || 'Failed to sign out');
     }
   };
 
