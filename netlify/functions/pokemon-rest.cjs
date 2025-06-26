@@ -21,13 +21,8 @@ exports.handler = async (event, context) => {
   }
 
   try {
-    // Add debugging
-    console.log('Event path:', event.path);
-    console.log('Event query params:', event.queryStringParameters);
-    
     // Parse the URL path to get the API endpoint
     const pathSegments = event.path.split('/');
-    console.log('Path segments:', pathSegments);
     
     // The path comes as /api/pokemon/rest/pokemon/4
     // We need to extract everything after 'rest'
@@ -38,10 +33,7 @@ exports.handler = async (event, context) => {
       functionIndex = pathSegments.findIndex(segment => segment === 'pokemon-rest');
     }
     
-    console.log('Function index:', functionIndex);
-    
     if (functionIndex === -1 || functionIndex >= pathSegments.length - 1) {
-      console.log('Error: No API path found');
       return {
         statusCode: 400,
         headers: {
@@ -65,9 +57,6 @@ exports.handler = async (event, context) => {
       new URLSearchParams(event.queryStringParameters).toString() : '';
     const fullApiUrl = `${REST_ENDPOINT}/${apiPath}${queryString ? `?${queryString}` : ''}`;
     
-    console.log('API path:', apiPath);
-    console.log('Full API URL:', fullApiUrl);
-
     // Create the request
     const apiRequest = new Request(fullApiUrl, {
       method: 'GET',
