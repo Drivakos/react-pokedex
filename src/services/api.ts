@@ -1,8 +1,17 @@
 import { Pokemon, RawPokemonData, Filters, PokemonDetails } from '../types/pokemon';
+import { 
+  fetchCachedPokemonById, 
+  fetchCachedPokemonData, 
+  fetchCachedPokemonDetails, 
+  fetchCachedFilterOptions 
+} from './cached-api';
 
-// Use environment variables for API endpoints
+// Use environment variables for API endpoints (fallback for direct calls)
 const GRAPHQL_ENDPOINT = import.meta.env.VITE_API_GRAPHQL_URL || 'https://beta.pokeapi.co/graphql/v1beta';
 const REST_ENDPOINT = import.meta.env.VITE_API_REST_URL || import.meta.env.VITE_API_URL || 'https://pokeapi.co/api/v2';
+
+// Feature flag to enable/disable caching
+const USE_CACHED_API = import.meta.env.VITE_USE_CACHED_API !== 'false'; // Default to true
 
 // Validate API endpoints
 if (!GRAPHQL_ENDPOINT || !REST_ENDPOINT) {
@@ -64,10 +73,22 @@ export const buildTypeAndCondition = (types: string[]) => {
 };
 
 /**
- * Fetches a single Pokemon by ID
+ * Fetches a single Pokemon by ID with caching support
  */
 export const fetchPokemonById = async (id: number): Promise<Pokemon> => {
+  // Try cached version first if enabled
+  if (USE_CACHED_API) {
+    try {
+      console.log(`🚀 Fetching Pokemon ${id} from cached API`);
+      return await fetchCachedPokemonById(id);
+    } catch (error) {
+      console.warn(`⚠️ Cached API failed for Pokemon ${id}, falling back to direct API:`, error);
+    }
+  }
+
+  // Fallback to direct API call
   try {
+    console.log(`📡 Fetching Pokemon ${id} from direct API`);
     const query = `
       query GetPokemonById($id: Int!) {
         pokemon_v2_pokemon_by_pk(id: $id) {
@@ -140,7 +161,7 @@ export const fetchPokemonById = async (id: number): Promise<Pokemon> => {
 };
 
 /**
- * Fetches Pokemon data from GraphQL API
+ * Fetches Pokemon data from GraphQL API with caching support
  */
 export const fetchPokemonData = async (
   limit: number, 
@@ -148,7 +169,19 @@ export const fetchPokemonData = async (
   searchTerm: string, 
   filters: Filters
 ): Promise<Pokemon[]> => {
+  // Try cached version first if enabled
+  if (USE_CACHED_API) {
+    try {
+      console.log(`🚀 Fetching Pokemon data from cached API (limit: ${limit}, offset: ${offset})`);
+      return await fetchCachedPokemonData(limit, offset, searchTerm, filters);
+    } catch (error) {
+      console.warn(`⚠️ Cached API failed for Pokemon data, falling back to direct API:`, error);
+    }
+  }
+
+  // Fallback to direct API call
   try {
+    console.log(`📡 Fetching Pokemon data from direct API (limit: ${limit}, offset: ${offset})`);
     const whereConditions = buildWhereConditions(searchTerm, filters);
     const typeAndCondition = buildTypeAndCondition(filters.types);
 
@@ -282,7 +315,19 @@ export const transformSinglePokemon = (p: RawPokemonData): Pokemon => {
  * Fetches detailed Pokemon data from the REST API
  */
 export const fetchPokemonDetails = async (id: number): Promise<PokemonDetails> => {
+  // Try cached version first if enabled
+  if (USE_CACHED_API) {
+    try {
+      console.log(`🚀 Fetching Pokemon details ${id} from cached API`);
+      return await fetchCachedPokemonDetails(id);
+    } catch (error) {
+      console.warn(`⚠️ Cached API failed for Pokemon details ${id}, falling back to direct API:`, error);
+    }
+  }
+
+  // Fallback to direct API call
   try {
+    console.log(`📡 Fetching Pokemon details ${id} from direct API`);
     // Fetch basic Pokemon data
     const pokemonResponse = await fetch(`${REST_ENDPOINT}/pokemon/${id}`);
     const pokemonData = await pokemonResponse.json();
@@ -426,7 +471,19 @@ export const fetchPokemonDetails = async (id: number): Promise<PokemonDetails> =
  * Fetches available filter options (types, moves, generations)
  */
 export const fetchFilterOptions = async () => {
+  // Try cached version first if enabled
+  if (USE_CACHED_API) {
+    try {
+      console.log(`🚀 Fetching filter options from cached API`);
+      return await fetchCachedFilterOptions();
+    } catch (error) {
+      console.warn(`⚠️ Cached API failed for filter options, falling back to direct API:`, error);
+    }
+  }
+
+  // Fallback to direct API call
   try {
+    console.log(`📡 Fetching filter options from direct API`);
     const query = `
       query GetFilterOptions {
         types: pokemon_v2_type(where: {pokemon_v2_pokemontypes: {pokemon_v2_pokemon: {is_default: {_eq: true}}}}) {

@@ -394,11 +394,12 @@ const Teams: React.FC = () => {
             </div>
             <button
               onClick={() => exportTeam(selectedTeam, teamMembers)}
-              className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors"
+              className="flex items-center gap-1 md:gap-2 bg-blue-600 hover:bg-blue-700 text-white px-2 py-1 md:px-4 md:py-2 rounded-lg font-medium transition-colors text-sm md:text-base"
               title="Export team to clipboard"
             >
-              <Copy size={16} />
-              Export Team
+              <Copy size={14} className="md:w-4 md:h-4" />
+              <span className="hidden sm:inline">Export Team</span>
+              <span className="sm:hidden">Export</span>
             </button>
           </div>
 
@@ -461,17 +462,19 @@ const Teams: React.FC = () => {
                         <span>Position {member.position}</span>
                         <ChevronRight size={16} className="text-blue-500" />
                       </div>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          exportSinglePokemon(member.pokemon_id);
-                        }}
-                        className="flex items-center gap-2 bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-md font-medium transition-colors text-sm"
-                        title="Export Pokemon to clipboard"
-                      >
-                        <Copy size={14} />
-                        Export
-                      </button>
+                      <div className="flex justify-center mt-3">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            exportSinglePokemon(member.pokemon_id);
+                          }}
+                          className="flex items-center gap-2 bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-md font-medium transition-colors text-sm"
+                          title="Export Pokemon to clipboard"
+                        >
+                          <Copy size={14} />
+                          Export
+                        </button>
+                      </div>
                     </div>
                   </div>
                 );

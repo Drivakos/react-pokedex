@@ -1,6 +1,7 @@
 [build]
   command = "npm run build:prod"
   publish = "dist"
+  functions = "netlify/functions"
   ignore = "git diff --quiet $CACHED_COMMIT_REF $COMMIT_REF ./src/"
 
 [dev]
@@ -44,7 +45,7 @@
        style-src 'self' 'unsafe-inline';
        img-src 'self' data: https://raw.githubusercontent.com https://images.pokemontcg.io/ https://*.googleusercontent.com https://*.googleapis.com;
        font-src 'self' data:;
-       connect-src 'self' https://kefcxvcbpadksfizrckw.supabase.co https://beta.pokeapi.co https://api.pokemontcg.io https://pokeapi.co;
+       connect-src 'self' https://kefcxvcbpadksfizrckw.supabase.co https://beta.pokeapi.co https://api.pokemontcg.io https://pokeapi.co /.netlify/functions/;
      """
     Access-Control-Allow-Origin = "*"
 
