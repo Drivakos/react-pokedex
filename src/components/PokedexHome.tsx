@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { RefreshCw, SlidersHorizontal, X } from 'lucide-react';
+import { RefreshCw, SlidersHorizontal, X, Trophy } from 'lucide-react';
 import { Helmet } from 'react-helmet-async';
 import { PokemonDetail } from './PokemonDetail';
 import { PokemonList } from './PokemonList';
@@ -11,6 +11,7 @@ import { FilterTabs } from './filters/FilterTabs';
 import { TypesFilter } from './filters/TypesFilter';
 import { MovesFilter } from './filters/MovesFilter';
 import { OtherFilters } from './filters/OtherFilters';
+import GymLeaderChallenge from './GymLeaderChallenge';
 
 const PokedexHome: React.FC = () => {
   // Use our custom hooks
@@ -37,6 +38,7 @@ const PokedexHome: React.FC = () => {
   const [showDesktopFilters, setShowDesktopFilters] = useState(false);
   const [activeFilterTab, setActiveFilterTab] = useState('types');
   const [moveSearch, setMoveSearch] = useState('');
+  const [showGymChallenge, setShowGymChallenge] = useState(false);
   
   // Setup the intersection observer for infinite scrolling
   const setupObserver = (node: HTMLDivElement | null) => {
@@ -113,8 +115,12 @@ const PokedexHome: React.FC = () => {
       </Helmet>
       
       <header className="mb-6">
+        {/* Main heading for SEO and accessibility */}
+        <h1 className="text-3xl md:text-4xl font-bold text-center text-gray-800 mb-6">
+          Pokédex - Discover All Pokémon
+        </h1>
+        
         <div className="flex flex-col md:flex-row md:items-center md:justify-center gap-4 md:gap-6 mb-6" data-component-name="PokedexHome">
-          {/* Heading removed - already in navigation */}
           
           <div className="flex-1 max-w-2xl md:w-4/5 md:flex md:items-center" data-component-name="PokedexHome">
             <SearchBar 
@@ -153,6 +159,17 @@ const PokedexHome: React.FC = () => {
           </div>
         </div>
       </header>
+
+      {/* Gym Leader Challenge Button */}
+      <div className="flex justify-center mb-6">
+        <button
+          onClick={() => setShowGymChallenge(true)}
+          className="bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600 text-white font-bold py-3 px-6 rounded-lg shadow-lg transform hover:scale-105 transition-all duration-200 flex items-center gap-2"
+        >
+          <Trophy size={20} />
+          <span>Gym Leader Challenge</span>
+        </button>
+      </div>
       
       <main className="flex flex-col gap-6">
         {/* Desktop Filters */}
@@ -360,6 +377,14 @@ const PokedexHome: React.FC = () => {
       </button>
       
       {detailModal}
+      
+      {/* Gym Leader Challenge Modal */}
+      {showGymChallenge && (
+        <div className="fixed inset-0 z-50">
+          <GymLeaderChallenge onBack={() => setShowGymChallenge(false)} />
+        </div>
+      )}
+      
       <div className="container mx-auto px-4 py-4 mt-8">
         <div className="text-sm text-gray-500 flex justify-between">
           <div>

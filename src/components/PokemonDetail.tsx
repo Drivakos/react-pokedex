@@ -5,6 +5,7 @@ import { TYPE_COLORS } from '../types/pokemon';
 import { X, ExternalLink, ChevronDown, ChevronUp, Users } from 'lucide-react';
 import FavoritePokemon from './FavoritePokemon';
 import TeamSelector from './teams/TeamSelector';
+import BattleButton from './BattleButton';
 import { useAuth } from '../hooks/useAuth';
 
 interface PokemonDetailProps {
@@ -129,7 +130,8 @@ export const PokemonDetail: React.FC<PokemonDetailProps> = ({ pokemon, onClose }
             )}
           </div>
           
-          <div className="mt-6 w-full">
+          <div className="mt-6 w-full space-y-3">
+            <BattleButton pokemon={pokemon} className="w-full" />
             <Link 
               to={`/pokemon/${pokemon.id}`} 
               className="flex items-center justify-center gap-2 w-full bg-blue-500 hover:bg-blue-600 text-white py-3 px-4 rounded-lg font-medium transition-colors"

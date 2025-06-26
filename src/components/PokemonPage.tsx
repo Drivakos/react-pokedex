@@ -10,6 +10,7 @@ import Footer from './Footer';
 import PokemonSeoContent from './PokemonSeoContent';
 import RelatedPokemon from './RelatedPokemon';
 import FavoritePokemon from './FavoritePokemon';
+import BattleButton from './BattleButton';
 
 // No need for hardcoded mapping anymore as we get species_id from the API
 
@@ -283,6 +284,13 @@ const PokemonPage: React.FC = () => {
                     <p className="font-semibold">{pokemonDetails.base_experience}</p>
                   </div>
                 </div>
+              </div>
+            </div>
+            
+            {/* Battle Button Section */}
+            <div className="p-6 bg-gray-50 border-b">
+              <div className="max-w-md mx-auto">
+                <BattleButton pokemon={pokemonDetails} className="w-full" />
               </div>
             </div>
           </div>
