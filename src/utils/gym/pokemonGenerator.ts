@@ -246,93 +246,393 @@ const generatePokemonMoves = async (pokemonData: any, level: number): Promise<an
 
 // Fallback move generation (simplified)
 const generateFallbackMoves = (types: string[], level: number): any[] => {
-  const moves = [
+  const moves = [];
+
+  // Add type-specific STAB moves first
+  types.forEach(type => {
+    switch (type) {
+      case 'fire':
+        moves.push({
+          name: 'flamethrower',
+          type: 'fire',
+          power: 90,
+          accuracy: 100,
+          pp: 15,
+          currentPP: 15,
+          damageClass: 'special',
+          priority: 0,
+          target: 'opponent',
+          description: 'The target is scorched with an intense blast of fire.'
+        });
+        break;
+      case 'water':
+        moves.push({
+          name: 'surf',
+          type: 'water',
+          power: 90,
+          accuracy: 100,
+          pp: 15,
+          currentPP: 15,
+          damageClass: 'special',
+          priority: 0,
+          target: 'opponent',
+          description: 'The user attacks everything around it by swamping its surroundings with a giant wave.'
+        });
+        break;
+      case 'electric':
+        moves.push({
+          name: 'thunderbolt',
+          type: 'electric',
+          power: 90,
+          accuracy: 100,
+          pp: 15,
+          currentPP: 15,
+          damageClass: 'special',
+          priority: 0,
+          target: 'opponent',
+          description: 'A strong electric blast crashes down on the target. This may also leave the target with paralysis.',
+          effect: 'paralyze'
+        });
+        break;
+      case 'grass':
+        moves.push({
+          name: 'solar-beam',
+          type: 'grass',
+          power: 120,
+          accuracy: 100,
+          pp: 10,
+          currentPP: 10,
+          damageClass: 'special',
+          priority: 0,
+          target: 'opponent',
+          description: 'A two-turn attack. The user gathers light, then blasts a bundled beam on the next turn.'
+        });
+        break;
+      case 'ice':
+        moves.push({
+          name: 'ice-beam',
+          type: 'ice',
+          power: 90,
+          accuracy: 100,
+          pp: 10,
+          currentPP: 10,
+          damageClass: 'special',
+          priority: 0,
+          target: 'opponent',
+          description: 'The target is struck with an icy-cold beam of energy. This may also leave the target frozen.',
+          effect: 'freeze'
+        });
+        break;
+      case 'fighting':
+        moves.push({
+          name: 'close-combat',
+          type: 'fighting',
+          power: 120,
+          accuracy: 100,
+          pp: 5,
+          currentPP: 5,
+          damageClass: 'physical',
+          priority: 0,
+          target: 'opponent',
+          description: 'The user fights the target up close without guarding itself.',
+          effect: 'lower_defense'
+        });
+        break;
+      case 'poison':
+        moves.push({
+          name: 'sludge-bomb',
+          type: 'poison',
+          power: 90,
+          accuracy: 100,
+          pp: 10,
+          currentPP: 10,
+          damageClass: 'special',
+          priority: 0,
+          target: 'opponent',
+          description: 'Unsanitary sludge is hurled at the target. This may also poison the target.',
+          effect: 'poison'
+        });
+        break;
+      case 'ground':
+        moves.push({
+          name: 'earthquake',
+          type: 'ground',
+          power: 100,
+          accuracy: 100,
+          pp: 10,
+          currentPP: 10,
+          damageClass: 'physical',
+          priority: 0,
+          target: 'opponent',
+          description: 'The user sets off an earthquake that strikes every Pokémon around it.'
+        });
+        break;
+      case 'flying':
+        moves.push({
+          name: 'air-slash',
+          type: 'flying',
+          power: 75,
+          accuracy: 95,
+          pp: 15,
+          currentPP: 15,
+          damageClass: 'special',
+          priority: 0,
+          target: 'opponent',
+          description: 'The user attacks with a blade of air that slices even the sky.',
+          effect: 'flinch'
+        });
+        break;
+      case 'psychic':
+        moves.push({
+          name: 'psychic',
+          type: 'psychic',
+          power: 90,
+          accuracy: 100,
+          pp: 10,
+          currentPP: 10,
+          damageClass: 'special',
+          priority: 0,
+          target: 'opponent',
+          description: 'The target is hit by a strong telekinetic force.',
+          effect: 'lower_special_defense'
+        });
+        break;
+      case 'bug':
+        moves.push({
+          name: 'x-scissor',
+          type: 'bug',
+          power: 80,
+          accuracy: 100,
+          pp: 15,
+          currentPP: 15,
+          damageClass: 'physical',
+          priority: 0,
+          target: 'opponent',
+          description: 'The user slashes at the target by crossing its scythes or claws as if they were a pair of scissors.'
+        });
+        break;
+      case 'rock':
+        moves.push({
+          name: 'stone-edge',
+          type: 'rock',
+          power: 100,
+          accuracy: 80,
+          pp: 5,
+          currentPP: 5,
+          damageClass: 'physical',
+          priority: 0,
+          target: 'opponent',
+          description: 'The user stabs the target from below with sharpened stones. Critical hits land more easily.'
+        });
+        break;
+      case 'ghost':
+        moves.push({
+          name: 'shadow-ball',
+          type: 'ghost',
+          power: 80,
+          accuracy: 100,
+          pp: 15,
+          currentPP: 15,
+          damageClass: 'special',
+          priority: 0,
+          target: 'opponent',
+          description: 'The user hurls a shadowy blob at the target.',
+          effect: 'lower_special_defense'
+        });
+        break;
+      case 'dragon':
+        moves.push({
+          name: 'dragon-pulse',
+          type: 'dragon',
+          power: 85,
+          accuracy: 100,
+          pp: 10,
+          currentPP: 10,
+          damageClass: 'special',
+          priority: 0,
+          target: 'opponent',
+          description: 'The target is attacked with a shock wave generated by the user\'s gaping mouth.'
+        });
+        break;
+      case 'dark':
+        moves.push({
+          name: 'dark-pulse',
+          type: 'dark',
+          power: 80,
+          accuracy: 100,
+          pp: 15,
+          currentPP: 15,
+          damageClass: 'special',
+          priority: 0,
+          target: 'opponent',
+          description: 'The user releases a horrible aura imbued with dark thoughts.',
+          effect: 'flinch'
+        });
+        break;
+      case 'steel':
+        moves.push({
+          name: 'iron-tail',
+          type: 'steel',
+          power: 100,
+          accuracy: 75,
+          pp: 15,
+          currentPP: 15,
+          damageClass: 'physical',
+          priority: 0,
+          target: 'opponent',
+          description: 'The target is slammed with a steel-hard tail.',
+          effect: 'lower_defense'
+        });
+        break;
+      case 'fairy':
+        moves.push({
+          name: 'moonblast',
+          type: 'fairy',
+          power: 95,
+          accuracy: 100,
+          pp: 15,
+          currentPP: 15,
+          damageClass: 'special',
+          priority: 0,
+          target: 'opponent',
+          description: 'Borrowing the power of the moon, the user attacks the target.',
+          effect: 'lower_special_attack'
+        });
+        break;
+      default:
+        // For normal type or unknown types, add tackle
+        moves.push({
+          name: 'tackle',
+          type: 'normal',
+          power: 40,
+          accuracy: 100,
+          pp: 35,
+          currentPP: 35,
+          damageClass: 'physical',
+          priority: 0,
+          target: 'opponent',
+          description: 'A physical attack in which the user charges and slams into the target with its whole body.'
+        });
+    }
+  });
+
+  // Add diverse status moves to create strategic depth
+  const statusMoves = [
     {
-      name: 'tackle',
-      type: 'normal',
-      power: 40,
-      accuracy: 100,
-      pp: 35,
-      currentPP: 35,
-      damageClass: 'physical',
+      name: 'toxic',
+      type: 'poison',
+      power: 0,
+      accuracy: 90,
+      pp: 10,
+      currentPP: 10,
+      damageClass: 'status',
       priority: 0,
       target: 'opponent',
-      description: 'A physical attack in which the user charges and slams into the target with its whole body.'
+      description: 'A move that leaves the target badly poisoned.',
+      effect: 'bad_poison'
+    },
+    {
+      name: 'thunder-wave',
+      type: 'electric',
+      power: 0,
+      accuracy: 90,
+      pp: 20,
+      currentPP: 20,
+      damageClass: 'status',
+      priority: 0,
+      target: 'opponent',
+      description: 'The user launches a weak jolt of electricity that paralyzes the target.',
+      effect: 'paralyze'
+    },
+    {
+      name: 'will-o-wisp',
+      type: 'fire',
+      power: 0,
+      accuracy: 85,
+      pp: 15,
+      currentPP: 15,
+      damageClass: 'status',
+      priority: 0,
+      target: 'opponent',
+      description: 'The user shoots a sinister, bluish-white flame at the target to inflict a burn.',
+      effect: 'burn'
+    },
+    {
+      name: 'swords-dance',
+      type: 'normal',
+      power: 0,
+      accuracy: 100,
+      pp: 20,
+      currentPP: 20,
+      damageClass: 'status',
+      priority: 0,
+      target: 'self',
+      description: 'A frenetic dance to uplift the fighting spirit. This sharply raises the user\'s Attack stat.',
+      effect: 'raise_attack_2'
+    },
+    {
+      name: 'recover',
+      type: 'normal',
+      power: 0,
+      accuracy: 100,
+      pp: 10,
+      currentPP: 10,
+      damageClass: 'status',
+      priority: 0,
+      target: 'self',
+      description: 'Restoring its own cells, the user restores its own HP by half of its max HP.',
+      effect: 'heal_50'
     }
   ];
 
-  // Add type-specific moves
+  // Add a second attacking move based on types or generic
   if (types.includes('fire')) {
     moves.push({
-      name: 'ember',
+      name: 'fire-blast',
       type: 'fire',
-      power: 40,
-      accuracy: 100,
-      pp: 25,
-      currentPP: 25,
+      power: 110,
+      accuracy: 85,
+      pp: 5,
+      currentPP: 5,
       damageClass: 'special',
       priority: 0,
       target: 'opponent',
-      description: 'The target is attacked with small flames. This may also leave the target with a burn.',
+      description: 'A searing blast of fire that may inflict a burn.',
       effect: 'burn'
     });
   } else if (types.includes('water')) {
     moves.push({
-      name: 'water-gun',
+      name: 'hydro-pump',
       type: 'water',
-      power: 40,
-      accuracy: 100,
-      pp: 25,
-      currentPP: 25,
+      power: 110,
+      accuracy: 80,
+      pp: 5,
+      currentPP: 5,
       damageClass: 'special',
       priority: 0,
       target: 'opponent',
-      description: 'The target is blasted with a forceful shot of water.'
+      description: 'The target is blasted by a huge volume of water launched under great pressure.'
     });
-  } else if (types.includes('electric')) {
+  } else {
     moves.push({
-      name: 'thunder-shock',
-      type: 'electric',
-      power: 40,
+      name: 'return',
+      type: 'normal',
+      power: 80,
       accuracy: 100,
-      pp: 30,
-      currentPP: 30,
-      damageClass: 'special',
-      priority: 0,
-      target: 'opponent',
-      description: 'A jolt of electricity crashes down on the target to inflict damage. This may also leave the target with paralysis.',
-      effect: 'paralyze'
-    });
-  } else if (types.includes('grass')) {
-    moves.push({
-      name: 'vine-whip',
-      type: 'grass',
-      power: 45,
-      accuracy: 100,
-      pp: 25,
-      currentPP: 25,
+      pp: 20,
+      currentPP: 20,
       damageClass: 'physical',
       priority: 0,
       target: 'opponent',
-      description: 'The target is struck with slender, whiplike vines to inflict damage.'
+      description: 'A full-power attack that grows more powerful the more the user likes its Trainer.'
     });
   }
 
-  // Add basic status moves
-  moves.push({
-    name: 'growl',
-    type: 'normal',
-    power: 0,
-    accuracy: 100,
-    pp: 40,
-    currentPP: 40,
-    damageClass: 'status',
-    priority: 0,
-    target: 'all-opponents',
-    description: 'The user growls in an endearing way, making opposing Pokémon less wary. This lowers their Attack stats.',
-    effect: 'lower_attack'
-  });
+  // Add one random status move
+  const randomStatusMove = statusMoves[Math.floor(Math.random() * statusMoves.length)];
+  moves.push(randomStatusMove);
 
+  // Add protect as a defensive option
   moves.push({
     name: 'protect',
     type: 'normal',

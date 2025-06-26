@@ -4,6 +4,7 @@ import { fetchCachedPokemonData } from '../../services/cached-api';
 import { GymChallengeState, GymType, GymPokemon, ChallengerTeam } from '../../utils/gym/types';
 import { CHALLENGER_NAMES } from '../../utils/gym/constants';
 import { createGymPokemonSync, getRandomPokemonOfType } from '../../utils/gym/pokemonGenerator';
+import { createGymPokemon } from '../../utils/gym/pokemonGenerator';
 
 export function useGymChallenge() {
   const [state, setState] = useState<GymChallengeState>({
@@ -95,13 +96,22 @@ export function useGymChallenge() {
       if (selectedPokemon) {
         // Challenger Pokemon levels scale with battle wins
         const level = Math.max(15, Math.min(60, 25 + state.battleWins * 3 + Math.floor(Math.random() * 15)));
-        // Use sync version for challengers to avoid async complexity in battle generation
-        team.push(createGymPokemonSync(selectedPokemon, level, true));
+        
+        try {
+          // Use async version for enhanced move diversity
+          const gymPokemon = await createGymPokemon(selectedPokemon, level, true);
+          team.push(gymPokemon);
+        } catch (error) {
+          console.warn(`Failed to create enhanced opponent ${selectedPokemon.name}, using fallback moves`, error);
+          // Fallback to sync version if async fails
+          const gymPokemon = createGymPokemonSync(selectedPokemon, level, true);
+          team.push(gymPokemon);
+        }
       }
     }
 
     console.log(`Generated challenger ${challengerName} with ${team.length} Pokemon (battle #${state.battleWins + 1}):`, 
-      team.map(p => `${p.name} (Lv.${p.level}, ${p.types.join('/')})`));
+      team.map(p => `${p.name} (Lv.${p.level}, ${p.types.join('/')}) - moves: ${p.moves.map(m => m.name).join(', ')}`));
 
     return { pokemon: team, name: challengerName };
   }, [state.allPokemon, state.battleWins]);
@@ -120,13 +130,23 @@ export function useGymChallenge() {
     },
 
     handlePokemonSelection: async (pokemon: any) => {
-      // Use sync version for simplicity, or make this async if needed
-      const gymPokemon = createGymPokemonSync(pokemon, 50);
-      setState(prev => ({
-        ...prev,
-        gymTeam: [gymPokemon],
-        gamePhase: 'pokemon-select-for-battle'
-      }));
+      // Use async version for better move generation
+      try {
+        const gymPokemon = await createGymPokemon(pokemon, 50);
+        setState(prev => ({
+          ...prev,
+          gymTeam: [gymPokemon],
+          gamePhase: 'pokemon-select-for-battle'
+        }));
+      } catch (error) {
+        console.warn('Failed to create gym Pokemon with async moves, using sync version', error);
+        const gymPokemon = createGymPokemonSync(pokemon, 50);
+        setState(prev => ({
+          ...prev,
+          gymTeam: [gymPokemon],
+          gamePhase: 'pokemon-select-for-battle'
+        }));
+      }
     },
 
     startNewBattle: async () => {
@@ -184,27 +204,51 @@ export function useGymChallenge() {
     },
 
     handleTeamExpansion: async (pokemon: any) => {
-      // Use sync version for simplicity
-      const newGymPokemon = createGymPokemonSync(pokemon, 50);
-      
-      setState(prev => {
-        if (prev.pokemonToReplace) {
-          // Replace the selected Pokemon
-          return {
-            ...prev,
-            gymTeam: prev.gymTeam.map(p => p.id === prev.pokemonToReplace!.id ? newGymPokemon : p),
-            pokemonToReplace: null,
-            gamePhase: 'pokemon-select-for-battle'
-          };
-        } else {
-          // Add new Pokemon to team
-          return {
-            ...prev,
-            gymTeam: [...prev.gymTeam, newGymPokemon],
-            gamePhase: 'pokemon-select-for-battle'
-          };
-        }
-      });
+      // Use async version for better move generation
+      try {
+        const newGymPokemon = await createGymPokemon(pokemon, 50);
+        
+        setState(prev => {
+          if (prev.pokemonToReplace) {
+            // Replace the selected Pokemon
+            return {
+              ...prev,
+              gymTeam: prev.gymTeam.map(p => p.id === prev.pokemonToReplace!.id ? newGymPokemon : p),
+              pokemonToReplace: null,
+              gamePhase: 'pokemon-select-for-battle'
+            };
+          } else {
+            // Add new Pokemon to team
+            return {
+              ...prev,
+              gymTeam: [...prev.gymTeam, newGymPokemon],
+              gamePhase: 'pokemon-select-for-battle'
+            };
+          }
+        });
+      } catch (error) {
+        console.warn('Failed to create gym Pokemon with async moves, using sync version', error);
+        const newGymPokemon = createGymPokemonSync(pokemon, 50);
+        
+        setState(prev => {
+          if (prev.pokemonToReplace) {
+            // Replace the selected Pokemon
+            return {
+              ...prev,
+              gymTeam: prev.gymTeam.map(p => p.id === prev.pokemonToReplace!.id ? newGymPokemon : p),
+              pokemonToReplace: null,
+              gamePhase: 'pokemon-select-for-battle'
+            };
+          } else {
+            // Add new Pokemon to team
+            return {
+              ...prev,
+              gymTeam: [...prev.gymTeam, newGymPokemon],
+              gamePhase: 'pokemon-select-for-battle'
+            };
+          }
+        });
+      }
     },
 
     handlePokemonReplacement: (pokemonToReplace: GymPokemon) => {
