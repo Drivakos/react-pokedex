@@ -1,10 +1,9 @@
-import type { Config, Context } from "@netlify/functions";
-import { fetchWithCache } from "@netlify/cache";
+const { fetchWithCache } = require("@netlify/cache");
 
 // Environment variables with fallbacks
 const GRAPHQL_ENDPOINT = process.env.VITE_API_GRAPHQL_URL || 'https://beta.pokeapi.co/graphql/v1beta';
 
-export default async (req: Request, context: Context) => {
+exports.handler = async (event, context) => {
   // Set CORS headers
   const corsHeaders = {
     'Access-Control-Allow-Origin': '*',
@@ -13,32 +12,45 @@ export default async (req: Request, context: Context) => {
   };
 
   // Handle OPTIONS request for CORS
-  if (req.method === 'OPTIONS') {
-    return new Response(null, {
-      status: 200,
+  if (event.httpMethod === 'OPTIONS') {
+    return {
+      statusCode: 200,
       headers: corsHeaders,
-    });
+      body: ''
+    };
   }
 
   try {
     // Parse the request body to get the GraphQL query
-    const { query, variables } = await req.json();
+    let body;
+    try {
+      body = JSON.parse(event.body || '{}');
+    } catch (e) {
+      return {
+        statusCode: 400,
+        headers: {
+          'Content-Type': 'application/json',
+          ...corsHeaders,
+        },
+        body: JSON.stringify({ error: 'Invalid JSON in request body' })
+      };
+    }
+
+    const { query, variables } = body;
 
     if (!query) {
-      return new Response(
-        JSON.stringify({ error: 'GraphQL query is required' }),
-        {
-          status: 400,
-          headers: {
-            'Content-Type': 'application/json',
-            ...corsHeaders,
-          },
-        }
-      );
+      return {
+        statusCode: 400,
+        headers: {
+          'Content-Type': 'application/json',
+          ...corsHeaders,
+        },
+        body: JSON.stringify({ error: 'GraphQL query is required' })
+      };
     }
 
     // Create a cache key based on the query and variables
-    const cacheKey = `graphql:${btoa(JSON.stringify({ query, variables }))}`;
+    const cacheKey = `graphql:${Buffer.from(JSON.stringify({ query, variables })).toString('base64')}`;
     const requestUrl = `${GRAPHQL_ENDPOINT}?cache_key=${cacheKey}`;
 
     // Create the GraphQL request
@@ -70,34 +82,29 @@ export default async (req: Request, context: Context) => {
     const data = await response.json();
 
     // Return the cached/fresh data
-    return new Response(JSON.stringify(data), {
-      status: 200,
+    return {
+      statusCode: 200,
       headers: {
         'Content-Type': 'application/json',
         'Cache-Control': 'public, max-age=3600, s-maxage=3600',
         ...corsHeaders,
       },
-    });
+      body: JSON.stringify(data)
+    };
 
   } catch (error) {
     console.error('Pokemon GraphQL API Error:', error);
     
-    return new Response(
-      JSON.stringify({ 
+    return {
+      statusCode: 500,
+      headers: {
+        'Content-Type': 'application/json',
+        ...corsHeaders,
+      },
+      body: JSON.stringify({ 
         error: 'Failed to fetch Pokemon data',
         message: error instanceof Error ? error.message : 'Unknown error'
-      }),
-      {
-        status: 500,
-        headers: {
-          'Content-Type': 'application/json',
-          ...corsHeaders,
-        },
-      }
-    );
+      })
+    };
   }
-};
-
-export const config: Config = {
-  path: "/api/pokemon/graphql"
 }; 

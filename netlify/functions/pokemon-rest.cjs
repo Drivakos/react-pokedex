@@ -1,10 +1,9 @@
-import type { Config, Context } from "@netlify/functions";
-import { fetchWithCache } from "@netlify/cache";
+const { fetchWithCache } = require("@netlify/cache");
 
 // Environment variables with fallbacks
 const REST_ENDPOINT = process.env.VITE_API_REST_URL || process.env.VITE_API_URL || 'https://pokeapi.co/api/v2';
 
-export default async (req: Request, context: Context) => {
+exports.handler = async (event, context) => {
   // Set CORS headers
   const corsHeaders = {
     'Access-Control-Allow-Origin': '*',
@@ -13,37 +12,36 @@ export default async (req: Request, context: Context) => {
   };
 
   // Handle OPTIONS request for CORS
-  if (req.method === 'OPTIONS') {
-    return new Response(null, {
-      status: 200,
+  if (event.httpMethod === 'OPTIONS') {
+    return {
+      statusCode: 200,
       headers: corsHeaders,
-    });
+      body: ''
+    };
   }
 
   try {
-    // Parse the URL to get the path parameter
-    const url = new URL(req.url);
-    const pathSegments = url.pathname.split('/');
+    // Parse the URL path to get the API endpoint
+    const pathSegments = event.path.split('/');
     
-    // Extract the API path after '/api/pokemon/rest/'
-    const apiPathIndex = pathSegments.findIndex(segment => segment === 'rest');
-    if (apiPathIndex === -1 || apiPathIndex >= pathSegments.length - 1) {
-      return new Response(
-        JSON.stringify({ error: 'API path is required. Use /api/pokemon/rest/{endpoint}' }),
-        {
-          status: 400,
-          headers: {
-            'Content-Type': 'application/json',
-            ...corsHeaders,
-          },
-        }
-      );
+    // Extract the API path after '/pokemon-rest/'
+    const functionIndex = pathSegments.findIndex(segment => segment === 'pokemon-rest');
+    if (functionIndex === -1 || functionIndex >= pathSegments.length - 1) {
+      return {
+        statusCode: 400,
+        headers: {
+          'Content-Type': 'application/json',
+          ...corsHeaders,
+        },
+        body: JSON.stringify({ error: 'API path is required. Use /.netlify/functions/pokemon-rest/{endpoint}' })
+      };
     }
 
     // Reconstruct the API path and query parameters
-    const apiPath = pathSegments.slice(apiPathIndex + 1).join('/');
-    const queryString = url.search;
-    const fullApiUrl = `${REST_ENDPOINT}/${apiPath}${queryString}`;
+    const apiPath = pathSegments.slice(functionIndex + 1).join('/');
+    const queryString = event.queryStringParameters ? 
+      new URLSearchParams(event.queryStringParameters).toString() : '';
+    const fullApiUrl = `${REST_ENDPOINT}/${apiPath}${queryString ? `?${queryString}` : ''}`;
 
     // Create the request
     const apiRequest = new Request(fullApiUrl, {
@@ -88,35 +86,30 @@ export default async (req: Request, context: Context) => {
     const data = await response.json();
 
     // Return the cached/fresh data with appropriate headers
-    return new Response(JSON.stringify(data), {
-      status: 200,
+    return {
+      statusCode: 200,
       headers: {
         'Content-Type': 'application/json',
         'Cache-Control': `public, max-age=${maxAge}, s-maxage=${maxAge}`,
         'X-Cache-Duration': maxAge.toString(),
         ...corsHeaders,
       },
-    });
+      body: JSON.stringify(data)
+    };
 
   } catch (error) {
     console.error('Pokemon REST API Error:', error);
     
-    return new Response(
-      JSON.stringify({ 
+    return {
+      statusCode: 500,
+      headers: {
+        'Content-Type': 'application/json',
+        ...corsHeaders,
+      },
+      body: JSON.stringify({ 
         error: 'Failed to fetch Pokemon data',
         message: error instanceof Error ? error.message : 'Unknown error'
-      }),
-      {
-        status: 500,
-        headers: {
-          'Content-Type': 'application/json',
-          ...corsHeaders,
-        },
-      }
-    );
+      })
+    };
   }
-};
-
-export const config: Config = {
-  path: "/api/pokemon/rest/*"
 }; 

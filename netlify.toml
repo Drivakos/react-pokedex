@@ -56,6 +56,19 @@
   status = 200
   force = false
 
+# API redirects to Netlify Functions
+[[redirects]]
+  from = "/api/pokemon/graphql"
+  to = "/.netlify/functions/pokemon-graphql"
+  status = 200
+  force = false
+
+[[redirects]]
+  from = "/api/pokemon/rest/*"
+  to = "/.netlify/functions/pokemon-rest/:splat"
+  status = 200
+  force = false
+
 # Redirect www to non-www version
 [[redirects]]
   from = "https://www.react-pokedex.netlify.app/*"
