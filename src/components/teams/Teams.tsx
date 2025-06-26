@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../../hooks/useAuth';
 import { Team } from '../../lib/supabase';
-import { ChevronRight, Settings, Sword, Shield } from 'lucide-react';
+import { ChevronRight, Settings, Sword, Shield, Copy } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { formatName, getOfficialArtwork } from '../../utils/helpers';
 import MovesetEditor from './MovesetEditor';
@@ -137,6 +137,210 @@ const Teams: React.FC = () => {
     setSelectedPokemon(null);
   };
 
+  const exportSinglePokemon = async (pokemonId: number) => {
+    try {
+      const pokemon = pokemonDetails[pokemonId];
+      if (!pokemon) {
+        toast.error('Pokemon data not found');
+        return;
+      }
+
+      // Try to load build data from localStorage
+      const buildKey = `pokemon-build-${pokemonId}`;
+      const savedBuild = localStorage.getItem(buildKey);
+      
+      let build = null;
+      if (savedBuild) {
+        try {
+          build = JSON.parse(savedBuild);
+        } catch (e) {
+          console.warn(`Failed to parse build for ${pokemon.name}`);
+        }
+      }
+
+      // Default values if no build saved
+      const pokemonName = formatName(pokemon.name);
+      const heldItem = build?.heldItem ? formatName(build.heldItem) : '';
+      const ability = build?.ability ? formatName(build.ability) : '';
+      const nature = build?.nature ? formatName(build.nature) : 'Hardy';
+      const moves = build?.moves || [];
+      const nickname = build?.nickname || '';
+      const teraType = build?.teraType || '';
+
+      // Format EVs (only show non-zero values)
+      const evs = build?.evs || {};
+      const evStrings: string[] = [];
+      if (evs.hp > 0) evStrings.push(`${evs.hp} HP`);
+      if (evs.attack > 0) evStrings.push(`${evs.attack} Atk`);
+      if (evs.defense > 0) evStrings.push(`${evs.defense} Def`);
+      if (evs['special-attack'] > 0) evStrings.push(`${evs['special-attack']} SpA`);
+      if (evs['special-defense'] > 0) evStrings.push(`${evs['special-defense']} SpD`);
+      if (evs.speed > 0) evStrings.push(`${evs.speed} Spe`);
+
+      // Build the Pokemon export string
+      let pokemonExport = '';
+      
+      // Pokemon name and item (with nickname if present)
+      if (nickname) {
+        if (heldItem) {
+          pokemonExport += `${nickname} (${pokemonName}) @ ${heldItem}\n`;
+        } else {
+          pokemonExport += `${nickname} (${pokemonName})\n`;
+        }
+      } else {
+        if (heldItem) {
+          pokemonExport += `${pokemonName} @ ${heldItem}\n`;
+        } else {
+          pokemonExport += `${pokemonName}\n`;
+        }
+      }
+
+      // Ability
+      if (ability) {
+        pokemonExport += `Ability: ${ability}\n`;
+      }
+
+      // Tera Type
+      if (teraType) {
+        pokemonExport += `Tera Type: ${teraType}\n`;
+      }
+
+      // EVs
+      if (evStrings.length > 0) {
+        pokemonExport += `EVs: ${evStrings.join(' / ')}\n`;
+      }
+
+      // Nature
+      pokemonExport += `${nature} Nature\n`;
+
+      // Moves
+      if (moves.length > 0) {
+        moves.forEach((move: any) => {
+          const moveName = typeof move === 'string' ? move : move.name;
+          pokemonExport += `- ${formatName(moveName)}\n`;
+        });
+      }
+
+      // Copy to clipboard
+      await navigator.clipboard.writeText(pokemonExport.trim());
+      toast.success(`${pokemonName} exported to clipboard!`);
+      
+    } catch (error) {
+      console.error('Error exporting Pokemon:', error);
+      toast.error('Failed to export Pokemon');
+    }
+  };
+
+  const exportTeam = async (team: Team, members: TeamMember[]) => {
+    if (members.length === 0) {
+      // If no members provided, fetch them first
+      try {
+        const teamMembers = await getTeamMembers(team.id);
+        return exportTeam(team, teamMembers);
+      } catch (error) {
+        toast.error('Failed to load team members for export');
+        return;
+      }
+    }
+
+    try {
+      const teamExportData: string[] = [];
+
+      for (const member of members) {
+        const pokemon = pokemonDetails[member.pokemon_id];
+        if (!pokemon) continue;
+
+        // Try to load build data from localStorage
+        const buildKey = `pokemon-build-${member.pokemon_id}`;
+        const savedBuild = localStorage.getItem(buildKey);
+        
+        let build = null;
+        if (savedBuild) {
+          try {
+            build = JSON.parse(savedBuild);
+          } catch (e) {
+            console.warn(`Failed to parse build for ${pokemon.name}`);
+          }
+        }
+
+        // Default values if no build saved
+        const pokemonName = formatName(pokemon.name);
+        const heldItem = build?.heldItem ? formatName(build.heldItem) : '';
+        const ability = build?.ability ? formatName(build.ability) : '';
+        const nature = build?.nature ? formatName(build.nature) : 'Hardy';
+        const moves = build?.moves || [];
+        const nickname = build?.nickname || '';
+        const teraType = build?.teraType || '';
+
+        // Format EVs (only show non-zero values)
+        const evs = build?.evs || {};
+        const evStrings: string[] = [];
+        if (evs.hp > 0) evStrings.push(`${evs.hp} HP`);
+        if (evs.attack > 0) evStrings.push(`${evs.attack} Atk`);
+        if (evs.defense > 0) evStrings.push(`${evs.defense} Def`);
+        if (evs['special-attack'] > 0) evStrings.push(`${evs['special-attack']} SpA`);
+        if (evs['special-defense'] > 0) evStrings.push(`${evs['special-defense']} SpD`);
+        if (evs.speed > 0) evStrings.push(`${evs.speed} Spe`);
+
+        // Build the Pokemon export string
+        let pokemonExport = '';
+        
+        // Pokemon name and item (with nickname if present)
+        if (nickname) {
+          if (heldItem) {
+            pokemonExport += `${nickname} (${pokemonName}) @ ${heldItem}\n`;
+          } else {
+            pokemonExport += `${nickname} (${pokemonName})\n`;
+          }
+        } else {
+          if (heldItem) {
+            pokemonExport += `${pokemonName} @ ${heldItem}\n`;
+          } else {
+            pokemonExport += `${pokemonName}\n`;
+          }
+        }
+
+        // Ability
+        if (ability) {
+          pokemonExport += `Ability: ${ability}\n`;
+        }
+
+        // Tera Type
+        if (teraType) {
+          pokemonExport += `Tera Type: ${teraType}\n`;
+        }
+
+        // EVs
+        if (evStrings.length > 0) {
+          pokemonExport += `EVs: ${evStrings.join(' / ')}\n`;
+        }
+
+        // Nature
+        pokemonExport += `${nature} Nature\n`;
+
+        // Moves
+        if (moves.length > 0) {
+          moves.forEach((move: any) => {
+            const moveName = typeof move === 'string' ? move : move.name;
+            pokemonExport += `- ${formatName(moveName)}\n`;
+          });
+        }
+
+        teamExportData.push(pokemonExport.trim());
+      }
+
+      const fullTeamData = `${team.name}\n\n${teamExportData.join('\n\n')}`;
+
+      // Copy to clipboard
+      await navigator.clipboard.writeText(fullTeamData);
+      toast.success(`Team "${team.name}" copied to clipboard!`);
+      
+    } catch (error) {
+      console.error('Error exporting team:', error);
+      toast.error('Failed to export team');
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-6">
@@ -178,17 +382,24 @@ const Teams: React.FC = () => {
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-6">
         <div className="max-w-4xl mx-auto">
           {/* Header */}
-          <div className="mb-8">
+          <div className="flex items-center justify-between mb-8">
+            <div className="flex items-center gap-4">
+              <button
+                onClick={handleBackToTeams}
+                className="text-blue-600 hover:text-blue-800 font-medium flex items-center gap-2"
+              >
+                ← Back to Teams
+              </button>
+              <h1 className="text-3xl font-bold text-gray-800">{selectedTeam.name}</h1>
+            </div>
             <button
-              onClick={handleBackToTeams}
-              className="text-blue-600 hover:text-blue-800 mb-4 flex items-center transition-colors"
+              onClick={() => exportTeam(selectedTeam, teamMembers)}
+              className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors"
+              title="Export team to clipboard"
             >
-              ← Back to Teams
+              <Copy size={16} />
+              Export Team
             </button>
-            <h1 className="text-3xl font-bold text-gray-800 mb-2">{selectedTeam.name}</h1>
-            {selectedTeam.description && (
-              <p className="text-gray-600">{selectedTeam.description}</p>
-            )}
           </div>
 
           {/* Team Pokemon Grid */}
@@ -250,6 +461,17 @@ const Teams: React.FC = () => {
                         <span>Position {member.position}</span>
                         <ChevronRight size={16} className="text-blue-500" />
                       </div>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          exportSinglePokemon(member.pokemon_id);
+                        }}
+                        className="flex items-center gap-2 bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-md font-medium transition-colors text-sm"
+                        title="Export Pokemon to clipboard"
+                      >
+                        <Copy size={14} />
+                        Export
+                      </button>
                     </div>
                   </div>
                 );
@@ -291,21 +513,39 @@ const Teams: React.FC = () => {
             {teams.map((team) => (
               <div
                 key={team.id}
-                onClick={() => handleTeamSelect(team)}
-                className="bg-white rounded-xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer border-2 border-transparent hover:border-blue-300 group"
+                className="bg-white rounded-xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 border-2 border-transparent hover:border-blue-300 group relative"
               >
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-xl font-bold text-gray-800">{team.name}</h3>
-                  <ChevronRight size={20} className="text-blue-500 group-hover:translate-x-1 transition-transform" />
+                <div
+                  onClick={() => handleTeamSelect(team)}
+                  className="cursor-pointer"
+                >
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-xl font-bold text-gray-800">{team.name}</h3>
+                    <ChevronRight size={20} className="text-blue-500 group-hover:translate-x-1 transition-transform" />
+                  </div>
+                  
+                  {team.description && (
+                    <p className="text-gray-600 mb-4 line-clamp-2">{team.description}</p>
+                  )}
+                  
+                  <div className="flex items-center gap-2 text-sm text-gray-500 mb-4">
+                    <Settings size={16} />
+                    <span>Manage movesets</span>
+                  </div>
                 </div>
                 
-                {team.description && (
-                  <p className="text-gray-600 mb-4 line-clamp-2">{team.description}</p>
-                )}
-                
-                <div className="flex items-center gap-2 text-sm text-gray-500">
-                  <Settings size={16} />
-                  <span>Manage movesets</span>
+                <div className="flex gap-2">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      exportTeam(team, []);
+                    }}
+                    className="flex items-center gap-2 bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-md font-medium transition-colors text-sm"
+                    title="Export team to clipboard"
+                  >
+                    <Copy size={14} />
+                    Export
+                  </button>
                 </div>
               </div>
             ))}

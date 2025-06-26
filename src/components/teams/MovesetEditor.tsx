@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, Save, Trash2, Plus, Zap, Settings, Award, ChevronUp, ChevronDown } from 'lucide-react';
+import { ArrowLeft, Save, Trash2, Plus, Zap, Settings, Award, ChevronUp, ChevronDown, Copy } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { formatName, getOfficialArtwork } from '../../utils/helpers';
 import MovesFilter from '../filters/MovesFilter';
@@ -77,6 +77,8 @@ interface PokemonBuild {
   ability: string;
   gender: string | null;
   heldItem: string;
+  nickname: string;
+  teraType: string;
   ivs: {
     hp: number;
     attack: number;
@@ -95,6 +97,71 @@ interface PokemonBuild {
   };
 }
 
+const EV_PRESETS = {
+  'Physical Attacker': {
+    hp: 4,
+    attack: 252,
+    defense: 0,
+    'special-attack': 0,
+    'special-defense': 0,
+    speed: 252
+  },
+  'Special Attacker': {
+    hp: 4,
+    attack: 0,
+    defense: 0,
+    'special-attack': 252,
+    'special-defense': 0,
+    speed: 252
+  },
+  'Physical Tank': {
+    hp: 252,
+    attack: 0,
+    defense: 252,
+    'special-attack': 0,
+    'special-defense': 4,
+    speed: 0
+  },
+  'Special Tank': {
+    hp: 252,
+    attack: 0,
+    defense: 4,
+    'special-attack': 0,
+    'special-defense': 252,
+    speed: 0
+  },
+  'Mixed Tank': {
+    hp: 252,
+    attack: 0,
+    defense: 128,
+    'special-attack': 0,
+    'special-defense': 128,
+    speed: 0
+  },
+  'Fast Support': {
+    hp: 252,
+    attack: 0,
+    defense: 4,
+    'special-attack': 0,
+    'special-defense': 0,
+    speed: 252
+  },
+  'Balanced': {
+    hp: 85,
+    attack: 85,
+    defense: 85,
+    'special-attack': 85,
+    'special-defense': 85,
+    speed: 85
+  }
+};
+
+const POKEMON_TYPES = [
+  'Normal', 'Fire', 'Water', 'Electric', 'Grass', 'Ice',
+  'Fighting', 'Poison', 'Ground', 'Flying', 'Psychic', 'Bug',
+  'Rock', 'Ghost', 'Dragon', 'Dark', 'Steel', 'Fairy'
+];
+
 const MovesetEditor: React.FC<MovesetEditorProps> = ({ pokemon, teamId, onBack }) => {
   const [selectedMoves, setSelectedMoves] = useState<string[]>([]);
   const [availableMoves, setAvailableMoves] = useState<string[]>([]);
@@ -110,6 +177,8 @@ const MovesetEditor: React.FC<MovesetEditorProps> = ({ pokemon, teamId, onBack }
     ability: '',
     gender: null,
     heldItem: '',
+    nickname: '',
+    teraType: '',
     ivs: {
       hp: 31,
       attack: 31,
@@ -322,22 +391,6 @@ const MovesetEditor: React.FC<MovesetEditorProps> = ({ pokemon, teamId, onBack }
     return Math.max(min, Math.min(max, num));
   };
 
-  const handleIVChange = (stat: keyof PokemonBuild['ivs'], value: string) => {
-    const formattedValue = validateAndFormatInput(value, 0, 31);
-    // IVs can be 31 for all stats - no total limit needed
-    if (formattedValue !== parseInt(value, 10) && value !== '') {
-      toast.error('IVs must be between 0 and 31');
-    }
-    
-    setPokemonBuild(prev => ({
-      ...prev,
-      ivs: {
-        ...prev.ivs,
-        [stat]: formattedValue
-      }
-    }));
-  };
-
   const handleEVChange = (stat: keyof PokemonBuild['evs'], value: string) => {
     const newValue = validateAndFormatInput(value, 0, 252);
     const evs = { ...pokemonBuild.evs };
@@ -369,7 +422,79 @@ const MovesetEditor: React.FC<MovesetEditorProps> = ({ pokemon, teamId, onBack }
   const totalEVs = Object.values(pokemonBuild.evs).reduce((sum, ev) => sum + ev, 0);
   const remainingEVs = 510 - totalEVs;
 
-  // Rest of existing code for move handling...
+  const exportCurrentPokemon = async () => {
+    try {
+      // Default values
+      const pokemonName = formatName(pokemon.name);
+      const heldItem = pokemonBuild.heldItem ? formatName(pokemonBuild.heldItem) : '';
+      const ability = pokemonBuild.ability ? formatName(pokemonBuild.ability) : '';
+      const nature = pokemonBuild.nature ? formatName(pokemonBuild.nature) : 'Hardy';
+      const moves = selectedMoves || [];
+
+      // Format EVs (only show non-zero values)
+      const evs = pokemonBuild.evs || {};
+      const evStrings: string[] = [];
+      if (evs.hp > 0) evStrings.push(`${evs.hp} HP`);
+      if (evs.attack > 0) evStrings.push(`${evs.attack} Atk`);
+      if (evs.defense > 0) evStrings.push(`${evs.defense} Def`);
+      if (evs['special-attack'] > 0) evStrings.push(`${evs['special-attack']} SpA`);
+      if (evs['special-defense'] > 0) evStrings.push(`${evs['special-defense']} SpD`);
+      if (evs.speed > 0) evStrings.push(`${evs.speed} Spe`);
+
+      // Build the Pokemon export string
+      let pokemonExport = '';
+      
+      // Pokemon name and item (with nickname if present)
+      if (pokemonBuild.nickname) {
+        if (heldItem) {
+          pokemonExport += `${pokemonBuild.nickname} (${pokemonName}) @ ${heldItem}\n`;
+        } else {
+          pokemonExport += `${pokemonBuild.nickname} (${pokemonName})\n`;
+        }
+      } else {
+        if (heldItem) {
+          pokemonExport += `${pokemonName} @ ${heldItem}\n`;
+        } else {
+          pokemonExport += `${pokemonName}\n`;
+        }
+      }
+
+      // Ability
+      if (ability) {
+        pokemonExport += `Ability: ${ability}\n`;
+      }
+
+      // Tera Type
+      if (pokemonBuild.teraType) {
+        pokemonExport += `Tera Type: ${pokemonBuild.teraType}\n`;
+      }
+
+      // EVs
+      if (evStrings.length > 0) {
+        pokemonExport += `EVs: ${evStrings.join(' / ')}\n`;
+      }
+
+      // Nature
+      pokemonExport += `${nature} Nature\n`;
+
+      // Moves
+      if (moves.length > 0) {
+        moves.forEach((move: any) => {
+          const moveName = typeof move === 'string' ? move : move.name;
+          pokemonExport += `- ${formatName(moveName)}\n`;
+        });
+      }
+
+      // Copy to clipboard
+      await navigator.clipboard.writeText(pokemonExport.trim());
+      toast.success(`${pokemonName} build exported to clipboard!`);
+      
+    } catch (error) {
+      console.error('Error exporting Pokemon build:', error);
+      toast.error('Failed to export Pokemon build');
+    }
+  };
+
   const loadMoveDetails = async (moveName: string): Promise<MoveDetails | null> => {
     if (moveDetails[moveName]) {
       return moveDetails[moveName];
@@ -518,6 +643,13 @@ const MovesetEditor: React.FC<MovesetEditorProps> = ({ pokemon, teamId, onBack }
                 <Save size={16} />
                 Save Build
               </button>
+              <button
+                onClick={exportCurrentPokemon}
+                className="bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors"
+              >
+                <Copy size={16} />
+                Export Build
+              </button>
             </div>
           </div>
 
@@ -658,41 +790,64 @@ const MovesetEditor: React.FC<MovesetEditorProps> = ({ pokemon, teamId, onBack }
           {activeTab === 'stats' ? (
             <div className="bg-white rounded-xl p-6 shadow-lg">
               <div className="mb-6">
-                <div className="flex items-center gap-2 mb-3">
-                  <h3 className="text-lg font-semibold text-gray-800">Individual Values (IVs)</h3>
-                  <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
-                    0-31 per stat
-                  </span>
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-lg font-semibold text-gray-800">Individual Values (IVs)</h3>
+                    <span className="text-xs bg-purple-100 text-purple-800 px-2 py-1 rounded-full">
+                      Max 31 each
+                    </span>
+                  </div>
+                  <button
+                    onClick={() => setPokemonBuild(prev => ({ 
+                      ...prev, 
+                      ivs: {
+                        hp: 31,
+                        attack: 31,
+                        defense: 31,
+                        'special-attack': 31,
+                        'special-defense': 31,
+                        speed: 31
+                      }
+                    }))}
+                    className="bg-purple-600 hover:bg-purple-700 text-white px-3 py-1 rounded text-xs transition-colors"
+                  >
+                    Max All IVs
+                  </button>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {Object.keys(pokemonBuild.ivs).map((stat) => (
-                    <div key={stat} className="flex items-center gap-2">
-                      <span className="text-gray-800 w-20">{formatStatName(stat)}:</span>
+                <div className="grid grid-cols-2 gap-4">
+                  {Object.entries(pokemonBuild.ivs).map(([stat, value]) => (
+                    <div key={stat} className="flex items-center justify-between">
+                      <label className="text-sm font-medium text-gray-700 capitalize">
+                        {stat.replace('-', ' ')}
+                      </label>
                       <input
                         type="number"
                         min="0"
                         max="31"
-                        value={pokemonBuild.ivs[stat as keyof PokemonBuild['ivs']]}
-                        onChange={(e) => handleIVChange(stat as keyof PokemonBuild['ivs'], e.target.value)}
-                        onBlur={(e) => handleIVChange(stat as keyof PokemonBuild['ivs'], e.target.value)}
-                        className="w-16 p-1 border border-gray-300 rounded text-center"
-                        title="Individual Values determine genetic potential (0-31, higher is better)"
+                        value={value}
+                        onChange={(e) => {
+                          const newValue = Math.min(31, Math.max(0, parseInt(e.target.value) || 0));
+                          setPokemonBuild(prev => ({
+                            ...prev,
+                            ivs: { ...prev.ivs, [stat]: newValue }
+                          }));
+                        }}
+                        className="w-16 p-1 border border-gray-300 rounded text-center text-gray-800"
                       />
-                      <span className="text-xs text-gray-500">/31</span>
                     </div>
                   ))}
                 </div>
-                <p className="text-xs text-gray-500 mt-2">IVs are like genetics - higher values mean better base stats</p>
+                <p className="text-xs text-gray-500 mt-1">Higher IVs mean stronger stats (0-31 range)</p>
               </div>
               
               <div className="mb-4">
-                <div className="flex items-center gap-2 mb-3">
+                <div className="flex items-center justify-between mb-3">
                   <h3 className="text-lg font-semibold text-gray-800">Effort Values (EVs)</h3>
                   <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full">
                     {totalEVs}/510 total
                   </span>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-3">
+                <div className="grid grid-cols-2 gap-4 mb-3">
                   {Object.keys(pokemonBuild.evs).map((stat) => (
                     <div key={stat} className="flex items-center gap-2">
                       <span className="text-gray-800 w-20">{formatStatName(stat)}:</span>
@@ -716,6 +871,24 @@ const MovesetEditor: React.FC<MovesetEditorProps> = ({ pokemon, teamId, onBack }
                     {remainingEVs === 0 && <span className="text-green-600 ml-2">Fully trained!</span>}
                   </p>
                   <p className="text-xs text-gray-500 mt-1">Distribute 510 points to boost stats (max 252 per stat)</p>
+                </div>
+                <div className="mt-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="text-lg font-semibold text-gray-800">EV Presets</h3>
+                    <span className="text-xs text-gray-500">Quick competitive spreads</span>
+                  </div>
+                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
+                    {Object.entries(EV_PRESETS).map(([preset, evs]) => (
+                      <button
+                        key={preset}
+                        onClick={() => setPokemonBuild(prev => ({ ...prev, evs }))}
+                        className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-2 rounded-md text-xs font-medium transition-colors"
+                        title={`Set EVs for ${preset}`}
+                      >
+                        {preset}
+                      </button>
+                    ))}
+                  </div>
                 </div>
               </div>
             </div>
@@ -793,6 +966,48 @@ const MovesetEditor: React.FC<MovesetEditorProps> = ({ pokemon, teamId, onBack }
                   ) : (
                     <p className="text-gray-500 italic text-sm">This Pokémon has no gender differences</p>
                   )}
+                </div>
+                
+                <div>
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-lg font-semibold text-gray-800">Nickname</h3>
+                      <span className="text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full">
+                        Custom name
+                      </span>
+                    </div>
+                    <span className="text-xs text-gray-500">Give your Pokémon a nickname</span>
+                  </div>
+                  <input
+                    type="text"
+                    value={pokemonBuild.nickname}
+                    onChange={(e) => setPokemonBuild(prev => ({ ...prev, nickname: e.target.value }))}
+                    className="w-full p-2 border border-gray-300 rounded text-gray-800"
+                    title="Give your Pokémon a custom nickname"
+                  />
+                </div>
+                
+                <div>
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-lg font-semibold text-gray-800">Tera Type</h3>
+                      <span className="text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full">
+                        Tera Raid
+                      </span>
+                    </div>
+                    <span className="text-xs text-gray-500">Tera Raid type</span>
+                  </div>
+                  <select
+                    value={pokemonBuild.teraType}
+                    onChange={(e) => setPokemonBuild(prev => ({ ...prev, teraType: e.target.value }))}
+                    className="w-full p-2 border border-gray-300 rounded text-gray-800"
+                    title="Select a Tera Raid type"
+                  >
+                    <option value="">Select Tera Type</option>
+                    {POKEMON_TYPES.map((type) => (
+                      <option key={type} value={type}>{formatName(type)}</option>
+                    ))}
+                  </select>
                 </div>
                 
                 <div>
