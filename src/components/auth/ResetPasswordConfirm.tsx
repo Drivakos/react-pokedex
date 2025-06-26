@@ -35,17 +35,13 @@ const ResetPasswordConfirm: React.FC = () => {
         } else if (type === 'recovery' && !session) {
           setError('Password reset session has expired. Please request a new reset link.');
         } else if (location.pathname === '/auth/update-password' && session) {
-          // Direct access from Supabase email link
           setValidResetLink(true);
         } else if (location.pathname === '/auth/update-password' && !session) {
           setError('Password reset session has expired. Please request a new reset link.');
         } else if (type === 'signup' || type === 'magiclink') {
           navigate('/', { replace: true });
         } else if (user && session) {
-          // User is already logged in and has a valid session
           setValidResetLink(true);
-        } else {
-          setError('Password reset link is invalid or has expired. Please request a new one.');
         }
       } catch (err) {
         setError('Error processing reset password link. Please request a new one.');
