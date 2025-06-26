@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, Save, Trash2, Plus, Zap, Settings, Award } from 'lucide-react';
+import { ArrowLeft, Save, Trash2, Plus, Zap, Settings, Award, ChevronUp, ChevronDown } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { formatName, getOfficialArtwork } from '../../utils/helpers';
 import MovesFilter from '../filters/MovesFilter';
@@ -52,10 +52,21 @@ interface MoveDetails {
       name: string;
     };
   }[];
+  flavor_text_entries: {
+    flavor_text: string;
+    language: {
+      name: string;
+    };
+  }[];
+  target: {
+    name: string;
+  };
+  priority: number;
 }
 
 interface Nature {
   name: string;
+  description: string;
   increased_stat?: { name: string };
   decreased_stat?: { name: string };
 }
@@ -122,7 +133,12 @@ const MovesetEditor: React.FC<MovesetEditorProps> = ({ pokemon, teamId, onBack }
   const [availableItems, setAvailableItems] = useState<string[]>([]);
   const [hasGenderDifference, setHasGenderDifference] = useState(false);
   const [activeTab, setActiveTab] = useState<'moves' | 'stats' | 'details'>('moves');
-
+  
+  // Description states
+  const [pokemonDescription, setPokemonDescription] = useState<string>('');
+  const [abilityDescriptions, setAbilityDescriptions] = useState<Record<string, string>>({});
+  const [itemDescriptions, setItemDescriptions] = useState<Record<string, string>>({});
+  
   // Comprehensive competitive held items list
   const competitiveItems = [
     // Choice Items
@@ -146,14 +162,36 @@ const MovesetEditor: React.FC<MovesetEditorProps> = ({ pokemon, teamId, onBack }
 
   const filteredItems = availableItems;
 
-  // Common Pokemon natures
+  // Common Pokemon natures with descriptions
   const commonNatures = [
-    'hardy', 'lonely', 'brave', 'adamant', 'naughty',
-    'bold', 'docile', 'relaxed', 'impish', 'lax',
-    'timid', 'hasty', 'serious', 'jolly', 'naive',
-    'modest', 'mild', 'quiet', 'bashful', 'rash',
-    'calm', 'gentle', 'sassy', 'careful', 'quirky'
+    { name: 'hardy', description: 'Neutral nature (no stat changes)' },
+    { name: 'lonely', description: '+Attack, -Defense' },
+    { name: 'brave', description: '+Attack, -Speed' },
+    { name: 'adamant', description: '+Attack, -Sp. Attack' },
+    { name: 'naughty', description: '+Attack, -Sp. Defense' },
+    { name: 'bold', description: '+Defense, -Attack' },
+    { name: 'docile', description: 'Neutral nature (no stat changes)' },
+    { name: 'relaxed', description: '+Defense, -Speed' },
+    { name: 'impish', description: '+Defense, -Sp. Attack' },
+    { name: 'lax', description: '+Defense, -Sp. Defense' },
+    { name: 'timid', description: '+Speed, -Attack' },
+    { name: 'hasty', description: '+Speed, -Defense' },
+    { name: 'serious', description: 'Neutral nature (no stat changes)' },
+    { name: 'jolly', description: '+Speed, -Sp. Attack' },
+    { name: 'naive', description: '+Speed, -Sp. Defense' },
+    { name: 'modest', description: '+Sp. Attack, -Attack' },
+    { name: 'mild', description: '+Sp. Attack, -Defense' },
+    { name: 'quiet', description: '+Sp. Attack, -Speed' },
+    { name: 'bashful', description: 'Neutral nature (no stat changes)' },
+    { name: 'rash', description: '+Sp. Attack, -Sp. Defense' },
+    { name: 'calm', description: '+Sp. Defense, -Attack' },
+    { name: 'gentle', description: '+Sp. Defense, -Defense' },
+    { name: 'sassy', description: '+Sp. Defense, -Speed' },
+    { name: 'careful', description: '+Sp. Defense, -Sp. Attack' },
+    { name: 'quirky', description: 'Neutral nature (no stat changes)' }
   ];
+
+  const [expandedMove, setExpandedMove] = useState('');
 
   useEffect(() => {
     const loadPokemonData = async () => {
@@ -166,9 +204,26 @@ const MovesetEditor: React.FC<MovesetEditorProps> = ({ pokemon, teamId, onBack }
           const moves = pokemonData.moves.map((move: PokemonMove) => move.move.name);
           setAvailableMoves(moves);
           
-          // Get abilities
+          // Get abilities and fetch their descriptions
           const abilities = pokemonData.abilities.map((ability: any) => ability.ability.name);
           setAvailableAbilities(abilities);
+          
+          // Fetch ability descriptions
+          const abilityDescs: Record<string, string> = {};
+          for (const ability of abilities) {
+            try {
+              const abilityResponse = await fetch(`https://pokeapi.co/api/v2/ability/${ability}`);
+              if (abilityResponse.ok) {
+                const abilityData = await abilityResponse.json();
+                const englishEntry = abilityData.effect_entries.find((entry: any) => entry.language.name === 'en');
+                abilityDescs[ability] = englishEntry?.short_effect || 'No description available';
+              }
+            } catch (error) {
+              console.warn(`Failed to fetch description for ability: ${ability}`);
+              abilityDescs[ability] = 'Description not available';
+            }
+          }
+          setAbilityDescriptions(abilityDescs);
           
           // Check for gender differences
           setHasGenderDifference(pokemonData.species ? true : false);
@@ -178,13 +233,61 @@ const MovesetEditor: React.FC<MovesetEditorProps> = ({ pokemon, teamId, onBack }
             ...prev,
             ability: abilities[0] || ''
           }));
+
+          // Fetch Pokemon species description
+          try {
+            const speciesResponse = await fetch(pokemonData.species.url);
+            if (speciesResponse.ok) {
+              const speciesData = await speciesResponse.json();
+              const englishEntry = speciesData.flavor_text_entries.find((entry: any) => entry.language.name === 'en');
+              setPokemonDescription(englishEntry?.flavor_text?.replace(/\f/g, ' ') || 'No description available');
+            }
+          } catch (error) {
+            console.warn('Failed to fetch Pokemon species description');
+            setPokemonDescription('Description not available');
+          }
         }
         
         // Set available natures
-        setAvailableNatures(commonNatures.map(name => ({ name })));
+        setAvailableNatures(commonNatures);
         
-        // Set competitive items list
+        // Set competitive items list and fetch descriptions
         setAvailableItems(competitiveItems);
+        
+        // Fetch item descriptions for competitive items
+        const itemDescs: Record<string, string> = {};
+        for (const item of competitiveItems) { // Fetch all items, not just first 20
+          try {
+            const itemResponse = await fetch(`https://pokeapi.co/api/v2/item/${item}`);
+            if (itemResponse.ok) {
+              const itemData = await itemResponse.json();
+              const englishEntry = itemData.effect_entries.find((entry: any) => entry.language.name === 'en');
+              itemDescs[item] = englishEntry?.short_effect || englishEntry?.effect || 'Competitive battle item';
+            }
+          } catch (error) {
+            console.warn(`Failed to fetch description for item: ${item}`);
+            // Provide fallback descriptions for common items
+            const fallbackDescriptions: Record<string, string> = {
+              'leftovers': 'Restores HP gradually each turn',
+              'choice-band': 'Boosts Attack but locks you into one move',
+              'choice-scarf': 'Boosts Speed but locks you into one move',
+              'choice-specs': 'Boosts Sp. Attack but locks you into one move',
+              'life-orb': 'Boosts move power but causes recoil damage',
+              'focus-sash': 'Survives a KO hit with 1 HP when at full health',
+              'assault-vest': 'Boosts Sp. Defense but prevents status moves',
+              'rocky-helmet': 'Damages attackers who make contact',
+              'sitrus-berry': 'Restores HP when health is low',
+              'lum-berry': 'Cures any status condition',
+              'flame-orb': 'Inflicts burn status after one turn',
+              'toxic-orb': 'Inflicts poison status after one turn',
+              'black-sludge': 'Restores HP for Poison-types, damages others',
+              'eviolite': 'Boosts defenses of Pokémon that can still evolve',
+              'air-balloon': 'Makes holder immune to Ground moves until popped'
+            };
+            itemDescs[item] = fallbackDescriptions[item] || 'Competitive battle item';
+          }
+        }
+        setItemDescriptions(itemDescs);
         
         // Load saved build from localStorage
         const savedBuild = localStorage.getItem(`build_${teamId}_${pokemon.id}`);
@@ -283,7 +386,10 @@ const MovesetEditor: React.FC<MovesetEditorProps> = ({ pokemon, teamId, onBack }
           accuracy: move.accuracy,
           pp: move.pp,
           damage_class: move.damage_class,
-          effect_entries: move.effect_entries || []
+          effect_entries: move.effect_entries || [],
+          flavor_text_entries: move.flavor_text_entries || [],
+          target: move.target,
+          priority: move.priority
         };
         
         setMoveDetails(prev => ({ ...prev, [moveName]: details }));
@@ -368,11 +474,11 @@ const MovesetEditor: React.FC<MovesetEditorProps> = ({ pokemon, teamId, onBack }
                   target.src = `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${pokemon.id}.png`;
                 }}
               />
-              <div>
+              <div className="flex-1">
                 <h1 className="text-2xl font-bold text-gray-800 mb-2">
                   {formatName(pokemon.name)} Moveset
                 </h1>
-                <div className="flex gap-2">
+                <div className="flex gap-2 mb-3">
                   {pokemon.types.map((type) => (
                     <span
                       key={type.type.name}
@@ -383,6 +489,11 @@ const MovesetEditor: React.FC<MovesetEditorProps> = ({ pokemon, teamId, onBack }
                     </span>
                   ))}
                 </div>
+                {pokemonDescription && (
+                  <p className="text-gray-600 text-sm italic">
+                    "{pokemonDescription}"
+                  </p>
+                )}
               </div>
             </div>
           </div>
@@ -423,13 +534,25 @@ const MovesetEditor: React.FC<MovesetEditorProps> = ({ pokemon, teamId, onBack }
                 return (
                   <div key={moveName} className="bg-white rounded-xl p-4 shadow-lg border-l-4 border-blue-500">
                     <div className="flex items-start justify-between mb-2">
-                      <h3 className="font-semibold text-gray-800">{formatMoveName(moveName)}</h3>
-                      <button
-                        onClick={() => handleRemoveMove(moveName)}
-                        className="text-red-500 hover:text-red-700 p-1 rounded transition-colors"
-                      >
-                        <Trash2 size={16} />
-                      </button>
+                      <div className="flex-1">
+                        <h3 className="font-semibold text-gray-800">{formatMoveName(moveName)}</h3>
+                      </div>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => setExpandedMove(expandedMove === moveName ? '' : moveName)}
+                          className="text-blue-600 hover:text-blue-800 p-1 rounded transition-colors"
+                          title={expandedMove === moveName ? 'Collapse details' : 'Expand details'}
+                        >
+                          {expandedMove === moveName ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                        </button>
+                        <button
+                          onClick={() => handleRemoveMove(moveName)}
+                          className="text-red-500 hover:text-red-700 p-1 rounded transition-colors"
+                          title="Remove move"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
                     </div>
                     
                     {move && (
@@ -449,12 +572,39 @@ const MovesetEditor: React.FC<MovesetEditorProps> = ({ pokemon, teamId, onBack }
                         </div>
                         
                         <div className="flex gap-4 text-gray-600">
-                          {move.power && <span>Power: {move.power}</span>}
-                          {move.accuracy && <span>Accuracy: {move.accuracy}%</span>}
-                          <span>PP: {move.pp}</span>
+                          {move.power && <span>Power: <strong>{move.power}</strong></span>}
+                          {move.accuracy && <span>Accuracy: <strong>{move.accuracy}%</strong></span>}
+                          <span>PP: <strong>{move.pp}</strong></span>
                         </div>
                         
-                        {move.effect_entries.length > 0 && (
+                        {expandedMove === moveName && (
+                          <div className="mt-3 pt-3 border-t border-gray-200 space-y-2">
+                            {move.effect_entries.length > 0 && (
+                              <div>
+                                <h4 className="font-medium text-gray-800 mb-1">Effect:</h4>
+                                <p className="text-gray-600 text-xs leading-relaxed">
+                                  {move.effect_entries.find(entry => entry.language.name === 'en')?.short_effect || 
+                                   move.effect_entries[0]?.short_effect}
+                                </p>
+                              </div>
+                            )}
+                            {move.flavor_text_entries && move.flavor_text_entries.length > 0 && (
+                              <div>
+                                <h4 className="font-medium text-gray-800 mb-1">Description:</h4>
+                                <p className="text-gray-600 text-xs italic leading-relaxed">
+                                  "{move.flavor_text_entries.find((entry: any) => entry.language.name === 'en')?.flavor_text || 
+                                    move.flavor_text_entries[0]?.flavor_text}"
+                                </p>
+                              </div>
+                            )}
+                            <div className="grid grid-cols-2 gap-2 text-xs text-gray-500">
+                              <div><strong>Target:</strong> {formatName(move.target?.name || 'unknown')}</div>
+                              <div><strong>Priority:</strong> {move.priority || 0}</div>
+                            </div>
+                          </div>
+                        )}
+                        
+                        {expandedMove !== moveName && move.effect_entries.length > 0 && (
                           <p className="text-gray-600 text-xs leading-relaxed">
                             {move.effect_entries.find(entry => entry.language.name === 'en')?.short_effect || 
                              move.effect_entries[0]?.short_effect}
@@ -507,89 +657,170 @@ const MovesetEditor: React.FC<MovesetEditorProps> = ({ pokemon, teamId, onBack }
 
           {activeTab === 'stats' ? (
             <div className="bg-white rounded-xl p-6 shadow-lg">
-              <h3 className="text-lg font-semibold text-gray-800 mb-2">IVs</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {Object.keys(pokemonBuild.ivs).map((stat) => (
-                  <div key={stat} className="flex items-center gap-2">
-                    <span className="text-gray-800">{formatStatName(stat)}:</span>
-                    <input
-                      type="number"
-                      min="0"
-                      max="31"
-                      value={pokemonBuild.ivs[stat as keyof PokemonBuild['ivs']]}
-                      onChange={(e) => handleIVChange(stat as keyof PokemonBuild['ivs'], e.target.value)}
-                      onBlur={(e) => handleIVChange(stat as keyof PokemonBuild['ivs'], e.target.value)}
-                      className="w-16 p-1 border border-gray-300 rounded text-center"
-                    />
-                  </div>
-                ))}
+              <div className="mb-6">
+                <div className="flex items-center gap-2 mb-3">
+                  <h3 className="text-lg font-semibold text-gray-800">Individual Values (IVs)</h3>
+                  <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
+                    0-31 per stat
+                  </span>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {Object.keys(pokemonBuild.ivs).map((stat) => (
+                    <div key={stat} className="flex items-center gap-2">
+                      <span className="text-gray-800 w-20">{formatStatName(stat)}:</span>
+                      <input
+                        type="number"
+                        min="0"
+                        max="31"
+                        value={pokemonBuild.ivs[stat as keyof PokemonBuild['ivs']]}
+                        onChange={(e) => handleIVChange(stat as keyof PokemonBuild['ivs'], e.target.value)}
+                        onBlur={(e) => handleIVChange(stat as keyof PokemonBuild['ivs'], e.target.value)}
+                        className="w-16 p-1 border border-gray-300 rounded text-center"
+                        title="Individual Values determine genetic potential (0-31, higher is better)"
+                      />
+                      <span className="text-xs text-gray-500">/31</span>
+                    </div>
+                  ))}
+                </div>
+                <p className="text-xs text-gray-500 mt-2">IVs are like genetics - higher values mean better base stats</p>
               </div>
-              <h3 className="text-lg font-semibold text-gray-800 mt-4 mb-2">EVs</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {Object.keys(pokemonBuild.evs).map((stat) => (
-                  <div key={stat} className="flex items-center gap-2">
-                    <span className="text-gray-800">{formatStatName(stat)}:</span>
-                    <input
-                      type="number"
-                      min="0"
-                      max="252"
-                      value={pokemonBuild.evs[stat as keyof PokemonBuild['evs']]}
-                      onChange={(e) => handleEVChange(stat as keyof PokemonBuild['evs'], e.target.value)}
-                      onBlur={(e) => handleEVChange(stat as keyof PokemonBuild['evs'], e.target.value)}
-                      className="w-16 p-1 border border-gray-300 rounded text-center"
-                    />
-                  </div>
-                ))}
+              
+              <div className="mb-4">
+                <div className="flex items-center gap-2 mb-3">
+                  <h3 className="text-lg font-semibold text-gray-800">Effort Values (EVs)</h3>
+                  <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full">
+                    {totalEVs}/510 total
+                  </span>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-3">
+                  {Object.keys(pokemonBuild.evs).map((stat) => (
+                    <div key={stat} className="flex items-center gap-2">
+                      <span className="text-gray-800 w-20">{formatStatName(stat)}:</span>
+                      <input
+                        type="number"
+                        min="0"
+                        max="252"
+                        value={pokemonBuild.evs[stat as keyof PokemonBuild['evs']]}
+                        onChange={(e) => handleEVChange(stat as keyof PokemonBuild['evs'], e.target.value)}
+                        onBlur={(e) => handleEVChange(stat as keyof PokemonBuild['evs'], e.target.value)}
+                        className="w-16 p-1 border border-gray-300 rounded text-center"
+                        title="Effort Values from training (0-252 per stat, 510 total)"
+                      />
+                      <span className="text-xs text-gray-500">/252</span>
+                    </div>
+                  ))}
+                </div>
+                <div className="bg-gray-50 p-3 rounded-lg">
+                  <p className="text-sm text-gray-600">
+                    <strong>Total EVs:</strong> {totalEVs}/510 ({remainingEVs} remaining)
+                    {remainingEVs === 0 && <span className="text-green-600 ml-2">Fully trained!</span>}
+                  </p>
+                  <p className="text-xs text-gray-500 mt-1">Distribute 510 points to boost stats (max 252 per stat)</p>
+                </div>
               </div>
-              <p className="text-gray-600 text-xs mt-2">Total EVs: {totalEVs} / 510 ({remainingEVs} remaining)</p>
             </div>
           ) : (
             <div className="bg-white rounded-xl p-6 shadow-lg">
-              <h3 className="text-lg font-semibold text-gray-800 mb-2">Nature</h3>
-              <select
-                value={pokemonBuild.nature}
-                onChange={(e) => setPokemonBuild(prev => ({ ...prev, nature: e.target.value }))}
-                className="w-full p-2 border border-gray-300 rounded text-gray-800"
-              >
-                {availableNatures.map((nature) => (
-                  <option key={nature.name} value={nature.name}>{formatName(nature.name)}</option>
-                ))}
-              </select>
-              <h3 className="text-lg font-semibold text-gray-800 mt-4 mb-2">Ability</h3>
-              <select
-                value={pokemonBuild.ability}
-                onChange={(e) => setPokemonBuild(prev => ({ ...prev, ability: e.target.value }))}
-                className="w-full p-2 border border-gray-300 rounded text-gray-800"
-              >
-                {availableAbilities.map((ability) => (
-                  <option key={ability} value={ability}>{formatName(ability)}</option>
-                ))}
-              </select>
-              <h3 className="text-lg font-semibold text-gray-800 mt-4 mb-2">Gender</h3>
-              {hasGenderDifference ? (
-                <select
-                  value={pokemonBuild.gender || ''}
-                  onChange={(e) => setPokemonBuild(prev => ({ ...prev, gender: e.target.value || null }))}
-                  className="w-full p-2 border border-gray-300 rounded text-gray-800"
-                >
-                  <option value="">Select Gender</option>
-                  <option value="male">Male</option>
-                  <option value="female">Female</option>
-                </select>
-              ) : (
-                <p className="text-gray-600">No gender difference</p>
-              )}
-              <h3 className="text-lg font-semibold text-gray-800 mt-4 mb-2">Held Item</h3>
-              <select
-                value={pokemonBuild.heldItem}
-                onChange={(e) => setPokemonBuild(prev => ({ ...prev, heldItem: e.target.value }))}
-                className="w-full p-2 border border-gray-300 rounded text-gray-800"
-              >
-                <option value="">No Item</option>
-                {filteredItems.map((item) => (
-                  <option key={item} value={item}>{formatName(item)}</option>
-                ))}
-              </select>
+              <div className="space-y-6">
+                <div>
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-lg font-semibold text-gray-800">Nature</h3>
+                      <span className="text-xs bg-purple-100 text-purple-800 px-2 py-1 rounded-full">
+                        +10% / -10%
+                      </span>
+                    </div>
+                    <span className="text-xs text-gray-500">Affects stat growth</span>
+                  </div>
+                  <select
+                    value={pokemonBuild.nature}
+                    onChange={(e) => setPokemonBuild(prev => ({ ...prev, nature: e.target.value }))}
+                    className="w-full p-2 border border-gray-300 rounded text-gray-800"
+                    title="Nature boosts one stat by 10% and reduces another by 10%"
+                  >
+                    {availableNatures.map((nature) => (
+                      <option key={nature.name} value={nature.name}>{formatName(nature.name)} - {nature.description}</option>
+                    ))}
+                  </select>
+                </div>
+                
+                <div>
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-lg font-semibold text-gray-800">Ability</h3>
+                      <span className="text-xs bg-orange-100 text-orange-800 px-2 py-1 rounded-full">
+                        Battle effects
+                      </span>
+                    </div>
+                    <span className="text-xs text-gray-500">Passive abilities</span>
+                  </div>
+                  <select
+                    value={pokemonBuild.ability}
+                    onChange={(e) => setPokemonBuild(prev => ({ ...prev, ability: e.target.value }))}
+                    className="w-full p-2 border border-gray-300 rounded text-gray-800"
+                    title="Abilities provide passive effects during battle"
+                  >
+                    {availableAbilities.map((ability) => (
+                      <option key={ability} value={ability}>
+                        {formatName(ability)}
+                        {abilityDescriptions[ability] && ` - ${abilityDescriptions[ability]}`}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                
+                <div>
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-lg font-semibold text-gray-800">Gender</h3>
+                      <span className="text-xs bg-pink-100 text-pink-800 px-2 py-1 rounded-full">
+                        Cosmetic
+                      </span>
+                    </div>
+                    <span className="text-xs text-gray-500">Visual only</span>
+                  </div>
+                  {hasGenderDifference ? (
+                    <select
+                      value={pokemonBuild.gender || ''}
+                      onChange={(e) => setPokemonBuild(prev => ({ ...prev, gender: e.target.value || null }))}
+                      className="w-full p-2 border border-gray-300 rounded text-gray-800"
+                      title="Some Pokémon have visual differences between genders"
+                    >
+                      <option value="">Select Gender</option>
+                      <option value="male">Male</option>
+                      <option value="female">Female</option>
+                    </select>
+                  ) : (
+                    <p className="text-gray-500 italic text-sm">This Pokémon has no gender differences</p>
+                  )}
+                </div>
+                
+                <div>
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-lg font-semibold text-gray-800">Held Item</h3>
+                      <span className="text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full">
+                        Strategic
+                      </span>
+                    </div>
+                    <span className="text-xs text-gray-500">Battle items</span>
+                  </div>
+                  <select
+                    value={pokemonBuild.heldItem}
+                    onChange={(e) => setPokemonBuild(prev => ({ ...prev, heldItem: e.target.value }))}
+                    className="w-full p-2 border border-gray-300 rounded text-gray-800"
+                    title="Held items provide various battle effects and advantages"
+                  >
+                    <option value="">No Item</option>
+                    {filteredItems.map((item) => (
+                      <option key={item} value={item}>
+                        {formatName(item)}
+                        {itemDescriptions[item] && ` - ${itemDescriptions[item]}`}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
             </div>
           )}
         </div>
