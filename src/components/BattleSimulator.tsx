@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { BattleEngine } from '../utils/battleEngine';
 import { ArrowLeft, Zap, Shield, Heart, Swords } from 'lucide-react';
 
 interface BattlePokemon {
@@ -283,72 +284,10 @@ const BattleSimulator: React.FC<BattleSimulatorProps> = ({
     };
   }, []);
 
-  // Apply move effects
+  // Apply move effects using the enhanced battle engine
   const applyMoveEffect = useCallback((move: BattleMove, user: BattlePokemon, target: BattlePokemon): { user: BattlePokemon; target: BattlePokemon; messages: string[] } => {
-    const newUser = { ...user };
-    const newTarget = { ...target };
-    const messages: string[] = [];
-
-    switch (move.effect) {
-      case 'protect':
-        newUser.protected = true;
-        messages.push(`${user.name} protected itself!`);
-        break;
-
-      case 'lower_attack':
-        newTarget.statBoosts.attack = Math.max(-6, newTarget.statBoosts.attack - 1);
-        messages.push(`${target.name}'s Attack fell!`);
-        break;
-
-      case 'raise_attack_2':
-        newUser.statBoosts.attack = Math.min(6, newUser.statBoosts.attack + 2);
-        messages.push(`${user.name}'s Attack rose sharply!`);
-        break;
-
-      case 'paralyze':
-        if (!newTarget.status && !newTarget.types.includes('electric')) {
-          newTarget.status = 'paralysis';
-          messages.push(`${target.name} was paralyzed! It may be unable to move!`);
-        } else {
-          messages.push(`${target.name} is already affected by a status condition!`);
-        }
-        break;
-
-      case 'burn':
-        if (!newTarget.status && !newTarget.types.includes('fire')) {
-          newTarget.status = 'burn';
-          messages.push(`${target.name} was burned!`);
-        } else {
-          messages.push(`${target.name} is already affected by a status condition!`);
-        }
-        break;
-
-      case 'bad_poison':
-        if (!newTarget.status && !newTarget.types.includes('poison') && !newTarget.types.includes('steel')) {
-          newTarget.status = 'poison';
-          newTarget.statusTurns = 0;
-          messages.push(`${target.name} was badly poisoned!`);
-        } else {
-          messages.push(`${target.name} is already affected by a status condition!`);
-        }
-        break;
-
-      case 'heal_50':
-        const healAmount = Math.floor(newUser.maxHp * 0.5);
-        const actualHeal = Math.min(healAmount, newUser.maxHp - newUser.currentHp);
-        newUser.currentHp += actualHeal;
-        messages.push(`${user.name} restored ${actualHeal} HP!`);
-        break;
-
-      case 'rest':
-        newUser.currentHp = newUser.maxHp;
-        newUser.status = 'sleep';
-        newUser.statusTurns = 2;
-        messages.push(`${user.name} restored its HP and fell asleep!`);
-        break;
-    }
-
-    return { user: newUser, target: newTarget, messages };
+    // Use the enhanced battle engine for move effects
+    return BattleEngine.applyMoveEffect(move, user, target);
   }, []);
 
   // Apply status effects at end of turn

@@ -1,4 +1,6 @@
 import { GymPokemon, GymType } from './types';
+import { selectPokemonMoves } from '../../services/moves';
+import { BattleEngine } from '../battleEngine';
 
 // Generate a smart moveset for a Pokemon
 export const generateMoveset = (pokemon: any, isRandomized: boolean = false) => {
@@ -124,8 +126,8 @@ export const getMovePPByName = (moveName: string): number => {
   return ppMap[moveName] || 15;
 };
 
-// Create a gym Pokemon with stats and moves
-export const createGymPokemon = (basePokemon: any, level: number, isRandomized: boolean = false): GymPokemon => {
+// Create a gym Pokemon with stats and moves (enhanced version)
+export const createGymPokemon = async (basePokemon: any, level: number, isRandomized: boolean = false): Promise<GymPokemon> => {
   const baseStats = basePokemon.stats || {
     hp: 100, attack: 80, defense: 80,
     'special-attack': 80, 'special-defense': 80, speed: 80
@@ -134,8 +136,43 @@ export const createGymPokemon = (basePokemon: any, level: number, isRandomized: 
   // Calculate max HP
   const maxHp = Math.floor(((baseStats.hp * 2) * level) / 100) + level + 10;
 
-  // Generate moves based on Pokemon's actual moveset
-  const moves = generateMoveset(basePokemon, isRandomized);
+  // Generate moves using the new PokeAPI system
+  let moves;
+  try {
+    moves = await generatePokemonMoves(basePokemon, level);
+  } catch (error) {
+    console.warn(`Failed to generate moves for ${basePokemon.name}, using fallback`);
+    moves = generateFallbackMoves(basePokemon.types || ['normal'], level);
+  }
+
+  return {
+    id: basePokemon.id,
+    name: basePokemon.name,
+    types: basePokemon.types || ['normal'],
+    sprites: {
+      front_default: basePokemon.sprites?.other?.['official-artwork']?.front_default || basePokemon.sprites?.front_default || '',
+      back_default: basePokemon.sprites?.back_default || basePokemon.sprites?.front_default || ''
+    },
+    stats: baseStats,
+    moves,
+    level,
+    currentHp: maxHp,
+    maxHp: maxHp
+  };
+};
+
+// Legacy synchronous version for backward compatibility
+export const createGymPokemonSync = (basePokemon: any, level: number, isRandomized: boolean = false): GymPokemon => {
+  const baseStats = basePokemon.stats || {
+    hp: 100, attack: 80, defense: 80,
+    'special-attack': 80, 'special-defense': 80, speed: 80
+  };
+
+  // Calculate max HP
+  const maxHp = Math.floor(((baseStats.hp * 2) * level) / 100) + level + 10;
+
+  // Use fallback moves for sync version
+  const moves = generateFallbackMoves(basePokemon.types || ['normal'], level);
 
   return {
     id: basePokemon.id,
@@ -172,4 +209,143 @@ export const getRandomPokemonOfType = (allPokemon: any[], type: string, count: n
   // Shuffle and return random selection
   const shuffled = [...typeFilteredPokemon].sort(() => Math.random() - 0.5);
   return shuffled.slice(0, Math.min(count, shuffled.length));
+};
+
+// Generate moves for the Pokemon
+// Enhanced move generation using PokeAPI
+const generatePokemonMoves = async (pokemonData: any, level: number): Promise<any[]> => {
+  try {
+    // Use the new PokeAPI-based move selection
+    const battleMoves = await selectPokemonMoves(
+      pokemonData.id,
+      pokemonData.types || ['normal'],
+      level,
+      4
+    );
+    
+    return battleMoves.map(move => ({
+      name: move.name,
+      type: move.type,
+      power: move.power,
+      accuracy: move.accuracy,
+      pp: move.pp,
+      currentPP: move.currentPP,
+      damageClass: move.damageClass,
+      priority: move.priority,
+      effect: move.effect,
+      target: move.target,
+      description: move.description
+    }));
+  } catch (error) {
+    console.warn(`Failed to generate moves for ${pokemonData.name}, using fallback`, error);
+    
+    // Fallback to type-based moves if API fails
+    return generateFallbackMoves(pokemonData.types || ['normal'], level);
+  }
+};
+
+// Fallback move generation (simplified)
+const generateFallbackMoves = (types: string[], level: number): any[] => {
+  const moves = [
+    {
+      name: 'tackle',
+      type: 'normal',
+      power: 40,
+      accuracy: 100,
+      pp: 35,
+      currentPP: 35,
+      damageClass: 'physical',
+      priority: 0,
+      target: 'opponent',
+      description: 'A physical attack in which the user charges and slams into the target with its whole body.'
+    }
+  ];
+
+  // Add type-specific moves
+  if (types.includes('fire')) {
+    moves.push({
+      name: 'ember',
+      type: 'fire',
+      power: 40,
+      accuracy: 100,
+      pp: 25,
+      currentPP: 25,
+      damageClass: 'special',
+      priority: 0,
+      target: 'opponent',
+      description: 'The target is attacked with small flames. This may also leave the target with a burn.',
+      effect: 'burn'
+    });
+  } else if (types.includes('water')) {
+    moves.push({
+      name: 'water-gun',
+      type: 'water',
+      power: 40,
+      accuracy: 100,
+      pp: 25,
+      currentPP: 25,
+      damageClass: 'special',
+      priority: 0,
+      target: 'opponent',
+      description: 'The target is blasted with a forceful shot of water.'
+    });
+  } else if (types.includes('electric')) {
+    moves.push({
+      name: 'thunder-shock',
+      type: 'electric',
+      power: 40,
+      accuracy: 100,
+      pp: 30,
+      currentPP: 30,
+      damageClass: 'special',
+      priority: 0,
+      target: 'opponent',
+      description: 'A jolt of electricity crashes down on the target to inflict damage. This may also leave the target with paralysis.',
+      effect: 'paralyze'
+    });
+  } else if (types.includes('grass')) {
+    moves.push({
+      name: 'vine-whip',
+      type: 'grass',
+      power: 45,
+      accuracy: 100,
+      pp: 25,
+      currentPP: 25,
+      damageClass: 'physical',
+      priority: 0,
+      target: 'opponent',
+      description: 'The target is struck with slender, whiplike vines to inflict damage.'
+    });
+  }
+
+  // Add basic status moves
+  moves.push({
+    name: 'growl',
+    type: 'normal',
+    power: 0,
+    accuracy: 100,
+    pp: 40,
+    currentPP: 40,
+    damageClass: 'status',
+    priority: 0,
+    target: 'all-opponents',
+    description: 'The user growls in an endearing way, making opposing Pokémon less wary. This lowers their Attack stats.',
+    effect: 'lower_attack'
+  });
+
+  moves.push({
+    name: 'protect',
+    type: 'normal',
+    power: 0,
+    accuracy: 100,
+    pp: 10,
+    currentPP: 10,
+    damageClass: 'status',
+    priority: 4,
+    target: 'self',
+    description: 'Enables the user to evade all attacks. Its chance of failing rises if it is used in succession.',
+    effect: 'protect'
+  });
+
+  return moves.slice(0, 4);
 }; 

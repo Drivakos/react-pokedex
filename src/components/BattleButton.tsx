@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Swords, Zap, X } from 'lucide-react';
 import BattleSimulator from './BattleSimulator';
-import { getRandomMoveSet } from '../services/moves';
+import { selectPokemonMoves } from '../services/moves';
 
 interface BattleButtonProps {
   pokemon: any;
@@ -16,15 +16,29 @@ const BattleButton: React.FC<BattleButtonProps> = ({ pokemon, className = '' }) 
   // Prepare player's Pokemon with proper moves
   const preparePlayerPokemon = async (pokemon: any) => {
     const pokemonTypes = pokemon.types || ['normal'];
-    const movesData = await getRandomMoveSet(pokemonTypes);
+    const pokemonId = pokemon.id || 1;
+    const level = 50; // Default level for battles
     
-    return {
-      ...pokemon,
-      moves: movesData.map(move => ({
-        ...move,
-        currentPP: move.pp
-      }))
-    };
+    try {
+      const movesData = await selectPokemonMoves(pokemonId, pokemonTypes, level, 4);
+      
+      return {
+        ...pokemon,
+        moves: movesData.map(move => ({
+          ...move,
+          currentPP: move.pp
+        }))
+      };
+    } catch (error) {
+      console.warn('Failed to get moves for player Pokemon, using fallback', error);
+      return {
+        ...pokemon,
+        moves: [
+          { name: 'tackle', type: 'normal', power: 40, accuracy: 100, pp: 35, currentPP: 35, damageClass: 'physical', description: 'A physical attack.' },
+          { name: 'growl', type: 'normal', power: 0, accuracy: 100, pp: 40, currentPP: 40, damageClass: 'status', description: 'Lowers Attack.', effect: 'lower_attack' }
+        ]
+      };
+    }
   };
 
   // Random opponent generator
@@ -35,13 +49,25 @@ const BattleButton: React.FC<BattleButtonProps> = ({ pokemon, className = '' }) 
       const response = await fetch(`https://pokeapi.co/api/v2/pokemon/${randomId}`);
       const opponentData = await response.json();
       
-      // Get moves for the opponent using the moves service
+      // Get moves for the opponent using the new moves service
       const opponentTypes = opponentData.types.map((type: any) => type.type.name);
-      const movesData = await getRandomMoveSet(opponentTypes);
-      const movesResponse = movesData.map(move => ({
-        ...move,
-        currentPP: move.pp
-      }));
+      const level = 50;
+      
+      let movesResponse;
+      try {
+        const movesData = await selectPokemonMoves(randomId, opponentTypes, level, 4);
+        movesResponse = movesData.map(move => ({
+          ...move,
+          currentPP: move.pp
+        }));
+      } catch (error) {
+        console.warn('Failed to get moves for opponent, using fallback', error);
+        // Fallback moves
+        movesResponse = [
+          { name: 'tackle', type: 'normal', power: 40, accuracy: 100, pp: 35, currentPP: 35, damageClass: 'physical', description: 'A physical attack.' },
+          { name: 'growl', type: 'normal', power: 0, accuracy: 100, pp: 40, currentPP: 40, damageClass: 'status', description: 'Lowers Attack.', effect: 'lower_attack' }
+        ];
+      }
 
       const formattedOpponent = {
         id: opponentData.id,
@@ -63,21 +89,6 @@ const BattleButton: React.FC<BattleButtonProps> = ({ pokemon, className = '' }) 
     } catch (error) {
       console.error('Error generating opponent:', error);
       // Fallback opponent
-      setOpponent({
-        id: 25,
-        name: 'pikachu',
-        types: ['electric'],
-        stats: { hp: 35, attack: 55, defense: 40, 'special-attack': 50, 'special-defense': 50, speed: 90 },
-        sprites: {
-          front_default: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/25.png',
-          back_default: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/back/25.png'
-        },
-        moves: [
-          { name: 'thunderbolt', type: 'electric', power: 90, accuracy: 100, pp: 15, currentPP: 15, damageClass: 'special', description: 'A strong electric attack.' },
-          { name: 'quick-attack', type: 'normal', power: 40, accuracy: 100, pp: 30, currentPP: 30, damageClass: 'physical', description: 'A fast attack.' }
-        ]
-      });
-      
       return {
         id: 25,
         name: 'pikachu',

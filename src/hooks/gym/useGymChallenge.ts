@@ -3,7 +3,7 @@ import { fetchPokemonData } from '../../services/api';
 import { fetchCachedPokemonData } from '../../services/cached-api';
 import { GymChallengeState, GymType, GymPokemon, ChallengerTeam } from '../../utils/gym/types';
 import { CHALLENGER_NAMES } from '../../utils/gym/constants';
-import { createGymPokemon, getRandomPokemonOfType } from '../../utils/gym/pokemonGenerator';
+import { createGymPokemonSync, getRandomPokemonOfType } from '../../utils/gym/pokemonGenerator';
 
 export function useGymChallenge() {
   const [state, setState] = useState<GymChallengeState>({
@@ -64,7 +64,7 @@ export function useGymChallenge() {
   }, []);
 
   // Generate random challenger team
-  const generateChallenger = useCallback((): ChallengerTeam => {
+  const generateChallenger = useCallback(async (): Promise<ChallengerTeam> => {
     const teamSize = Math.min(1 + Math.floor(state.battleWins / 3), 4); // Progressively larger teams
     const challengerName = CHALLENGER_NAMES[Math.floor(Math.random() * CHALLENGER_NAMES.length)];
     const team: GymPokemon[] = [];
@@ -95,7 +95,8 @@ export function useGymChallenge() {
       if (selectedPokemon) {
         // Challenger Pokemon levels scale with battle wins
         const level = Math.max(15, Math.min(60, 25 + state.battleWins * 3 + Math.floor(Math.random() * 15)));
-        team.push(createGymPokemon(selectedPokemon, level, true));
+        // Use sync version for challengers to avoid async complexity in battle generation
+        team.push(createGymPokemonSync(selectedPokemon, level, true));
       }
     }
 
@@ -118,8 +119,9 @@ export function useGymChallenge() {
       }));
     },
 
-    handlePokemonSelection: (pokemon: any) => {
-      const gymPokemon = createGymPokemon(pokemon, 50);
+    handlePokemonSelection: async (pokemon: any) => {
+      // Use sync version for simplicity, or make this async if needed
+      const gymPokemon = createGymPokemonSync(pokemon, 50);
       setState(prev => ({
         ...prev,
         gymTeam: [gymPokemon],
@@ -127,8 +129,8 @@ export function useGymChallenge() {
       }));
     },
 
-    startNewBattle: () => {
-      const challenger = generateChallenger();
+    startNewBattle: async () => {
+      const challenger = await generateChallenger();
       setState(prev => ({
         ...prev,
         currentChallenger: challenger,
@@ -170,8 +172,8 @@ export function useGymChallenge() {
       });
     },
 
-    handleBattlePokemonSelection: (pokemon: GymPokemon) => {
-      const challenger = generateChallenger();
+    handleBattlePokemonSelection: async (pokemon: GymPokemon) => {
+      const challenger = await generateChallenger();
       setState(prev => ({
         ...prev,
         selectedBattlePokemon: pokemon,
@@ -181,8 +183,9 @@ export function useGymChallenge() {
       }));
     },
 
-    handleTeamExpansion: (pokemon: any) => {
-      const newGymPokemon = createGymPokemon(pokemon, 50);
+    handleTeamExpansion: async (pokemon: any) => {
+      // Use sync version for simplicity
+      const newGymPokemon = createGymPokemonSync(pokemon, 50);
       
       setState(prev => {
         if (prev.pokemonToReplace) {
