@@ -340,39 +340,132 @@ export const fetchCachedPokemonDetails = async (id: number): Promise<PokemonDeta
     const pokemon = await fetchCachedREST(`pokemon/${id}`);
     const species = await fetchCachedREST(`pokemon-species/${id}`);
 
+    // Extract English flavor text
+    const englishFlavorText = species.flavor_text_entries
+      ?.find((entry: any) => entry.language.name === 'en')?.flavor_text
+      ?.replace(/\f/g, ' ')
+      ?.replace(/\n/g, ' ') || '';
+
+    // Format stats
+    const stats = pokemon.stats.reduce((acc: any, stat: any) => {
+      const statName = stat.stat.name.replace('-', '_');
+      acc[statName] = stat.base_stat;
+      return acc;
+    }, {});
+
+    // Fetch abilities with descriptions
+    const abilitiesPromises = pokemon.abilities.map(async (ability: any) => {
+      try {
+        const abilityData = await fetchCachedREST(`ability/${ability.ability.name}`);
+        
+        // Find English description
+        const englishEntry = abilityData.flavor_text_entries?.find(
+          (entry: any) => entry.language.name === 'en'
+        );
+        
+        return {
+          name: ability.ability.name.replace('-', ' '),
+          is_hidden: ability.is_hidden,
+          description: englishEntry ? englishEntry.flavor_text : 'No description available.'
+        };
+      } catch (error) {
+        console.warn(`Failed to fetch ability ${ability.ability.name}:`, error);
+        return {
+          name: ability.ability.name.replace('-', ' '),
+          is_hidden: ability.is_hidden,
+          description: 'No description available.'
+        };
+      }
+    });
+
+    const abilities = await Promise.all(abilitiesPromises);
+
+    // Fetch evolution chain if available
+    let evolutionChain: any[] = [];
+    if (species.evolution_chain?.url) {
+      try {
+        const evolutionResponse = await fetch(species.evolution_chain.url);
+        const evolutionData = await evolutionResponse.json();
+        
+        // Process evolution chain with species IDs
+        if (evolutionData) {
+          const evoData = evolutionData.chain;
+          
+          // Fetch species data for the base form
+          const baseSpeciesResponse = await fetchCachedREST(`pokemon-species/${evoData.species.name}`);
+          
+          const evoDetails = {
+            species_name: evoData.species.name,
+            species_id: baseSpeciesResponse.id,
+            min_level: 1,
+            trigger_name: null,
+            item: null
+          };
+          evolutionChain.push(evoDetails);
+          
+          // Process first evolution
+          if (evoData.evolves_to.length > 0) {
+            for (const evo1 of evoData.evolves_to) {
+              const speciesData = await fetchCachedREST(`pokemon-species/${evo1.species.name}`);
+              
+              const evoDetails = {
+                species_name: evo1.species.name,
+                species_id: speciesData.id,
+                min_level: evo1.evolution_details[0]?.min_level || null,
+                trigger_name: evo1.evolution_details[0]?.trigger?.name || null,
+                item: evo1.evolution_details[0]?.item?.name || null
+              };
+              evolutionChain.push(evoDetails);
+              
+              // Process second evolution
+              if (evo1.evolves_to.length > 0) {
+                for (const evo2 of evo1.evolves_to) {
+                  const speciesData = await fetchCachedREST(`pokemon-species/${evo2.species.name}`);
+                  
+                  const evoDetails = {
+                    species_name: evo2.species.name,
+                    species_id: speciesData.id,
+                    min_level: evo2.evolution_details[0]?.min_level || null,
+                    trigger_name: evo2.evolution_details[0]?.trigger?.name || null,
+                    item: evo2.evolution_details[0]?.item?.name || null
+                  };
+                  evolutionChain.push(evoDetails);
+                }
+              }
+            }
+          }
+        }
+      } catch (error) {
+        console.warn(`Failed to fetch evolution chain for ${species.name}:`, error);
+      }
+    }
+
     return {
       id: pokemon.id,
       name: pokemon.name,
       height: pokemon.height,
       weight: pokemon.weight,
-      base_experience: pokemon.base_experience,
       types: pokemon.types.map((t: any) => t.type.name),
-      abilities: pokemon.abilities.map((a: any) => ({
-        name: a.ability.name,
-        is_hidden: a.is_hidden,
-      })),
-      stats: pokemon.stats.map((s: any) => ({
-        name: s.stat.name,
-        base_stat: s.base_stat,
-      })),
-      moves: pokemon.moves.map((m: any) => m.move.name),
-      sprites: pokemon.sprites,
-      species: {
-        name: species.name,
-        flavor_text_entries: species.flavor_text_entries,
-        genera: species.genera,
-        habitat: species.habitat,
-        growth_rate: species.growth_rate,
-        capture_rate: species.capture_rate,
-        base_happiness: species.base_happiness,
-        is_baby: species.is_baby,
-        is_legendary: species.is_legendary,
-        is_mythical: species.is_mythical,
-        hatch_counter: species.hatch_counter,
-        has_gender_differences: species.has_gender_differences,
-        forms_switchable: species.forms_switchable,
-        evolution_chain: species.evolution_chain,
+      abilities,
+      stats,
+      sprites: {
+        front_default: pokemon.sprites.front_default,
+        back_default: pokemon.sprites.back_default,
+        front_shiny: pokemon.sprites.front_shiny,
+        back_shiny: pokemon.sprites.back_shiny,
+        official_artwork: pokemon.sprites.other?.['official-artwork']?.front_default
       },
+      moves: pokemon.moves.map((m: any) => ({
+        name: m.move.name,
+        learned_at_level: m.version_group_details[0]?.level_learned_at || 0,
+        learn_method: m.version_group_details[0]?.move_learn_method.name || 'unknown'
+      })),
+      flavor_text: englishFlavorText,
+      genera: species.genera?.find((g: any) => g.language.name === 'en')?.genus || '',
+      generation: species.generation?.name || 'unknown',
+      evolution_chain: evolutionChain,
+      base_experience: pokemon.base_experience,
+      has_evolutions: evolutionChain.length > 1
     };
   } catch (error) {
     console.error(`Error fetching cached Pokemon details for ID ${id}:`, error);
