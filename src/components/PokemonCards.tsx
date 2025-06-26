@@ -387,7 +387,7 @@ const PokemonCards: React.FC<PokemonCardsProps> = ({ pokemonName, pokemonId }) =
     if (pokemonName) {
       fetchPokemonCards();
     }
-  }, [pokemonName, pokemonId]);
+  }, [pokemonName, pokemonId, visibleCards]);
 
   const openCardModal = (card: PokemonCard) => {
     setSelectedCard(card);

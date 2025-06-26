@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { ArrowLeft, Save, Trash2, Plus, Zap, Settings, Award, ChevronUp, ChevronDown, Copy } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { formatName, getOfficialArtwork } from '../../utils/helpers';
@@ -271,6 +271,7 @@ const MovesetEditor: React.FC<MovesetEditorProps> = ({ pokemon, teamId, onBack }
   const [selectedMoves, setSelectedMoves] = useState<string[]>([]);
   const [availableMoves, setAvailableMoves] = useState<string[]>([]);
   const [moveDetails, setMoveDetails] = useState<Record<string, MoveDetails>>({});
+  const loadedMovesRef = useRef<Set<string>>(new Set());
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
   const [showMoveSelector, setShowMoveSelector] = useState(false);
@@ -339,10 +340,10 @@ const MovesetEditor: React.FC<MovesetEditorProps> = ({ pokemon, teamId, onBack }
                 const englishEntry = abilityData.effect_entries.find((entry: any) => entry.language.name === 'en');
                 abilityDescs[ability] = englishEntry?.short_effect || 'No description available';
               }
-            } catch (error) {
-              console.warn(`Failed to fetch description for ability: ${ability}`);
-              abilityDescs[ability] = 'Description not available';
-            }
+                      } catch {
+            console.warn(`Failed to fetch description for ability: ${ability}`);
+            abilityDescs[ability] = 'Description not available';
+          }
           }
           setAbilityDescriptions(abilityDescs);
           
@@ -363,7 +364,7 @@ const MovesetEditor: React.FC<MovesetEditorProps> = ({ pokemon, teamId, onBack }
               const englishEntry = speciesData.flavor_text_entries.find((entry: any) => entry.language.name === 'en');
               setPokemonDescription(englishEntry?.flavor_text?.replace(/\f/g, ' ') || 'No description available');
             }
-          } catch (error) {
+          } catch {
             console.warn('Failed to fetch Pokemon species description');
             setPokemonDescription('Description not available');
           }
@@ -408,7 +409,7 @@ const MovesetEditor: React.FC<MovesetEditorProps> = ({ pokemon, teamId, onBack }
               const englishEntry = itemData.effect_entries.find((entry: any) => entry.language.name === 'en');
               itemDescs[item] = englishEntry?.short_effect || englishEntry?.effect || 'Competitive battle item';
             }
-          } catch (error) {
+          } catch {
             console.warn(`Failed to fetch description for item: ${item}`);
             // Provide fallback descriptions for common items
             const fallbackDescriptions: Record<string, string> = {
@@ -455,7 +456,8 @@ const MovesetEditor: React.FC<MovesetEditorProps> = ({ pokemon, teamId, onBack }
   useEffect(() => {
     const loadDetailsForSelectedMoves = async () => {
       for (const moveName of selectedMoves) {
-        if (!moveDetails[moveName]) {
+        if (!loadedMovesRef.current.has(moveName)) {
+          loadedMovesRef.current.add(moveName);
           await loadMoveDetails(moveName);
         }
       }
@@ -464,7 +466,7 @@ const MovesetEditor: React.FC<MovesetEditorProps> = ({ pokemon, teamId, onBack }
     if (selectedMoves.length > 0) {
       loadDetailsForSelectedMoves();
     }
-  }, [selectedMoves]); // Only depend on selectedMoves, not moveDetails to avoid infinite loop
+  }, [selectedMoves, loadMoveDetails]); // No need for moveDetails dependency due to ref approach
 
   const handleSaveBuild = () => {
     const completeBuild = {
@@ -585,7 +587,7 @@ const MovesetEditor: React.FC<MovesetEditorProps> = ({ pokemon, teamId, onBack }
     }
   };
 
-  const loadMoveDetails = async (moveName: string): Promise<MoveDetails | null> => {
+  const loadMoveDetails = useCallback(async (moveName: string): Promise<MoveDetails | null> => {
     if (moveDetails[moveName]) {
       return moveDetails[moveName];
     }
@@ -615,7 +617,7 @@ const MovesetEditor: React.FC<MovesetEditorProps> = ({ pokemon, teamId, onBack }
     }
     
     return null;
-  };
+  }, [moveDetails]);
 
   const handleMoveToggle = async (moveName: string) => {
     if (selectedMoves.includes(moveName)) {
