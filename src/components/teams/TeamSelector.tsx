@@ -55,7 +55,6 @@ const TeamSelector: React.FC<TeamSelectorProps> = ({ pokemon, onClose }) => {
       try {
         // Step 1: Fetch teams fresh when modal opens
         if (user && typeof fetchTeams === 'function') {
-          console.log('🔄 Fetching teams...');
           await fetchTeams();
           hasFetchedTeams.current = true;
         }
@@ -80,7 +79,6 @@ const TeamSelector: React.FC<TeamSelectorProps> = ({ pokemon, onClose }) => {
       
       if (teams && teams.length > 0 && typeof getTeamMembers === 'function') {
         try {
-          console.log('🔄 Fetching team members for', teams.length, 'teams...');
           const members: Record<number, number[]> = {};
           const memberDetails: Record<number, TeamMember[]> = {};
           
@@ -94,7 +92,6 @@ const TeamSelector: React.FC<TeamSelectorProps> = ({ pokemon, onClose }) => {
           setTeamMembers(members);
           setTeamMemberDetails(memberDetails);
           hasFetchedMembers.current = true;
-          console.log('✅ Team members fetched successfully');
         } catch (error) {
           console.error('Error fetching team members:', error);
         }
@@ -147,7 +144,6 @@ const TeamSelector: React.FC<TeamSelectorProps> = ({ pokemon, onClose }) => {
   };
 
   const handleAddPokemon = async (teamId: number, position: number) => {
-    console.log('➕ Adding Pokémon to team:', teamId, 'position:', position, 'pokemon:', pokemon.name);
     try {
       // Check that we have a valid session before adding the Pokémon
       const sessionValid = await checkSession();
@@ -161,19 +157,16 @@ const TeamSelector: React.FC<TeamSelectorProps> = ({ pokemon, onClose }) => {
       try {
         await addPokemonToTeam(teamId, pokemon.id, position);
         success = true;
-        console.log('✅ Add Pokemon successful');
       } catch (error) {
         console.error('❌ Error in addPokemonToTeam:', error);
         success = false;
       }
       
       if (success) {
-        console.log('🔄 Refreshing team members after add');
         // Refresh team members from database to get accurate state
         if (typeof getTeamMembers === 'function') {
           try {
             const freshTeamMembers = await getTeamMembers(teamId);
-            console.log('🔄 Fresh team members after add:', freshTeamMembers);
             setTeamMembers(prev => ({
               ...prev,
               [teamId]: freshTeamMembers.map(member => member.position)
@@ -199,7 +192,6 @@ const TeamSelector: React.FC<TeamSelectorProps> = ({ pokemon, onClose }) => {
   };
 
   const handleRemovePokemon = async (teamId: number, position: number) => {
-    console.log('🗑️ Removing Pokémon from team:', teamId, 'position:', position);
     try {
       // Check that we have a valid session before removing the Pokémon
       const sessionValid = await checkSession();
@@ -211,11 +203,9 @@ const TeamSelector: React.FC<TeamSelectorProps> = ({ pokemon, onClose }) => {
       let success = false;
       
       if (typeof removePokemonFromTeam === 'function') {
-        console.log('🔧 Using auth context removePokemonFromTeam method');
         await removePokemonFromTeam(teamId, position);
         success = true;
       } else {
-        console.log('🔧 Using direct database access fallback');
         // Fallback to direct database access if the context method isn't available
         const result = await withSession(async () => {
           const { error } = await supabase
@@ -239,12 +229,10 @@ const TeamSelector: React.FC<TeamSelectorProps> = ({ pokemon, onClose }) => {
       }
       
       if (success) {
-        console.log('✅ Removal successful, refreshing team members');
         // Refresh team members from database to get accurate state
         if (typeof getTeamMembers === 'function') {
           try {
             const freshTeamMembers = await getTeamMembers(teamId);
-            console.log('🔄 Fresh team members:', freshTeamMembers);
             setTeamMembers(prev => ({
               ...prev,
               [teamId]: freshTeamMembers.map(member => member.position)

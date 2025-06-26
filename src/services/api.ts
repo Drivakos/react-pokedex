@@ -79,7 +79,6 @@ export const fetchPokemonById = async (id: number): Promise<Pokemon> => {
   // Try cached version first if enabled
   if (USE_CACHED_API) {
     try {
-      console.log(`🚀 Fetching Pokemon ${id} from cached API`);
       return await fetchCachedPokemonById(id);
     } catch (error) {
       console.warn(`⚠️ Cached API failed for Pokemon ${id}, falling back to direct API:`, error);
@@ -88,7 +87,6 @@ export const fetchPokemonById = async (id: number): Promise<Pokemon> => {
 
   // Fallback to direct API call
   try {
-    console.log(`📡 Fetching Pokemon ${id} from direct API`);
     const query = `
       query GetPokemonById($id: Int!) {
         pokemon_v2_pokemon_by_pk(id: $id) {
@@ -172,7 +170,6 @@ export const fetchPokemonData = async (
   // Try cached version first if enabled
   if (USE_CACHED_API) {
     try {
-      console.log(`🚀 Fetching Pokemon data from cached API (limit: ${limit}, offset: ${offset})`);
       return await fetchCachedPokemonData(limit, offset, searchTerm, filters);
     } catch (error) {
       console.warn(`⚠️ Cached API failed for Pokemon data, falling back to direct API:`, error);
@@ -181,7 +178,6 @@ export const fetchPokemonData = async (
 
   // Fallback to direct API call
   try {
-    console.log(`📡 Fetching Pokemon data from direct API (limit: ${limit}, offset: ${offset})`);
     const whereConditions = buildWhereConditions(searchTerm, filters);
     const typeAndCondition = buildTypeAndCondition(filters.types);
 
@@ -318,7 +314,6 @@ export const fetchPokemonDetails = async (id: number): Promise<PokemonDetails> =
   // Try cached version first if enabled
   if (USE_CACHED_API) {
     try {
-      console.log(`🚀 Fetching Pokemon details ${id} from cached API`);
       return await fetchCachedPokemonDetails(id);
     } catch (error) {
       console.warn(`⚠️ Cached API failed for Pokemon details ${id}, falling back to direct API:`, error);
@@ -327,7 +322,6 @@ export const fetchPokemonDetails = async (id: number): Promise<PokemonDetails> =
 
   // Fallback to direct API call
   try {
-    console.log(`📡 Fetching Pokemon details ${id} from direct API`);
     // Fetch basic Pokemon data
     const pokemonResponse = await fetch(`${REST_ENDPOINT}/pokemon/${id}`);
     const pokemonData = await pokemonResponse.json();
@@ -474,7 +468,6 @@ export const fetchFilterOptions = async () => {
   // Try cached version first if enabled
   if (USE_CACHED_API) {
     try {
-      console.log(`🚀 Fetching filter options from cached API`);
       return await fetchCachedFilterOptions();
     } catch (error) {
       console.warn(`⚠️ Cached API failed for filter options, falling back to direct API:`, error);
@@ -483,7 +476,6 @@ export const fetchFilterOptions = async () => {
 
   // Fallback to direct API call
   try {
-    console.log(`📡 Fetching filter options from direct API`);
     const query = `
       query GetFilterOptions {
         types: pokemon_v2_type(where: {pokemon_v2_pokemontypes: {pokemon_v2_pokemon: {is_default: {_eq: true}}}}) {

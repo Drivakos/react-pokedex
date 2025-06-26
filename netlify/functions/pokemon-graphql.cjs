@@ -57,11 +57,10 @@ exports.handler = async (event, context) => {
     try {
       cachedResponse = await getCache(cacheKey);
     } catch (error) {
-      console.log('Cache get error:', error);
+      // Silent cache miss - this is normal
     }
 
     if (cachedResponse) {
-      console.log('Cache hit for GraphQL query');
       return {
         statusCode: 200,
         headers: {
@@ -95,7 +94,6 @@ exports.handler = async (event, context) => {
       await setCache(cacheKey, responseBody, {
         maxAge: 3600, // 1 hour
       });
-      console.log('Cached GraphQL response');
     } catch (error) {
       console.error('Cache set error:', error);
     }

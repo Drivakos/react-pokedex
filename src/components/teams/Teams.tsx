@@ -50,10 +50,8 @@ const Teams: React.FC = () => {
       hasFetchedTeams.current = true;
       
       try {
-        console.log('🔄 Loading teams...');
         if (fetchTeams && typeof fetchTeams === 'function') {
           await fetchTeams();
-          console.log('✅ Teams loaded successfully');
         }
       } catch (error) {
         console.error('❌ Error loading teams:', error);
@@ -90,12 +88,6 @@ const Teams: React.FC = () => {
             const response = await fetch(`https://pokeapi.co/api/v2/pokemon/${member.pokemon_id}`);
             if (response.ok) {
               const pokemon = await response.json();
-              console.log(`🎮 Loaded Pokemon ${member.pokemon_id}:`, {
-                name: pokemon.name,
-                id: pokemon.id,
-                sprites: pokemon.sprites,
-                officialArtwork: pokemon.sprites?.other?.['official-artwork']?.front_default
-              });
               pokemonDetailsMap[member.pokemon_id] = {
                 id: pokemon.id,
                 name: pokemon.name,
@@ -154,7 +146,7 @@ const Teams: React.FC = () => {
         try {
           build = JSON.parse(savedBuild);
         } catch (e) {
-          console.warn(`Failed to parse build for ${pokemon.name}`);
+          // Build data parsing failed, using defaults
         }
       }
 
@@ -259,7 +251,7 @@ const Teams: React.FC = () => {
           try {
             build = JSON.parse(savedBuild);
           } catch (e) {
-            console.warn(`Failed to parse build for ${pokemon.name}`);
+            // Build data parsing failed, using defaults
           }
         }
 
