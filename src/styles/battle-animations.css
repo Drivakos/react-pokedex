@@ -405,4 +405,371 @@
 
 .pokemon-pp-bar {
   animation: ppBarGlow 2s ease-in-out infinite;
-} 
+}
+
+/* === NEW POKEMON MOVE ANIMATIONS === */
+
+/* Physical Attack Animations */
+@keyframes physical-charge {
+  0% { transform: translateX(0) scale(1); }
+  30% { transform: translateX(-20px) scale(1.1); }
+  60% { transform: translateX(15px) scale(0.95); }
+  100% { transform: translateX(0) scale(1); }
+}
+
+@keyframes tackle-rush {
+  0% { transform: translateX(0) rotate(0deg); }
+  50% { transform: translateX(30px) rotate(5deg); }
+  100% { transform: translateX(0) rotate(0deg); }
+}
+
+@keyframes physical-attack {
+  0% { transform: translateX(0) scale(1); }
+  40% { transform: translateX(20px) scale(1.05); }
+  70% { transform: translateX(-10px) scale(0.98); }
+  100% { transform: translateX(0) scale(1); }
+}
+
+/* Damage/Impact Animations */
+@keyframes impact-shake {
+  0%, 100% { transform: translateX(0) scale(1); }
+  20% { transform: translateX(-8px) scale(1.02); }
+  40% { transform: translateX(8px) scale(0.98); }
+  60% { transform: translateX(-6px) scale(1.01); }
+  80% { transform: translateX(6px) scale(0.99); }
+}
+
+@keyframes hit-shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-5px); }
+  75% { transform: translateX(5px); }
+}
+
+@keyframes damage-flash {
+  0%, 100% { filter: brightness(1); }
+  50% { filter: brightness(1.5) contrast(1.2); }
+}
+
+/* Special Move Charge Animations */
+@keyframes fire-charge {
+  0% { transform: scale(1); filter: hue-rotate(0deg); }
+  50% { transform: scale(1.1); filter: hue-rotate(15deg) brightness(1.3); }
+  100% { transform: scale(1); filter: hue-rotate(0deg); }
+}
+
+@keyframes water-charge {
+  0% { transform: scale(1) rotate(0deg); }
+  50% { transform: scale(1.08) rotate(2deg); filter: hue-rotate(-20deg) brightness(1.2); }
+  100% { transform: scale(1) rotate(0deg); }
+}
+
+@keyframes electric-charge {
+  0% { transform: scale(1); filter: brightness(1); }
+  25% { transform: scale(1.05); filter: brightness(1.4) contrast(1.3); }
+  50% { transform: scale(1.1); filter: brightness(1.1) contrast(1.1); }
+  75% { transform: scale(1.05); filter: brightness(1.4) contrast(1.3); }
+  100% { transform: scale(1); filter: brightness(1); }
+}
+
+@keyframes grass-charge {
+  0% { transform: scale(1) translateY(0); }
+  50% { transform: scale(1.06) translateY(-5px); filter: hue-rotate(10deg) brightness(1.2); }
+  100% { transform: scale(1) translateY(0); }
+}
+
+@keyframes ice-charge {
+  0% { transform: scale(1); filter: brightness(1); }
+  50% { transform: scale(1.08); filter: brightness(1.3) hue-rotate(-10deg); }
+  100% { transform: scale(1); filter: brightness(1); }
+}
+
+@keyframes psychic-focus {
+  0% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.1); opacity: 0.8; filter: hue-rotate(45deg) brightness(1.2); }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+@keyframes ghost-phase {
+  0% { transform: scale(1); opacity: 1; }
+  30% { transform: scale(1.05); opacity: 0.6; }
+  60% { transform: scale(0.95); opacity: 0.4; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+@keyframes dragon-roar {
+  0% { transform: scale(1) rotate(0deg); }
+  30% { transform: scale(1.15) rotate(-2deg); filter: brightness(1.3) hue-rotate(20deg); }
+  60% { transform: scale(1.1) rotate(1deg); filter: brightness(1.1); }
+  100% { transform: scale(1) rotate(0deg); }
+}
+
+@keyframes special-charge {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.08); filter: brightness(1.2); }
+  100% { transform: scale(1); }
+}
+
+/* Status Effect Animations */
+@keyframes status-cast {
+  0% { transform: scale(1); filter: brightness(1); }
+  33% { transform: scale(1.05); filter: brightness(1.2) hue-rotate(30deg); }
+  66% { transform: scale(1.1); filter: brightness(1.4) hue-rotate(60deg); }
+  100% { transform: scale(1); filter: brightness(1); }
+}
+
+@keyframes status-paralysis {
+  0%, 100% { transform: translateX(0); filter: brightness(1); }
+  25% { transform: translateX(-3px); filter: brightness(1.3) hue-rotate(60deg); }
+  75% { transform: translateX(3px); filter: brightness(1.3) hue-rotate(60deg); }
+}
+
+@keyframes status-burn {
+  0%, 100% { filter: brightness(1) hue-rotate(0deg); }
+  50% { filter: brightness(1.4) hue-rotate(15deg) contrast(1.2); }
+}
+
+@keyframes status-poison {
+  0%, 100% { filter: brightness(1) hue-rotate(0deg); }
+  50% { filter: brightness(1.2) hue-rotate(90deg) contrast(1.1); }
+}
+
+/* Defensive Animations */
+@keyframes defend-glow {
+  0% { transform: scale(1); filter: brightness(1); }
+  50% { transform: scale(1.05); filter: brightness(1.3) hue-rotate(240deg); }
+  100% { transform: scale(1); filter: brightness(1); }
+}
+
+@keyframes heal-glow {
+  0% { transform: scale(1); filter: brightness(1); }
+  50% { transform: scale(1.08); filter: brightness(1.4) hue-rotate(120deg); }
+  100% { transform: scale(1); filter: brightness(1); }
+}
+
+@keyframes stat-boost {
+  0% { transform: scale(1) translateY(0); }
+  50% { transform: scale(1.12) translateY(-8px); filter: brightness(1.3); }
+  100% { transform: scale(1) translateY(0); }
+}
+
+/* Damage Type Animations */
+@keyframes fire-damage {
+  0%, 100% { filter: brightness(1) hue-rotate(0deg); }
+  50% { filter: brightness(1.5) hue-rotate(15deg) contrast(1.3); }
+}
+
+@keyframes water-damage {
+  0%, 100% { filter: brightness(1) hue-rotate(0deg); }
+  50% { filter: brightness(1.3) hue-rotate(-30deg) contrast(1.2); }
+}
+
+@keyframes electric-damage {
+  0%, 100% { filter: brightness(1); }
+  20% { filter: brightness(1.6) contrast(1.4); }
+  40% { filter: brightness(1.1) contrast(1.1); }
+  60% { filter: brightness(1.6) contrast(1.4); }
+  80% { filter: brightness(1.1) contrast(1.1); }
+}
+
+@keyframes grass-damage {
+  0%, 100% { filter: brightness(1) hue-rotate(0deg); }
+  50% { filter: brightness(1.3) hue-rotate(60deg) contrast(1.2); }
+}
+
+@keyframes ice-damage {
+  0%, 100% { filter: brightness(1) hue-rotate(0deg); }
+  50% { filter: brightness(1.4) hue-rotate(-45deg) contrast(1.3); }
+}
+
+@keyframes psychic-damage {
+  0%, 100% { filter: brightness(1) hue-rotate(0deg); opacity: 1; }
+  50% { filter: brightness(1.3) hue-rotate(300deg) contrast(1.2); opacity: 0.8; }
+}
+
+@keyframes ghost-damage {
+  0%, 100% { opacity: 1; filter: brightness(1); }
+  50% { opacity: 0.5; filter: brightness(1.4) hue-rotate(270deg); }
+}
+
+@keyframes dragon-damage {
+  0%, 100% { filter: brightness(1) hue-rotate(0deg); }
+  50% { filter: brightness(1.4) hue-rotate(45deg) contrast(1.3); }
+}
+
+/* Effect Overlay Animations */
+@keyframes fire-blast {
+  0% { opacity: 0; transform: scale(0.5) rotate(0deg); }
+  50% { opacity: 1; transform: scale(1.2) rotate(180deg); }
+  100% { opacity: 0; transform: scale(2) rotate(360deg); }
+}
+
+@keyframes water-splash {
+  0% { opacity: 0; transform: scale(0.3) translateY(20px); }
+  50% { opacity: 1; transform: scale(1.1) translateY(-10px); }
+  100% { opacity: 0; transform: scale(1.5) translateY(-30px); }
+}
+
+@keyframes lightning-bolt {
+  0% { opacity: 0; transform: scale(0.2) rotate(-15deg); }
+  20% { opacity: 1; transform: scale(1.3) rotate(5deg); }
+  40% { opacity: 0.6; transform: scale(1.1) rotate(-5deg); }
+  60% { opacity: 1; transform: scale(1.2) rotate(3deg); }
+  100% { opacity: 0; transform: scale(0.8) rotate(0deg); }
+}
+
+@keyframes leaf-storm {
+  0% { opacity: 0; transform: scale(0.4) rotate(0deg); }
+  50% { opacity: 1; transform: scale(1.2) rotate(360deg); }
+  100% { opacity: 0; transform: scale(1.8) rotate(720deg); }
+}
+
+@keyframes ice-crystals {
+  0% { opacity: 0; transform: scale(0.3) rotate(0deg); }
+  50% { opacity: 1; transform: scale(1.1) rotate(90deg); }
+  100% { opacity: 0; transform: scale(1.6) rotate(180deg); }
+}
+
+@keyframes psychic-waves {
+  0% { opacity: 0; transform: scale(0.5); }
+  25% { opacity: 0.8; transform: scale(1.1); }
+  50% { opacity: 0.4; transform: scale(1.3); }
+  75% { opacity: 0.8; transform: scale(1.1); }
+  100% { opacity: 0; transform: scale(1.5); }
+}
+
+@keyframes shadow-orbs {
+  0% { opacity: 0; transform: scale(0.2) rotate(0deg); }
+  50% { opacity: 0.9; transform: scale(1.2) rotate(180deg); }
+  100% { opacity: 0; transform: scale(2) rotate(360deg); }
+}
+
+@keyframes dragon-flames {
+  0% { opacity: 0; transform: scale(0.4) rotate(-30deg); }
+  50% { opacity: 1; transform: scale(1.3) rotate(15deg); }
+  100% { opacity: 0; transform: scale(2.2) rotate(60deg); }
+}
+
+@keyframes protect-shield {
+  0% { opacity: 0; transform: scale(0.8); }
+  50% { opacity: 0.9; transform: scale(1.2); }
+  100% { opacity: 0; transform: scale(1.5); }
+}
+
+@keyframes heal-sparkles {
+  0% { opacity: 0; transform: scale(0.3) rotate(0deg); }
+  50% { opacity: 1; transform: scale(1.1) rotate(180deg); }
+  100% { opacity: 0; transform: scale(1.4) rotate(360deg); }
+}
+
+@keyframes electric-sparks {
+  0% { opacity: 0; transform: scale(0.2); }
+  20% { opacity: 1; transform: scale(1.2); }
+  40% { opacity: 0.5; transform: scale(0.8); }
+  60% { opacity: 1; transform: scale(1.1); }
+  80% { opacity: 0.3; transform: scale(0.9); }
+  100% { opacity: 0; transform: scale(1.3); }
+}
+
+@keyframes fire-sparks {
+  0% { opacity: 0; transform: scale(0.3) rotate(0deg); }
+  50% { opacity: 1; transform: scale(1.1) rotate(90deg); }
+  100% { opacity: 0; transform: scale(1.5) rotate(180deg); }
+}
+
+@keyframes poison-bubbles {
+  0% { opacity: 0; transform: scale(0.2) translateY(0); }
+  50% { opacity: 1; transform: scale(1.1) translateY(-20px); }
+  100% { opacity: 0; transform: scale(1.4) translateY(-40px); }
+}
+
+@keyframes impact-burst {
+  0% { opacity: 0; transform: scale(0.1); }
+  50% { opacity: 1; transform: scale(1.3); }
+  100% { opacity: 0; transform: scale(2.5); }
+}
+
+@keyframes normal-impact {
+  0% { opacity: 0; transform: scale(0.4); }
+  50% { opacity: 1; transform: scale(1.2); }
+  100% { opacity: 0; transform: scale(1.8); }
+}
+
+@keyframes physical-impact {
+  0% { opacity: 0; transform: scale(0.3) rotate(0deg); }
+  50% { opacity: 1; transform: scale(1.1) rotate(45deg); }
+  100% { opacity: 0; transform: scale(1.6) rotate(90deg); }
+}
+
+@keyframes stat-change {
+  0% { opacity: 0; transform: scale(0.5) translateY(0); }
+  50% { opacity: 1; transform: scale(1.2) translateY(-15px); }
+  100% { opacity: 0; transform: scale(1.1) translateY(-30px); }
+}
+
+@keyframes status-effect {
+  0% { opacity: 0; transform: scale(0.6); }
+  50% { opacity: 1; transform: scale(1.1); }
+  100% { opacity: 0; transform: scale(1.3); }
+}
+
+@keyframes energy-blast {
+  0% { opacity: 0; transform: scale(0.4) rotate(0deg); }
+  50% { opacity: 1; transform: scale(1.2) rotate(120deg); }
+  100% { opacity: 0; transform: scale(1.8) rotate(240deg); }
+}
+
+/* Animation Classes */
+.battle-physical-charge { animation: physical-charge 0.8s ease-in-out; }
+.battle-tackle-rush { animation: tackle-rush 0.6s ease-in-out; }
+.battle-physical-attack { animation: physical-attack 0.7s ease-in-out; }
+.battle-impact-shake { animation: impact-shake 0.4s ease-in-out; }
+.battle-hit-shake { animation: hit-shake 0.3s ease-in-out; }
+.battle-damage-flash { animation: damage-flash 0.3s ease-in-out; }
+
+.battle-fire-charge { animation: fire-charge 1s ease-in-out; }
+.battle-water-charge { animation: water-charge 1s ease-in-out; }
+.battle-electric-charge { animation: electric-charge 1s ease-in-out; }
+.battle-grass-charge { animation: grass-charge 1s ease-in-out; }
+.battle-ice-charge { animation: ice-charge 1s ease-in-out; }
+.battle-psychic-focus { animation: psychic-focus 1.2s ease-in-out; }
+.battle-ghost-phase { animation: ghost-phase 1.1s ease-in-out; }
+.battle-dragon-roar { animation: dragon-roar 1.3s ease-in-out; }
+.battle-special-charge { animation: special-charge 1s ease-in-out; }
+
+.battle-status-cast { animation: status-cast 1s ease-in-out; }
+.battle-status-paralysis { animation: status-paralysis 0.6s ease-in-out; }
+.battle-status-burn { animation: status-burn 0.8s ease-in-out; }
+.battle-status-poison { animation: status-poison 0.8s ease-in-out; }
+
+.battle-defend-glow { animation: defend-glow 1s ease-in-out; }
+.battle-heal-glow { animation: heal-glow 1.2s ease-in-out; }
+.battle-stat-boost { animation: stat-boost 1s ease-in-out; }
+
+.battle-fire-damage { animation: fire-damage 0.5s ease-in-out; }
+.battle-water-damage { animation: water-damage 0.5s ease-in-out; }
+.battle-electric-damage { animation: electric-damage 0.6s ease-in-out; }
+.battle-grass-damage { animation: grass-damage 0.5s ease-in-out; }
+.battle-ice-damage { animation: ice-damage 0.5s ease-in-out; }
+.battle-psychic-damage { animation: psychic-damage 0.7s ease-in-out; }
+.battle-ghost-damage { animation: ghost-damage 0.6s ease-in-out; }
+.battle-dragon-damage { animation: dragon-damage 0.6s ease-in-out; }
+
+.battle-fire-blast { animation: fire-blast 1.5s ease-out; }
+.battle-water-splash { animation: water-splash 1.2s ease-out; }
+.battle-lightning-bolt { animation: lightning-bolt 1s ease-out; }
+.battle-leaf-storm { animation: leaf-storm 1.3s ease-out; }
+.battle-ice-crystals { animation: ice-crystals 1.1s ease-out; }
+.battle-psychic-waves { animation: psychic-waves 1.4s ease-out; }
+.battle-shadow-orbs { animation: shadow-orbs 1.2s ease-out; }
+.battle-dragon-flames { animation: dragon-flames 1.3s ease-out; }
+.battle-protect-shield { animation: protect-shield 1s ease-out; }
+.battle-heal-sparkles { animation: heal-sparkles 1.2s ease-out; }
+.battle-electric-sparks { animation: electric-sparks 1s ease-out; }
+.battle-fire-sparks { animation: fire-sparks 1s ease-out; }
+.battle-poison-bubbles { animation: poison-bubbles 1.1s ease-out; }
+.battle-impact-burst { animation: impact-burst 0.8s ease-out; }
+.battle-normal-impact { animation: normal-impact 0.7s ease-out; }
+.battle-physical-impact { animation: physical-impact 0.8s ease-out; }
+.battle-stat-change { animation: stat-change 1s ease-out; }
+.battle-status-effect { animation: status-effect 1s ease-out; }
+.battle-energy-blast { animation: energy-blast 1.1s ease-out; } 

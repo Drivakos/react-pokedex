@@ -128,6 +128,9 @@ const BattleSimulator: React.FC<BattleSimulatorProps> = ({
   const [isAnimating, setIsAnimating] = useState(false);
   const [currentMessage, setCurrentMessage] = useState('What will you do?');
   const [battleMenu, setBattleMenu] = useState<'main' | 'fight' | 'switch'>('main');
+  const [playerAnimation, setPlayerAnimation] = useState<string>('');
+  const [opponentAnimation, setOpponentAnimation] = useState<string>('');
+  const [moveEffectAnimation, setMoveEffectAnimation] = useState<string>('');
 
   // Initialize battle Pokémon with enhanced stats and moves
   useEffect(() => {
@@ -392,16 +395,74 @@ const BattleSimulator: React.FC<BattleSimulatorProps> = ({
     return { pokemon: newPokemon, messages };
   }, []);
 
+  // Get animation based on move type and damage class
+  const getMoveAnimation = useCallback((move: BattleMove) => {
+    const { damageClass, type, effect } = move;
+    
+    // Status moves get special animations
+    if (damageClass === 'status') {
+      if (effect === 'protect') return { attacker: 'defend-glow', defender: '', effect: 'protect-shield' };
+      if (effect === 'heal_50' || effect === 'rest') return { attacker: 'heal-glow', defender: '', effect: 'heal-sparkles' };
+      if (effect === 'raise_attack_2' || effect === 'lower_attack') return { attacker: 'stat-boost', defender: '', effect: 'stat-change' };
+      if (effect === 'paralyze') return { attacker: 'status-cast', defender: 'status-paralysis', effect: 'electric-sparks' };
+      if (effect === 'burn') return { attacker: 'status-cast', defender: 'status-burn', effect: 'fire-sparks' };
+      if (effect === 'bad_poison') return { attacker: 'status-cast', defender: 'status-poison', effect: 'poison-bubbles' };
+      return { attacker: 'status-cast', defender: '', effect: 'status-effect' };
+    }
+    
+    // Physical moves
+    if (damageClass === 'physical') {
+      if (['fighting', 'rock', 'ground'].includes(type)) return { attacker: 'physical-charge', defender: 'impact-shake', effect: 'impact-burst' };
+      if (type === 'normal') return { attacker: 'tackle-rush', defender: 'hit-shake', effect: 'normal-impact' };
+      return { attacker: 'physical-attack', defender: 'damage-flash', effect: 'physical-impact' };
+    }
+    
+    // Special moves get type-specific animations
+    const typeAnimations: Record<string, { attacker: string; defender: string; effect: string }> = {
+      fire: { attacker: 'fire-charge', defender: 'fire-damage', effect: 'fire-blast' },
+      water: { attacker: 'water-charge', defender: 'water-damage', effect: 'water-splash' },
+      electric: { attacker: 'electric-charge', defender: 'electric-damage', effect: 'lightning-bolt' },
+      grass: { attacker: 'grass-charge', defender: 'grass-damage', effect: 'leaf-storm' },
+      ice: { attacker: 'ice-charge', defender: 'ice-damage', effect: 'ice-crystals' },
+      psychic: { attacker: 'psychic-focus', defender: 'psychic-damage', effect: 'psychic-waves' },
+      ghost: { attacker: 'ghost-phase', defender: 'ghost-damage', effect: 'shadow-orbs' },
+      dragon: { attacker: 'dragon-roar', defender: 'dragon-damage', effect: 'dragon-flames' }
+    };
+    
+    return typeAnimations[type] || { attacker: 'special-charge', defender: 'damage-flash', effect: 'energy-blast' };
+  }, []);
+
   // Enhanced move execution
   const executeMove = useCallback(async (attacker: BattlePokemon, defender: BattlePokemon, move: BattleMove) => {
     setIsAnimating(true);
     setBattlePhase('animation');
     setCurrentMessage(`${attacker.name} used ${move.name.replace('-', ' ')}!`);
 
+    // Get move animations
+    const animations = getMoveAnimation(move);
+    
+    // Set animations based on who's attacking
+    if (turn === 'player') {
+      setPlayerAnimation(animations.attacker);
+      setOpponentAnimation(animations.defender);
+    } else {
+      setOpponentAnimation(animations.attacker);
+      setPlayerAnimation(animations.defender);
+    }
+    setMoveEffectAnimation(animations.effect);
+
+    // Clear animations after the move completes
+    const clearAnimations = () => {
+      setPlayerAnimation('');
+      setOpponentAnimation('');
+      setMoveEffectAnimation('');
+    };
+
     // Check if Pokemon can move (paralysis, sleep, etc.)
     if (attacker.status === 'paralysis' && Math.random() < 0.25) {
       setBattleLog(prev => [...prev, `${attacker.name} is paralyzed and can't move!`]);
       setTimeout(() => {
+        clearAnimations();
         setIsAnimating(false);
         setBattlePhase('select');
         setTurn(turn === 'player' ? 'opponent' : 'player');
@@ -412,6 +473,7 @@ const BattleSimulator: React.FC<BattleSimulatorProps> = ({
     if (attacker.status === 'sleep') {
       setBattleLog(prev => [...prev, `${attacker.name} is fast asleep!`]);
       setTimeout(() => {
+        clearAnimations();
         setIsAnimating(false);
         setBattlePhase('select');
         setTurn(turn === 'player' ? 'opponent' : 'player');
@@ -488,11 +550,12 @@ const BattleSimulator: React.FC<BattleSimulatorProps> = ({
     setBattleLog(prev => [...prev, ...newLog]);
 
     setTimeout(() => {
+      clearAnimations();
       setIsAnimating(false);
       setBattlePhase('select');
       setTurn(turn === 'player' ? 'opponent' : 'player');
     }, 3000);
-  }, [calculateDamage, applyMoveEffect, turn]);
+  }, [calculateDamage, applyMoveEffect, turn, getMoveAnimation]);
 
   const handleMoveSelect = (moveIndex: number) => {
     if (!player || battlePhase !== 'select' || turn !== 'player') return;
@@ -639,7 +702,7 @@ const BattleSimulator: React.FC<BattleSimulatorProps> = ({
               <img
                 src={opponent.sprites.front_default}
                 alt={opponent.name}
-                className={`w-24 h-24 ${isAnimating ? 'animate-pulse' : ''}`}
+                className={`w-24 h-24 transition-all duration-500 ${opponentAnimation ? `battle-${opponentAnimation}` : ''} ${isAnimating && !opponentAnimation ? 'animate-pulse' : ''}`}
               />
             </div>
           </div>
@@ -650,7 +713,7 @@ const BattleSimulator: React.FC<BattleSimulatorProps> = ({
               <img
                 src={player.sprites.back_default || player.sprites.front_default}
                 alt={player.name}
-                className={`w-24 h-24 ${isAnimating ? 'animate-pulse' : ''}`}
+                className={`w-24 h-24 transition-all duration-500 ${playerAnimation ? `battle-${playerAnimation}` : ''} ${isAnimating && !playerAnimation ? 'animate-pulse' : ''}`}
               />
               <div className="bg-white rounded-lg p-2 mt-2 shadow-lg">
                 <div className="font-bold">{player.name}</div>
@@ -678,6 +741,40 @@ const BattleSimulator: React.FC<BattleSimulatorProps> = ({
               <div key={index} className="text-sm mb-1">{log}</div>
             ))}
           </div>
+
+          {/* Move Effect Overlay */}
+          {moveEffectAnimation && (
+            <div className={`absolute inset-0 pointer-events-none flex items-center justify-center battle-${moveEffectAnimation}`}>
+              <div className="text-6xl opacity-80">
+                {moveEffectAnimation.includes('fire') && '🔥'}
+                {moveEffectAnimation.includes('water') && '💧'}
+                {moveEffectAnimation.includes('electric') && '⚡'}
+                {moveEffectAnimation.includes('grass') && '🌿'}
+                {moveEffectAnimation.includes('ice') && '❄️'}
+                {moveEffectAnimation.includes('psychic') && '🧠'}
+                {moveEffectAnimation.includes('ghost') && '👻'}
+                {moveEffectAnimation.includes('dragon') && '🐉'}
+                {moveEffectAnimation.includes('protect') && '🛡️'}
+                {moveEffectAnimation.includes('heal') && '✨'}
+                {moveEffectAnimation.includes('poison') && '☠️'}
+                {moveEffectAnimation.includes('impact') && '💥'}
+                {moveEffectAnimation.includes('stat') && '📈'}
+                {!moveEffectAnimation.includes('fire') && 
+                 !moveEffectAnimation.includes('water') && 
+                 !moveEffectAnimation.includes('electric') && 
+                 !moveEffectAnimation.includes('grass') && 
+                 !moveEffectAnimation.includes('ice') && 
+                 !moveEffectAnimation.includes('psychic') && 
+                 !moveEffectAnimation.includes('ghost') && 
+                 !moveEffectAnimation.includes('dragon') && 
+                 !moveEffectAnimation.includes('protect') && 
+                 !moveEffectAnimation.includes('heal') && 
+                 !moveEffectAnimation.includes('poison') && 
+                 !moveEffectAnimation.includes('impact') && 
+                 !moveEffectAnimation.includes('stat') && '💫'}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Interface Area - Fixed height */}
