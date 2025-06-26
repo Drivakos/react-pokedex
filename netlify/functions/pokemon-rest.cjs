@@ -21,19 +21,34 @@ exports.handler = async (event, context) => {
   }
 
   try {
+    // Add debugging
+    console.log('Event path:', event.path);
+    console.log('Event query params:', event.queryStringParameters);
+    
     // Parse the URL path to get the API endpoint
     const pathSegments = event.path.split('/');
+    console.log('Path segments:', pathSegments);
     
     // Extract the API path after '/pokemon-rest/'
     const functionIndex = pathSegments.findIndex(segment => segment === 'pokemon-rest');
+    console.log('Function index:', functionIndex);
+    
     if (functionIndex === -1 || functionIndex >= pathSegments.length - 1) {
+      console.log('Error: No API path found');
       return {
         statusCode: 400,
         headers: {
           'Content-Type': 'application/json',
           ...corsHeaders,
         },
-        body: JSON.stringify({ error: 'API path is required. Use /.netlify/functions/pokemon-rest/{endpoint}' })
+        body: JSON.stringify({ 
+          error: 'API path is required. Use /.netlify/functions/pokemon-rest/{endpoint}',
+          debug: {
+            path: event.path,
+            pathSegments,
+            functionIndex
+          }
+        })
       };
     }
 
@@ -42,6 +57,9 @@ exports.handler = async (event, context) => {
     const queryString = event.queryStringParameters ? 
       new URLSearchParams(event.queryStringParameters).toString() : '';
     const fullApiUrl = `${REST_ENDPOINT}/${apiPath}${queryString ? `?${queryString}` : ''}`;
+    
+    console.log('API path:', apiPath);
+    console.log('Full API URL:', fullApiUrl);
 
     // Create the request
     const apiRequest = new Request(fullApiUrl, {

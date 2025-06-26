@@ -45,7 +45,7 @@
        style-src 'self' 'unsafe-inline';
        img-src 'self' data: https://raw.githubusercontent.com https://images.pokemontcg.io/ https://*.googleusercontent.com https://*.googleapis.com;
        font-src 'self' data:;
-       connect-src 'self' https://kefcxvcbpadksfizrckw.supabase.co https://beta.pokeapi.co https://api.pokemontcg.io https://pokeapi.co /.netlify/functions/;
+       connect-src 'self' https://kefcxvcbpadksfizrckw.supabase.co https://beta.pokeapi.co https://api.pokemontcg.io https://pokeapi.co;
      """
     Access-Control-Allow-Origin = "*"
 
