@@ -29,8 +29,15 @@ exports.handler = async (event, context) => {
     const pathSegments = event.path.split('/');
     console.log('Path segments:', pathSegments);
     
-    // Extract the API path after '/pokemon-rest/'
-    const functionIndex = pathSegments.findIndex(segment => segment === 'pokemon-rest');
+    // The path comes as /api/pokemon/rest/pokemon/4
+    // We need to extract everything after 'rest'
+    let functionIndex = pathSegments.findIndex(segment => segment === 'rest');
+    
+    // If we don't find 'rest', try looking for 'pokemon-rest' (in case redirect works)
+    if (functionIndex === -1) {
+      functionIndex = pathSegments.findIndex(segment => segment === 'pokemon-rest');
+    }
+    
     console.log('Function index:', functionIndex);
     
     if (functionIndex === -1 || functionIndex >= pathSegments.length - 1) {
@@ -42,7 +49,7 @@ exports.handler = async (event, context) => {
           ...corsHeaders,
         },
         body: JSON.stringify({ 
-          error: 'API path is required. Use /.netlify/functions/pokemon-rest/{endpoint}',
+          error: 'API path is required. Use /api/pokemon/rest/{endpoint} or /.netlify/functions/pokemon-rest/{endpoint}',
           debug: {
             path: event.path,
             pathSegments,
