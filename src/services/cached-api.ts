@@ -1,13 +1,46 @@
 import { Pokemon, RawPokemonData, Filters, PokemonDetails } from '../types/pokemon';
 
-// Use cached Netlify Functions instead of direct API calls
-const CACHED_GRAPHQL_ENDPOINT = '/api/pokemon/graphql';
-const CACHED_REST_ENDPOINT = '/api/pokemon/rest';
+// Detect if we're in development or if functions are available
+const isLocalDevelopment = import.meta.env.DEV;
+const netlifyFunctionsAvailable = !isLocalDevelopment && typeof window !== 'undefined';
+
+// Use cached Netlify Functions only in production when available
+const CACHED_GRAPHQL_ENDPOINT = netlifyFunctionsAvailable ? '/api/pokemon/graphql' : null;
+const CACHED_REST_ENDPOINT = netlifyFunctionsAvailable ? '/api/pokemon/rest' : null;
+
+/**
+ * Checks if cached endpoints are available
+ */
+const areCachedEndpointsAvailable = async (): Promise<boolean> => {
+  if (!netlifyFunctionsAvailable || !CACHED_GRAPHQL_ENDPOINT) {
+    return false;
+  }
+
+  try {
+    // Quick health check on the GraphQL endpoint
+    const response = await fetch(CACHED_GRAPHQL_ENDPOINT, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ 
+        query: 'query { __typename }' // Simple schema query
+      }),
+    });
+    
+    return response.status !== 404;
+  } catch (error) {
+    console.warn('Cached endpoints not available:', error);
+    return false;
+  }
+};
 
 /**
  * Makes a cached GraphQL request through Netlify Functions
  */
 const fetchCachedGraphQL = async (query: string, variables?: any) => {
+  if (!CACHED_GRAPHQL_ENDPOINT) {
+    throw new Error('Cached GraphQL endpoint not available in development');
+  }
+
   try {
     const response = await fetch(CACHED_GRAPHQL_ENDPOINT, {
       method: 'POST',
@@ -38,6 +71,10 @@ const fetchCachedGraphQL = async (query: string, variables?: any) => {
  * Makes a cached REST request through Netlify Functions
  */
 const fetchCachedREST = async (endpoint: string) => {
+  if (!CACHED_REST_ENDPOINT) {
+    throw new Error('Cached REST endpoint not available in development');
+  }
+
   try {
     const response = await fetch(`${CACHED_REST_ENDPOINT}/${endpoint}`);
 
@@ -132,9 +169,14 @@ export const transformRawData = (rawData: RawPokemonData[]): Pokemon[] => {
 };
 
 /**
- * Fetches a single Pokemon by ID using cached endpoint
+ * Fetches a single Pokemon by ID using cached endpoint (with availability check)
  */
 export const fetchCachedPokemonById = async (id: number): Promise<Pokemon> => {
+  // Check if cached endpoints are available first
+  if (!(await areCachedEndpointsAvailable())) {
+    throw new Error('Cached endpoints not available');
+  }
+
   try {
     const query = `
       query GetPokemonById($id: Int!) {
@@ -197,7 +239,7 @@ export const fetchCachedPokemonById = async (id: number): Promise<Pokemon> => {
 };
 
 /**
- * Fetches Pokemon data using cached GraphQL endpoint
+ * Fetches Pokemon data using cached GraphQL endpoint (with availability check)
  */
 export const fetchCachedPokemonData = async (
   limit: number, 
@@ -205,6 +247,11 @@ export const fetchCachedPokemonData = async (
   searchTerm: string, 
   filters: Filters
 ): Promise<Pokemon[]> => {
+  // Check if cached endpoints are available first
+  if (!(await areCachedEndpointsAvailable())) {
+    throw new Error('Cached endpoints not available');
+  }
+
   try {
     const whereConditions = buildWhereConditions(searchTerm, filters);
     const typeAndCondition = buildTypeAndCondition(filters.types);
@@ -280,9 +327,14 @@ export const fetchCachedPokemonData = async (
 };
 
 /**
- * Fetches Pokemon details using cached REST endpoint
+ * Fetches Pokemon details using cached REST endpoint (with availability check)
  */
 export const fetchCachedPokemonDetails = async (id: number): Promise<PokemonDetails> => {
+  // Check if cached endpoints are available first
+  if (!(await areCachedEndpointsAvailable())) {
+    throw new Error('Cached endpoints not available');
+  }
+
   try {
     // Fetch from cached REST endpoint
     const pokemon = await fetchCachedREST(`pokemon/${id}`);
@@ -329,9 +381,14 @@ export const fetchCachedPokemonDetails = async (id: number): Promise<PokemonDeta
 };
 
 /**
- * Fetches filter options using cached GraphQL endpoint
+ * Fetches filter options using cached GraphQL endpoint (with availability check)
  */
 export const fetchCachedFilterOptions = async () => {
+  // Check if cached endpoints are available first
+  if (!(await areCachedEndpointsAvailable())) {
+    throw new Error('Cached endpoints not available');
+  }
+
   try {
     const query = `
       query GetFilterOptions {
