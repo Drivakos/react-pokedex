@@ -276,7 +276,7 @@ const PokemonPage: React.FC = () => {
                   </div>
                   <div>
                     <p className="text-sm text-white text-opacity-80">Generation</p>
-                    <p className="font-semibold capitalize">{pokemonDetails.generation.replace('-', ' ')}</p>
+                    <p className="font-semibold capitalize">{pokemonDetails.generation?.replace('-', ' ') || 'Unknown'}</p>
                   </div>
                   <div>
                     <p className="text-sm text-white text-opacity-80">Base Exp</p>
@@ -520,7 +520,7 @@ const PokemonPage: React.FC = () => {
                           )}
                         </div>
                         <div className="text-xs text-gray-500 mt-1 capitalize">
-                          {move.learn_method.replace('-', ' ')}
+                          {move.learn_method?.replace('-', ' ') || 'Unknown'}
                         </div>
                       </div>
                     ))}
@@ -581,7 +581,7 @@ const PokemonPage: React.FC = () => {
                               );
                               
                               // We'll limit to max 2 final evolutions for better visual layout
-                              // This covers most Pok├⌐mon evolution patterns (like Eevee being a special case)
+                              // This covers most Pokémon evolution patterns (like Eevee being a special case)
                               const limitedFinalEvolutions = finalEvolutions.slice(0, Math.min(finalEvolutions.length, 2));
                               
                               // Create a single branch for the middle evolution with its final evolutions
@@ -668,13 +668,13 @@ const PokemonPage: React.FC = () => {
                                             <span>Level {branch.evolution.min_level}</span>
                                           )}
                                           {branch.evolution.trigger_name === 'use-item' && branch.evolution.item && (
-                                            <span>Use {branch.evolution.item.replace('-', ' ')}</span>
+                                            <span>Use {branch.evolution.item?.replace('-', ' ') || 'item'}</span>
                                           )}
                                           {branch.evolution.trigger_name === 'trade' && (
                                             <span>Trade</span>
                                           )}
                                           {branch.evolution.trigger_name && !branch.evolution.min_level && !branch.evolution.item && branch.evolution.trigger_name !== 'trade' && (
-                                            <span>{branch.evolution.trigger_name.replace('-', ' ')}</span>
+                                            <span>{branch.evolution.trigger_name?.replace('-', ' ') || 'Unknown'}</span>
                                           )}
                                           {!branch.evolution.trigger_name && (
                                             <span>Evolution</span>
@@ -738,13 +738,13 @@ const PokemonPage: React.FC = () => {
                                                       <span>Level {furtherEvo.min_level}</span>
                                                     )}
                                                     {furtherEvo.trigger_name === 'use-item' && furtherEvo.item && (
-                                                      <span>Use {furtherEvo.item.replace('-', ' ')}</span>
+                                                      <span>Use {furtherEvo.item?.replace('-', ' ') || 'item'}</span>
                                                     )}
                                                     {furtherEvo.trigger_name === 'trade' && (
                                                       <span>Trade</span>
                                                     )}
                                                     {furtherEvo.trigger_name && !furtherEvo.min_level && !furtherEvo.item && furtherEvo.trigger_name !== 'trade' && (
-                                                      <span>{furtherEvo.trigger_name.replace('-', ' ')}</span>
+                                                      <span>{furtherEvo.trigger_name?.replace('-', ' ') || 'Unknown'}</span>
                                                     )}
                                                     {!furtherEvo.trigger_name && (
                                                       <span>Evolution</span>
@@ -823,10 +823,10 @@ const PokemonPage: React.FC = () => {
                                       <li>Evolves at level {evo.min_level}</li>
                                     )}
                                     {evo.trigger_name && (
-                                      <li>Trigger: {evo.trigger_name.replace('-', ' ')}</li>
+                                      <li>Trigger: {evo.trigger_name?.replace('-', ' ') || 'Unknown'}</li>
                                     )}
                                     {evo.item && (
-                                      <li>Requires item: {evo.item.replace('-', ' ')}</li>
+                                      <li>Requires item: {evo.item?.replace('-', ' ') || 'Unknown'}</li>
                                     )}
                                     {!evo.min_level && !evo.item && evo.trigger_name !== 'level-up' && (
                                       <li>Special evolution method</li>
