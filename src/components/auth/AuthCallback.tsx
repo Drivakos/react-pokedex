@@ -80,7 +80,7 @@ export const AuthCallback = () => {
               navigate('/', { replace: true });
               return;
             }
-          } catch (sessionError) {
+          } catch {
             setError('Failed to set authentication session');
             toast.error('Authentication failed');
             navigate('/login', { replace: true });
@@ -121,7 +121,7 @@ export const AuthCallback = () => {
           navigate('/login', { replace: true });
         }
 
-      } catch (err) {
+      } catch {
         setError('An unexpected error occurred');
         toast.error('Authentication failed. Please try again.');
 
@@ -133,7 +133,7 @@ export const AuthCallback = () => {
     };
 
     handleAuthCallback();
-  }, [navigate, searchParams]);
+  }, [navigate, searchParams, refreshSession]);
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50">
