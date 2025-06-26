@@ -1,0 +1,1 @@
+export { useGymChallenge } from './useGymChallenge'; 

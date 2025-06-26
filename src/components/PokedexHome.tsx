@@ -11,7 +11,7 @@ import { FilterTabs } from './filters/FilterTabs';
 import { TypesFilter } from './filters/TypesFilter';
 import { MovesFilter } from './filters/MovesFilter';
 import { OtherFilters } from './filters/OtherFilters';
-import GymLeaderChallenge from './GymLeaderChallenge';
+import GymLeaderChallenge from './gym/GymLeaderChallenge';
 
 const PokedexHome: React.FC = () => {
   // Use our custom hooks
@@ -380,8 +380,16 @@ const PokedexHome: React.FC = () => {
       
       {/* Gym Leader Challenge Modal */}
       {showGymChallenge && (
-        <div className="fixed inset-0 z-50">
-          <GymLeaderChallenge onBack={() => setShowGymChallenge(false)} />
+        <div 
+          className="fixed inset-0 z-50 bg-black bg-opacity-50 flex items-center justify-center p-2 sm:p-4"
+          onClick={() => setShowGymChallenge(false)}
+        >
+          <div 
+            className="bg-white rounded-lg shadow-xl max-w-6xl w-full max-h-[95vh] sm:max-h-[90vh] overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <GymLeaderChallenge onExit={() => setShowGymChallenge(false)} />
+          </div>
         </div>
       )}
       
