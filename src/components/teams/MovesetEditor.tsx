@@ -162,6 +162,111 @@ const POKEMON_TYPES = [
   'Rock', 'Ghost', 'Dragon', 'Dark', 'Steel', 'Fairy'
 ];
 
+const HELD_ITEMS = [
+  // Choice Items
+  'Choice Band',
+  'Choice Specs', 
+  'Choice Scarf',
+  // Defensive Items
+  'Leftovers',
+  'Heavy-Duty Boots',
+  'Assault Vest',
+  'Rocky Helmet',
+  'Black Sludge',
+  // Offensive Items
+  'Life Orb',
+  'Expert Belt',
+  'Muscle Band',
+  'Wise Glasses',
+  // Focus Items
+  'Focus Sash',
+  'Focus Band',
+  // Berries - Popular
+  'Sitrus Berry',
+  'Lum Berry',
+  'Chesto Berry',
+  'Leppa Berry',
+  // Berries - Stat Boost
+  'Liechi Berry',
+  'Ganlon Berry',
+  'Salac Berry',
+  'Petaya Berry',
+  'Apicot Berry',
+  // Berries - Type Resist
+  'Occa Berry',
+  'Passho Berry',
+  'Wacan Berry',
+  'Rindo Berry',
+  'Yache Berry',
+  'Chople Berry',
+  'Kebia Berry',
+  'Shuca Berry',
+  'Coba Berry',
+  'Payapa Berry',
+  'Tanga Berry',
+  'Charti Berry',
+  'Kasib Berry',
+  'Haban Berry',
+  'Colbur Berry',
+  'Babiri Berry',
+  'Chilan Berry',
+  'Roseli Berry',
+  // Utility Items
+  'Air Balloon',
+  'Mental Herb',
+  'Power Herb',
+  'Quick Claw',
+  'King\'s Rock',
+  'Razor Claw',
+  'Scope Lens',
+  'Wide Lens',
+  'Zoom Lens',
+  // Status Orbs
+  'Flame Orb',
+  'Toxic Orb',
+  // Terrain Seeds
+  'Electric Seed',
+  'Grassy Seed',
+  'Misty Seed',
+  'Psychic Seed',
+  // Weather Items
+  'Heat Rock',
+  'Damp Rock',
+  'Smooth Rock',
+  'Icy Rock',
+  // Competitive Items
+  'Eject Button',
+  'Red Card',
+  'Shed Shell',
+  'Safety Goggles',
+  'Protective Pads',
+  'Clear Amulet',
+  'Covert Cloak',
+  'Loaded Dice',
+  'Booster Energy',
+  'Mirror Herb',
+  'Punching Glove',
+  // Type Enhancing Items
+  'Black Belt',
+  'Black Glasses',
+  'Charcoal',
+  'Dragon Fang',
+  'Hard Stone',
+  'Magnet',
+  'Metal Coat',
+  'Miracle Seed',
+  'Mystic Water',
+  'Never-Melt Ice',
+  'Poison Barb',
+  'Sharp Beak',
+  'Silk Scarf',
+  'Silver Powder',
+  'Soft Sand',
+  'Spell Tag',
+  'Twisted Spoon',
+  'Fairy Feather'
+];
+
 const MovesetEditor: React.FC<MovesetEditorProps> = ({ pokemon, teamId, onBack }) => {
   const [selectedMoves, setSelectedMoves] = useState<string[]>([]);
   const [availableMoves, setAvailableMoves] = useState<string[]>([]);
@@ -199,7 +304,6 @@ const MovesetEditor: React.FC<MovesetEditorProps> = ({ pokemon, teamId, onBack }
   
   const [availableNatures, setAvailableNatures] = useState<Nature[]>([]);
   const [availableAbilities, setAvailableAbilities] = useState<string[]>([]);
-  const [availableItems, setAvailableItems] = useState<string[]>([]);
   const [hasGenderDifference, setHasGenderDifference] = useState(false);
   const [activeTab, setActiveTab] = useState<'moves' | 'stats' | 'details'>('moves');
   
@@ -208,58 +312,6 @@ const MovesetEditor: React.FC<MovesetEditorProps> = ({ pokemon, teamId, onBack }
   const [abilityDescriptions, setAbilityDescriptions] = useState<Record<string, string>>({});
   const [itemDescriptions, setItemDescriptions] = useState<Record<string, string>>({});
   
-  // Comprehensive competitive held items list
-  const competitiveItems = [
-    // Choice Items
-    'choice-band', 'choice-scarf', 'choice-specs',
-    // Life Orb & Damage Boosters
-    'life-orb', 'expert-belt', 'muscle-band', 'wise-glasses', 'scope-lens',
-    // Defensive Items
-    'leftovers', 'rocky-helmet', 'assault-vest', 'eviolite', 'heavy-duty-boots',
-    // Focus Items
-    'focus-sash', 'focus-band',
-    // Status & Utility
-    'flame-orb', 'toxic-orb', 'black-sludge', 'shed-shell', 'air-balloon',
-    'weakness-policy', 'bright-powder', 'kings-rock', 'razor-claw',
-    // Common Berries
-    'sitrus-berry', 'oran-berry', 'lum-berry', 'chesto-berry', 'pecha-berry',
-    'rawst-berry', 'aspear-berry', 'persim-berry', 'cheri-berry',
-    'liechi-berry', 'ganlon-berry', 'salac-berry', 'petaya-berry', 'apicot-berry',
-    // Weather & Terrain
-    'heat-rock', 'damp-rock', 'smooth-rock', 'icy-rock'
-  ];
-
-  const filteredItems = availableItems;
-
-  // Common Pokemon natures with descriptions
-  const commonNatures = [
-    { name: 'hardy', description: 'Neutral nature (no stat changes)' },
-    { name: 'lonely', description: '+Attack, -Defense' },
-    { name: 'brave', description: '+Attack, -Speed' },
-    { name: 'adamant', description: '+Attack, -Sp. Attack' },
-    { name: 'naughty', description: '+Attack, -Sp. Defense' },
-    { name: 'bold', description: '+Defense, -Attack' },
-    { name: 'docile', description: 'Neutral nature (no stat changes)' },
-    { name: 'relaxed', description: '+Defense, -Speed' },
-    { name: 'impish', description: '+Defense, -Sp. Attack' },
-    { name: 'lax', description: '+Defense, -Sp. Defense' },
-    { name: 'timid', description: '+Speed, -Attack' },
-    { name: 'hasty', description: '+Speed, -Defense' },
-    { name: 'serious', description: 'Neutral nature (no stat changes)' },
-    { name: 'jolly', description: '+Speed, -Sp. Attack' },
-    { name: 'naive', description: '+Speed, -Sp. Defense' },
-    { name: 'modest', description: '+Sp. Attack, -Attack' },
-    { name: 'mild', description: '+Sp. Attack, -Defense' },
-    { name: 'quiet', description: '+Sp. Attack, -Speed' },
-    { name: 'bashful', description: 'Neutral nature (no stat changes)' },
-    { name: 'rash', description: '+Sp. Attack, -Sp. Defense' },
-    { name: 'calm', description: '+Sp. Defense, -Attack' },
-    { name: 'gentle', description: '+Sp. Defense, -Defense' },
-    { name: 'sassy', description: '+Sp. Defense, -Speed' },
-    { name: 'careful', description: '+Sp. Defense, -Sp. Attack' },
-    { name: 'quirky', description: 'Neutral nature (no stat changes)' }
-  ];
-
   const [expandedMove, setExpandedMove] = useState('');
 
   useEffect(() => {
@@ -318,16 +370,39 @@ const MovesetEditor: React.FC<MovesetEditorProps> = ({ pokemon, teamId, onBack }
         }
         
         // Set available natures
-        setAvailableNatures(commonNatures);
-        
-        // Set competitive items list and fetch descriptions
-        setAvailableItems(competitiveItems);
-        
+        setAvailableNatures([
+          { name: 'hardy', description: 'Neutral nature (no stat changes)' },
+          { name: 'lonely', description: '+Attack, -Defense' },
+          { name: 'brave', description: '+Attack, -Speed' },
+          { name: 'adamant', description: '+Attack, -Sp. Attack' },
+          { name: 'naughty', description: '+Attack, -Sp. Defense' },
+          { name: 'bold', description: '+Defense, -Attack' },
+          { name: 'docile', description: 'Neutral nature (no stat changes)' },
+          { name: 'relaxed', description: '+Defense, -Speed' },
+          { name: 'impish', description: '+Defense, -Sp. Attack' },
+          { name: 'lax', description: '+Defense, -Sp. Defense' },
+          { name: 'timid', description: '+Speed, -Attack' },
+          { name: 'hasty', description: '+Speed, -Defense' },
+          { name: 'serious', description: 'Neutral nature (no stat changes)' },
+          { name: 'jolly', description: '+Speed, -Sp. Attack' },
+          { name: 'naive', description: '+Speed, -Sp. Defense' },
+          { name: 'modest', description: '+Sp. Attack, -Attack' },
+          { name: 'mild', description: '+Sp. Attack, -Defense' },
+          { name: 'quiet', description: '+Sp. Attack, -Speed' },
+          { name: 'bashful', description: 'Neutral nature (no stat changes)' },
+          { name: 'rash', description: '+Sp. Attack, -Sp. Defense' },
+          { name: 'calm', description: '+Sp. Defense, -Attack' },
+          { name: 'gentle', description: '+Sp. Defense, -Defense' },
+          { name: 'sassy', description: '+Sp. Defense, -Speed' },
+          { name: 'careful', description: '+Sp. Defense, -Sp. Attack' },
+          { name: 'quirky', description: 'Neutral nature (no stat changes)' }
+        ]);
+
         // Fetch item descriptions for competitive items
         const itemDescs: Record<string, string> = {};
-        for (const item of competitiveItems) { // Fetch all items, not just first 20
+        for (const item of HELD_ITEMS) { // Fetch all items, not just first 20
           try {
-            const itemResponse = await fetch(`https://pokeapi.co/api/v2/item/${item}`);
+            const itemResponse = await fetch(`https://pokeapi.co/api/v2/item/${item.toLowerCase().replace(' ', '-')}`);
             if (itemResponse.ok) {
               const itemData = await itemResponse.json();
               const englishEntry = itemData.effect_entries.find((entry: any) => entry.language.name === 'en');
@@ -353,7 +428,7 @@ const MovesetEditor: React.FC<MovesetEditorProps> = ({ pokemon, teamId, onBack }
               'eviolite': 'Boosts defenses of Pokémon that can still evolve',
               'air-balloon': 'Makes holder immune to Ground moves until popped'
             };
-            itemDescs[item] = fallbackDescriptions[item] || 'Competitive battle item';
+            itemDescs[item] = fallbackDescriptions[item.toLowerCase().replace(' ', '-')] || 'Competitive battle item';
           }
         }
         setItemDescriptions(itemDescs);
@@ -375,6 +450,21 @@ const MovesetEditor: React.FC<MovesetEditorProps> = ({ pokemon, teamId, onBack }
 
     loadPokemonData();
   }, [pokemon.id, teamId]);
+
+  // Load move details when selectedMoves changes (including from saved builds)
+  useEffect(() => {
+    const loadDetailsForSelectedMoves = async () => {
+      for (const moveName of selectedMoves) {
+        if (!moveDetails[moveName]) {
+          await loadMoveDetails(moveName);
+        }
+      }
+    };
+
+    if (selectedMoves.length > 0) {
+      loadDetailsForSelectedMoves();
+    }
+  }, [selectedMoves]); // Only depend on selectedMoves, not moveDetails to avoid infinite loop
 
   const handleSaveBuild = () => {
     const completeBuild = {
@@ -709,20 +799,19 @@ const MovesetEditor: React.FC<MovesetEditorProps> = ({ pokemon, teamId, onBack }
                           <span>PP: <strong>{move.pp}</strong></span>
                         </div>
                         
+                        {/* Always show short effect/description */}
+                        {move.effect_entries.length > 0 && (
+                          <p className="text-gray-600 text-sm leading-relaxed mt-2 italic">
+                            {move.effect_entries.find(entry => entry.language.name === 'en')?.short_effect || 
+                             move.effect_entries[0]?.short_effect}
+                          </p>
+                        )}
+                        
                         {expandedMove === moveName && (
                           <div className="mt-3 pt-3 border-t border-gray-200 space-y-2">
-                            {move.effect_entries.length > 0 && (
-                              <div>
-                                <h4 className="font-medium text-gray-800 mb-1">Effect:</h4>
-                                <p className="text-gray-600 text-xs leading-relaxed">
-                                  {move.effect_entries.find(entry => entry.language.name === 'en')?.short_effect || 
-                                   move.effect_entries[0]?.short_effect}
-                                </p>
-                              </div>
-                            )}
                             {move.flavor_text_entries && move.flavor_text_entries.length > 0 && (
                               <div>
-                                <h4 className="font-medium text-gray-800 mb-1">Description:</h4>
+                                <h4 className="font-medium text-gray-800 mb-1">Game Description:</h4>
                                 <p className="text-gray-600 text-xs italic leading-relaxed">
                                   "{move.flavor_text_entries.find((entry: any) => entry.language.name === 'en')?.flavor_text || 
                                     move.flavor_text_entries[0]?.flavor_text}"
@@ -734,13 +823,6 @@ const MovesetEditor: React.FC<MovesetEditorProps> = ({ pokemon, teamId, onBack }
                               <div><strong>Priority:</strong> {move.priority || 0}</div>
                             </div>
                           </div>
-                        )}
-                        
-                        {expandedMove !== moveName && move.effect_entries.length > 0 && (
-                          <p className="text-gray-600 text-xs leading-relaxed">
-                            {move.effect_entries.find(entry => entry.language.name === 'en')?.short_effect || 
-                             move.effect_entries[0]?.short_effect}
-                          </p>
                         )}
                       </div>
                     )}
@@ -1027,7 +1109,7 @@ const MovesetEditor: React.FC<MovesetEditorProps> = ({ pokemon, teamId, onBack }
                     title="Held items provide various battle effects and advantages"
                   >
                     <option value="">No Item</option>
-                    {filteredItems.map((item) => (
+                    {HELD_ITEMS.map((item) => (
                       <option key={item} value={item}>
                         {formatName(item)}
                         {itemDescriptions[item] && ` - ${itemDescriptions[item]}`}
