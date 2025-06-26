@@ -1,4 +1,4 @@
-const { fetchWithCache } = require("@netlify/cache");
+const { getCache, setCache } = require("@netlify/cache");
 
 // Environment variables with fallbacks
 const GRAPHQL_ENDPOINT = process.env.VITE_API_GRAPHQL_URL || 'https://beta.pokeapi.co/graphql/v1beta';
@@ -51,10 +51,31 @@ exports.handler = async (event, context) => {
 
     // Create a cache key based on the query and variables
     const cacheKey = `graphql:${Buffer.from(JSON.stringify({ query, variables })).toString('base64')}`;
-    const requestUrl = `${GRAPHQL_ENDPOINT}?cache_key=${cacheKey}`;
 
-    // Create the GraphQL request
-    const graphqlRequest = new Request(requestUrl, {
+    // Try to get cached response first
+    let cachedResponse;
+    try {
+      cachedResponse = await getCache(cacheKey);
+    } catch (error) {
+      console.log('Cache get error:', error);
+    }
+
+    if (cachedResponse) {
+      console.log('Cache hit for GraphQL query');
+      return {
+        statusCode: 200,
+        headers: {
+          'Content-Type': 'application/json',
+          'Cache-Control': 'public, max-age=3600, s-maxage=3600',
+          'X-Cache': 'HIT',
+          ...corsHeaders,
+        },
+        body: cachedResponse
+      };
+    }
+
+    // Make the GraphQL request
+    const response = await fetch(GRAPHQL_ENDPOINT, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -62,34 +83,33 @@ exports.handler = async (event, context) => {
       body: JSON.stringify({ query, variables }),
     });
 
-    // Use fetchWithCache to automatically handle caching
-    // Cache for 1 hour (3600 seconds) for Pokemon data which doesn't change often
-    const response = await fetchWithCache(
-      graphqlRequest,
-      {},
-      {
-        durable: true,
-        overrideDeployRevalidation: false,
-        maxAge: 3600, // 1 hour cache
-        overrideCacheControl: 'public, max-age=3600, s-maxage=3600',
-      }
-    );
-
     if (!response.ok) {
       throw new Error(`GraphQL API returned ${response.status}: ${response.statusText}`);
     }
 
     const data = await response.json();
+    const responseBody = JSON.stringify(data);
 
-    // Return the cached/fresh data
+    // Cache the response for 1 hour
+    try {
+      await setCache(cacheKey, responseBody, {
+        maxAge: 3600, // 1 hour
+      });
+      console.log('Cached GraphQL response');
+    } catch (error) {
+      console.error('Cache set error:', error);
+    }
+
+    // Return the fresh data
     return {
       statusCode: 200,
       headers: {
         'Content-Type': 'application/json',
         'Cache-Control': 'public, max-age=3600, s-maxage=3600',
+        'X-Cache': 'MISS',
         ...corsHeaders,
       },
-      body: JSON.stringify(data)
+      body: responseBody
     };
 
   } catch (error) {
