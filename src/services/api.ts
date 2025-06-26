@@ -10,8 +10,8 @@ import {
 const GRAPHQL_ENDPOINT = import.meta.env.VITE_API_GRAPHQL_URL || 'https://beta.pokeapi.co/graphql/v1beta';
 const REST_ENDPOINT = import.meta.env.VITE_API_REST_URL || import.meta.env.VITE_API_URL || 'https://pokeapi.co/api/v2';
 
-// Feature flag to enable/disable caching
-const USE_CACHED_API = import.meta.env.VITE_USE_CACHED_API !== 'false'; // Default to true
+// Feature flag to enable/disable caching (disabled in development by default)
+const USE_CACHED_API = import.meta.env.VITE_USE_CACHED_API === 'true' && !import.meta.env.DEV;
 
 // Validate API endpoints
 if (!GRAPHQL_ENDPOINT || !REST_ENDPOINT) {
