@@ -91,263 +91,286 @@ const BattleSimulator: React.FC<BattleSimulatorProps> = ({
   const [moveEffectAnimation, setMoveEffectAnimation] = useState<string>('');
 
   // Initialize battle Pokémon with proper BattleEngine interface
-  useEffect(() => {
-    const initializePokemon = (pokemon: any): BattlePokemon => {
-      const baseStats: PokemonStats = {
-        hp: pokemon.stats?.hp || 100,
-        attack: pokemon.stats?.attack || 80,
-        defense: pokemon.stats?.defense || 80,
-        specialAttack: pokemon.stats?.['special-attack'] || 80,
-        specialDefense: pokemon.stats?.['special-defense'] || 80,
-        speed: pokemon.stats?.speed || 80
-      };
-
-      const level = pokemon.level || 50;
-      const actualStats = BattleEngine.calculateStats(baseStats, level);
-      const maxHp = actualStats.hp;
-
-      // Enhanced move initialization with better fallbacks
-      const initializeMoves = (pokemonMoves: any[]): BattleMove[] => {
-        // If we have specific moves, use them
-        if (pokemonMoves && pokemonMoves.length > 0) {
-          return pokemonMoves.slice(0, 4).map((moveData: any) => {
-            const moveName = typeof moveData === 'string' ? moveData : moveData.name;
-            const moveInfo = MOVE_DATABASE[moveName] || {
-              type: 'normal',
-              power: 50,
-              accuracy: 100,
-              damageClass: 'physical'
-            };
-
-            return {
-              name: moveName,
-              type: moveInfo.type || 'normal',
-              power: moveInfo.power || 50,
-              accuracy: moveInfo.accuracy || 100,
-              pp: moveInfo.power === 0 ? 20 : 15,
-              currentPP: moveInfo.power === 0 ? 20 : 15,
-              damageClass: moveInfo.damageClass || 'physical',
-              description: moveData.description || `${moveName} - A Pokémon move`,
-              effect: moveInfo.effect,
-              priority: moveInfo.priority || 0,
-              target: moveInfo.target || 'opponent'
-            };
-          });
-        }
-
-        // Generate type-specific fallback moves
-        const pokemonTypes = pokemon.types || ['normal'];
-        const moves = [];
-
-        // Add STAB move for each type
-        pokemonTypes.forEach((type: string) => {
-          switch (type) {
-            case 'fire':
-              moves.push({
-                name: 'flamethrower',
-                type: 'fire',
-                power: 90,
-                accuracy: 100,
-                pp: 15,
-                currentPP: 15,
-                damageClass: 'special' as const,
-                description: 'The target is scorched with an intense blast of fire.',
-                priority: 0,
-                target: 'opponent' as const
-              });
-              break;
-            case 'water':
-              moves.push({
-                name: 'surf',
-                type: 'water',
-                power: 90,
-                accuracy: 100,
-                pp: 15,
-                currentPP: 15,
-                damageClass: 'special' as const,
-                description: 'A big wave crashes down on the target.',
-                priority: 0,
-                target: 'opponent' as const
-              });
-              break;
-            case 'electric':
-              moves.push({
-                name: 'thunderbolt',
-                type: 'electric',
-                power: 90,
-                accuracy: 100,
-                pp: 15,
-                currentPP: 15,
-                damageClass: 'special' as const,
-                description: 'A strong electric blast crashes down on the target.',
-                effect: 'paralyze',
-                priority: 0,
-                target: 'opponent' as const
-              });
-              break;
-            case 'grass':
-              moves.push({
-                name: 'energy-ball',
-                type: 'grass',
-                power: 90,
-                accuracy: 100,
-                pp: 10,
-                currentPP: 10,
-                damageClass: 'special' as const,
-                description: 'The user draws power from nature and fires it at the target.',
-                priority: 0,
-                target: 'opponent' as const
-              });
-              break;
-            case 'ice':
-              moves.push({
-                name: 'ice-beam',
-                type: 'ice',
-                power: 90,
-                accuracy: 100,
-                pp: 10,
-                currentPP: 10,
-                damageClass: 'special' as const,
-                description: 'The target is struck with an icy-cold beam of energy.',
-                effect: 'freeze',
-                priority: 0,
-                target: 'opponent' as const
-              });
-              break;
-            default:
-              moves.push({
-                name: 'tackle',
-                type: 'normal',
-                power: 40,
-                accuracy: 100,
-                pp: 35,
-                currentPP: 35,
-                damageClass: 'physical' as const,
-                description: 'A physical attack in which the user charges and slams into the target.',
-                priority: 0,
-                target: 'opponent' as const
-              });
-          }
-        });
-
-        // Add diverse status/utility moves
-        const statusMoves = [
-          {
-            name: 'protect',
-            type: 'normal',
-            power: 0,
-            accuracy: 100,
-            pp: 10,
-            currentPP: 10,
-            damageClass: 'status' as const,
-            description: 'Enables the user to evade all attacks.',
-            effect: 'protect',
-            priority: 4,
-            target: 'self' as const
-          },
-          {
-            name: 'toxic',
-            type: 'poison',
-            power: 0,
-            accuracy: 90,
-            pp: 10,
-            currentPP: 10,
-            damageClass: 'status' as const,
-            description: 'A move that leaves the target badly poisoned.',
-            effect: 'bad_poison',
-            priority: 0,
-            target: 'opponent' as const
-          },
-          {
-            name: 'swords-dance',
-            type: 'normal',
-            power: 0,
-            accuracy: 100,
-            pp: 20,
-            currentPP: 20,
-            damageClass: 'status' as const,
-            description: 'Sharply raises the user\'s Attack stat.',
-            effect: 'raise_attack_2',
-            priority: 0,
-            target: 'self' as const
-          },
-          {
-            name: 'recover',
-            type: 'normal',
-            power: 0,
-            accuracy: 100,
-            pp: 10,
-            currentPP: 10,
-            damageClass: 'status' as const,
-            description: 'Restores the user\'s HP by half of its max HP.',
-            effect: 'heal_50',
-            priority: 0,
-            target: 'self' as const
-          }
-        ];
-
-        // Add random status moves to fill the moveset
-        const shuffledStatusMoves = [...statusMoves].sort(() => Math.random() - 0.5);
-        moves.push(...shuffledStatusMoves.slice(0, 4 - moves.length));
-
-        // Ensure we have at least tackle if somehow no moves were added
-        if (moves.length === 0) {
-          moves.push({
-            name: 'tackle',
-            type: 'normal',
-            power: 40,
-            accuracy: 100,
-            pp: 35,
-            currentPP: 35,
-            damageClass: 'physical' as const,
-            description: 'A physical attack in which the user charges and slams into the target.',
-            priority: 0,
-            target: 'opponent' as const
-          });
-        }
-
-        return moves.slice(0, 4);
-      };
-
-      return {
-        id: pokemon.id,
-        name: pokemon.name,
-        types: pokemon.types || ['normal'],
-        level,
-        currentHp: pokemon.currentHp || maxHp,
-        maxHp,
-        baseStats,
-        actualStats,
-        moves: initializeMoves(pokemon.moves),
-        sprites: {
-          front_default: pokemon.sprites?.other?.['official-artwork']?.front_default || pokemon.sprites?.front_default || '',
-          back_default: pokemon.sprites?.back_default || pokemon.sprites?.front_default || '',
-        },
-        status: pokemon.status || null,
-        statusTurns: pokemon.statusTurns || 0,
-        statStages: BattleEngine.createStatStages(), // Use proper stat stages
-        volatileStatuses: [], // Initialize empty volatile statuses
-      };
+  const initializePokemon = useCallback((pokemon: any): BattlePokemon => {
+    const baseStats: PokemonStats = {
+      hp: pokemon.stats?.hp || 100,
+      attack: pokemon.stats?.attack || 80,
+      defense: pokemon.stats?.defense || 80,
+      specialAttack: pokemon.stats?.['special-attack'] || 80,
+      specialDefense: pokemon.stats?.['special-defense'] || 80,
+      speed: pokemon.stats?.speed || 80
     };
 
-    if (playerPokemon && opponentPokemon) {
-      setPlayer(initializePokemon(playerPokemon));
+    const level = pokemon.level || 50;
+    const actualStats = BattleEngine.calculateStats(baseStats, level);
+    const maxHp = actualStats.hp;
+
+    // Enhanced move initialization with better fallbacks
+    const initializeMoves = (pokemonMoves: any[]): BattleMove[] => {
+      // If we have specific moves, use them
+      if (pokemonMoves && pokemonMoves.length > 0) {
+        return pokemonMoves.slice(0, 4).map((moveData: any) => {
+          const moveName = typeof moveData === 'string' ? moveData : moveData.name;
+          const moveInfo = MOVE_DATABASE[moveName] || {
+            type: 'normal',
+            power: 50,
+            accuracy: 100,
+            damageClass: 'physical'
+          };
+
+          return {
+            name: moveName,
+            type: moveInfo.type || 'normal',
+            power: moveInfo.power || 50,
+            accuracy: moveInfo.accuracy || 100,
+            pp: moveInfo.power === 0 ? 20 : 15,
+            currentPP: moveInfo.power === 0 ? 20 : 15,
+            damageClass: moveInfo.damageClass || 'physical',
+            description: moveData.description || `${moveName} - A Pokémon move`,
+            effect: moveInfo.effect,
+            priority: moveInfo.priority || 0,
+            target: moveInfo.target || 'opponent'
+          };
+        });
+      }
+
+      // Generate type-specific fallback moves
+      const pokemonTypes = pokemon.types || ['normal'];
+      const moves = [];
+
+      // Add STAB move for each type
+      pokemonTypes.forEach((type: string) => {
+        switch (type) {
+          case 'fire':
+            moves.push({
+              name: 'flamethrower',
+              type: 'fire',
+              power: 90,
+              accuracy: 100,
+              pp: 15,
+              currentPP: 15,
+              damageClass: 'special' as const,
+              description: 'The target is scorched with an intense blast of fire.',
+              priority: 0,
+              target: 'opponent' as const
+            });
+            break;
+          case 'water':
+            moves.push({
+              name: 'surf',
+              type: 'water',
+              power: 90,
+              accuracy: 100,
+              pp: 15,
+              currentPP: 15,
+              damageClass: 'special' as const,
+              description: 'A big wave crashes down on the target.',
+              priority: 0,
+              target: 'opponent' as const
+            });
+            break;
+          case 'electric':
+            moves.push({
+              name: 'thunderbolt',
+              type: 'electric',
+              power: 90,
+              accuracy: 100,
+              pp: 15,
+              currentPP: 15,
+              damageClass: 'special' as const,
+              description: 'A strong electric blast crashes down on the target.',
+              effect: 'paralyze',
+              priority: 0,
+              target: 'opponent' as const
+            });
+            break;
+          case 'grass':
+            moves.push({
+              name: 'energy-ball',
+              type: 'grass',
+              power: 90,
+              accuracy: 100,
+              pp: 10,
+              currentPP: 10,
+              damageClass: 'special' as const,
+              description: 'The user draws power from nature and fires it at the target.',
+              priority: 0,
+              target: 'opponent' as const
+            });
+            break;
+          case 'ice':
+            moves.push({
+              name: 'ice-beam',
+              type: 'ice',
+              power: 90,
+              accuracy: 100,
+              pp: 10,
+              currentPP: 10,
+              damageClass: 'special' as const,
+              description: 'The target is struck with an icy-cold beam of energy.',
+              effect: 'freeze',
+              priority: 0,
+              target: 'opponent' as const
+            });
+            break;
+          default:
+            moves.push({
+              name: 'tackle',
+              type: 'normal',
+              power: 40,
+              accuracy: 100,
+              pp: 35,
+              currentPP: 35,
+              damageClass: 'physical' as const,
+              description: 'A physical attack in which the user charges and slams into the target.',
+              priority: 0,
+              target: 'opponent' as const
+            });
+        }
+      });
+
+      // Add diverse status/utility moves
+      const statusMoves = [
+        {
+          name: 'protect',
+          type: 'normal',
+          power: 0,
+          accuracy: 100,
+          pp: 10,
+          currentPP: 10,
+          damageClass: 'status' as const,
+          description: 'Enables the user to evade all attacks.',
+          effect: 'protect',
+          priority: 4,
+          target: 'self' as const
+        },
+        {
+          name: 'toxic',
+          type: 'poison',
+          power: 0,
+          accuracy: 90,
+          pp: 10,
+          currentPP: 10,
+          damageClass: 'status' as const,
+          description: 'A move that leaves the target badly poisoned.',
+          effect: 'bad_poison',
+          priority: 0,
+          target: 'opponent' as const
+        },
+        {
+          name: 'swords-dance',
+          type: 'normal',
+          power: 0,
+          accuracy: 100,
+          pp: 20,
+          currentPP: 20,
+          damageClass: 'status' as const,
+          description: 'Sharply raises the user\'s Attack stat.',
+          effect: 'raise_attack_2',
+          priority: 0,
+          target: 'self' as const
+        },
+        {
+          name: 'recover',
+          type: 'normal',
+          power: 0,
+          accuracy: 100,
+          pp: 10,
+          currentPP: 10,
+          damageClass: 'status' as const,
+          description: 'Restores the user\'s HP by half of its max HP.',
+          effect: 'heal_50',
+          priority: 0,
+          target: 'self' as const
+        }
+      ];
+
+      // Add random status moves to fill the moveset
+      const shuffledStatusMoves = [...statusMoves].sort(() => Math.random() - 0.5);
+      moves.push(...shuffledStatusMoves.slice(0, 4 - moves.length));
+
+      // Ensure we have at least tackle if somehow no moves were added
+      if (moves.length === 0) {
+        moves.push({
+          name: 'tackle',
+          type: 'normal',
+          power: 40,
+          accuracy: 100,
+          pp: 35,
+          currentPP: 35,
+          damageClass: 'physical' as const,
+          description: 'A physical attack in which the user charges and slams into the target.',
+          priority: 0,
+          target: 'opponent' as const
+        });
+      }
+
+      return moves.slice(0, 4);
+    };
+
+    return {
+      id: pokemon.id,
+      name: pokemon.name,
+      types: pokemon.types || ['normal'],
+      level,
+      currentHp: pokemon.currentHp || maxHp,
+      maxHp,
+      baseStats,
+      actualStats,
+      moves: initializeMoves(pokemon.moves),
+      sprites: {
+        front_default: pokemon.sprites?.other?.['official-artwork']?.front_default || pokemon.sprites?.front_default || '',
+        back_default: pokemon.sprites?.back_default || pokemon.sprites?.front_default || '',
+      },
+      status: pokemon.status || null,
+      statusTurns: pokemon.statusTurns || 0,
+      statStages: BattleEngine.createStatStages(), // Use proper stat stages
+      volatileStatuses: [], // Initialize empty volatile statuses
+    };
+  }, []);
+
+  // Initialize opponent Pokemon (only once at battle start)
+  useEffect(() => {
+    if (opponentPokemon && !opponent) {
       setOpponent(initializePokemon(opponentPokemon));
-      setBattleLog([`${playerPokemon.name} vs ${opponentPokemon.name}!`, 'Battle begins!']);
+    }
+  }, [opponentPokemon]);
+
+  // Initialize player Pokemon and battle log
+  useEffect(() => {
+    if (playerPokemon) {
+      setPlayer(initializePokemon(playerPokemon));
+      
+      // Set appropriate battle log message
+      if (opponent) {
+        // This is a Pokemon switch
+        setBattleLog(prev => [...prev, `Go ${playerPokemon.name}!`]);
+      } else if (opponentPokemon) {
+        // This is battle start
+        setBattleLog([`${playerPokemon.name} vs ${opponentPokemon.name}!`, 'Battle begins!']);
+      }
     }
   }, [playerPokemon, opponentPokemon]);
 
   // Enhanced damage calculation
   const calculateDamage = useCallback((attacker: BattlePokemon, defender: BattlePokemon, move: BattleMove): { damage: number; effectiveness: number; isCritical: boolean; canHit: boolean } => {
-          // Status moves and protect
-      if (move.power === 0) return { damage: 0, effectiveness: 1, isCritical: false, canHit: true };
-      const isProtected = defender.volatileStatuses.some(status => status.type === 'protected');
-      if (isProtected && move.damageClass !== 'status') {
-        return { damage: 0, effectiveness: 1, isCritical: false, canHit: false };
-      }
+    // Safety check: ensure both Pokemon have actualStats
+    if (!attacker?.actualStats || !defender?.actualStats) {
+      console.warn('Pokemon missing actualStats, returning no damage');
+      return { damage: 0, effectiveness: 1, isCritical: false, canHit: false };
+    }
 
-    // Accuracy check
-    const accuracyMod = attacker.statStages.accuracy - defender.statStages.evasion;
+    // Status moves and protect
+    if (move.power === 0) return { damage: 0, effectiveness: 1, isCritical: false, canHit: true };
+    const isProtected = defender.volatileStatuses?.some(status => status.type === 'protected') || false;
+    if (isProtected && move.damageClass !== 'status') {
+      return { damage: 0, effectiveness: 1, isCritical: false, canHit: false };
+    }
+
+    // Accuracy check with safety
+    const attackerAccuracy = attacker.statStages?.accuracy || 0;
+    const defenderEvasion = defender.statStages?.evasion || 0;
+    const accuracyMod = attackerAccuracy - defenderEvasion;
     const finalAccuracy = move.accuracy * (Math.max(1, 3 + accuracyMod) / Math.max(1, 3 - accuracyMod));
     if (Math.random() * 100 > finalAccuracy) {
       return { damage: 0, effectiveness: 1, isCritical: false, canHit: false };
@@ -360,28 +383,30 @@ const BattleSimulator: React.FC<BattleSimulatorProps> = ({
     };
 
     const attack = move.damageClass === 'physical' 
-      ? getEffectiveStat(attacker.actualStats.attack, attacker.statStages.attack)
-      : getEffectiveStat(attacker.actualStats.specialAttack, attacker.statStages.specialAttack);
+      ? getEffectiveStat(attacker.actualStats.attack, attacker.statStages?.attack || 0)
+      : getEffectiveStat(attacker.actualStats.specialAttack, attacker.statStages?.specialAttack || 0);
     
     const defense = move.damageClass === 'physical' 
-      ? getEffectiveStat(defender.actualStats.defense, defender.statStages.defense)
-      : getEffectiveStat(defender.actualStats.specialDefense, defender.statStages.specialDefense);
+      ? getEffectiveStat(defender.actualStats.defense, defender.statStages?.defense || 0)
+      : getEffectiveStat(defender.actualStats.specialDefense, defender.statStages?.specialDefense || 0);
     
     // Enhanced damage formula
     let damage = ((((2 * attacker.level + 10) / 250) * (attack / defense) * move.power) + 2);
     
-    // STAB (Same Type Attack Bonus)
-    if (attacker.types.includes(move.type)) {
+    // STAB (Same Type Attack Bonus) with safety check
+    if (attacker.types?.includes(move.type)) {
       damage *= 1.5;
     }
 
-    // Type effectiveness
+    // Type effectiveness with safety check
     let effectiveness = 1;
-    defender.types.forEach((defenderType: string) => {
-      if (TYPE_EFFECTIVENESS[move.type]?.[defenderType] !== undefined) {
-        effectiveness *= TYPE_EFFECTIVENESS[move.type][defenderType];
-      }
-    });
+    if (defender.types && defender.types.length > 0) {
+      defender.types.forEach((defenderType: string) => {
+        if (TYPE_EFFECTIVENESS[move.type]?.[defenderType] !== undefined) {
+          effectiveness *= TYPE_EFFECTIVENESS[move.type][defenderType];
+        }
+      });
+    }
     damage *= effectiveness;
 
     // Status effects on damage
@@ -510,7 +535,7 @@ const BattleSimulator: React.FC<BattleSimulatorProps> = ({
     
     let newLog = [`${attacker.name} used ${move.name.replace('-', ' ')}!`];
 
-    const isDefenderProtected = defender.volatileStatuses.some(status => status.type === 'protected');
+    const isDefenderProtected = defender.volatileStatuses?.some(status => status.type === 'protected') || false;
     if (!result.canHit && isDefenderProtected) {
       newLog.push(`${defender.name} protected itself!`);
     } else if (!result.canHit) {
@@ -608,18 +633,28 @@ const BattleSimulator: React.FC<BattleSimulatorProps> = ({
   }, [turn, opponent, battlePhase, isAnimating, executeMove, player]);
 
   const handlePokemonSwitch = (newPokemon: any) => {
+    // Preserve the current Pokemon's battle state before switching
+    if (player && onSwitchPokemon) {
+      const updatedCurrentPokemon = {
+        ...player,
+        // Don't include battle-specific state that shouldn't be preserved
+        statStages: undefined,
+        volatileStatuses: undefined
+      };
+      onSwitchPokemon(updatedCurrentPokemon);
+    }
+
+    // Initialize the new Pokemon with fresh battle state
     const switchedPokemon = {
       ...newPokemon,
       statStages: BattleEngine.createStatStages(),
       volatileStatuses: []
     };
+    
     setPlayer(switchedPokemon);
-    setBattleLog(prev => [...prev, `Go ${newPokemon.name}!`]);
-    if (onSwitchPokemon) {
-      onSwitchPokemon(newPokemon);
-    }
+    setBattleLog(prev => [...prev, `Come back ${player?.name}!`, `Go ${newPokemon.name}!`]);
     setBattleMenu('main');
-    setTurn('opponent');
+    setTurn('opponent'); // Switching gives opponent the turn
   };
 
   const getTypeColor = (type: string) => {
@@ -640,13 +675,36 @@ const BattleSimulator: React.FC<BattleSimulatorProps> = ({
     if (player.currentHp <= 0) {
       setBattlePhase('ended');
       setBattleLog(prev => [...prev, `${player.name} fainted!`, 'You lost the battle!']);
+      
+      // Preserve the fainted Pokemon's state before ending
+      if (onSwitchPokemon) {
+        const faintedPokemon = {
+          ...player,
+          currentHp: 0, // Ensure it stays fainted
+          statStages: undefined,
+          volatileStatuses: undefined
+        };
+        onSwitchPokemon(faintedPokemon);
+      }
+      
       setTimeout(() => onBattleEnd?.(false), 2000);
     } else if (opponent.currentHp <= 0) {
       setBattlePhase('ended');
       setBattleLog(prev => [...prev, `${opponent.name} fainted!`, 'You won the battle!']);
+      
+      // Preserve the current Pokemon's state (they should keep their current HP)
+      if (onSwitchPokemon) {
+        const survivingPokemon = {
+          ...player,
+          statStages: undefined,
+          volatileStatuses: undefined
+        };
+        onSwitchPokemon(survivingPokemon);
+      }
+      
       setTimeout(() => onBattleEnd?.(true), 2000);
     }
-  }, [player?.currentHp, opponent?.currentHp, onBattleEnd, player, opponent]);
+  }, [player?.currentHp, opponent?.currentHp]); // Removed problematic dependencies
 
   // Apply status effects at end of each turn
   useEffect(() => {
@@ -663,7 +721,7 @@ const BattleSimulator: React.FC<BattleSimulatorProps> = ({
         setBattleLog(prev => [...prev, ...messages]);
       }
     }
-  }, [turn, isAnimating, applyStatusEffects]);
+  }, [turn, isAnimating]); // Removed applyStatusEffects dependency
 
   if (!player || !opponent) {
     return <div className="fixed inset-0 bg-black flex items-center justify-center text-white">Loading battle...</div>;
@@ -813,7 +871,7 @@ const BattleSimulator: React.FC<BattleSimulatorProps> = ({
               <button
                 onClick={() => setBattleMenu('switch')}
                 className="bg-green-400 hover:bg-green-500 rounded-lg font-bold text-lg flex items-center justify-center"
-                disabled={playerTeam.length <= 1}
+                disabled={playerTeam.filter(p => p.currentHp > 0 && p.id !== player.id).length === 0}
               >
                 <ArrowLeft className="mr-2" size={20} />
                 POKEMON

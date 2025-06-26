@@ -291,7 +291,9 @@ export function useGymChallenge() {
 
     setPokemonToReplace: (pokemon: GymPokemon | null) => {
       setState(prev => ({ ...prev, pokemonToReplace: pokemon }));
-    }
+    },
+
+    setState: setState
   };
 
   return {

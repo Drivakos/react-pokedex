@@ -30,12 +30,33 @@ const GymLeaderChallenge: React.FC<GymLeaderChallengeProps> = ({ onExit }) => {
 
   // Battle Phase
   if (state.gamePhase === 'battling' && state.selectedBattlePokemon && state.currentChallenger) {
+    const handlePokemonSwitch = (newPokemon: any) => {
+      // Update the gym team with the current Pokemon's state before switching
+      const updatedGymTeam = state.gymTeam.map(p => 
+        p.id === state.selectedBattlePokemon?.id ? {
+          ...p,
+          currentHp: state.selectedBattlePokemon.currentHp,
+          status: state.selectedBattlePokemon.status,
+          statusTurns: state.selectedBattlePokemon.statusTurns
+        } : p
+      );
+      
+      // Update state with the new selected Pokemon and preserved HP states
+      actions.setState((prev: any) => ({
+        ...prev,
+        selectedBattlePokemon: newPokemon,
+        gymTeam: updatedGymTeam
+      }));
+    };
+
     return (
       <BattleSimulator
         playerPokemon={state.selectedBattlePokemon}
         opponentPokemon={state.currentChallenger.pokemon[0]}
+        playerTeam={state.gymTeam}
         onBack={() => actions.setGamePhase('pokemon-select-for-battle')}
         onBattleEnd={actions.handleBattleComplete}
+        onSwitchPokemon={handlePokemonSwitch}
       />
     );
   }
