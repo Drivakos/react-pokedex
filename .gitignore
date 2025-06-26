@@ -71,3 +71,6 @@ dist/stats.html
 tech_stack.md
 feature_log.md
 changelog.md
+
+# remove temp filesystem files
+*~
