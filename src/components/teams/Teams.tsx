@@ -31,7 +31,7 @@ interface PokemonWithMoves {
   moves: string[];
 }
 
-const Teams: React.FC = () => {
+const TeamsContent: React.FC = () => {
   const { user, teams, fetchTeams, getTeamMembers } = useAuth();
   const [selectedTeam, setSelectedTeam] = useState<Team | null>(null);
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
@@ -88,6 +88,7 @@ const Teams: React.FC = () => {
             const response = await fetch(`https://pokeapi.co/api/v2/pokemon/${member.pokemon_id}`);
             if (response.ok) {
               const pokemon = await response.json();
+
               pokemonDetailsMap[member.pokemon_id] = {
                 id: pokemon.id,
                 name: pokemon.name,
@@ -146,7 +147,7 @@ const Teams: React.FC = () => {
         try {
           build = JSON.parse(savedBuild);
         } catch (e) {
-          // Build data parsing failed, using defaults
+          console.warn(`Failed to parse build for ${pokemon.name}`);
         }
       }
 
@@ -251,7 +252,7 @@ const Teams: React.FC = () => {
           try {
             build = JSON.parse(savedBuild);
           } catch (e) {
-            // Build data parsing failed, using defaults
+            console.warn(`Failed to parse build for ${pokemon.name}`);
           }
         }
 
@@ -386,12 +387,11 @@ const Teams: React.FC = () => {
             </div>
             <button
               onClick={() => exportTeam(selectedTeam, teamMembers)}
-              className="flex items-center gap-1 md:gap-2 bg-blue-600 hover:bg-blue-700 text-white px-2 py-1 md:px-4 md:py-2 rounded-lg font-medium transition-colors text-sm md:text-base"
+              className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors"
               title="Export team to clipboard"
             >
-              <Copy size={14} className="md:w-4 md:h-4" />
-              <span className="hidden sm:inline">Export Team</span>
-              <span className="sm:hidden">Export</span>
+              <Copy size={16} />
+              Export Team
             </button>
           </div>
 
@@ -454,19 +454,17 @@ const Teams: React.FC = () => {
                         <span>Position {member.position}</span>
                         <ChevronRight size={16} className="text-blue-500" />
                       </div>
-                      <div className="flex justify-center mt-3">
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            exportSinglePokemon(member.pokemon_id);
-                          }}
-                          className="flex items-center gap-2 bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-md font-medium transition-colors text-sm"
-                          title="Export Pokemon to clipboard"
-                        >
-                          <Copy size={14} />
-                          Export
-                        </button>
-                      </div>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          exportSinglePokemon(member.pokemon_id);
+                        }}
+                        className="flex items-center gap-2 bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-md font-medium transition-colors text-sm"
+                        title="Export Pokemon to clipboard"
+                      >
+                        <Copy size={14} />
+                        Export
+                      </button>
                     </div>
                   </div>
                 );
@@ -549,6 +547,33 @@ const Teams: React.FC = () => {
       </div>
     </div>
   );
+};
+
+// Error boundary wrapper for Teams component
+const Teams: React.FC = () => {
+  try {
+    return <TeamsContent />;
+  } catch (error) {
+    console.error('Teams component error:', error);
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-6">
+        <div className="max-w-4xl mx-auto">
+          <div className="text-center py-12">
+            <h1 className="text-2xl font-bold text-red-600 mb-4">Something went wrong</h1>
+            <p className="text-gray-600 mb-4">
+              Error: {error instanceof Error ? error.message : 'Unknown error occurred'}
+            </p>
+            <button
+              onClick={() => window.location.reload()}
+              className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded transition-colors"
+            >
+              Refresh Page
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 };
 
 export default Teams;
