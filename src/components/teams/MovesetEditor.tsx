@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ArrowLeft, Save, Trash2, Plus, Zap, Settings, Award, ChevronUp, ChevronDown, Copy } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { formatName, getOfficialArtwork } from '../../utils/helpers';
@@ -267,11 +267,10 @@ const HELD_ITEMS = [
   'Fairy Feather'
 ];
 
-const MovesetEditor: React.FC<MovesetEditorProps> = ({ pokemon, teamId, onBack }) => {
+const MovesetEditorContent: React.FC<MovesetEditorProps> = ({ pokemon, teamId, onBack }) => {
   const [selectedMoves, setSelectedMoves] = useState<string[]>([]);
   const [availableMoves, setAvailableMoves] = useState<string[]>([]);
   const [moveDetails, setMoveDetails] = useState<Record<string, MoveDetails>>({});
-  const loadedMovesRef = useRef<Set<string>>(new Set());
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
   const [showMoveSelector, setShowMoveSelector] = useState(false);
@@ -341,9 +340,9 @@ const MovesetEditor: React.FC<MovesetEditorProps> = ({ pokemon, teamId, onBack }
                 abilityDescs[ability] = englishEntry?.short_effect || 'No description available';
               }
                       } catch {
-            console.warn(`Failed to fetch description for ability: ${ability}`);
-            abilityDescs[ability] = 'Description not available';
-          }
+              console.warn(`Failed to fetch description for ability: ${ability}`);
+              abilityDescs[ability] = 'Description not available';
+            }
           }
           setAbilityDescriptions(abilityDescs);
           
@@ -456,8 +455,7 @@ const MovesetEditor: React.FC<MovesetEditorProps> = ({ pokemon, teamId, onBack }
   useEffect(() => {
     const loadDetailsForSelectedMoves = async () => {
       for (const moveName of selectedMoves) {
-        if (!loadedMovesRef.current.has(moveName)) {
-          loadedMovesRef.current.add(moveName);
+        if (!moveDetails[moveName]) {
           await loadMoveDetails(moveName);
         }
       }
@@ -466,7 +464,7 @@ const MovesetEditor: React.FC<MovesetEditorProps> = ({ pokemon, teamId, onBack }
     if (selectedMoves.length > 0) {
       loadDetailsForSelectedMoves();
     }
-  }, [selectedMoves, loadMoveDetails]); // No need for moveDetails dependency due to ref approach
+  }, [selectedMoves]); // Only depend on selectedMoves, not moveDetails to avoid infinite loop
 
   const handleSaveBuild = () => {
     const completeBuild = {
@@ -587,7 +585,7 @@ const MovesetEditor: React.FC<MovesetEditorProps> = ({ pokemon, teamId, onBack }
     }
   };
 
-  const loadMoveDetails = useCallback(async (moveName: string): Promise<MoveDetails | null> => {
+  const loadMoveDetails = async (moveName: string): Promise<MoveDetails | null> => {
     if (moveDetails[moveName]) {
       return moveDetails[moveName];
     }
@@ -617,7 +615,7 @@ const MovesetEditor: React.FC<MovesetEditorProps> = ({ pokemon, teamId, onBack }
     }
     
     return null;
-  }, [moveDetails]);
+  };
 
   const handleMoveToggle = async (moveName: string) => {
     if (selectedMoves.includes(moveName)) {
@@ -667,10 +665,10 @@ const MovesetEditor: React.FC<MovesetEditorProps> = ({ pokemon, teamId, onBack }
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-3 sm:p-6">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-6">
       <div className="max-w-4xl mx-auto">
         {/* Header */}
-        <div className="mb-6 sm:mb-8">
+        <div className="mb-8">
           <button
             onClick={onBack}
             className="text-blue-600 hover:text-blue-800 mb-4 flex items-center transition-colors"
@@ -679,23 +677,23 @@ const MovesetEditor: React.FC<MovesetEditorProps> = ({ pokemon, teamId, onBack }
             Back to Team
           </button>
           
-          <div className="bg-white rounded-xl p-4 sm:p-6 shadow-lg">
-            <div className="flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-6">
+          <div className="bg-white rounded-xl p-6 shadow-lg">
+            <div className="flex items-center gap-6">
               <img
                 src={getOfficialArtwork(pokemon.sprites)}
                 alt={formatName(pokemon.name)}
-                className="w-16 h-16 sm:w-20 sm:h-20 object-contain mx-auto sm:mx-0"
+                className="w-20 h-20 object-contain"
                 onError={(e) => {
                   // Fallback to regular sprite if official artwork fails
                   const target = e.target as HTMLImageElement;
                   target.src = `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${pokemon.id}.png`;
                 }}
               />
-              <div className="flex-1 text-center sm:text-left">
-                <h1 className="text-xl sm:text-2xl font-bold text-gray-800 mb-2">
+              <div className="flex-1">
+                <h1 className="text-2xl font-bold text-gray-800 mb-2">
                   {formatName(pokemon.name)} Moveset
                 </h1>
-                <div className="flex flex-wrap justify-center sm:justify-start gap-2 mb-3">
+                <div className="flex gap-2 mb-3">
                   {pokemon.types.map((type) => (
                     <span
                       key={type.type.name}
@@ -717,27 +715,27 @@ const MovesetEditor: React.FC<MovesetEditorProps> = ({ pokemon, teamId, onBack }
         </div>
 
         {/* Current Moveset */}
-        <div className="mb-6 sm:mb-8">
-          <div className="flex flex-col gap-3 mb-4">
-            <h2 className="text-lg sm:text-xl font-bold text-gray-800">Current Moveset ({selectedMoves.length}/4)</h2>
-            <div className="flex flex-col sm:flex-row gap-2">
+        <div className="mb-8">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-bold text-gray-800">Current Moveset ({selectedMoves.length}/4)</h2>
+            <div className="flex gap-2">
               <button
                 onClick={() => setShowMoveSelector(!showMoveSelector)}
-                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center justify-center gap-2 transition-colors text-sm"
+                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors"
               >
                 <Plus size={16} />
-                {showMoveSelector ? 'Hide Moves' : 'Add Moves'}
+                {showMoveSelector ? 'Hide' : 'Add'} Moves
               </button>
               <button
                 onClick={handleSaveBuild}
-                className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center justify-center gap-2 transition-colors text-sm"
+                className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors"
               >
                 <Save size={16} />
                 Save Build
               </button>
               <button
                 onClick={exportCurrentPokemon}
-                className="bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded-lg flex items-center justify-center gap-2 transition-colors text-sm"
+                className="bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors"
               >
                 <Copy size={16} />
                 Export Build
@@ -746,22 +744,22 @@ const MovesetEditor: React.FC<MovesetEditorProps> = ({ pokemon, teamId, onBack }
           </div>
 
           {selectedMoves.length === 0 ? (
-            <div className="bg-white rounded-xl p-6 sm:p-8 text-center shadow-lg">
-              <Zap className="mx-auto h-12 w-12 sm:h-16 sm:w-16 text-gray-400 mb-4" />
+            <div className="bg-white rounded-xl p-8 text-center shadow-lg">
+              <Zap className="mx-auto h-16 w-16 text-gray-400 mb-4" />
               <h3 className="text-lg font-semibold text-gray-800 mb-2">No moves selected</h3>
-              <p className="text-gray-600 text-sm sm:text-base">Add up to 4 moves to create this Pokémon's moveset.</p>
+              <p className="text-gray-600">Add up to 4 moves to create this Pokémon's moveset.</p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {selectedMoves.map((moveName) => {
                 const move = moveDetails[moveName];
                 return (
                   <div key={moveName} className="bg-white rounded-xl p-4 shadow-lg border-l-4 border-blue-500">
                     <div className="flex items-start justify-between mb-2">
                       <div className="flex-1">
-                        <h3 className="font-semibold text-gray-800 text-sm sm:text-base">{formatMoveName(moveName)}</h3>
+                        <h3 className="font-semibold text-gray-800">{formatMoveName(moveName)}</h3>
                       </div>
-                      <div className="flex gap-2 ml-2">
+                      <div className="flex gap-2">
                         <button
                           onClick={() => setExpandedMove(expandedMove === moveName ? '' : moveName)}
                           className="text-blue-600 hover:text-blue-800 p-1 rounded transition-colors"
@@ -781,7 +779,7 @@ const MovesetEditor: React.FC<MovesetEditorProps> = ({ pokemon, teamId, onBack }
                     
                     {move && (
                       <div className="space-y-2 text-sm">
-                        <div className="flex flex-wrap items-center gap-2">
+                        <div className="flex items-center gap-2">
                           <span
                             className="px-2 py-1 rounded text-xs font-medium text-white"
                             style={{ backgroundColor: getTypeColor(move.type.name) }}
@@ -795,15 +793,15 @@ const MovesetEditor: React.FC<MovesetEditorProps> = ({ pokemon, teamId, onBack }
                           </span>
                         </div>
                         
-                        <div className="flex flex-wrap gap-3 sm:gap-4 text-xs sm:text-sm text-gray-600">
+                        <div className="flex gap-4 text-gray-600">
                           {move.power && <span>Power: <strong>{move.power}</strong></span>}
-                          {move.accuracy && <span>Acc: <strong>{move.accuracy}%</strong></span>}
+                          {move.accuracy && <span>Accuracy: <strong>{move.accuracy}%</strong></span>}
                           <span>PP: <strong>{move.pp}</strong></span>
                         </div>
                         
                         {/* Always show short effect/description */}
                         {move.effect_entries.length > 0 && (
-                          <p className="text-gray-600 text-xs sm:text-sm leading-relaxed mt-2 italic">
+                          <p className="text-gray-600 text-sm leading-relaxed mt-2 italic">
                             {move.effect_entries.find(entry => entry.language.name === 'en')?.short_effect || 
                              move.effect_entries[0]?.short_effect}
                           </p>
@@ -813,14 +811,14 @@ const MovesetEditor: React.FC<MovesetEditorProps> = ({ pokemon, teamId, onBack }
                           <div className="mt-3 pt-3 border-t border-gray-200 space-y-2">
                             {move.flavor_text_entries && move.flavor_text_entries.length > 0 && (
                               <div>
-                                <h4 className="font-medium text-gray-800 mb-1 text-xs sm:text-sm">Game Description:</h4>
-                                <p className="text-gray-600 text-xs leading-relaxed italic">
+                                <h4 className="font-medium text-gray-800 mb-1">Game Description:</h4>
+                                <p className="text-gray-600 text-xs italic leading-relaxed">
                                   "{move.flavor_text_entries.find((entry: any) => entry.language.name === 'en')?.flavor_text || 
                                     move.flavor_text_entries[0]?.flavor_text}"
                                 </p>
                               </div>
                             )}
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs text-gray-500">
+                            <div className="grid grid-cols-2 gap-2 text-xs text-gray-500">
                               <div><strong>Target:</strong> {formatName(move.target?.name || 'unknown')}</div>
                               <div><strong>Priority:</strong> {move.priority || 0}</div>
                             </div>
@@ -837,8 +835,8 @@ const MovesetEditor: React.FC<MovesetEditorProps> = ({ pokemon, teamId, onBack }
 
         {/* Move Selector */}
         {showMoveSelector && (
-          <div className="bg-white rounded-xl p-4 sm:p-6 shadow-lg mb-6 sm:mb-8">
-            <h2 className="text-lg sm:text-xl font-bold text-gray-800 mb-4">Available Moves</h2>
+          <div className="bg-white rounded-xl p-6 shadow-lg mb-8">
+            <h2 className="text-xl font-bold text-gray-800 mb-4">Available Moves</h2>
             <MovesFilter
               availableMoves={availableMoves}
               selectedMoves={selectedMoves}
@@ -850,42 +848,34 @@ const MovesetEditor: React.FC<MovesetEditorProps> = ({ pokemon, teamId, onBack }
         )}
 
         {/* Build Customization */}
-        <div className="mb-6 sm:mb-8">
-          <div className="flex flex-col gap-3 mb-4">
-            <h2 className="text-lg sm:text-xl font-bold text-gray-800">Build Customization</h2>
-            <div className="flex flex-col sm:flex-row gap-2">
+        <div className="mb-8">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-bold text-gray-800">Build Customization</h2>
+            <div className="flex gap-2">
               <button
                 onClick={() => setActiveTab('stats')}
-                className={`px-4 py-2 rounded-lg flex items-center justify-center gap-2 transition-colors text-sm ${
-                  activeTab === 'stats' 
-                    ? 'bg-blue-700 text-white' 
-                    : 'bg-blue-600 hover:bg-blue-700 text-white'
-                }`}
+                className={`bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors ${activeTab === 'stats' ? 'bg-blue-700' : ''}`}
               >
                 <Award size={16} />
-                Stats & EVs
+                Stats
               </button>
               <button
                 onClick={() => setActiveTab('details')}
-                className={`px-4 py-2 rounded-lg flex items-center justify-center gap-2 transition-colors text-sm ${
-                  activeTab === 'details' 
-                    ? 'bg-blue-700 text-white' 
-                    : 'bg-blue-600 hover:bg-blue-700 text-white'
-                }`}
+                className={`bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors ${activeTab === 'details' ? 'bg-blue-700' : ''}`}
               >
                 <Settings size={16} />
-                Nature & Items
+                Details
               </button>
             </div>
           </div>
 
           {activeTab === 'stats' ? (
-            <div className="bg-white rounded-xl p-4 sm:p-6 shadow-lg space-y-6">
-              <div>
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-3 gap-2">
-                  <div className="flex flex-col sm:flex-row sm:items-center gap-2">
-                    <h3 className="text-base sm:text-lg font-semibold text-gray-800">Individual Values (IVs)</h3>
-                    <span className="text-xs bg-purple-100 text-purple-800 px-2 py-1 rounded-full w-fit">
+            <div className="bg-white rounded-xl p-6 shadow-lg">
+              <div className="mb-6">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-lg font-semibold text-gray-800">Individual Values (IVs)</h3>
+                    <span className="text-xs bg-purple-100 text-purple-800 px-2 py-1 rounded-full">
                       Max 31 each
                     </span>
                   </div>
@@ -901,15 +891,15 @@ const MovesetEditor: React.FC<MovesetEditorProps> = ({ pokemon, teamId, onBack }
                         speed: 31
                       }
                     }))}
-                    className="bg-purple-600 hover:bg-purple-700 text-white px-3 py-2 rounded text-xs transition-colors w-fit"
+                    className="bg-purple-600 hover:bg-purple-700 text-white px-3 py-1 rounded text-xs transition-colors"
                   >
                     Max All IVs
                   </button>
                 </div>
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4">
+                <div className="grid grid-cols-2 gap-4">
                   {Object.entries(pokemonBuild.ivs).map(([stat, value]) => (
-                    <div key={stat} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 sm:gap-2">
-                      <label className="text-xs sm:text-sm font-medium text-gray-700 capitalize">
+                    <div key={stat} className="flex items-center justify-between">
+                      <label className="text-sm font-medium text-gray-700 capitalize">
                         {stat.replace('-', ' ')}
                       </label>
                       <input
@@ -924,25 +914,25 @@ const MovesetEditor: React.FC<MovesetEditorProps> = ({ pokemon, teamId, onBack }
                             ivs: { ...prev.ivs, [stat]: newValue }
                           }));
                         }}
-                        className="w-full sm:w-16 p-2 border border-gray-300 rounded text-center text-gray-800 text-sm"
+                        className="w-16 p-1 border border-gray-300 rounded text-center text-gray-800"
                       />
                     </div>
                   ))}
                 </div>
-                <p className="text-xs text-gray-500 mt-2">Higher IVs mean stronger stats (0-31 range)</p>
+                <p className="text-xs text-gray-500 mt-1">Higher IVs mean stronger stats (0-31 range)</p>
               </div>
               
-              <div>
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-3 gap-2">
-                  <h3 className="text-base sm:text-lg font-semibold text-gray-800">Effort Values (EVs)</h3>
-                  <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full w-fit">
+              <div className="mb-4">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-lg font-semibold text-gray-800">Effort Values (EVs)</h3>
+                  <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full">
                     {totalEVs}/510 total
                   </span>
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
+                <div className="grid grid-cols-2 gap-4 mb-3">
                   {Object.keys(pokemonBuild.evs).map((stat) => (
                     <div key={stat} className="flex items-center gap-2">
-                      <span className="text-gray-800 text-sm w-16 sm:w-20 flex-shrink-0">{formatStatName(stat)}:</span>
+                      <span className="text-gray-800 w-20">{formatStatName(stat)}:</span>
                       <input
                         type="number"
                         min="0"
@@ -950,10 +940,10 @@ const MovesetEditor: React.FC<MovesetEditorProps> = ({ pokemon, teamId, onBack }
                         value={pokemonBuild.evs[stat as keyof PokemonBuild['evs']]}
                         onChange={(e) => handleEVChange(stat as keyof PokemonBuild['evs'], e.target.value)}
                         onBlur={(e) => handleEVChange(stat as keyof PokemonBuild['evs'], e.target.value)}
-                        className="flex-1 p-2 border border-gray-300 rounded text-center text-sm"
+                        className="w-16 p-1 border border-gray-300 rounded text-center"
                         title="Effort Values from training (0-252 per stat, 510 total)"
                       />
-                      <span className="text-xs text-gray-500 w-8 flex-shrink-0">/252</span>
+                      <span className="text-xs text-gray-500">/252</span>
                     </div>
                   ))}
                 </div>
@@ -965,16 +955,16 @@ const MovesetEditor: React.FC<MovesetEditorProps> = ({ pokemon, teamId, onBack }
                   <p className="text-xs text-gray-500 mt-1">Distribute 510 points to boost stats (max 252 per stat)</p>
                 </div>
                 <div className="mt-4">
-                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-3 gap-2">
-                    <h3 className="text-base sm:text-lg font-semibold text-gray-800">EV Presets</h3>
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="text-lg font-semibold text-gray-800">EV Presets</h3>
                     <span className="text-xs text-gray-500">Quick competitive spreads</span>
                   </div>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
+                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
                     {Object.entries(EV_PRESETS).map(([preset, evs]) => (
                       <button
                         key={preset}
                         onClick={() => setPokemonBuild(prev => ({ ...prev, evs }))}
-                        className="bg-blue-500 hover:bg-blue-600 text-white px-2 py-2 rounded-md text-xs font-medium transition-colors text-center"
+                        className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-2 rounded-md text-xs font-medium transition-colors"
                         title={`Set EVs for ${preset}`}
                       >
                         {preset}
@@ -985,13 +975,13 @@ const MovesetEditor: React.FC<MovesetEditorProps> = ({ pokemon, teamId, onBack }
               </div>
             </div>
           ) : (
-            <div className="bg-white rounded-xl p-4 sm:p-6 shadow-lg">
+            <div className="bg-white rounded-xl p-6 shadow-lg">
               <div className="space-y-6">
                 <div>
-                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-3 gap-2">
-                    <div className="flex flex-col sm:flex-row sm:items-center gap-2">
-                      <h3 className="text-base sm:text-lg font-semibold text-gray-800">Nature</h3>
-                      <span className="text-xs bg-purple-100 text-purple-800 px-2 py-1 rounded-full w-fit">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-lg font-semibold text-gray-800">Nature</h3>
+                      <span className="text-xs bg-purple-100 text-purple-800 px-2 py-1 rounded-full">
                         +10% / -10%
                       </span>
                     </div>
@@ -1000,7 +990,7 @@ const MovesetEditor: React.FC<MovesetEditorProps> = ({ pokemon, teamId, onBack }
                   <select
                     value={pokemonBuild.nature}
                     onChange={(e) => setPokemonBuild(prev => ({ ...prev, nature: e.target.value }))}
-                    className="w-full p-3 border border-gray-300 rounded text-gray-800 text-sm"
+                    className="w-full p-2 border border-gray-300 rounded text-gray-800"
                     title="Nature boosts one stat by 10% and reduces another by 10%"
                   >
                     {availableNatures.map((nature) => (
@@ -1010,10 +1000,10 @@ const MovesetEditor: React.FC<MovesetEditorProps> = ({ pokemon, teamId, onBack }
                 </div>
                 
                 <div>
-                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-3 gap-2">
-                    <div className="flex flex-col sm:flex-row sm:items-center gap-2">
-                      <h3 className="text-base sm:text-lg font-semibold text-gray-800">Ability</h3>
-                      <span className="text-xs bg-orange-100 text-orange-800 px-2 py-1 rounded-full w-fit">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-lg font-semibold text-gray-800">Ability</h3>
+                      <span className="text-xs bg-orange-100 text-orange-800 px-2 py-1 rounded-full">
                         Battle effects
                       </span>
                     </div>
@@ -1022,7 +1012,7 @@ const MovesetEditor: React.FC<MovesetEditorProps> = ({ pokemon, teamId, onBack }
                   <select
                     value={pokemonBuild.ability}
                     onChange={(e) => setPokemonBuild(prev => ({ ...prev, ability: e.target.value }))}
-                    className="w-full p-3 border border-gray-300 rounded text-gray-800 text-sm"
+                    className="w-full p-2 border border-gray-300 rounded text-gray-800"
                     title="Abilities provide passive effects during battle"
                   >
                     {availableAbilities.map((ability) => (
@@ -1035,10 +1025,10 @@ const MovesetEditor: React.FC<MovesetEditorProps> = ({ pokemon, teamId, onBack }
                 </div>
                 
                 <div>
-                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-3 gap-2">
-                    <div className="flex flex-col sm:flex-row sm:items-center gap-2">
-                      <h3 className="text-base sm:text-lg font-semibold text-gray-800">Gender</h3>
-                      <span className="text-xs bg-pink-100 text-pink-800 px-2 py-1 rounded-full w-fit">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-lg font-semibold text-gray-800">Gender</h3>
+                      <span className="text-xs bg-pink-100 text-pink-800 px-2 py-1 rounded-full">
                         Cosmetic
                       </span>
                     </div>
@@ -1048,7 +1038,7 @@ const MovesetEditor: React.FC<MovesetEditorProps> = ({ pokemon, teamId, onBack }
                     <select
                       value={pokemonBuild.gender || ''}
                       onChange={(e) => setPokemonBuild(prev => ({ ...prev, gender: e.target.value || null }))}
-                      className="w-full p-3 border border-gray-300 rounded text-gray-800 text-sm"
+                      className="w-full p-2 border border-gray-300 rounded text-gray-800"
                       title="Some Pokémon have visual differences between genders"
                     >
                       <option value="">Select Gender</option>
@@ -1056,15 +1046,15 @@ const MovesetEditor: React.FC<MovesetEditorProps> = ({ pokemon, teamId, onBack }
                       <option value="female">Female</option>
                     </select>
                   ) : (
-                    <p className="text-gray-500 italic text-sm bg-gray-50 p-3 rounded">This Pokémon has no gender differences</p>
+                    <p className="text-gray-500 italic text-sm">This Pokémon has no gender differences</p>
                   )}
                 </div>
                 
                 <div>
-                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-3 gap-2">
-                    <div className="flex flex-col sm:flex-row sm:items-center gap-2">
-                      <h3 className="text-base sm:text-lg font-semibold text-gray-800">Nickname</h3>
-                      <span className="text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full w-fit">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-lg font-semibold text-gray-800">Nickname</h3>
+                      <span className="text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full">
                         Custom name
                       </span>
                     </div>
@@ -1074,17 +1064,16 @@ const MovesetEditor: React.FC<MovesetEditorProps> = ({ pokemon, teamId, onBack }
                     type="text"
                     value={pokemonBuild.nickname}
                     onChange={(e) => setPokemonBuild(prev => ({ ...prev, nickname: e.target.value }))}
-                    className="w-full p-3 border border-gray-300 rounded text-gray-800 text-sm"
-                    placeholder="Enter a nickname..."
+                    className="w-full p-2 border border-gray-300 rounded text-gray-800"
                     title="Give your Pokémon a custom nickname"
                   />
                 </div>
                 
                 <div>
-                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-3 gap-2">
-                    <div className="flex flex-col sm:flex-row sm:items-center gap-2">
-                      <h3 className="text-base sm:text-lg font-semibold text-gray-800">Tera Type</h3>
-                      <span className="text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full w-fit">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-lg font-semibold text-gray-800">Tera Type</h3>
+                      <span className="text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full">
                         Tera Raid
                       </span>
                     </div>
@@ -1093,7 +1082,7 @@ const MovesetEditor: React.FC<MovesetEditorProps> = ({ pokemon, teamId, onBack }
                   <select
                     value={pokemonBuild.teraType}
                     onChange={(e) => setPokemonBuild(prev => ({ ...prev, teraType: e.target.value }))}
-                    className="w-full p-3 border border-gray-300 rounded text-gray-800 text-sm"
+                    className="w-full p-2 border border-gray-300 rounded text-gray-800"
                     title="Select a Tera Raid type"
                   >
                     <option value="">Select Tera Type</option>
@@ -1104,10 +1093,10 @@ const MovesetEditor: React.FC<MovesetEditorProps> = ({ pokemon, teamId, onBack }
                 </div>
                 
                 <div>
-                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-3 gap-2">
-                    <div className="flex flex-col sm:flex-row sm:items-center gap-2">
-                      <h3 className="text-base sm:text-lg font-semibold text-gray-800">Held Item</h3>
-                      <span className="text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full w-fit">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-lg font-semibold text-gray-800">Held Item</h3>
+                      <span className="text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full">
                         Strategic
                       </span>
                     </div>
@@ -1116,7 +1105,7 @@ const MovesetEditor: React.FC<MovesetEditorProps> = ({ pokemon, teamId, onBack }
                   <select
                     value={pokemonBuild.heldItem}
                     onChange={(e) => setPokemonBuild(prev => ({ ...prev, heldItem: e.target.value }))}
-                    className="w-full p-3 border border-gray-300 rounded text-gray-800 text-sm"
+                    className="w-full p-2 border border-gray-300 rounded text-gray-800"
                     title="Held items provide various battle effects and advantages"
                   >
                     <option value="">No Item</option>
@@ -1135,6 +1124,34 @@ const MovesetEditor: React.FC<MovesetEditorProps> = ({ pokemon, teamId, onBack }
       </div>
     </div>
   );
+};
+
+// Error boundary wrapper for MovesetEditor component
+const MovesetEditor: React.FC<MovesetEditorProps> = ({ pokemon, teamId, onBack }) => {
+  try {
+    return <MovesetEditorContent pokemon={pokemon} teamId={teamId} onBack={onBack} />;
+  } catch (error) {
+    console.error('MovesetEditor component error:', error);
+    toast.error(`Error loading moveset editor: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-6">
+        <div className="max-w-4xl mx-auto">
+          <div className="text-center py-12">
+            <h1 className="text-2xl font-bold text-red-600 mb-4">Error Loading Moveset Editor</h1>
+            <p className="text-gray-600 mb-4">
+              Failed to load the moveset editor. Please try again.
+            </p>
+            <button
+              onClick={onBack}
+              className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded transition-colors"
+            >
+              Go Back
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 };
 
 export default MovesetEditor;
