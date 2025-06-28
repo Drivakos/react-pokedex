@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Swords, Zap, X } from 'lucide-react';
-import BattleSimulator from './BattleSimulator';
+import NativeShowdownBattle from './NativeShowdownBattle';
 import { selectPokemonMoves } from '../services/moves';
 
 interface BattleButtonProps {
@@ -43,7 +43,7 @@ const BattleButton: React.FC<BattleButtonProps> = ({ pokemon, className = '' }) 
 
   // Random opponent generator
   const generateRandomOpponent = async () => {
-    const randomId = Math.floor(Math.random() * 150) + 1; // Gen 1 Pokemon
+    const randomId = Math.floor(Math.random() * 1010) + 1; // All Pokemon up to Gen 8
     
     try {
       const response = await fetch(`https://pokeapi.co/api/v2/pokemon/${randomId}`);
@@ -139,26 +139,17 @@ const BattleButton: React.FC<BattleButtonProps> = ({ pokemon, className = '' }) 
         <Zap size={16} className="animate-pulse" />
       </button>
 
-      {/* Battle Modal */}
+      {/* Native Showdown Battle */}
       {showBattle && opponent && battlePokemon && (
-        <div className="fixed inset-0 z-50 bg-black bg-opacity-75 flex items-center justify-center">
-          <div className="relative w-full h-full max-w-none">
-            {/* Close Button */}
-            <button
-              onClick={closeBattle}
-              className="absolute top-4 right-4 z-60 p-2 bg-black/50 text-white rounded-full hover:bg-black/70 transition-colors"
-            >
-              <X size={24} />
-            </button>
-            
-            {/* Battle Simulator */}
-            <BattleSimulator
-              playerPokemon={battlePokemon}
-              opponentPokemon={opponent}
-              onBack={closeBattle}
-            />
-          </div>
-        </div>
+        <NativeShowdownBattle
+          playerPokemon={battlePokemon}
+          opponentPokemon={opponent}
+          onBack={closeBattle}
+          onBattleEnd={(playerWon) => {
+            console.log('Battle ended, player won:', playerWon);
+            // Handle battle end if needed
+          }}
+        />
       )}
     </>
   );

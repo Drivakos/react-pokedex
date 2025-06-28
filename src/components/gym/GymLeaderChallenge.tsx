@@ -7,7 +7,7 @@ import {
   TeamExpansion, 
   GameOver 
 } from './index';
-import BattleSimulator from '../BattleSimulator';
+import NativeShowdownBattle from '../NativeShowdownBattle';
 
 interface GymLeaderChallengeProps {
   onExit: () => void;
@@ -49,14 +49,36 @@ const GymLeaderChallenge: React.FC<GymLeaderChallengeProps> = ({ onExit }) => {
       }));
     };
 
+    const handleBattleComplete = (won: boolean) => {
+      // Sync the current Pokemon state before calling the original handler
+      const currentPokemon = state.selectedBattlePokemon;
+      const updatedGymTeam = state.gymTeam.map(p => 
+        p.id === currentPokemon?.id ? {
+          ...p,
+          currentHp: won ? currentPokemon.currentHp : 0, // If lost, set HP to 0
+          status: currentPokemon.status,
+          statusTurns: currentPokemon.statusTurns
+        } : p
+      );
+      
+      // Update gym team first, then call original handler
+      actions.setState((prev: any) => ({
+        ...prev,
+        gymTeam: updatedGymTeam
+      }));
+      
+      // Small delay to ensure state is updated
+      setTimeout(() => {
+        actions.handleBattleComplete(won);
+      }, 100);
+    };
+
     return (
-      <BattleSimulator
+      <NativeShowdownBattle
         playerPokemon={state.selectedBattlePokemon}
         opponentPokemon={state.currentChallenger.pokemon[0]}
-        playerTeam={state.gymTeam}
         onBack={() => actions.setGamePhase('pokemon-select-for-battle')}
-        onBattleEnd={actions.handleBattleComplete}
-        onSwitchPokemon={handlePokemonSwitch}
+        onBattleEnd={handleBattleComplete}
       />
     );
   }

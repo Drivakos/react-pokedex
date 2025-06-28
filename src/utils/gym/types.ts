@@ -1,12 +1,21 @@
 export interface GymPokemon {
   id: number;
   name: string;
+  species?: string;
   types: string[];
   sprites: {
     front_default: string;
     back_default: string;
   };
   stats: {
+    hp: number;
+    attack: number;
+    defense: number;
+    'special-attack': number;
+    'special-defense': number;
+    speed: number;
+  };
+  baseStats?: {
     hp: number;
     attack: number;
     defense: number;
@@ -23,10 +32,39 @@ export interface GymPokemon {
     currentPP: number;
     damageClass: 'physical' | 'special' | 'status';
     description: string;
+    priority?: number;
+    target?: string;
+    effect?: string;
+    learnMethod?: string;
+    levelLearned?: number;
   }>;
   level: number;
   currentHp: number;
   maxHp: number;
+  ability?: string;
+  nature?: string;
+  item?: string | null;
+  status?: string | null;
+  statusTurns?: number;
+  // Competitive data
+  ivs?: {
+    hp: number;
+    atk: number;
+    def: number;
+    spa: number;
+    spd: number;
+    spe: number;
+  };
+  evs?: {
+    hp: number;
+    atk: number;
+    def: number;
+    spa: number;
+    spd: number;
+    spe: number;
+  };
+  experience?: number;
+  happiness?: number;
 }
 
 export interface ChallengerTeam {

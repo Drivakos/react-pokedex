@@ -22,6 +22,9 @@ export function useGymChallenge() {
     comingFromLoss: false,
   });
 
+  // Track used Pokemon for better variety across battles
+  const [usedPokemonIds, setUsedPokemonIds] = useState<Set<number>>(new Set());
+
   // Load Pokemon data on component mount
   useEffect(() => {
     const loadRequiredPokemon = async () => {
@@ -31,8 +34,8 @@ export function useGymChallenge() {
         let pokemonData = [];
         
         try {
-          // Fetch first 200 Pokemon using cached API (covers all we need)
-          pokemonData = await fetchCachedPokemonData(200, 0, '', {
+          // Fetch up to 1000 Pokemon using cached API (covers all generations)
+          pokemonData = await fetchCachedPokemonData(1000, 0, '', {
             types: [],
             moves: [],
             generation: '',
@@ -40,11 +43,11 @@ export function useGymChallenge() {
             height: { min: 0, max: 0 },
             hasEvolutions: null,
           });
-          console.log('Successfully fetched Pokemon from cached API');
+          console.log(`Successfully fetched ${pokemonData.length} Pokemon from cached API`);
         } catch (cachedError) {
           console.warn('Cached API not available, using direct API:', cachedError);
-          // Fallback to direct API - fetch in smaller batches to avoid rate limits
-          pokemonData = await fetchPokemonData(200, 0, '', {
+          // Fallback to direct API - fetch more Pokemon for variety
+          pokemonData = await fetchPokemonData(1000, 0, '', {
             types: [],
             moves: [],
             generation: '',
@@ -52,8 +55,29 @@ export function useGymChallenge() {
             height: { min: 0, max: 0 },
             hasEvolutions: null,
           });
+          console.log(`Successfully fetched ${pokemonData.length} Pokemon from direct API`);
         }
         
+        // Add debug info about Pokemon generations loaded
+        const generationStats = pokemonData.reduce((stats, pokemon) => {
+          const id = pokemon.id;
+          let gen = 'Unknown';
+          if (id <= 151) gen = 'Gen 1';
+          else if (id <= 251) gen = 'Gen 2';
+          else if (id <= 386) gen = 'Gen 3';
+          else if (id <= 493) gen = 'Gen 4';
+          else if (id <= 649) gen = 'Gen 5';
+          else if (id <= 721) gen = 'Gen 6';
+          else if (id <= 809) gen = 'Gen 7';
+          else if (id <= 905) gen = 'Gen 8';
+          else gen = 'Gen 9+';
+          
+          stats[gen] = (stats[gen] || 0) + 1;
+          return stats;
+        }, {} as Record<string, number>);
+        
+        console.log('Pokemon generations loaded:', generationStats);
+        console.log(`Total Pokemon available for battles: ${pokemonData.length}`);
         setState(prev => ({ ...prev, allPokemon: pokemonData, loading: false }));
       } catch (error) {
         console.error('Error loading Pokemon data:', error);
@@ -64,7 +88,7 @@ export function useGymChallenge() {
     loadRequiredPokemon();
   }, []);
 
-  // Generate random challenger team
+  // Enhanced challenger generation with better randomization
   const generateChallenger = useCallback(async (): Promise<ChallengerTeam> => {
     const teamSize = Math.min(1 + Math.floor(state.battleWins / 3), 4); // Progressively larger teams
     const challengerName = CHALLENGER_NAMES[Math.floor(Math.random() * CHALLENGER_NAMES.length)];
@@ -75,22 +99,62 @@ export function useGymChallenge() {
       return { pokemon: team, name: challengerName };
     }
 
-    // Get random types for diversity
+    // Get all available types for better variety
     const availableTypes = ['normal', 'fire', 'water', 'electric', 'grass', 'ice', 'fighting', 'poison', 'ground', 'flying', 'psychic', 'bug', 'rock', 'ghost', 'dragon', 'dark', 'steel', 'fairy'];
     
+    // Track Pokemon IDs used in this team to prevent duplicates
+    const teamPokemonIds = new Set<number>();
+    
+    // Create a pool of available Pokemon, prioritizing unused ones
+    const availablePokemon = state.allPokemon.filter(pokemon => !usedPokemonIds.has(pokemon.id));
+    const fallbackPokemon = state.allPokemon; // Use all Pokemon if needed
+    
+    console.log(`Generating challenger team #${state.battleWins + 1}:`);
+    console.log(`- Available unused Pokemon: ${availablePokemon.length}/${state.allPokemon.length}`);
+    console.log(`- Team size: ${teamSize}`);
+    
     for (let i = 0; i < teamSize; i++) {
-      // Get random type for this Pokemon
-      const randomType = availableTypes[Math.floor(Math.random() * availableTypes.length)];
+      let selectedPokemon = null;
+      let attempts = 0;
+      const maxAttempts = 20; // Prevent infinite loops
       
-      // Get random Pokemon of that type
-      const randomTypePokemon = getRandomPokemonOfType(state.allPokemon, randomType, 50);
+      while (!selectedPokemon && attempts < maxAttempts) {
+        attempts++;
+        
+        // Get random type for variety
+        const randomType = availableTypes[Math.floor(Math.random() * availableTypes.length)];
+        
+        // First try with unused Pokemon
+        let candidatePokemon = getRandomPokemonOfType(availablePokemon, randomType, 20);
+        
+        // If not enough unused Pokemon of this type, try all Pokemon
+        if (candidatePokemon.length < 3 && availablePokemon.length !== state.allPokemon.length) {
+          candidatePokemon = getRandomPokemonOfType(fallbackPokemon, randomType, 30);
+        }
+        
+        // If still no Pokemon of this type found, get any type
+        if (candidatePokemon.length === 0) {
+          candidatePokemon = availablePokemon.length > 0 ? 
+            availablePokemon.slice(0, 20) : 
+            fallbackPokemon.slice(0, 20);
+        }
+        
+        // Filter out Pokemon already in this team
+        const validCandidates = candidatePokemon.filter(pokemon => !teamPokemonIds.has(pokemon.id));
+        
+        if (validCandidates.length > 0) {
+          selectedPokemon = validCandidates[Math.floor(Math.random() * validCandidates.length)];
+          teamPokemonIds.add(selectedPokemon.id);
+        }
+      }
       
-      let selectedPokemon;
-      if (randomTypePokemon.length > 0) {
-        selectedPokemon = randomTypePokemon[Math.floor(Math.random() * randomTypePokemon.length)];
-      } else {
-        // Fallback to any random Pokemon if no Pokemon of that type found
-        selectedPokemon = state.allPokemon[Math.floor(Math.random() * state.allPokemon.length)];
+      // Fallback: if we still don't have a Pokemon, get any unused one
+      if (!selectedPokemon) {
+        const remainingPokemon = state.allPokemon.filter(pokemon => !teamPokemonIds.has(pokemon.id));
+        if (remainingPokemon.length > 0) {
+          selectedPokemon = remainingPokemon[Math.floor(Math.random() * remainingPokemon.length)];
+          teamPokemonIds.add(selectedPokemon.id);
+        }
       }
       
       if (selectedPokemon) {
@@ -101,20 +165,33 @@ export function useGymChallenge() {
           // Use async version for enhanced move diversity
           const gymPokemon = await createGymPokemon(selectedPokemon, level, true);
           team.push(gymPokemon);
+          
+          console.log(`  - Selected: ${selectedPokemon.name} (Lv.${level}, ${selectedPokemon.types?.join('/') || 'unknown'}) - ${usedPokemonIds.has(selectedPokemon.id) ? 'REUSED' : 'NEW'}`);
+          console.log(`    Ability: ${gymPokemon.ability} | Nature: ${gymPokemon.nature}`);
         } catch (error) {
           console.warn(`Failed to create enhanced opponent ${selectedPokemon.name}, using fallback moves`, error);
           // Fallback to sync version if async fails
           const gymPokemon = createGymPokemonSync(selectedPokemon, level, true);
           team.push(gymPokemon);
+          console.log(`    Ability: ${gymPokemon.ability} | Nature: ${gymPokemon.nature} (fallback)`);
         }
+        
+        // Mark Pokemon as used for future battles
+        setUsedPokemonIds(prev => new Set([...prev, selectedPokemon.id]));
       }
     }
 
-    console.log(`Generated challenger ${challengerName} with ${team.length} Pokemon (battle #${state.battleWins + 1}):`, 
-      team.map(p => `${p.name} (Lv.${p.level}, ${p.types.join('/')}) - moves: ${p.moves.map(m => m.name).join(', ')}`));
+    console.log(`Generated challenger "${challengerName}" with ${team.length} Pokemon:`, 
+      team.map(p => `${p.name} (Lv.${p.level}, ${p.types.join('/')})`));
+    
+    // Reset used Pokemon tracking after every 10 battles to allow reuse
+    if (state.battleWins > 0 && state.battleWins % 10 === 0) {
+      console.log('Resetting used Pokemon pool for variety after 10 battles');
+      setUsedPokemonIds(new Set());
+    }
 
     return { pokemon: team, name: challengerName };
-  }, [state.allPokemon, state.battleWins]);
+  }, [state.allPokemon, state.battleWins, usedPokemonIds]);
 
   // Action creators
   const actions = {
@@ -160,17 +237,29 @@ export function useGymChallenge() {
 
     handleBattleComplete: (won: boolean) => {
       setState(prev => {
+        // Update the gym team with the battle Pokemon's current state
+        const updatedGymTeam = prev.gymTeam.map(p => 
+          p.id === prev.selectedBattlePokemon?.id ? {
+            ...p,
+            currentHp: won ? p.currentHp : 0, // If lost, set HP to 0
+            status: prev.selectedBattlePokemon?.status || null,
+            statusTurns: prev.selectedBattlePokemon?.statusTurns || 0
+          } : p
+        );
+
         if (won) {
           return {
             ...prev,
             isInBattle: false,
             battleWins: prev.battleWins + 1,
             comingFromLoss: false,
-            gamePhase: 'team-expansion'
+            gamePhase: 'team-expansion',
+            gymTeam: updatedGymTeam,
+            selectedBattlePokemon: null // Clear selected Pokemon
           };
         } else {
-          // Check if there are still Pokemon with HP > 0
-          const availablePokemon = prev.gymTeam.filter(p => p.currentHp > 0);
+          // Check if there are still Pokemon with HP > 0 after this battle
+          const availablePokemon = updatedGymTeam.filter(p => p.currentHp > 0);
           
           if (availablePokemon.length > 0) {
             // Still have Pokemon left, let user choose next one
@@ -178,14 +267,18 @@ export function useGymChallenge() {
               ...prev,
               isInBattle: false,
               comingFromLoss: true,
-              gamePhase: 'pokemon-select-for-battle'
+              gamePhase: 'pokemon-select-for-battle',
+              gymTeam: updatedGymTeam,
+              selectedBattlePokemon: null // Clear selected Pokemon
             };
           } else {
             // All Pokemon fainted, game over
             return {
               ...prev,
               isInBattle: false,
-              gamePhase: 'game-over'
+              gamePhase: 'game-over',
+              gymTeam: updatedGymTeam,
+              selectedBattlePokemon: null // Clear selected Pokemon
             };
           }
         }
@@ -273,6 +366,9 @@ export function useGymChallenge() {
         pokemonToReplace: null,
         comingFromLoss: false,
       });
+      // Clear used Pokemon tracking for completely fresh start
+      setUsedPokemonIds(new Set());
+      console.log('Challenge reset - Pokemon variety pool refreshed');
     },
 
     refreshAvailablePokemon: () => {
@@ -293,11 +389,21 @@ export function useGymChallenge() {
       setState(prev => ({ ...prev, pokemonToReplace: pokemon }));
     },
 
+    refreshPokemonPool: () => {
+      setUsedPokemonIds(new Set());
+      console.log('Pokemon variety pool manually refreshed - all Pokemon available again');
+    },
+
     setState: setState
   };
 
   return {
     state,
-    actions
+    actions,
+    debug: {
+      usedPokemonCount: usedPokemonIds.size,
+      totalPokemonCount: state.allPokemon.length,
+      usedPokemonIds: Array.from(usedPokemonIds)
+    }
   };
 } 

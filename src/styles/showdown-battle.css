@@ -1,0 +1,378 @@
+/* Pokemon Showdown Battle Animations */
+
+/* Battle entrance animations */
+@keyframes pokemon-enter-left {
+  from {
+    transform: translateX(-100px) scale(0.8);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0) scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes pokemon-enter-right {
+  from {
+    transform: translateX(100px) scale(0.8);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0) scale(1);
+    opacity: 1;
+  }
+}
+
+/* Attack animations */
+@keyframes physical-attack {
+  0% { transform: translateX(0); }
+  30% { transform: translateX(-20px) scale(1.1); }
+  60% { transform: translateX(15px) scale(1.05); }
+  100% { transform: translateX(0) scale(1); }
+}
+
+@keyframes special-attack {
+  0% { transform: scale(1); filter: brightness(1); }
+  50% { transform: scale(1.1); filter: brightness(1.3) hue-rotate(45deg); }
+  100% { transform: scale(1); filter: brightness(1); }
+}
+
+@keyframes take-damage {
+  0% { transform: translateX(0); filter: brightness(1); }
+  25% { transform: translateX(-5px); filter: brightness(1.5); }
+  75% { transform: translateX(5px); filter: brightness(0.8); }
+  100% { transform: translateX(0); filter: brightness(1); }
+}
+
+@keyframes faint {
+  0% { transform: translateY(0) scale(1); opacity: 1; }
+  50% { transform: translateY(-10px) scale(1.05); opacity: 0.8; }
+  100% { transform: translateY(50px) scale(0.8); opacity: 0; }
+}
+
+/* Status effect animations */
+@keyframes burn-effect {
+  0%, 100% { filter: brightness(1) hue-rotate(0deg); }
+  50% { filter: brightness(1.3) hue-rotate(15deg) saturate(1.5); }
+}
+
+@keyframes poison-effect {
+  0%, 100% { filter: brightness(1) hue-rotate(0deg); }
+  50% { filter: brightness(0.9) hue-rotate(270deg) saturate(1.3); }
+}
+
+@keyframes paralysis-effect {
+  0%, 100% { transform: translateX(0); filter: brightness(1); }
+  25% { transform: translateX(-1px); filter: brightness(1.2) saturate(0.8); }
+  75% { transform: translateX(1px); filter: brightness(0.9) saturate(1.2); }
+}
+
+@keyframes sleep-effect {
+  0%, 100% { opacity: 1; filter: brightness(1); }
+  50% { opacity: 0.6; filter: brightness(0.7) blur(1px); }
+}
+
+/* Weather animations */
+@keyframes sunny-weather {
+  0%, 100% { filter: brightness(1) saturate(1); }
+  50% { filter: brightness(1.2) saturate(1.3) hue-rotate(30deg); }
+}
+
+@keyframes rainy-weather {
+  0%, 100% { filter: brightness(1) saturate(1); }
+  50% { filter: brightness(0.8) saturate(1.4) hue-rotate(200deg); }
+}
+
+@keyframes sandstorm-weather {
+  0%, 100% { filter: brightness(1) saturate(1); }
+  50% { filter: brightness(0.9) saturate(0.8) hue-rotate(45deg); }
+}
+
+/* Move effect animations */
+@keyframes protect-shield {
+  0% { transform: scale(0.8); opacity: 0; }
+  50% { transform: scale(1.2); opacity: 0.8; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+@keyframes substitute-appear {
+  0% { transform: scale(0) rotate(180deg); opacity: 0; }
+  50% { transform: scale(1.2) rotate(90deg); opacity: 0.8; }
+  100% { transform: scale(1) rotate(0deg); opacity: 1; }
+}
+
+@keyframes critical-hit {
+  0% { transform: scale(1); filter: brightness(1); }
+  50% { transform: scale(1.1); filter: brightness(2) saturate(2); }
+  100% { transform: scale(1); filter: brightness(1); }
+}
+
+/* Stat boost animations */
+@keyframes stat-boost {
+  0% { transform: translateY(0); filter: brightness(1); }
+  50% { transform: translateY(-5px); filter: brightness(1.3) hue-rotate(120deg); }
+  100% { transform: translateY(0); filter: brightness(1); }
+}
+
+@keyframes stat-drop {
+  0% { transform: translateY(0) scale(1); filter: brightness(1); }
+  50% { transform: translateY(5px) scale(0.95); filter: brightness(0.7) saturate(0.7); }
+  100% { transform: translateY(0) scale(1); filter: brightness(1); }
+}
+
+/* Type-specific move effects */
+@keyframes fire-move {
+  0%, 100% { filter: brightness(1) hue-rotate(0deg); }
+  50% { filter: brightness(1.4) hue-rotate(30deg) saturate(1.5); }
+}
+
+@keyframes water-move {
+  0%, 100% { filter: brightness(1) hue-rotate(0deg); }
+  50% { filter: brightness(1.2) hue-rotate(200deg) saturate(1.4); }
+}
+
+@keyframes electric-move {
+  0%, 100% { filter: brightness(1) hue-rotate(0deg); }
+  50% { filter: brightness(1.6) hue-rotate(60deg) saturate(1.6); }
+}
+
+@keyframes grass-move {
+  0%, 100% { filter: brightness(1) hue-rotate(0deg); }
+  50% { filter: brightness(1.3) hue-rotate(90deg) saturate(1.4); }
+}
+
+/* HP bar animations */
+@keyframes hp-decrease {
+  0% { transform: scaleX(1); }
+  50% { transform: scaleX(1.05); filter: brightness(1.3); }
+  100% { transform: scaleX(var(--final-width)); filter: brightness(1); }
+}
+
+@keyframes hp-critical {
+  0%, 100% { background-color: #ef4444; }
+  50% { background-color: #fbbf24; }
+}
+
+/* Battle UI animations */
+@keyframes menu-slide-up {
+  from {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes button-press {
+  0% { transform: scale(1) translateY(0); }
+  50% { transform: scale(0.98) translateY(2px); }
+  100% { transform: scale(1) translateY(0); }
+}
+
+@keyframes text-appear {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Showdown-style particle effects */
+@keyframes particle-float {
+  0% { transform: translateY(0) scale(1) rotate(0deg); opacity: 1; }
+  100% { transform: translateY(-50px) scale(0.5) rotate(360deg); opacity: 0; }
+}
+
+@keyframes sparkle {
+  0%, 100% { transform: scale(0) rotate(0deg); opacity: 0; }
+  50% { transform: scale(1) rotate(180deg); opacity: 1; }
+}
+
+/* Application classes */
+.pokemon-enter-left {
+  animation: pokemon-enter-left 0.8s ease-out;
+}
+
+.pokemon-enter-right {
+  animation: pokemon-enter-right 0.8s ease-out;
+}
+
+.pokemon-physical-attack {
+  animation: physical-attack 0.6s ease-in-out;
+}
+
+.pokemon-special-attack {
+  animation: special-attack 0.8s ease-in-out;
+}
+
+.pokemon-take-damage {
+  animation: take-damage 0.5s ease-in-out;
+}
+
+.pokemon-faint {
+  animation: faint 1.2s ease-in-out forwards;
+}
+
+.pokemon-burn {
+  animation: burn-effect 2s ease-in-out infinite;
+}
+
+.pokemon-poison {
+  animation: poison-effect 2s ease-in-out infinite;
+}
+
+.pokemon-paralysis {
+  animation: paralysis-effect 1s ease-in-out infinite;
+}
+
+.pokemon-sleep {
+  animation: sleep-effect 3s ease-in-out infinite;
+}
+
+.weather-sunny {
+  animation: sunny-weather 4s ease-in-out infinite;
+}
+
+.weather-rainy {
+  animation: rainy-weather 3s ease-in-out infinite;
+}
+
+.weather-sandstorm {
+  animation: sandstorm-weather 2s ease-in-out infinite;
+}
+
+.move-protect {
+  animation: protect-shield 0.6s ease-out;
+}
+
+.move-substitute {
+  animation: substitute-appear 0.8s ease-out;
+}
+
+.move-critical {
+  animation: critical-hit 0.7s ease-out;
+}
+
+.stat-boost {
+  animation: stat-boost 0.8s ease-out;
+}
+
+.stat-drop {
+  animation: stat-drop 0.8s ease-out;
+}
+
+.move-fire {
+  animation: fire-move 0.8s ease-in-out;
+}
+
+.move-water {
+  animation: water-move 0.8s ease-in-out;
+}
+
+.move-electric {
+  animation: electric-move 0.6s ease-in-out;
+}
+
+.move-grass {
+  animation: grass-move 0.8s ease-in-out;
+}
+
+.hp-bar-decrease {
+  animation: hp-decrease 1s ease-out;
+}
+
+.hp-critical {
+  animation: hp-critical 1s ease-in-out infinite;
+}
+
+.battle-menu {
+  animation: menu-slide-up 0.3s ease-out;
+}
+
+.battle-button:active {
+  animation: button-press 0.1s ease-out;
+}
+
+.battle-text {
+  animation: text-appear 0.4s ease-out;
+}
+
+/* Showdown-style UI elements */
+.showdown-panel {
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+  border: 2px solid #4a90a4;
+  box-shadow: 
+    0 0 20px rgba(74, 144, 164, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+.showdown-button {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border: 2px solid #a8b4ff;
+  box-shadow: 
+    0 4px 15px rgba(102, 126, 234, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  transition: all 0.2s ease;
+}
+
+.showdown-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 
+    0 6px 20px rgba(102, 126, 234, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3);
+}
+
+.showdown-button:active {
+  transform: translateY(0);
+  box-shadow: 
+    0 2px 10px rgba(102, 126, 234, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+/* Type effectiveness indicators */
+.super-effective {
+  color: #22c55e;
+  font-weight: bold;
+  text-shadow: 0 0 8px rgba(34, 197, 94, 0.6);
+}
+
+.not-very-effective {
+  color: #ef4444;
+  font-weight: bold;
+  text-shadow: 0 0 8px rgba(239, 68, 68, 0.6);
+}
+
+.no-effect {
+  color: #6b7280;
+  font-weight: bold;
+  text-shadow: 0 0 8px rgba(107, 114, 128, 0.6);
+}
+
+/* Loading states */
+.showdown-loading {
+  background: linear-gradient(90deg, #667eea 0%, #764ba2 50%, #667eea 100%);
+  background-size: 200% 100%;
+  animation: loading-gradient 2s ease-in-out infinite;
+}
+
+@keyframes loading-gradient {
+  0% { background-position: 200% 0%; }
+  100% { background-position: -200% 0%; }
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .pokemon-enter-left,
+  .pokemon-enter-right {
+    animation-duration: 0.5s;
+  }
+  
+  .battle-menu {
+    animation-duration: 0.2s;
+  }
+} 

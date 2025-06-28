@@ -1,6 +1,505 @@
 import { GymPokemon, GymType } from './types';
 import { selectPokemonMoves } from '../../services/moves';
 import { BattleEngine } from '../battleEngine';
+import { generateRandom, generateByMethod } from '../randomMoveGenerator';
+
+
+// Enhanced Pokemon data fetcher that gets complete game-accurate information
+export const fetchCompletePokemonData = async (pokemonId: number): Promise<any> => {
+  try {
+    // Fetch both Pokemon and Species data for complete information
+    const [pokemonResponse, speciesResponse] = await Promise.all([
+      fetch(`https://pokeapi.co/api/v2/pokemon/${pokemonId}`),
+      fetch(`https://pokeapi.co/api/v2/pokemon-species/${pokemonId}`)
+    ]);
+
+    if (!pokemonResponse.ok || !speciesResponse.ok) {
+      throw new Error(`Failed to fetch Pokemon data for ID ${pokemonId}`);
+    }
+
+    const pokemonData = await pokemonResponse.json();
+    const speciesData = await speciesResponse.json();
+
+    // Extract game-accurate data
+    return {
+      id: pokemonData.id,
+      name: pokemonData.name,
+      species: speciesData.name,
+      types: pokemonData.types.map((type: any) => type.type.name),
+      abilities: pokemonData.abilities.map((ability: any) => ({
+        name: ability.ability.name,
+        isHidden: ability.is_hidden,
+        slot: ability.slot
+      })),
+      baseStats: {
+        hp: pokemonData.stats[0].base_stat,
+        attack: pokemonData.stats[1].base_stat,
+        defense: pokemonData.stats[2].base_stat,
+        'special-attack': pokemonData.stats[3].base_stat,
+        'special-defense': pokemonData.stats[4].base_stat,
+        speed: pokemonData.stats[5].base_stat
+      },
+      moves: pokemonData.moves, // Complete moveset with learn methods and levels
+      sprites: pokemonData.sprites,
+      height: pokemonData.height,
+      weight: pokemonData.weight,
+      baseExperience: pokemonData.base_experience,
+      evolutionChain: speciesData.evolution_chain,
+      habitat: speciesData.habitat,
+      generation: speciesData.generation
+    };
+  } catch (error) {
+    console.error(`Error fetching complete Pokemon data for ID ${pokemonId}:`, error);
+    return null;
+  }
+};
+
+// Generate authentic movesets from Pokemon's actual learnset
+export const generateAuthenticMoveSet = async (pokemonData: any, level: number): Promise<any[]> => {
+  try {
+    console.log(`Generating authentic moveset for ${pokemonData.name} at level ${level}`);
+    
+    // Extract moves the Pokemon can actually learn
+    const availableMoves: any[] = [];
+    
+    for (const moveEntry of pokemonData.moves) {
+      const moveName = moveEntry.move.name;
+      
+      // Check all version groups to find valid learn methods
+      for (const versionGroupDetail of moveEntry.version_group_details) {
+        const learnMethod = versionGroupDetail.move_learn_method.name;
+        const levelLearned = versionGroupDetail.level_learned_at;
+        
+        // Include moves based on valid learn methods
+        const validMethods = ['level-up', 'machine', 'tutor', 'egg'];
+        if (validMethods.includes(learnMethod)) {
+          // For level-up moves, only include if Pokemon level is sufficient
+          if (learnMethod === 'level-up' && levelLearned > level) {
+            continue;
+          }
+          
+          availableMoves.push({
+            name: moveName,
+            learnMethod,
+            levelLearned,
+            versionGroup: versionGroupDetail.version_group.name
+          });
+          break; // Only need one valid entry per move
+        }
+      }
+    }
+
+    console.log(`Found ${availableMoves.length} available moves for ${pokemonData.name}`);
+
+    if (availableMoves.length === 0) {
+      console.warn(`No moves found for ${pokemonData.name}, using fallback`);
+      return generateFallbackMoves(pokemonData.types, level);
+    }
+
+    // Fetch detailed data for selected moves
+    const selectedMoves: any[] = [];
+    const processedMoves = new Set<string>();
+
+    // Prioritize STAB moves
+    const stabMoves = availableMoves.filter(move => {
+      return pokemonData.types.some((type: string) => 
+        move.name.includes(type) || isSTABMove(move.name, pokemonData.types)
+      );
+    });
+
+    // Add 1-2 STAB moves
+    for (const moveEntry of shuffleArray(stabMoves).slice(0, 2)) {
+      if (selectedMoves.length >= 4) break;
+      
+      try {
+        const moveDetails = await fetchMoveDetails(moveEntry.name);
+        if (moveDetails && !processedMoves.has(moveEntry.name)) {
+          selectedMoves.push(convertToGymMove(moveDetails, moveEntry));
+          processedMoves.add(moveEntry.name);
+        }
+      } catch (error) {
+        console.warn(`Failed to fetch details for move ${moveEntry.name}`);
+      }
+    }
+
+    // Add coverage moves (different types)
+    const coverageMoves = availableMoves.filter(move => 
+      !pokemonData.types.some((type: string) => 
+        move.name.includes(type) || isSTABMove(move.name, pokemonData.types)
+      )
+    );
+
+    for (const moveEntry of shuffleArray(coverageMoves).slice(0, 2)) {
+      if (selectedMoves.length >= 4) break;
+      
+      try {
+        const moveDetails = await fetchMoveDetails(moveEntry.name);
+        if (moveDetails && !processedMoves.has(moveEntry.name)) {
+          selectedMoves.push(convertToGymMove(moveDetails, moveEntry));
+          processedMoves.add(moveEntry.name);
+        }
+      } catch (error) {
+        console.warn(`Failed to fetch details for move ${moveEntry.name}`);
+      }
+    }
+
+    // Fill remaining slots with any available moves
+    for (const moveEntry of shuffleArray(availableMoves)) {
+      if (selectedMoves.length >= 4) break;
+      
+      if (!processedMoves.has(moveEntry.name)) {
+        try {
+          const moveDetails = await fetchMoveDetails(moveEntry.name);
+          if (moveDetails) {
+            selectedMoves.push(convertToGymMove(moveDetails, moveEntry));
+            processedMoves.add(moveEntry.name);
+          }
+        } catch (error) {
+          console.warn(`Failed to fetch details for move ${moveEntry.name}`);
+        }
+      }
+    }
+
+    // Ensure we have at least 4 moves
+    while (selectedMoves.length < 4) {
+      const fallbackMoves = generateFallbackMoves(pokemonData.types, level);
+      for (const fallbackMove of fallbackMoves) {
+        if (selectedMoves.length >= 4) break;
+        if (!processedMoves.has(fallbackMove.name)) {
+          selectedMoves.push(fallbackMove);
+          processedMoves.add(fallbackMove.name);
+        }
+      }
+    }
+
+    console.log(`Generated moveset for ${pokemonData.name}: ${selectedMoves.map(m => m.name).join(', ')}`);
+    return selectedMoves.slice(0, 4);
+
+  } catch (error) {
+    console.error(`Error generating authentic moveset for ${pokemonData.name}:`, error);
+    return generateFallbackMoves(pokemonData.types || ['normal'], level);
+  }
+};
+
+// Fetch detailed move information from PokeAPI
+const fetchMoveDetails = async (moveName: string): Promise<any> => {
+  try {
+    const response = await fetch(`https://pokeapi.co/api/v2/move/${moveName}`);
+    if (!response.ok) {
+      throw new Error(`Failed to fetch move ${moveName}`);
+    }
+    return await response.json();
+  } catch (error) {
+    console.warn(`Error fetching move details for ${moveName}:`, error);
+    return null;
+  }
+};
+
+// Convert PokeAPI move data to our gym move format
+const convertToGymMove = (moveData: any, learnData: any): any => {
+  return {
+    name: moveData.name,
+    type: moveData.type.name,
+    power: moveData.power || 0,
+    accuracy: moveData.accuracy || 100,
+    pp: moveData.pp || 10,
+    currentPP: moveData.pp || 10,
+    damageClass: moveData.damage_class.name,
+    priority: moveData.priority || 0,
+    target: moveData.target.name,
+    description: moveData.flavor_text_entries.find((entry: any) => 
+      entry.language.name === 'en'
+    )?.flavor_text || `${moveData.name} - A ${moveData.type.name} type move`,
+    effect: moveData.effect_entries.find((entry: any) => 
+      entry.language.name === 'en'
+    )?.short_effect || '',
+    learnMethod: learnData.learnMethod,
+    levelLearned: learnData.levelLearned
+  };
+};
+
+// Check if a move is STAB (Same Type Attack Bonus)
+const isSTABMove = (moveName: string, pokemonTypes: string[]): boolean => {
+  // Common STAB move patterns
+  const stabPatterns: Record<string, string[]> = {
+    fire: ['flame', 'fire', 'heat', 'blaze', 'burn'],
+    water: ['water', 'surf', 'hydro', 'aqua', 'bubble'],
+    electric: ['thunder', 'electric', 'shock', 'bolt', 'spark'],
+    grass: ['leaf', 'grass', 'solar', 'vine', 'seed', 'petal'],
+    psychic: ['psychic', 'psych', 'mental', 'mind', 'confusion'],
+    ice: ['ice', 'freeze', 'frost', 'blizzard', 'hail'],
+    dragon: ['dragon', 'draco'],
+    dark: ['dark', 'night', 'shadow', 'bite'],
+    steel: ['steel', 'iron', 'metal'],
+    fairy: ['fairy', 'moon', 'charm', 'play'],
+    fighting: ['fight', 'combat', 'punch', 'kick', 'chop'],
+    poison: ['poison', 'toxic', 'acid', 'sludge'],
+    ground: ['earth', 'ground', 'sand', 'dig'],
+    flying: ['air', 'wind', 'fly', 'wing', 'gust'],
+    bug: ['bug', 'web', 'sting', 'swarm'],
+    rock: ['rock', 'stone', 'slide'],
+    ghost: ['ghost', 'shadow', 'spirit', 'phantom'],
+    normal: ['tackle', 'scratch', 'pound', 'slam']
+  };
+
+  return pokemonTypes.some(type => {
+    const patterns = stabPatterns[type] || [];
+    return patterns.some(pattern => moveName.includes(pattern));
+  });
+};
+
+// Utility function to shuffle array
+const shuffleArray = <T>(array: T[]): T[] => {
+  const shuffled = [...array];
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+  return shuffled;
+};
+
+// Get authentic ability for Pokemon based on its actual ability list
+export const getAuthenticAbility = (pokemonData: any): string => {
+  if (!pokemonData.abilities || pokemonData.abilities.length === 0) {
+    return 'pressure'; // Fallback
+  }
+
+  // Prefer non-hidden abilities for competitive balance
+  const normalAbilities = pokemonData.abilities.filter((ability: any) => !ability.isHidden);
+  const availableAbilities = normalAbilities.length > 0 ? normalAbilities : pokemonData.abilities;
+
+  // Select random ability from available ones
+  const selectedAbility = availableAbilities[Math.floor(Math.random() * availableAbilities.length)];
+  
+  // All abilities are supported in native Showdown
+  return selectedAbility.name.toLowerCase();
+};
+
+// Calculate competitive stats with IVs, EVs, and nature
+export const calculateCompetitiveStats = (baseStats: any, level: number, nature: string = 'hardy'): any => {
+  // Competitive IVs (31 in all stats)
+  const ivs = { hp: 31, atk: 31, def: 31, spa: 31, spd: 31, spe: 31 };
+  
+  // Random competitive EV spread
+  const evSpreads = [
+    { hp: 252, atk: 252, def: 4, spa: 0, spd: 0, spe: 0 },     // Physical Attacker
+    { hp: 252, atk: 0, def: 4, spa: 252, spd: 0, spe: 0 },     // Special Attacker
+    { hp: 252, atk: 0, def: 252, spa: 0, spd: 4, spe: 0 },     // Physical Wall
+    { hp: 252, atk: 0, def: 4, spa: 0, spd: 252, spe: 0 },     // Special Wall
+    { hp: 4, atk: 252, def: 0, spa: 0, spd: 0, spe: 252 },     // Fast Physical
+    { hp: 4, atk: 0, def: 0, spa: 252, spd: 0, spe: 252 },     // Fast Special
+    { hp: 252, atk: 0, def: 128, spa: 0, spd: 128, spe: 0 }    // Balanced Bulk
+  ];
+  
+  const evs = evSpreads[Math.floor(Math.random() * evSpreads.length)];
+
+  // Nature modifiers
+  const natureModifiers = getNatureModifiers(nature);
+
+  // Calculate final stats
+  const hp = Math.floor(((2 * baseStats.hp + ivs.hp + Math.floor(evs.hp / 4)) * level) / 100) + level + 10;
+  const attack = Math.floor((Math.floor(((2 * baseStats.attack + ivs.atk + Math.floor(evs.atk / 4)) * level) / 100) + 5) * natureModifiers.attack);
+  const defense = Math.floor((Math.floor(((2 * baseStats.defense + ivs.def + Math.floor(evs.def / 4)) * level) / 100) + 5) * natureModifiers.defense);
+  const specialAttack = Math.floor((Math.floor(((2 * baseStats['special-attack'] + ivs.spa + Math.floor(evs.spa / 4)) * level) / 100) + 5) * natureModifiers.specialAttack);
+  const specialDefense = Math.floor((Math.floor(((2 * baseStats['special-defense'] + ivs.spd + Math.floor(evs.spd / 4)) * level) / 100) + 5) * natureModifiers.specialDefense);
+  const speed = Math.floor((Math.floor(((2 * baseStats.speed + ivs.spe + Math.floor(evs.spe / 4)) * level) / 100) + 5) * natureModifiers.speed);
+
+  return {
+    hp,
+    attack,
+    defense,
+    'special-attack': specialAttack,
+    'special-defense': specialDefense,
+    speed,
+    // Additional competitive data
+    ivs,
+    evs,
+    nature
+  };
+};
+
+// Get nature stat modifiers
+const getNatureModifiers = (nature: string): any => {
+  const natures: Record<string, any> = {
+    'hardy': { attack: 1, defense: 1, specialAttack: 1, specialDefense: 1, speed: 1 },
+    'lonely': { attack: 1.1, defense: 0.9, specialAttack: 1, specialDefense: 1, speed: 1 },
+    'brave': { attack: 1.1, defense: 1, specialAttack: 1, specialDefense: 1, speed: 0.9 },
+    'adamant': { attack: 1.1, defense: 1, specialAttack: 0.9, specialDefense: 1, speed: 1 },
+    'naughty': { attack: 1.1, defense: 1, specialAttack: 1, specialDefense: 0.9, speed: 1 },
+    'bold': { attack: 0.9, defense: 1.1, specialAttack: 1, specialDefense: 1, speed: 1 },
+    'docile': { attack: 1, defense: 1, specialAttack: 1, specialDefense: 1, speed: 1 },
+    'relaxed': { attack: 1, defense: 1.1, specialAttack: 1, specialDefense: 1, speed: 0.9 },
+    'impish': { attack: 1, defense: 1.1, specialAttack: 0.9, specialDefense: 1, speed: 1 },
+    'lax': { attack: 1, defense: 1.1, specialAttack: 1, specialDefense: 0.9, speed: 1 },
+    'timid': { attack: 0.9, defense: 1, specialAttack: 1, specialDefense: 1, speed: 1.1 },
+    'hasty': { attack: 1, defense: 0.9, specialAttack: 1, specialDefense: 1, speed: 1.1 },
+    'serious': { attack: 1, defense: 1, specialAttack: 1, specialDefense: 1, speed: 1 },
+    'jolly': { attack: 1, defense: 1, specialAttack: 0.9, specialDefense: 1, speed: 1.1 },
+    'naive': { attack: 1, defense: 1, specialAttack: 1, specialDefense: 0.9, speed: 1.1 },
+    'modest': { attack: 0.9, defense: 1, specialAttack: 1.1, specialDefense: 1, speed: 1 },
+    'mild': { attack: 1, defense: 0.9, specialAttack: 1.1, specialDefense: 1, speed: 1 },
+    'quiet': { attack: 1, defense: 1, specialAttack: 1.1, specialDefense: 1, speed: 0.9 },
+    'bashful': { attack: 1, defense: 1, specialAttack: 1, specialDefense: 1, speed: 1 },
+    'rash': { attack: 1, defense: 1, specialAttack: 1.1, specialDefense: 0.9, speed: 1 },
+    'calm': { attack: 0.9, defense: 1, specialAttack: 1, specialDefense: 1.1, speed: 1 },
+    'gentle': { attack: 1, defense: 0.9, specialAttack: 1, specialDefense: 1.1, speed: 1 },
+    'sassy': { attack: 1, defense: 1, specialAttack: 1, specialDefense: 1.1, speed: 0.9 },
+    'careful': { attack: 1, defense: 1, specialAttack: 0.9, specialDefense: 1.1, speed: 1 },
+    'quirky': { attack: 1, defense: 1, specialAttack: 1, specialDefense: 1, speed: 1 }
+  };
+
+  return natures[nature.toLowerCase()] || natures['hardy'];
+};
+
+// Enhanced Pokemon creation with authentic game data
+export const createGymPokemon = async (basePokemon: any, level: number, isRandomized: boolean = false): Promise<GymPokemon> => {
+  try {
+    // Fetch complete Pokemon data if we only have basic info
+    let completeData = basePokemon;
+    if (!basePokemon.abilities || !basePokemon.moves) {
+      console.log(`Fetching complete data for ${basePokemon.name} (ID: ${basePokemon.id})`);
+      completeData = await fetchCompletePokemonData(basePokemon.id);
+      if (!completeData) {
+        console.warn(`Failed to fetch complete data for ${basePokemon.name}, using basic data`);
+        completeData = basePokemon;
+      }
+    }
+
+    // Use authentic base stats
+    const baseStats = completeData.baseStats || {
+      hp: 100, attack: 80, defense: 80,
+      'special-attack': 80, 'special-defense': 80, speed: 80
+    };
+
+    // Generate competitive nature
+    const nature = getRandomNature();
+
+    // Calculate accurate competitive stats
+    const competitiveStats = calculateCompetitiveStats(baseStats, level, nature);
+
+    // Generate authentic moveset from Pokemon's real movepool
+    const moves = await generateAuthenticMoveSet(completeData, level);
+
+    // Get authentic ability from Pokemon's actual ability list
+    const ability = getAuthenticAbility(completeData);
+
+    // Assign competitive item (optional for variety)
+    const item = getRandomCompetitiveItem();
+
+    console.log(`Created ${completeData.name}: Level ${level}, Ability: ${ability}, Nature: ${nature}`);
+    console.log(`  Stats: HP:${competitiveStats.hp} ATK:${competitiveStats.attack} DEF:${competitiveStats.defense} SPA:${competitiveStats['special-attack']} SPD:${competitiveStats['special-defense']} SPE:${competitiveStats.speed}`);
+    console.log(`  Moves: ${moves.map(m => m.name).join(', ')}`);
+
+    return {
+      id: completeData.id,
+      name: completeData.name,
+      species: completeData.species || completeData.name,
+      types: completeData.types || ['normal'],
+      sprites: {
+        front_default: completeData.sprites?.other?.['official-artwork']?.front_default || 
+                      completeData.sprites?.front_default || '',
+        back_default: completeData.sprites?.back_default || 
+                     completeData.sprites?.front_default || ''
+      },
+      stats: {
+        hp: competitiveStats.hp,
+        attack: competitiveStats.attack,
+        defense: competitiveStats.defense,
+        'special-attack': competitiveStats['special-attack'],
+        'special-defense': competitiveStats['special-defense'],
+        speed: competitiveStats.speed
+      },
+      baseStats,
+      moves,
+      level,
+      currentHp: competitiveStats.hp,
+      maxHp: competitiveStats.hp,
+      ability,
+      nature,
+      item,
+      status: null,
+      statusTurns: 0,
+      // Additional competitive data
+      ivs: competitiveStats.ivs,
+      evs: competitiveStats.evs,
+      experience: Math.floor(Math.pow(level, 3)),
+      happiness: 255
+    };
+
+  } catch (error) {
+    console.error(`Error creating competitive Pokemon for ${basePokemon.name}:`, error);
+    
+    // Fallback to basic creation
+    return createBasicGymPokemon(basePokemon, level);
+  }
+};
+
+// Fallback function for basic Pokemon creation
+const createBasicGymPokemon = (basePokemon: any, level: number): GymPokemon => {
+  const baseStats = basePokemon.stats || {
+    hp: 100, attack: 80, defense: 80,
+    'special-attack': 80, 'special-defense': 80, speed: 80
+  };
+
+  const nature = getRandomNature();
+  const competitiveStats = calculateCompetitiveStats(baseStats, level, nature);
+  const ability = getRandomAbilityForPokemon(basePokemon.name, basePokemon.types || ['normal']);
+  const moves = generateFallbackMoves(basePokemon.types || ['normal'], level);
+
+  return {
+    id: basePokemon.id,
+    name: basePokemon.name,
+    types: basePokemon.types || ['normal'],
+    sprites: {
+      front_default: basePokemon.sprites?.other?.['official-artwork']?.front_default || 
+                    basePokemon.sprites?.front_default || '',
+      back_default: basePokemon.sprites?.back_default || 
+                   basePokemon.sprites?.front_default || ''
+    },
+    stats: {
+      hp: competitiveStats.hp,
+      attack: competitiveStats.attack,
+      defense: competitiveStats.defense,
+      'special-attack': competitiveStats['special-attack'],
+      'special-defense': competitiveStats['special-defense'],
+      speed: competitiveStats.speed
+    },
+    moves,
+    level,
+    currentHp: competitiveStats.hp,
+    maxHp: competitiveStats.hp,
+    ability,
+    nature,
+    item: null,
+    status: null,
+    statusTurns: 0
+  };
+};
+
+// Get random competitive item
+const getRandomCompetitiveItem = (): string | null => {
+  const competitiveItems = [
+    null, null, null, // 60% chance of no item for balance
+    'leftovers',
+    'life-orb',
+    'choice-band',
+    'choice-specs',
+    'choice-scarf',
+    'rocky-helmet',
+    'assault-vest',
+    'focus-sash',
+    'sitrus-berry',
+    'lum-berry'
+  ];
+
+  return competitiveItems[Math.floor(Math.random() * competitiveItems.length)];
+};
+
+// Legacy synchronous version for backward compatibility
+export const createGymPokemonSync = (basePokemon: any, level: number, isRandomized: boolean = false): GymPokemon => {
+  console.log(`Creating sync Pokemon: ${basePokemon.name}`);
+  return createBasicGymPokemon(basePokemon, level);
+};
 
 // Generate a smart moveset for a Pokemon
 export const generateMoveset = (pokemon: any, isRandomized: boolean = false) => {
@@ -8,7 +507,7 @@ export const generateMoveset = (pokemon: any, isRandomized: boolean = false) => 
   const pokemonTypes = pokemon.types || ['normal'];
   
   // Create a pool of potential moves
-  const movePool = [];
+  const movePool: any[] = [];
   
   // Add moves from Pokemon's actual moveset if available
   if (pokemonMoves.length > 0) {
@@ -27,7 +526,7 @@ export const generateMoveset = (pokemon: any, isRandomized: boolean = false) => 
   }
   
   // Add type-specific moves to ensure good coverage
-  pokemonTypes.forEach(type => {
+  pokemonTypes.forEach((type: string) => {
     movePool.push({
       name: `${type}-blast`,
       type: type,
@@ -68,7 +567,7 @@ export const generateMoveset = (pokemon: any, isRandomized: boolean = false) => 
   const attackingMoves = shuffled.filter(move => move.power > 0);
   const statusMoves = shuffled.filter(move => move.power === 0);
   
-  const selectedMoves = [];
+  const selectedMoves: any[] = [];
   
   // Ensure at least 2 attacking moves
   selectedMoves.push(...attackingMoves.slice(0, 3));
@@ -92,6 +591,74 @@ export const generateMoveset = (pokemon: any, isRandomized: boolean = false) => 
     ...move,
     currentPP: move.pp
   }));
+};
+
+// Helper function to assign competitive abilities to Pokemon
+export const getRandomAbilityForPokemon = (pokemonName: string, types: string[]): string => {
+  // Competitive ability mapping based on Pokemon types and common abilities
+  const typeBasedAbilities: Record<string, string[]> = {
+    fire: ['blaze', 'flash-fire', 'drought', 'flame-body'],
+    water: ['torrent', 'water-absorb', 'drizzle', 'swift-swim'],
+    electric: ['volt-absorb', 'motor-drive', 'lightning-rod', 'static'],
+    grass: ['overgrow', 'chlorophyll', 'leaf-guard', 'sap-sipper'],
+    psychic: ['synchronize', 'trace', 'magic-guard', 'telepathy'],
+    ice: ['snow-warning', 'ice-body', 'slush-rush', 'snow-cloak'],
+    dragon: ['multiscale', 'inner-focus', 'marvel-scale', 'shed-skin'],
+    dark: ['dark-aura', 'moxie', 'justified', 'guts'],
+    steel: ['levitate', 'sturdy', 'clear-body', 'heavy-metal'],
+    fairy: ['pixilate', 'magic-bounce', 'cute-charm', 'competitive'],
+    fighting: ['guts', 'no-guard', 'inner-focus', 'justified'],
+    poison: ['poison-point', 'corrosion', 'merciless', 'immunity'],
+    ground: ['arena-trap', 'sand-rush', 'sand-force', 'reckless'],
+    flying: ['pressure', 'keen-eye', 'big-pecks', 'gale-wings'],
+    bug: ['swarm', 'compound-eyes', 'tinted-lens', 'skill-link'],
+    rock: ['sturdy', 'rock-head', 'sand-stream', 'solid-rock'],
+    ghost: ['cursed-body', 'frisk', 'infiltrator', 'shadow-tag'],
+    normal: ['normalize', 'natural-cure', 'serene-grace', 'skill-link']
+  };
+
+  // Universal competitive abilities that work on any Pokemon
+  const universalAbilities = [
+    'pressure', 'intimidate', 'trace', 'synchronize', 'natural-cure',
+    'clear-body', 'serene-grace', 'keen-eye', 'inner-focus'
+  ];
+
+  // Get abilities based on primary type
+  const primaryType = types[0] || 'normal';
+  const typeAbilities = typeBasedAbilities[primaryType] || [];
+  
+  // Combine type-specific and universal abilities
+  const availableAbilities = [...typeAbilities, ...universalAbilities];
+  
+  // All abilities are supported in native Showdown
+  if (availableAbilities.length > 0) {
+    return availableAbilities[Math.floor(Math.random() * availableAbilities.length)];
+  }
+  
+  return 'pressure'; // Default fallback ability
+};
+
+// Helper function to assign competitive natures
+export const getRandomNature = (): string => {
+  const competitiveNatures = [
+    'adamant',    // +Atk, -SpA
+    'modest',     // +SpA, -Atk  
+    'timid',      // +Spe, -Atk
+    'jolly',      // +Spe, -SpA
+    'bold',       // +Def, -Atk
+    'calm',       // +SpD, -Atk
+    'impish',     // +Def, -SpA
+    'careful',    // +SpD, -SpA
+    'naive',      // +Spe, -SpD
+    'hasty',      // +Spe, -Def
+    'hardy',      // Neutral
+    'docile',     // Neutral
+    'serious',    // Neutral
+    'bashful',    // Neutral
+    'quirky'      // Neutral
+  ];
+
+  return competitiveNatures[Math.floor(Math.random() * competitiveNatures.length)];
 };
 
 // Helper functions for move data
@@ -126,71 +693,7 @@ export const getMovePPByName = (moveName: string): number => {
   return ppMap[moveName] || 15;
 };
 
-// Create a gym Pokemon with stats and moves (enhanced version)
-export const createGymPokemon = async (basePokemon: any, level: number, isRandomized: boolean = false): Promise<GymPokemon> => {
-  const baseStats = basePokemon.stats || {
-    hp: 100, attack: 80, defense: 80,
-    'special-attack': 80, 'special-defense': 80, speed: 80
-  };
-
-  // Calculate max HP
-  const maxHp = Math.floor(((baseStats.hp * 2) * level) / 100) + level + 10;
-
-  // Generate moves using the new PokeAPI system
-  let moves;
-  try {
-    moves = await generatePokemonMoves(basePokemon, level);
-  } catch (error) {
-    console.warn(`Failed to generate moves for ${basePokemon.name}, using fallback`);
-    moves = generateFallbackMoves(basePokemon.types || ['normal'], level);
-  }
-
-  return {
-    id: basePokemon.id,
-    name: basePokemon.name,
-    types: basePokemon.types || ['normal'],
-    sprites: {
-      front_default: basePokemon.sprites?.other?.['official-artwork']?.front_default || basePokemon.sprites?.front_default || '',
-      back_default: basePokemon.sprites?.back_default || basePokemon.sprites?.front_default || ''
-    },
-    stats: baseStats,
-    moves,
-    level,
-    currentHp: maxHp,
-    maxHp: maxHp
-  };
-};
-
-// Legacy synchronous version for backward compatibility
-export const createGymPokemonSync = (basePokemon: any, level: number, isRandomized: boolean = false): GymPokemon => {
-  const baseStats = basePokemon.stats || {
-    hp: 100, attack: 80, defense: 80,
-    'special-attack': 80, 'special-defense': 80, speed: 80
-  };
-
-  // Calculate max HP
-  const maxHp = Math.floor(((baseStats.hp * 2) * level) / 100) + level + 10;
-
-  // Use fallback moves for sync version
-  const moves = generateFallbackMoves(basePokemon.types || ['normal'], level);
-
-  return {
-    id: basePokemon.id,
-    name: basePokemon.name,
-    types: basePokemon.types || ['normal'],
-    sprites: {
-      front_default: basePokemon.sprites?.other?.['official-artwork']?.front_default || basePokemon.sprites?.front_default || '',
-      back_default: basePokemon.sprites?.back_default || basePokemon.sprites?.front_default || ''
-    },
-    stats: baseStats,
-    moves,
-    level,
-    currentHp: maxHp,
-    maxHp: maxHp
-  };
-};
-
-// Get random Pokemon of a specific type
+// Get random Pokemon of a specific type with enhanced randomization
 export const getRandomPokemonOfType = (allPokemon: any[], type: string, count: number = 3) => {
   if (!allPokemon || allPokemon.length === 0) {
     console.warn('No Pokemon data available for type filtering');
@@ -206,22 +709,39 @@ export const getRandomPokemonOfType = (allPokemon: any[], type: string, count: n
     return allPokemon.slice(0, count); // Fallback to any Pokemon
   }
 
-  // Shuffle and return random selection
-  const shuffled = [...typeFilteredPokemon].sort(() => Math.random() - 0.5);
+  // Enhanced shuffling: Use crypto random if available, multiple shuffle passes
+  const shuffled = [...typeFilteredPokemon];
+  
+  // Fisher-Yates shuffle for better randomization
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+  
+  // Additional entropy: shuffle again with different random values
+  shuffled.sort(() => (Math.random() - 0.5) * 2);
+  
   return shuffled.slice(0, Math.min(count, shuffled.length));
 };
 
 // Generate moves for the Pokemon
-// Enhanced move generation using PokeAPI
+// Enhanced move generation using our new random move generator
 const generatePokemonMoves = async (pokemonData: any, level: number): Promise<any[]> => {
   try {
-    // Use the new PokeAPI-based move selection
-    const battleMoves = await selectPokemonMoves(
-      pokemonData.id,
-      pokemonData.types || ['normal'],
+    // Use our new random move generator for realistic movesets
+    const battleMoves = await generateRandom(pokemonData.id, {
+      maxMoves: 4,
       level,
-      4
-    );
+      prioritizeSTAB: true,
+      balanceTypes: true,
+      learnMethods: {
+        levelUp: true,
+        machine: true,
+        tutor: true
+      },
+      minDamageMoves: 2,
+      maxStatusMoves: 2
+    });
     
     return battleMoves.map(move => ({
       name: move.name,
