@@ -14,7 +14,7 @@ const CACHED_REST_ENDPOINT = supabaseFunctionsAvailable ?
  * Checks if cached endpoints are available
  */
 const areCachedEndpointsAvailable = async (): Promise<boolean> => {
-  if (!netlifyFunctionsAvailable || !CACHED_GRAPHQL_ENDPOINT) {
+  if (!supabaseFunctionsAvailable || !CACHED_GRAPHQL_ENDPOINT) {
     return false;
   }
 

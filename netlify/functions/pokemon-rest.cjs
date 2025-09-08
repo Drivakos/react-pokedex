@@ -1,7 +1,7 @@
 const { fetchWithCache } = require("@netlify/cache");
 
 // Environment variables with fallbacks
-const REST_ENDPOINT = process.env.VITE_API_REST_URL || process.env.VITE_API_URL || 'https://pokeapi.co/api/v2';
+const REST_ENDPOINT = process.env.VITE_API_REST_URL || process.env.VITE_API_URL;
 
 exports.handler = async (event, context) => {
   // Set CORS headers

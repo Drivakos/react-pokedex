@@ -1,7 +1,7 @@
 const { getCache, setCache } = require("@netlify/cache");
 
 // Environment variables with fallbacks
-const GRAPHQL_ENDPOINT = process.env.VITE_API_GRAPHQL_URL || 'https://beta.pokeapi.co/graphql/v1beta';
+const GRAPHQL_ENDPOINT = process.env.VITE_API_GRAPHQL_URL;
 
 exports.handler = async (event, context) => {
   // Set CORS headers

@@ -4,7 +4,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 console.log('REST Edge Function loaded')
 
 // Environment variables
-const REST_ENDPOINT = Deno.env.get('VITE_API_REST_URL') || Deno.env.get('VITE_API_URL') || 'https://pokeapi.co/api/v2'
+const REST_ENDPOINT = Deno.env.get('VITE_API_REST_URL') || Deno.env.get('VITE_API_URL')
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
 const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY')!
 
@@ -163,3 +163,4 @@ serve(async (req: Request) => {
     )
   }
 })
+

@@ -16,7 +16,7 @@ jobs:
     - name: Setup Node.js
       uses: actions/setup-node@v4
       with:
-        node-version: '18'
+        node-version: '20'
         cache: 'npm'
     
     - name: Install dependencies
@@ -25,14 +25,22 @@ jobs:
     - name: Create .env file for testing
       run: |
         touch .env
-        echo "VITE_API_URL=${{ secrets.VITE_API_URL || 'https://pokeapi.co/api/v2' }}" >> .env
-        echo "VITE_API_GRAPHQL_URL=${{ secrets.VITE_API_GRAPHQL_URL || 'https://beta.pokeapi.co/graphql/v1beta' }}" >> .env
-        echo "VITE_ENABLE_ANALYTICS=${{ secrets.VITE_ENABLE_ANALYTICS || 'false' }}" >> .env
-        echo "VITE_ENABLE_TCG_CARDS=${{ secrets.VITE_ENABLE_TCG_CARDS || 'true' }}" >> .env
-        echo "VITE_ENABLE_ADVANCED_SEARCH=${{ secrets.VITE_ENABLE_ADVANCED_SEARCH || 'true' }}" >> .env
-    
+        echo "VITE_SUPABASE_URL=${{ secrets.VITE_SUPABASE_URL }}" >> .env
+        echo "VITE_SUPABASE_ANON_KEY=${{ secrets.VITE_SUPABASE_ANON_KEY }}" >> .env
+        echo "VITE_API_URL=${{ secrets.VITE_API_URL }}" >> .env
+        echo "VITE_API_GRAPHQL_URL=${{ secrets.VITE_API_GRAPHQL_URL }}" >> .env
+        echo "VITE_API_REST_URL=${{ secrets.VITE_API_REST_URL }}" >> .env
+        echo "VITE_USE_CACHED_API=${{ secrets.VITE_USE_CACHED_API }}" >> .env
+        echo "VITE_ENABLE_ANALYTICS=${{ secrets.VITE_ENABLE_ANALYTICS }}" >> .env
+        echo "VITE_ENABLE_TCG_CARDS=${{ secrets.VITE_ENABLE_TCG_CARDS }}" >> .env
+        echo "VITE_ENABLE_ADVANCED_SEARCH=${{ secrets.VITE_ENABLE_ADVANCED_SEARCH }}" >> .env
+        echo "VITE_SITE_URL=${{ secrets.VITE_SITE_URL }}" >> .env
+
     - name: Run linting
-      run: npm run lint || echo "Linting failed but continuing..."
+      run: npm run lint || echo "Linting found warnings but continuing..."
+
+    - name: Run security audit
+      run: npm audit --audit-level moderate || echo "Security audit found issues but continuing..."
     
     - name: Run tests
       run: npm run test:ci
@@ -55,7 +63,7 @@ jobs:
     - name: Setup Node.js
       uses: actions/setup-node@v4
       with:
-        node-version: '18'
+        node-version: '20'
         cache: 'npm'
     
     - name: Install dependencies
@@ -64,12 +72,20 @@ jobs:
     - name: Create .env file
       run: |
         touch .env
-        echo "VITE_API_URL=${{ secrets.VITE_API_URL || 'https://pokeapi.co/api/v2' }}" >> .env
-        echo "VITE_API_GRAPHQL_URL=${{ secrets.VITE_API_GRAPHQL_URL || 'https://beta.pokeapi.co/graphql/v1beta' }}" >> .env
-        echo "VITE_ENABLE_ANALYTICS=${{ secrets.VITE_ENABLE_ANALYTICS || 'false' }}" >> .env
-        echo "VITE_ENABLE_TCG_CARDS=${{ secrets.VITE_ENABLE_TCG_CARDS || 'true' }}" >> .env
-        echo "VITE_ENABLE_ADVANCED_SEARCH=${{ secrets.VITE_ENABLE_ADVANCED_SEARCH || 'true' }}" >> .env
-    
+        echo "VITE_SUPABASE_URL=${{ secrets.VITE_SUPABASE_URL }}" >> .env
+        echo "VITE_SUPABASE_ANON_KEY=${{ secrets.VITE_SUPABASE_ANON_KEY }}" >> .env
+        echo "VITE_API_URL=${{ secrets.VITE_API_URL }}" >> .env
+        echo "VITE_API_GRAPHQL_URL=${{ secrets.VITE_API_GRAPHQL_URL }}" >> .env
+        echo "VITE_API_REST_URL=${{ secrets.VITE_API_REST_URL }}" >> .env
+        echo "VITE_USE_CACHED_API=${{ secrets.VITE_USE_CACHED_API }}" >> .env
+        echo "VITE_ENABLE_ANALYTICS=${{ secrets.VITE_ENABLE_ANALYTICS }}" >> .env
+        echo "VITE_ENABLE_TCG_CARDS=${{ secrets.VITE_ENABLE_TCG_CARDS }}" >> .env
+        echo "VITE_ENABLE_ADVANCED_SEARCH=${{ secrets.VITE_ENABLE_ADVANCED_SEARCH }}" >> .env
+        echo "VITE_SITE_URL=${{ secrets.VITE_SITE_URL }}" >> .env
+
+    - name: Run security audit
+      run: npm audit --audit-level moderate || echo "Security audit found issues but continuing..."
+
     - name: Build
       run: npm run build
     

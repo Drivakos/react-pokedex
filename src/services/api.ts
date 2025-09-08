@@ -7,8 +7,8 @@ import {
 } from './cached-api';
 
 // Use environment variables for API endpoints (fallback for direct calls)
-const GRAPHQL_ENDPOINT = import.meta.env.VITE_API_GRAPHQL_URL || 'https://beta.pokeapi.co/graphql/v1beta';
-const REST_ENDPOINT = import.meta.env.VITE_API_REST_URL || import.meta.env.VITE_API_URL || 'https://pokeapi.co/api/v2';
+const GRAPHQL_ENDPOINT = import.meta.env.VITE_API_GRAPHQL_URL;
+const REST_ENDPOINT = import.meta.env.VITE_API_REST_URL || import.meta.env.VITE_API_URL;
 
 // Feature flag to enable/disable caching (disabled in development by default)
 const USE_CACHED_API = import.meta.env.VITE_USE_CACHED_API === 'true' && !import.meta.env.DEV;

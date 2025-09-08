@@ -9,19 +9,23 @@ module.exports = {
         '<rootDir>/tests/**/*.test.js'
       ],
       collectCoverageFrom: [
-        'netlify/functions/**/*.{js,cjs}',
-        '!netlify/functions/**/*.test.{js}',
+        'supabase/functions/**/*.{js,ts}',
+        'src/services/**/*.{js,ts}',
+        '!supabase/functions/**/*.test.{js,ts}',
+        '!src/services/**/*.test.{js,ts}',
         '!**/node_modules/**',
         '!**/dist/**',
         '!**/coverage/**'
       ],
       setupFilesAfterEnv: ['<rootDir>/tests/setup.js'],
       transform: {
-        '^.+\\.(js|cjs)$': 'babel-jest'
+        '^.+\\.(js|cjs|ts)$': 'babel-jest'
       },
-      moduleFileExtensions: ['js', 'cjs', 'json'],
+      moduleFileExtensions: ['js', 'cjs', 'ts', 'json'],
       moduleNameMapper: {
-        '^@netlify/(.*)$': '<rootDir>/tests/__mocks__/@netlify/$1'
+        '^@netlify/(.*)$': '<rootDir>/tests/__mocks__/@netlify/$1',
+        '^@supabase/(.*)$': '<rootDir>/tests/__mocks__/@supabase/$1',
+        '^https://deno.land/(.*)': '<rootDir>/tests/__mocks__/deno-land/$1'
       }
     },
     // Frontend/Browser tests  
