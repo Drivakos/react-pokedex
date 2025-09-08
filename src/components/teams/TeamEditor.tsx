@@ -338,9 +338,6 @@ const TeamEditor: React.FC = () => {
         tera_type: buildData.teraType || selectedMember.tera_type || 'normal'
       };
 
-      if (!updateTeamMemberBuild || typeof updateTeamMemberBuild !== 'function') {
-        throw new Error('updateTeamMemberBuild function is not available');
-      }
       await updateTeamMemberBuild(parseInt(teamId), selectedMember.position, teamMemberData);
 
       // Refresh team data
