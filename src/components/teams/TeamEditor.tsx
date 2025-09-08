@@ -114,7 +114,11 @@ const TeamEditor: React.FC = () => {
 
         for (const pokemonId of uniqueIds) {
           try {
-            const response = await fetch(`https://pokeapi.co/api/v2/pokemon/${pokemonId}`);
+            const isDevelopment = import.meta.env.DEV;
+            const apiUrl = isDevelopment
+              ? `/api/pokeapi/pokemon/${pokemonId}`
+              : `https://pokeapi.co/api/v2/pokemon/${pokemonId}`;
+            const response = await fetch(apiUrl);
             if (response.ok) {
               const pokemon = await response.json();
               setPokemonData(prev => ({ ...prev, [pokemonId]: pokemon }));
@@ -142,7 +146,11 @@ const TeamEditor: React.FC = () => {
     }
 
     try {
-      const response = await fetch(`https://pokeapi.co/api/v2/pokemon?limit=20&offset=0`);
+      const isDevelopment = import.meta.env.DEV;
+      const apiUrl = isDevelopment
+        ? `/api/pokeapi/pokemon?limit=20&offset=0`
+        : `https://pokeapi.co/api/v2/pokemon?limit=20&offset=0`;
+      const response = await fetch(apiUrl);
       if (response.ok) {
         const data = await response.json();
         const filtered = data.results.filter((p: any) =>

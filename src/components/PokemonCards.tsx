@@ -336,10 +336,14 @@ const PokemonCards: React.FC<PokemonCardsProps> = ({ pokemonName, pokemonId }) =
         query = `nationalPokedexNumbers:${pokemonId}`;
       }
 
-      const apiUrl = `https://api.pokemontcg.io/v2/cards?q=${query}&orderBy=set.releaseDate&page=${page}&pageSize=12`;
+      // Use proxy in development to avoid CORS issues, direct API in production
+      const isDevelopment = import.meta.env.DEV;
+      const apiUrl = isDevelopment
+        ? `/api/pokemontcg/cards?q=${query}&orderBy=set.releaseDate&page=${page}&pageSize=12`
+        : `https://api.pokemontcg.io/v2/cards?q=${query}&orderBy=set.releaseDate&page=${page}&pageSize=12`;
 
       const response = await fetch(apiUrl, {
-        headers: { 'X-Api-Key': POKEMONTCG_API_KEY || '' }
+        headers: isDevelopment ? {} : { 'X-Api-Key': POKEMONTCG_API_KEY || '' }
       });
 
       if (!response.ok) {

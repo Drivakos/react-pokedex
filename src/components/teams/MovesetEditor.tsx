@@ -319,7 +319,11 @@ const MovesetEditorContent: React.FC<MovesetEditorProps> = ({ pokemon, teamId, o
       setLoading(true);
       try {
         // Fetch detailed Pokemon data
-        const response = await fetch(`https://pokeapi.co/api/v2/pokemon/${pokemon.id}`);
+        const isDevelopment = import.meta.env.DEV;
+        const apiUrl = isDevelopment
+          ? `/api/pokeapi/pokemon/${pokemon.id}`
+          : `https://pokeapi.co/api/v2/pokemon/${pokemon.id}`;
+        const response = await fetch(apiUrl);
         if (response.ok) {
           const pokemonData = await response.json();
           const moves = pokemonData.moves.map((move: PokemonMove) => move.move.name);
@@ -333,7 +337,10 @@ const MovesetEditorContent: React.FC<MovesetEditorProps> = ({ pokemon, teamId, o
           const abilityDescs: Record<string, string> = {};
           for (const ability of abilities) {
             try {
-              const abilityResponse = await fetch(`https://pokeapi.co/api/v2/ability/${ability}`);
+              const abilityUrl = isDevelopment
+                ? `/api/pokeapi/ability/${ability}`
+                : `https://pokeapi.co/api/v2/ability/${ability}`;
+              const abilityResponse = await fetch(abilityUrl);
               if (abilityResponse.ok) {
                 const abilityData = await abilityResponse.json();
                 const englishEntry = abilityData.effect_entries.find((entry: any) => entry.language.name === 'en');
@@ -402,7 +409,10 @@ const MovesetEditorContent: React.FC<MovesetEditorProps> = ({ pokemon, teamId, o
         const itemDescs: Record<string, string> = {};
         for (const item of HELD_ITEMS) { // Fetch all items, not just first 20
           try {
-            const itemResponse = await fetch(`https://pokeapi.co/api/v2/item/${item.toLowerCase().replace(' ', '-')}`);
+            const itemUrl = isDevelopment
+              ? `/api/pokeapi/item/${item.toLowerCase().replace(' ', '-')}`
+              : `https://pokeapi.co/api/v2/item/${item.toLowerCase().replace(' ', '-')}`;
+            const itemResponse = await fetch(itemUrl);
             if (itemResponse.ok) {
               const itemData = await itemResponse.json();
               const englishEntry = itemData.effect_entries.find((entry: any) => entry.language.name === 'en');
@@ -591,7 +601,11 @@ const MovesetEditorContent: React.FC<MovesetEditorProps> = ({ pokemon, teamId, o
     }
 
     try {
-      const response = await fetch(`https://pokeapi.co/api/v2/move/${moveName}`);
+      const isDevelopment = import.meta.env.DEV;
+      const moveUrl = isDevelopment
+        ? `/api/pokeapi/move/${moveName}`
+        : `https://pokeapi.co/api/v2/move/${moveName}`;
+      const response = await fetch(moveUrl);
       if (response.ok) {
         const move = await response.json();
         const details: MoveDetails = {

@@ -42,8 +42,8 @@
     Strict-Transport-Security = "max-age=31536000; includeSubDomains; preload"
     Content-Security-Policy = """
        default-src 'self';
-       script-src 'self';
-       style-src 'self';
+       script-src 'self' 'sha256-Z2/iFzh9VMlVkEOar1f/oSHWwQk3ve1qk/C2WdsC4Xk=';
+       style-src 'self' 'sha256-Nqnn8clbgv+5l0PgxcTOldg8mkMKrFn4TvPL+rYUUGg=' 'sha256-13vrThxdyT64GcXoTNGVoRRoL0a7EGBmOJ+lemEWyws=' 'sha256-QZ52fjvWgIOIOPr+gRIJZ7KjzNeTBm50Z+z9dH4N1/8=' 'sha256-yOU6eaJ75xfag0gVFUvld5ipLRGUy94G17B1uL683EU=' 'sha256-OpTmykz0m3o5HoX53cykwPhUeU4OECxHQlKXpB0QJPQ=' 'sha256-SSIM0kI/u45y4gqkri9aH+la6wn2R+xtcBj3Lzh7qQo=' 'sha256-ZH/+PJIjvP1BctwYxclIuiMu1wItb0aasjpXYXOmU0Y=' 'sha256-58jqDtherY9NOM+ziRgSqQY0078tAZ+qtTBjMgbM9po=' 'sha256-7Ri/I+PfhgtpcL7hT4A0VJKI6g3pK0ZvIN09RQV4ZhI=' 'sha256-uEvq29Gia+5yISklLH7mdEEjErdiBONR1Jd+xZ6k+3E=' 'sha256-O+dNMIawgFeaXkzGkCpSH4HBc/bMAuZg/3E7NFwYHyA=';
        img-src 'self' data: https://raw.githubusercontent.com https://images.pokemontcg.io/ https://*.googleusercontent.com https://*.googleapis.com;
        font-src 'self' data:;
        connect-src 'self' https://kefcxvcbpadksfizrckw.supabase.co https://beta.pokeapi.co https://api.pokemontcg.io https://pokeapi.co;
@@ -53,6 +53,24 @@
        frame-ancestors 'none';
        upgrade-insecure-requests;
      """
+    Access-Control-Allow-Origin = "*"
+    Access-Control-Allow-Methods = "GET, POST, PUT, DELETE, OPTIONS"
+    Access-Control-Allow-Headers = "Content-Type, Authorization, X-Requested-With"
+    Access-Control-Max-Age = "86400"
+    X-RateLimit-Limit = "1000"
+    X-RateLimit-Window = "1m"
+    Origin-Agent-Cluster = "?1"
+    Cross-Origin-Embedder-Policy = "credentialless"
+    Cross-Origin-Opener-Policy = "same-origin"
+
+# Development headers (only applies to dev server, not production)
+[dev]
+  command = "npm run dev"
+  port = 5173
+
+[[headers]]
+  for = "/*"
+  [headers.values]
     Access-Control-Allow-Origin = "*"
 
 # Make sure assets are never redirected
