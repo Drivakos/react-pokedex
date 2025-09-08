@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
+import { TeamMember } from '../../lib/supabase';
 import {
   ArrowLeft,
   Plus,
@@ -46,40 +47,12 @@ interface Pokemon {
   }[];
 }
 
-interface TeamMember {
-  id: number;
-  team_id: number;
-  pokemon_id: number;
-  position: number;
-  moves: string[];
-  item: string;
-  ability: string;
-  nature: string;
-  evs: {
-    hp: number;
-    attack: number;
-    defense: number;
-    'special-attack': number;
-    'special-defense': number;
-    speed: number;
-  };
-  ivs: {
-    hp: number;
-    attack: number;
-    defense: number;
-    'special-attack': number;
-    'special-defense': number;
-    speed: number;
-  };
-  level: number;
-  gender: 'male' | 'female' | 'genderless';
-  tera_type: string;
-}
 
 const TeamEditor: React.FC = () => {
   const { teamId } = useParams<{ teamId: string }>();
   const navigate = useNavigate();
-  const { user, getTeamMembers, addPokemonToTeam, removePokemonFromTeam, updateTeamMemberBuild, teams } = useAuth();
+  const auth = useAuth();
+  const { user, getTeamMembers, addPokemonToTeam, removePokemonFromTeam, updateTeamMemberBuild, teams } = auth as any;
 
   const [team, setTeam] = useState<any>(null);
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
@@ -365,6 +338,9 @@ const TeamEditor: React.FC = () => {
         tera_type: buildData.teraType || selectedMember.tera_type || 'normal'
       };
 
+      if (!updateTeamMemberBuild || typeof updateTeamMemberBuild !== 'function') {
+        throw new Error('updateTeamMemberBuild function is not available');
+      }
       await updateTeamMemberBuild(parseInt(teamId), selectedMember.position, teamMemberData);
 
       // Refresh team data

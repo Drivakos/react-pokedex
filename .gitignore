@@ -72,5 +72,9 @@ tech_stack.md
 feature_log.md
 changelog.md
 
+# Supabase temp files and schema dumps
+supabase/.temp/
+schema_dump.sql
+
 # remove temp filesystem files
 *~

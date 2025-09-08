@@ -11,13 +11,22 @@ import { useSessionRefresher } from './useSessionRefresher';
 export interface AuthContextType extends
   AuthMethods,
   ProfileMethods,
-  FavoritesMethods,
-  TeamsMethods {
+  FavoritesMethods {
   session: Session | null;
   user: User | null;
   profile: Profile | null;
   favorites: Favorite[];
   loading: boolean;
+
+  // Team methods
+  fetchTeams: () => Promise<void>;
+  createTeam: (name: string, description?: string) => Promise<any>;
+  updateTeam: (teamId: number, name: string, description?: string) => Promise<void>;
+  deleteTeam: (teamId: number) => Promise<void>;
+  addPokemonToTeam: (teamId: number, pokemonId: number, position: number) => Promise<void>;
+  removePokemonFromTeam: (teamId: number, position: number) => Promise<void>;
+  getTeamMembers: (teamId: number) => Promise<any[]>;
+  updateTeamMemberBuild: (teamId: number, position: number, buildData: Partial<any>) => Promise<void>;
 }
 
 export const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -67,15 +76,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setTeams
   }), [user, refreshSession]); // Removed teams and setTeams from deps to avoid unnecessary recreation
 
-  // Use callback to ensure stable references
-  const addPokemonToTeam = useCallback(teamsMethods.addPokemonToTeam, [teamsMethods]);
-  const removePokemonFromTeam = useCallback(teamsMethods.removePokemonFromTeam, [teamsMethods]);
-  const getTeamMembers = useCallback(teamsMethods.getTeamMembers, [teamsMethods]);
-  const updateTeamMemberBuild = teamsMethods.updateTeamMemberBuild; // Direct reference instead of callback
-  const fetchTeams = useCallback(teamsMethods.fetchTeams, [teamsMethods]);
-  const createTeam = useCallback(teamsMethods.createTeam, [teamsMethods]);
-  const updateTeam = useCallback(teamsMethods.updateTeam, [teamsMethods]);
-  const deleteTeam = useCallback(teamsMethods.deleteTeam, [teamsMethods]);
+  // Use direct references to maintain proper typing
+  const addPokemonToTeam = teamsMethods?.addPokemonToTeam;
+  const removePokemonFromTeam = teamsMethods?.removePokemonFromTeam;
+  const getTeamMembers = teamsMethods?.getTeamMembers;
+  const updateTeamMemberBuild = teamsMethods?.updateTeamMemberBuild;
+  const fetchTeams = teamsMethods?.fetchTeams;
+  const createTeam = teamsMethods?.createTeam;
+  const updateTeam = teamsMethods?.updateTeam;
+  const deleteTeam = teamsMethods?.deleteTeam;
+
 
   
   const resetAuthState = () => {

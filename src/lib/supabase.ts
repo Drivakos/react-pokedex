@@ -126,4 +126,29 @@ export interface TeamMember {
   pokemon_id: number;
   position: number;
   created_at?: string;
+  updated_at?: string;
+  // Build data fields
+  moves?: string[];
+  item?: string;
+  ability?: string;
+  nature?: string;
+  evs?: {
+    hp: number;
+    attack: number;
+    defense: number;
+    'special-attack': number;
+    'special-defense': number;
+    speed: number;
+  };
+  ivs?: {
+    hp: number;
+    attack: number;
+    defense: number;
+    'special-attack': number;
+    'special-defense': number;
+    speed: number;
+  };
+  level?: number;
+  gender?: 'male' | 'female' | 'genderless';
+  tera_type?: string;
 }
