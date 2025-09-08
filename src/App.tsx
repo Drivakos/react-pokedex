@@ -11,6 +11,7 @@ import MagicLinkLogin from './components/auth/MagicLinkLogin';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 import Navigation from './components/Navigation';
 import Teams from './components/teams/Teams';
+import TeamEditor from './components/teams/TeamEditor';
 
 function App() {
   return (
@@ -35,6 +36,11 @@ function App() {
           <Route path="/teams" element={
             <ProtectedRoute>
               <Teams />
+            </ProtectedRoute>
+          } />
+          <Route path="/team-editor/:teamId" element={
+            <ProtectedRoute>
+              <TeamEditor />
             </ProtectedRoute>
           } />
         </Routes>

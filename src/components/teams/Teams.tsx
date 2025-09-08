@@ -1,342 +1,83 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
-import { Team } from '../../lib/supabase';
-import { ChevronRight, Settings, Sword, Shield, Copy } from 'lucide-react';
+import { ChevronRight, Plus, X } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { formatName, getOfficialArtwork } from '../../utils/helpers';
-import MovesetEditor from './MovesetEditor';
 
-interface TeamMember {
-  id: number;
-  team_id: number;
-  pokemon_id: number;
-  position: number;
-}
-
-interface PokemonWithMoves {
-  id: number;
-  name: string;
-  sprites: {
-    other: {
-      'official-artwork': {
-        front_default: string;
-      };
-    };
-  };
-  types: {
-    type: {
-      name: string;
-    };
-  }[];
-  moves: string[];
-}
-
-const TeamsContent: React.FC = () => {
-  const { user, teams, fetchTeams, getTeamMembers } = useAuth();
-  const [selectedTeam, setSelectedTeam] = useState<Team | null>(null);
-  const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
-  const [pokemonDetails, setPokemonDetails] = useState<Record<number, PokemonWithMoves>>({});
-  const [selectedPokemon, setSelectedPokemon] = useState<number | null>(null);
+const Teams: React.FC = () => {
+  const { user, teams, fetchTeams, createTeam } = useAuth();
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
+  const teamsLoadedRef = useRef(false);
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [formData, setFormData] = useState({ name: '', description: '' });
+  const [creating, setCreating] = useState(false);
 
-  // Use ref to track if teams have been fetched to prevent infinite loops
-  const hasFetchedTeams = useRef(false);
+  const loadTeams = useCallback(async () => {
+    if (!user || teamsLoadedRef.current) {
+      setLoading(false);
+      return;
+    }
+
+    teamsLoadedRef.current = true;
+
+    try {
+      await fetchTeams();
+    } catch (error) {
+      console.error('Error loading teams:', error);
+      toast.error('Failed to load teams');
+      teamsLoadedRef.current = false; // Reset on error to allow retry
+    } finally {
+      setLoading(false);
+    }
+  }, [user]); // Removed fetchTeams from dependencies
 
   useEffect(() => {
-    const loadTeams = async () => {
-      if (!user || hasFetchedTeams.current) return;
-      
-      setLoading(true);
-      hasFetchedTeams.current = true;
-      
-      try {
-        if (fetchTeams && typeof fetchTeams === 'function') {
-          await fetchTeams();
-        }
-      } catch (error) {
-        console.error('❌ Error loading teams:', error);
-        toast.error('Failed to load teams');
-        hasFetchedTeams.current = false; // Reset on error to allow retry
-      } finally {
-        setLoading(false);
-      }
-    };
-
     loadTeams();
-  }, [user]); // Only depend on user, not fetchTeams
+  }, [loadTeams]);
 
-  // Reset fetch flag when component unmounts or user changes
+  // Reset teams loaded flag when user changes
   useEffect(() => {
-    return () => {
-      hasFetchedTeams.current = false;
-    };
+    teamsLoadedRef.current = false;
   }, [user]);
 
-  useEffect(() => {
-    const loadTeamMembers = async () => {
-      if (!selectedTeam || !getTeamMembers) return;
-
-      try {
-        const members = await getTeamMembers(selectedTeam.id);
-        setTeamMembers(members);
-        
-        // Load Pokemon details for each team member
-        const pokemonDetailsMap: Record<number, PokemonWithMoves> = {};
-        
-        for (const member of members) {
-          try {
-            const response = await fetch(`https://pokeapi.co/api/v2/pokemon/${member.pokemon_id}`);
-            if (response.ok) {
-              const pokemon = await response.json();
-
-              pokemonDetailsMap[member.pokemon_id] = {
-                id: pokemon.id,
-                name: pokemon.name,
-                sprites: pokemon.sprites,
-                types: pokemon.types,
-                moves: [], // Will be loaded from database
-              };
-            }
-          } catch (error) {
-            console.error(`Failed to fetch Pokemon ${member.pokemon_id}:`, error);
-          }
-        }
-        
-        setPokemonDetails(pokemonDetailsMap);
-      } catch (error) {
-        console.error('Error loading team members:', error);
-        toast.error('Failed to load team members');
-      }
-    };
-
-    loadTeamMembers();
-  }, [selectedTeam, getTeamMembers]);
-
-  const handleTeamSelect = (team: Team) => {
-    setSelectedTeam(team);
-    setSelectedPokemon(null);
+  const handleTeamSelect = (team: any) => {
+    // Navigate directly to team editor instead of showing details
+    navigate(`/team-editor/${team.id}`);
   };
 
-  const handlePokemonSelect = (pokemonId: number) => {
-    setSelectedPokemon(pokemonId);
-  };
 
-  const handleBackToTeams = () => {
-    setSelectedTeam(null);
-    setSelectedPokemon(null);
-  };
+  const handleCreateTeam = async (e: React.FormEvent) => {
+    e.preventDefault();
 
-  const handleBackToPokemon = () => {
-    setSelectedPokemon(null);
-  };
-
-  const exportSinglePokemon = async (pokemonId: number) => {
-    try {
-      const pokemon = pokemonDetails[pokemonId];
-      if (!pokemon) {
-        toast.error('Pokemon data not found');
-        return;
-      }
-
-      // Try to load build data from localStorage
-      const buildKey = `pokemon-build-${pokemonId}`;
-      const savedBuild = localStorage.getItem(buildKey);
-      
-      let build = null;
-      if (savedBuild) {
-        try {
-          build = JSON.parse(savedBuild);
-        } catch (e) {
-          console.warn(`Failed to parse build for ${pokemon.name}`);
-        }
-      }
-
-      // Default values if no build saved
-      const pokemonName = formatName(pokemon.name);
-      const heldItem = build?.heldItem ? formatName(build.heldItem) : '';
-      const ability = build?.ability ? formatName(build.ability) : '';
-      const nature = build?.nature ? formatName(build.nature) : 'Hardy';
-      const moves = build?.moves || [];
-      const nickname = build?.nickname || '';
-      const teraType = build?.teraType || '';
-
-      // Format EVs (only show non-zero values)
-      const evs = build?.evs || {};
-      const evStrings: string[] = [];
-      if (evs.hp > 0) evStrings.push(`${evs.hp} HP`);
-      if (evs.attack > 0) evStrings.push(`${evs.attack} Atk`);
-      if (evs.defense > 0) evStrings.push(`${evs.defense} Def`);
-      if (evs['special-attack'] > 0) evStrings.push(`${evs['special-attack']} SpA`);
-      if (evs['special-defense'] > 0) evStrings.push(`${evs['special-defense']} SpD`);
-      if (evs.speed > 0) evStrings.push(`${evs.speed} Spe`);
-
-      // Build the Pokemon export string
-      let pokemonExport = '';
-      
-      // Pokemon name and item (with nickname if present)
-      if (nickname) {
-        if (heldItem) {
-          pokemonExport += `${nickname} (${pokemonName}) @ ${heldItem}\n`;
-        } else {
-          pokemonExport += `${nickname} (${pokemonName})\n`;
-        }
-      } else {
-        if (heldItem) {
-          pokemonExport += `${pokemonName} @ ${heldItem}\n`;
-        } else {
-          pokemonExport += `${pokemonName}\n`;
-        }
-      }
-
-      // Ability
-      if (ability) {
-        pokemonExport += `Ability: ${ability}\n`;
-      }
-
-      // Tera Type
-      if (teraType) {
-        pokemonExport += `Tera Type: ${teraType}\n`;
-      }
-
-      // EVs
-      if (evStrings.length > 0) {
-        pokemonExport += `EVs: ${evStrings.join(' / ')}\n`;
-      }
-
-      // Nature
-      pokemonExport += `${nature} Nature\n`;
-
-      // Moves
-      if (moves.length > 0) {
-        moves.forEach((move: any) => {
-          const moveName = typeof move === 'string' ? move : move.name;
-          pokemonExport += `- ${formatName(moveName)}\n`;
-        });
-      }
-
-      // Copy to clipboard
-      await navigator.clipboard.writeText(pokemonExport.trim());
-      toast.success(`${pokemonName} exported to clipboard!`);
-      
-    } catch (error) {
-      console.error('Error exporting Pokemon:', error);
-      toast.error('Failed to export Pokemon');
-    }
-  };
-
-  const exportTeam = async (team: Team, members: TeamMember[]) => {
-    if (members.length === 0) {
-      // If no members provided, fetch them first
-      try {
-        const teamMembers = await getTeamMembers(team.id);
-        return exportTeam(team, teamMembers);
-      } catch (error) {
-        toast.error('Failed to load team members for export');
-        return;
-      }
+    if (!formData.name.trim()) {
+      toast.error('Team name is required');
+      return;
     }
 
     try {
-      const teamExportData: string[] = [];
+      setCreating(true);
+      const newTeam = await createTeam(formData.name.trim(), formData.description.trim() || undefined);
 
-      for (const member of members) {
-        const pokemon = pokemonDetails[member.pokemon_id];
-        if (!pokemon) continue;
-
-        // Try to load build data from localStorage
-        const buildKey = `pokemon-build-${member.pokemon_id}`;
-        const savedBuild = localStorage.getItem(buildKey);
-        
-        let build = null;
-        if (savedBuild) {
-          try {
-            build = JSON.parse(savedBuild);
-          } catch (e) {
-            console.warn(`Failed to parse build for ${pokemon.name}`);
-          }
-        }
-
-        // Default values if no build saved
-        const pokemonName = formatName(pokemon.name);
-        const heldItem = build?.heldItem ? formatName(build.heldItem) : '';
-        const ability = build?.ability ? formatName(build.ability) : '';
-        const nature = build?.nature ? formatName(build.nature) : 'Hardy';
-        const moves = build?.moves || [];
-        const nickname = build?.nickname || '';
-        const teraType = build?.teraType || '';
-
-        // Format EVs (only show non-zero values)
-        const evs = build?.evs || {};
-        const evStrings: string[] = [];
-        if (evs.hp > 0) evStrings.push(`${evs.hp} HP`);
-        if (evs.attack > 0) evStrings.push(`${evs.attack} Atk`);
-        if (evs.defense > 0) evStrings.push(`${evs.defense} Def`);
-        if (evs['special-attack'] > 0) evStrings.push(`${evs['special-attack']} SpA`);
-        if (evs['special-defense'] > 0) evStrings.push(`${evs['special-defense']} SpD`);
-        if (evs.speed > 0) evStrings.push(`${evs.speed} Spe`);
-
-        // Build the Pokemon export string
-        let pokemonExport = '';
-        
-        // Pokemon name and item (with nickname if present)
-        if (nickname) {
-          if (heldItem) {
-            pokemonExport += `${nickname} (${pokemonName}) @ ${heldItem}\n`;
-          } else {
-            pokemonExport += `${nickname} (${pokemonName})\n`;
-          }
-        } else {
-          if (heldItem) {
-            pokemonExport += `${pokemonName} @ ${heldItem}\n`;
-          } else {
-            pokemonExport += `${pokemonName}\n`;
-          }
-        }
-
-        // Ability
-        if (ability) {
-          pokemonExport += `Ability: ${ability}\n`;
-        }
-
-        // Tera Type
-        if (teraType) {
-          pokemonExport += `Tera Type: ${teraType}\n`;
-        }
-
-        // EVs
-        if (evStrings.length > 0) {
-          pokemonExport += `EVs: ${evStrings.join(' / ')}\n`;
-        }
-
-        // Nature
-        pokemonExport += `${nature} Nature\n`;
-
-        // Moves
-        if (moves.length > 0) {
-          moves.forEach((move: any) => {
-            const moveName = typeof move === 'string' ? move : move.name;
-            pokemonExport += `- ${formatName(moveName)}\n`;
-          });
-        }
-
-        teamExportData.push(pokemonExport.trim());
+      if (newTeam) {
+        setShowCreateModal(false);
+        setFormData({ name: '', description: '' });
+        teamsLoadedRef.current = false; // Allow reloading teams
+        await fetchTeams(); // Refresh teams list
+        toast.success(`Team "${newTeam.name}" created!`);
       }
-
-      const fullTeamData = `${team.name}\n\n${teamExportData.join('\n\n')}`;
-
-      // Copy to clipboard
-      await navigator.clipboard.writeText(fullTeamData);
-      toast.success(`Team "${team.name}" copied to clipboard!`);
-      
     } catch (error) {
-      console.error('Error exporting team:', error);
-      toast.error('Failed to export team');
+      console.error('Failed to create team:', error);
+      toast.error('Failed to create team');
+    } finally {
+      setCreating(false);
     }
   };
+
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-6">
+      <div className="min-h-screen bg-gray-50 p-6">
         <div className="max-w-4xl mx-auto">
           <div className="text-center py-12">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
@@ -349,155 +90,35 @@ const TeamsContent: React.FC = () => {
 
   if (!user) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-6">
+      <div className="min-h-screen bg-gray-50 p-6">
         <div className="max-w-4xl mx-auto text-center py-12">
-          <h1 className="text-2xl font-bold text-gray-800 mb-4">Teams & Movesets</h1>
-          <p className="text-gray-600">Please sign in to manage your teams and movesets.</p>
+          <h1 className="text-2xl font-bold text-gray-800 mb-4">Teams</h1>
+          <p className="text-gray-600">Please sign in to view your teams.</p>
         </div>
       </div>
     );
   }
 
-  // Show moveset editor if a specific Pokemon is selected
-  if (selectedPokemon && pokemonDetails[selectedPokemon]) {
-    return (
-      <MovesetEditor
-        pokemon={pokemonDetails[selectedPokemon]}
-        teamId={selectedTeam!.id}
-        onBack={handleBackToPokemon}
-      />
-    );
-  }
-
-  // Show team Pokemon if a team is selected
-  if (selectedTeam) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-6">
-        <div className="max-w-4xl mx-auto">
-          {/* Header */}
-          <div className="flex items-center justify-between mb-8">
-            <div className="flex items-center gap-4">
-              <button
-                onClick={handleBackToTeams}
-                className="text-blue-600 hover:text-blue-800 font-medium flex items-center gap-2"
-              >
-                ← Back to Teams
-              </button>
-              <h1 className="text-3xl font-bold text-gray-800">{selectedTeam.name}</h1>
-            </div>
-            <button
-              onClick={() => exportTeam(selectedTeam, teamMembers)}
-              className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors"
-              title="Export team to clipboard"
-            >
-              <Copy size={16} />
-              Export Team
-            </button>
-          </div>
-
-          {/* Team Pokemon Grid */}
-          {teamMembers.length === 0 ? (
-            <div className="text-center py-12">
-              <div className="bg-white rounded-xl p-8 shadow-lg">
-                <Settings className="mx-auto h-16 w-16 text-gray-400 mb-4" />
-                <h3 className="text-xl font-semibold text-gray-800 mb-2">No Pokémon in this team</h3>
-                <p className="text-gray-600">Add Pokémon to this team first to manage their movesets.</p>
-              </div>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {teamMembers.map((member) => {
-                const pokemon = pokemonDetails[member.pokemon_id];
-                if (!pokemon) return null;
-
-                return (
-                  <div
-                    key={member.id}
-                    onClick={() => handlePokemonSelect(member.pokemon_id)}
-                    className="bg-white rounded-xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer border-2 border-transparent hover:border-blue-300"
-                  >
-                    <div className="text-center">
-                      <div className="relative mb-4">
-                        <img
-                          src={getOfficialArtwork(pokemon.sprites)}
-                          alt={formatName(pokemon.name)}
-                          className="w-24 h-24 mx-auto object-contain"
-                          onError={(e) => {
-                            // Fallback to regular sprite if official artwork fails
-                            const target = e.target as HTMLImageElement;
-                            target.src = `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${pokemon.id}.png`;
-                          }}
-                        />
-                        <div className="absolute top-0 right-0 bg-blue-500 text-white text-xs px-2 py-1 rounded-full">
-                          #{pokemon.id}
-                        </div>
-                      </div>
-                      
-                      <h3 className="text-lg font-semibold text-gray-800 mb-2">
-                        {formatName(pokemon.name)}
-                      </h3>
-                      
-                      <div className="flex justify-center gap-1 mb-4">
-                        {pokemon.types.map((type, index) => (
-                          <span
-                            key={index}
-                            className="px-2 py-1 rounded-md text-xs font-medium text-white"
-                            style={{ backgroundColor: `var(--type-${type.type.name})` }}
-                          >
-                            {formatName(type.type.name)}
-                          </span>
-                        ))}
-                      </div>
-
-                      <div className="flex items-center justify-center gap-2 text-sm text-gray-600">
-                        <Sword size={16} />
-                        <span>Position {member.position}</span>
-                        <ChevronRight size={16} className="text-blue-500" />
-                      </div>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          exportSinglePokemon(member.pokemon_id);
-                        }}
-                        className="flex items-center gap-2 bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-md font-medium transition-colors text-sm"
-                        title="Export Pokemon to clipboard"
-                      >
-                        <Copy size={14} />
-                        Export
-                      </button>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
-      </div>
-    );
-  }
 
   // Show teams list
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-6">
+    <div className="min-h-screen bg-gray-50 p-6">
       <div className="max-w-4xl mx-auto">
-        {/* Header */}
         <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-gray-800 mb-4">Teams & Movesets</h1>
-          <p className="text-gray-600 text-lg">Select a team to manage your Pokémon movesets</p>
+          <h1 className="text-4xl font-bold text-gray-800 mb-4">Your Teams</h1>
+          <p className="text-gray-600">Manage your Pokemon teams</p>
         </div>
 
-        {/* Teams Grid */}
         {!teams || teams.length === 0 ? (
           <div className="text-center py-12">
-            <div className="bg-white rounded-xl p-8 shadow-lg">
-              <Shield className="mx-auto h-16 w-16 text-gray-400 mb-4" />
-              <h3 className="text-xl font-semibold text-gray-800 mb-2">No teams found</h3>
-              <p className="text-gray-600 mb-4">Create your first team to start managing movesets.</p>
+            <div className="bg-white rounded-lg p-8 shadow-md">
+              <h3 className="text-xl font-semibold text-gray-800 mb-2">No teams yet</h3>
+              <p className="text-gray-600 mb-4">Create your first team to get started.</p>
               <button
-                onClick={() => window.location.href = '/profile'}
-                className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium transition-colors"
+                onClick={() => setShowCreateModal(true)}
+                className="bg-blue-500 hover:bg-blue-600 text-white px-6 py-3 rounded font-medium"
               >
-                Go to Profile to Create Teams
+                Create Team
               </button>
             </div>
           </div>
@@ -506,74 +127,115 @@ const TeamsContent: React.FC = () => {
             {teams.map((team) => (
               <div
                 key={team.id}
-                className="bg-white rounded-xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 border-2 border-transparent hover:border-blue-300 group relative"
+                className="bg-white rounded-lg p-6 shadow-md hover:shadow-lg transition-shadow cursor-pointer"
+                onClick={() => handleTeamSelect(team)}
               >
-                <div
-                  onClick={() => handleTeamSelect(team)}
-                  className="cursor-pointer"
-                >
-                  <div className="flex items-center justify-between mb-4">
+                <div className="flex justify-between items-start mb-4">
+                  <div>
                     <h3 className="text-xl font-bold text-gray-800">{team.name}</h3>
-                    <ChevronRight size={20} className="text-blue-500 group-hover:translate-x-1 transition-transform" />
+                    {team.description && (
+                      <p className="text-gray-600 mt-1">{team.description}</p>
+                    )}
                   </div>
-                  
-                  {team.description && (
-                    <p className="text-gray-600 mb-4 line-clamp-2">{team.description}</p>
-                  )}
-                  
-                  <div className="flex items-center gap-2 text-sm text-gray-500 mb-4">
-                    <Settings size={16} />
-                    <span>Manage movesets</span>
-                  </div>
+                  <ChevronRight className="text-blue-500" />
                 </div>
-                
-                <div className="flex gap-2">
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      exportTeam(team, []);
-                    }}
-                    className="flex items-center gap-2 bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-md font-medium transition-colors text-sm"
-                    title="Export team to clipboard"
-                  >
-                    <Copy size={14} />
-                    Export
-                  </button>
+
+                <div className="text-sm text-gray-500">
+                  Created {new Date(team.created_at).toLocaleDateString()}
                 </div>
               </div>
             ))}
+
+            {/* Create new team card */}
+            <div
+              onClick={() => setShowCreateModal(true)}
+              className="bg-gray-100 rounded-lg p-6 border-2 border-dashed border-gray-300 hover:border-blue-400 transition-colors cursor-pointer"
+            >
+              <div className="text-center">
+                <Plus className="w-12 h-12 text-gray-400 mx-auto mb-2" />
+                <h3 className="text-lg font-semibold text-gray-700 mb-1">Create New Team</h3>
+                <p className="text-gray-500">Add a new team to organize your Pokemon</p>
+              </div>
+            </div>
           </div>
         )}
       </div>
-    </div>
-  );
-};
 
-// Error boundary wrapper for Teams component
-const Teams: React.FC = () => {
-  try {
-    return <TeamsContent />;
-  } catch (error) {
-    console.error('Teams component error:', error);
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-6">
-        <div className="max-w-4xl mx-auto">
-          <div className="text-center py-12">
-            <h1 className="text-2xl font-bold text-red-600 mb-4">Something went wrong</h1>
-            <p className="text-gray-600 mb-4">
-              Error: {error instanceof Error ? error.message : 'Unknown error occurred'}
-            </p>
-            <button
-              onClick={() => window.location.reload()}
-              className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded transition-colors"
-            >
-              Refresh Page
-            </button>
+      {/* Create Team Modal */}
+      {showCreateModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
+            <div className="flex items-center justify-between p-6 border-b">
+              <h2 className="text-xl font-bold text-gray-900">Create New Team</h2>
+              <button
+                onClick={() => !creating && (setShowCreateModal(false), setFormData({ name: '', description: '' }))}
+                disabled={creating}
+                className="text-gray-400 hover:text-gray-600 disabled:opacity-50"
+              >
+                <X size={24} />
+              </button>
+            </div>
+
+            <form onSubmit={handleCreateTeam} className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Team Name <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={formData.name}
+                  onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                  className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="Enter team name"
+                  disabled={creating}
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Description <span className="text-gray-500">(optional)</span>
+                </label>
+                <textarea
+                  value={formData.description}
+                  onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+                  className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
+                  placeholder="Describe your team..."
+                  rows={3}
+                  disabled={creating}
+                />
+              </div>
+
+              <div className="flex gap-3 pt-4">
+                <button
+                  type="button"
+                  onClick={() => !creating && (setShowCreateModal(false), setFormData({ name: '', description: '' }))}
+                  disabled={creating}
+                  className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 py-3 px-4 rounded-md font-medium disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={creating || !formData.name.trim()}
+                  className="flex-1 bg-blue-500 hover:bg-blue-600 text-white py-3 px-4 rounded-md font-medium disabled:opacity-50 flex items-center justify-center"
+                >
+                  {creating ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                      Creating...
+                    </>
+                  ) : (
+                    'Create Team'
+                  )}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
-      </div>
-    );
-  }
+      )}
+    </div>
+  );
 };
 
 export default Teams;

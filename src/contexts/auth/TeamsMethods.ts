@@ -319,7 +319,7 @@ export const TeamsMethods = ({
         .single();
 
       if (teamError || !teamData) {
-        toast.error('Team not found or you don\'t have permission to view it');
+        console.error('Team not found or permission denied:', teamError);
         return [];
       }
 
@@ -330,13 +330,13 @@ export const TeamsMethods = ({
         .order('position', { ascending: true });
 
       if (error) {
-        toast.error('Failed to fetch team members');
+        console.error('Failed to fetch team members:', error);
         return [];
       }
 
       return data as TeamMember[];
     } catch (err) {
-      toast.error('Failed to fetch team members');
+      console.error('Failed to fetch team members:', err);
       return [];
     }
   };

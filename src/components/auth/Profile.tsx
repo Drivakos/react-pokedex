@@ -1,78 +1,40 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
-import { supabase } from '../../lib/supabase';
 
 const Profile: React.FC = () => {
-  const { user, profile, signOut, updateProfile } = useAuth();
-  const [username, setUsername] = useState(profile?.username || '');
-  const [loading, setLoading] = useState(false);
-  const [fetchingFavorites, setFetchingFavorites] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [message, setMessage] = useState<string | null>(null);
-  const [favorites, setFavorites] = useState<number[]>([]);
+  const { user, profile, signOut, updateProfile, teams, favorites } = useAuth();
+  const [status, setStatus] = useState<{ type: 'success' | 'error' | null; message: string }>({ type: null, message: '' });
+
+  // No loading states needed - data is already available from useAuth
   const navigate = useNavigate();
 
-  const fetchFavorites = useCallback(async () => {
-    if (!user?.id) {
-      setFetchingFavorites(false);
-      return;
-    }
+  // Simple data access - no complex memoization needed
+  const favoritePokemonIds = user?.id ? (favorites ?? []).map(f => f.pokemon_id) : [];
+  const userTeams = user?.id ? (teams ?? []) : [];
 
-    try {
-      setFetchingFavorites(true);
-      const { data, error } = await supabase
-        .from('favorites')
-        .select('pokemon_id')
-        .eq('user_id', user.id);
-        
-      if (error) {
-        setError(error.message || 'Failed to fetch favorites');
-        setFetchingFavorites(false);
-        return;
-      }
-      
-      if (data) {
-        setFavorites(data.map(item => item.pokemon_id));
-      }
-    } catch (error: any) {
-      setError((error as Error).message || 'Failed to fetch favorites');
-    } finally {
-      setFetchingFavorites(false);
-    }
-  }, [user?.id]);
+  // Controlled form with local state for editing (React best practice)
+  const [formData, setFormData] = useState({ username: profile?.username || '' });
 
+  // Update local state when profile changes
   useEffect(() => {
-    if (user?.id && !loading) {
-      fetchFavorites();
-    } else if (!user?.id) {
-      setFetchingFavorites(false);
-    }
-  }, [user?.id, fetchFavorites, loading]);
+      if (profile && profile.username !== formData.username) {
+        setFormData({ username: profile.username ?? '' });
+      }
+    }, [profile?.username]);
 
-  useEffect(() => {
-    setUsername(profile?.username || '');
-  }, [profile?.username]);
-
-  const handleUpdateProfile = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    try {
-      setLoading(true);
-      setError(null);
-      setMessage(null);
-      
-      const { error: updateError } = await updateProfile({ username });
-      
-      if (updateError) {
-        throw updateError;
-      }
 
-      setMessage('Profile updated successfully!');
+    try {
+      setStatus({ type: null, message: '' });
+
+      const { error } = await updateProfile({ username: formData.username });
+      if (error) throw error;
+
+      setStatus({ type: 'success', message: 'Profile updated successfully!' });
     } catch (error: any) {
-      setError((error as Error).message || 'Failed to update profile');
-    } finally {
-      setLoading(false);
+      setStatus({ type: 'error', message: error.message || 'Failed to update profile' });
     }
   };
 
@@ -81,7 +43,7 @@ const Profile: React.FC = () => {
       await signOut();
       navigate('/');
     } catch (error: any) {
-      setError((error as Error).message || 'Failed to sign out');
+      setStatus({ type: 'error', message: error.message || 'Failed to sign out' });
     }
   };
 
@@ -101,176 +63,175 @@ const Profile: React.FC = () => {
     );
   }
 
+  // Status notification component
+  const StatusMessage = () => {
+    if (!status.type) return null;
+
+    const isError = status.type === 'error';
+    return (
+      <div className={`p-4 mb-6 rounded-md ${isError ? 'bg-red-50 border-red-200' : 'bg-green-50 border-green-200'}`}>
+        <p className={`text-sm ${isError ? 'text-red-700' : 'text-green-700'}`}>
+          {status.message}
+        </p>
+      </div>
+    );
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-3xl mx-auto">
-        <div className="bg-white shadow-md rounded-lg overflow-hidden">
-          <div className="px-6 py-8">
-            <div className="flex items-center justify-between mb-8">
-              <h2 className="text-2xl font-bold text-gray-900">Your Profile</h2>
-              <button
-                onClick={handleSignOut}
-                className="text-red-500 hover:text-red-700 font-medium"
-              >
-                Sign Out
+      <div className="max-w-4xl mx-auto space-y-6">
+
+        {/* Profile Card */}
+        <div className="bg-white rounded-lg shadow-md p-6">
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="text-2xl font-bold text-gray-900">Your Profile</h2>
+            <button onClick={handleSignOut} className="text-red-500 hover:text-red-700 font-medium">
+              Sign Out
+            </button>
+          </div>
+
+          <StatusMessage />
+
+          <div className="grid md:grid-cols-3 gap-8">
+            {/* Avatar Section */}
+            <div className="text-center">
+              <div className="w-32 h-32 mx-auto mb-4 rounded-full overflow-hidden bg-gray-100">
+                {profile?.avatar_url ? (
+                  <img src={profile.avatar_url} alt="Profile" className="w-full h-full object-cover" />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center bg-blue-50">
+                    <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/25.png" alt="Pokemon" className="w-20 h-20" />
+                  </div>
+                )}
+              </div>
+              <h3 className="text-xl font-semibold">{profile?.username || 'Trainer'}</h3>
+              <p className="text-gray-500 text-sm">{user.email}</p>
+            </div>
+
+            {/* Profile Form */}
+            <div className="md:col-span-2">
+              <form onSubmit={handleSubmit}>
+                <div className="mb-4">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Username</label>
+                  <input
+                    type="text"
+                    value={formData.username}
+                    onChange={(e) => setFormData({ username: e.target.value })}
+                    className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  />
+                </div>
+                <button
+                  type="submit"
+                  disabled={false}
+                  className="w-full bg-blue-500 hover:bg-blue-600 text-white py-3 px-4 rounded-md font-medium disabled:opacity-50"
+                >
+                  Update Profile
+                </button>
+              </form>
+            </div>
+          </div>
+        </div>
+        
+        {/* Favorites Section */}
+        <div className="bg-white rounded-lg shadow-md p-6">
+          <h2 className="text-2xl font-bold text-gray-900 mb-6">Your Favorite Pokémon</h2>
+
+          {favoritePokemonIds.length === 0 ? (
+            <div className="text-center py-8">
+              <p className="text-gray-500 mb-4">No favorites yet</p>
+              <button onClick={() => navigate('/')} className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded">
+                Browse Pokémon
               </button>
             </div>
-            
-            {error && (
-              <div className="bg-red-50 border-l-4 border-red-500 p-4 mb-6">
-                <div className="flex">
-                  <div className="flex-shrink-0">
-                    <svg className="h-5 w-5 text-red-500" viewBox="0 0 20 20" fill="currentColor">
-                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-                    </svg>
-                  </div>
-                  <div className="ml-3">
-                    <p className="text-sm text-red-700">{error}</p>
-                  </div>
+          ) : (
+            <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-4">
+              {favoritePokemonIds.map((pokemonId) => (
+                <div
+                  key={pokemonId}
+                  onClick={() => navigate(`/pokemon/${pokemonId}`)}
+                  className="bg-gray-50 rounded-lg p-4 text-center cursor-pointer hover:bg-gray-100 transition-colors"
+                >
+                  <img
+                    src={`https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${pokemonId}.png`}
+                    alt={`Pokemon ${pokemonId}`}
+                    className="w-16 h-16 mx-auto mb-2"
+                  />
+                  <p className="text-sm font-medium">#{pokemonId}</p>
                 </div>
-              </div>
-            )}
-            
-            {message && (
-              <div className="bg-green-50 border-l-4 border-green-500 p-4 mb-6">
-                <div className="flex">
-                  <div className="flex-shrink-0">
-                    <svg className="h-5 w-5 text-green-500" viewBox="0 0 20 20" fill="currentColor">
-                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                    </svg>
-                  </div>
-                  <div className="ml-3">
-                    <p className="text-sm text-green-700">{message}</p>
-                  </div>
-                </div>
-              </div>
-            )}
-            
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-              <div className="md:col-span-1">
-                <div className="flex flex-col items-center">
-                  <div className="w-32 h-32 rounded-full overflow-hidden bg-gray-100 mb-4">
-                    {profile?.avatar_url ? (
-                      <img 
-                        src={profile.avatar_url} 
-                        alt={profile.username || 'User avatar'} 
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center bg-blue-50">
-                        <img 
-                          src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/65.png"
-                          alt="Pokemon Trainer Avatar"
-                          className="w-24 h-24 object-contain"
-                        />
-                      </div>
-                    )}
-                  </div>
-                  
-                  <div className="text-center">
-                    <p className="text-xl font-semibold text-gray-900">{profile?.username || 'User'}</p>
-                    <p className="text-gray-500">{user.email}</p>
-                  </div>
-                </div>
-              </div>
-              
-              <div className="md:col-span-2">
-                <form onSubmit={handleUpdateProfile}>
-                  <div className="mb-6">
-                    <label htmlFor="username" className="block text-sm font-medium text-gray-700 mb-1">
-                      Username
-                    </label>
-                    <input
-                      type="text"
-                      id="username"
-                      value={username}
-                      onChange={(e) => setUsername(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                      disabled={loading}
-                    />
-                  </div>
-                  
-                  <div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Teams Section */}
+        <div className="bg-white rounded-lg shadow-md p-6">
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="text-2xl font-bold text-gray-900">Your Pokémon Teams</h2>
+            <button onClick={() => navigate('/teams')} className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded">
+              Manage Teams
+            </button>
+          </div>
+
+          {userTeams.length === 0 ? (
+            <div className="text-center py-8">
+              <p className="text-gray-500 mb-4">You haven't created any teams yet.</p>
+              <button onClick={() => navigate('/teams')} className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded">
+                Create Your First Team
+              </button>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {userTeams.slice(0, 3).map((team: { id: number; name: string; description?: string; created_at: string }) => (
+                <div key={team.id} className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 transition-colors">
+                  <div className="flex justify-between items-start mb-3">
+                    <div>
+                      <h3 className="font-semibold text-gray-900">{team.name}</h3>
+                      {team.description && (
+                        <p className="text-sm text-gray-600 mt-1">{team.description}</p>
+                      )}
+                    </div>
                     <button
-                      type="submit"
-                      disabled={loading}
-                      className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
+                      onClick={() => navigate(`/team-editor/${team.id}`)}
+                      className="text-blue-500 hover:text-blue-600 text-sm font-medium"
                     >
-                      {loading ? 'Updating...' : 'Update Profile'}
+                      View Team →
                     </button>
                   </div>
-                </form>
-              </div>
-            </div>
-          </div>
-        </div>
-        
-        <div className="mt-8 bg-white shadow-md rounded-lg overflow-hidden">
-          <div className="px-6 py-8">
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-2xl font-bold text-gray-900">Your Favorite Pokémon</h2>
-            </div>
-            
-            {fetchingFavorites ? (
-              <div className="text-center py-8">
-                <p className="text-gray-500 mb-4">Loading your favorites...</p>
-              </div>
-            ) : favorites.length === 0 ? (
-              <div className="text-center py-8">
-                <p className="text-gray-500 mb-4">You haven't added any Pokémon to your favorites yet.</p>
-                <button
-                  onClick={() => navigate('/')}
-                  className="bg-blue-500 hover:bg-blue-600 text-white font-medium py-2 px-4 rounded-md"
-                >
-                  Browse Pokémon
-                </button>
-              </div>
-            ) : (
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
-                {favorites.map((pokemonId) => (
-                  <div 
-                    key={pokemonId}
-                    onClick={() => navigate(`/pokemon/${pokemonId}`)}
-                    className="bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow p-4 flex flex-col items-center cursor-pointer"
-                  >
-                    <div className="w-20 h-20 flex items-center justify-center">
-                      <img 
-                        src={`https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${pokemonId}.png`}
-                        alt={`Pokémon #${pokemonId}`}
-                        className="w-full h-full object-contain"
-                      />
-                    </div>
-                    <div className="mt-2 text-center">
-                      <p className="text-sm font-medium text-gray-900">#{pokemonId}</p>
-                    </div>
+
+                  {/* Team preview - show Pokemon in team */}
+                  <div className="flex gap-2">
+                    {[1, 2, 3, 4, 5, 6].map((position) => {
+                      return (
+                        <div
+                          key={position}
+                          className="w-10 h-10 bg-gray-100 rounded border-2 border-gray-200 flex items-center justify-center overflow-hidden"
+                          title={`Position ${position}: Empty`}
+                        >
+                          <span className="text-xs text-gray-400">{position}</span>
+                        </div>
+                      );
+                    })}
                   </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-        
-        <div className="mt-8 bg-white shadow-md rounded-lg overflow-hidden">
-          <div className="px-6 py-8">
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-2xl font-bold text-gray-900">Your Pokémon Teams</h2>
-              <button
-                onClick={() => navigate('/teams')}
-                className="bg-blue-500 hover:bg-blue-600 text-white font-medium py-2 px-4 rounded-md flex items-center"
-              >
-                Manage Teams
-              </button>
+
+                  <div className="mt-2 flex justify-between items-center text-xs text-gray-500">
+                    <span>Team Preview</span>
+                    <span>Created {new Date(team.created_at).toLocaleDateString()}</span>
+                  </div>
+                </div>
+              ))}
+
+              {userTeams.length > 3 && (
+                <div className="text-center pt-4 border-t border-gray-200">
+                  <button
+                    onClick={() => navigate('/teams')}
+                    className="text-blue-500 hover:text-blue-600 font-medium"
+                  >
+                    View all {userTeams.length} teams →
+                  </button>
+                </div>
+              )}
             </div>
-            <p className="text-gray-600 mb-4">Create and manage your Pokémon teams to build the perfect lineup.</p>
-            <div className="flex justify-center">
-              <button
-                onClick={() => navigate('/teams')}
-                className="bg-gray-100 hover:bg-gray-200 text-gray-800 font-medium py-3 px-6 rounded-md flex items-center justify-center w-full max-w-md"
-              >
-                Go to Team Builder
-              </button>
-            </div>
-          </div>
+          )}
         </div>
       </div>
     </div>

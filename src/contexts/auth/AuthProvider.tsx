@@ -1,4 +1,4 @@
-import React, { useState, useEffect, createContext, useContext } from 'react';
+import React, { useState, useEffect, createContext, useContext, useMemo, useCallback } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase, Profile, Favorite } from '../../lib/supabase';
 import toast from 'react-hot-toast';
@@ -16,6 +16,7 @@ export interface AuthContextType extends
   session: Session | null;
   user: User | null;
   profile: Profile | null;
+  favorites: Favorite[];
   loading: boolean;
 }
 
@@ -38,39 +39,40 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [favorites, setFavorites] = useState<Favorite[]>([]);
   const [teams, setTeams] = useState<any[]>([]);
   
-  const profileMethods = ProfileMethods({
+  // Memoize all methods for stable references
+  const profileMethods = useMemo(() => ProfileMethods({
     user,
     refreshSession,
     setProfile
-  });
-  
+  }), [user, refreshSession, setProfile]);
+
   const { createProfile, refreshProfile } = profileMethods;
-  
-  const favoritesMethods = FavoritesMethods({
+
+  const favoritesMethods = useMemo(() => FavoritesMethods({
     user,
     refreshSession,
     favorites,
     setFavorites
-  });
-  
+  }), [user, refreshSession, favorites, setFavorites]);
+
   const { fetchFavorites } = favoritesMethods;
   
-  // Ensure methods are properly initialized with correct context
-  const teamsMethods = TeamsMethods({
+  // Memoize methods to ensure stable references (React best practice)
+  const teamsMethods = useMemo(() => TeamsMethods({
     user,
     refreshSession,
     teams,
     setTeams
-  });
-  
-  // Explicitly bind team methods to prevent context loss
-  const addPokemonToTeam = teamsMethods.addPokemonToTeam;
-  const removePokemonFromTeam = teamsMethods.removePokemonFromTeam;
-  const getTeamMembers = teamsMethods.getTeamMembers;
-  const fetchTeams = teamsMethods.fetchTeams;
-  const createTeam = teamsMethods.createTeam;
-  const updateTeam = teamsMethods.updateTeam;
-  const deleteTeam = teamsMethods.deleteTeam;
+  }), [user, refreshSession, teams, setTeams]);
+
+  // Use callback to ensure stable references
+  const addPokemonToTeam = useCallback(teamsMethods.addPokemonToTeam, [teamsMethods]);
+  const removePokemonFromTeam = useCallback(teamsMethods.removePokemonFromTeam, [teamsMethods]);
+  const getTeamMembers = useCallback(teamsMethods.getTeamMembers, [teamsMethods]);
+  const fetchTeams = useCallback(teamsMethods.fetchTeams, [teamsMethods]);
+  const createTeam = useCallback(teamsMethods.createTeam, [teamsMethods]);
+  const updateTeam = useCallback(teamsMethods.updateTeam, [teamsMethods]);
+  const deleteTeam = useCallback(teamsMethods.deleteTeam, [teamsMethods]);
   
   const resetAuthState = () => {
     setSession(null);
@@ -80,26 +82,53 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setTeams([]);
   };
   
-  const initProfile = async (userId: string) => {
+  const initProfile = useCallback(async (userId: string) => {
     try {
       await createProfile(userId);
       await refreshProfile(userId);
-      await fetchFavorites();
-      await teamsMethods.fetchTeams();
+
+      // Fetch favorites directly
+      const { data: favoritesData, error: favoritesError } = await supabase
+        .from('favorites')
+        .select('*')
+        .eq('user_id', userId);
+
+      if (!favoritesError && favoritesData) {
+        setFavorites(favoritesData);
+      }
+
+      // Fetch teams directly
+      const { data: teamsData, error: teamsError } = await supabase
+        .from('teams')
+        .select('*')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false });
+
+      if (!teamsError && teamsData) {
+        setTeams(teamsData);
+      }
     } catch (error) {
       console.error("Profile initialization error:", error);
     }
-  };
+  }, [createProfile, refreshProfile]);
   
-  const authMethods = AuthMethods({ 
-    setSession, 
-    setUser, 
+  const authMethods = useMemo(() => AuthMethods({
+    setSession,
+    setUser,
     resetAuthState,
     createProfile,
     refreshProfile,
     fetchFavorites,
     fetchTeams: teamsMethods.fetchTeams
-  });
+  }), [
+    setSession,
+    setUser,
+    resetAuthState,
+    createProfile,
+    refreshProfile,
+    fetchFavorites,
+    teamsMethods.fetchTeams
+  ]);
 
   useEffect(() => {
     const initAuth = async () => {
@@ -194,11 +223,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
   }, [user]);
   
-  const value = {
+  // Memoize context value to prevent unnecessary re-renders (React best practice)
+  const value = useMemo(() => ({
     session,
     user,
     profile,
     loading,
+    favorites,
     teams,
     // Use locally bound function references
     fetchTeams,
@@ -211,7 +242,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     ...authMethods,
     ...profileMethods,
     ...favoritesMethods
-  };
+  }), [
+    session,
+    user,
+    profile,
+    loading,
+    favorites,
+    teams,
+    fetchTeams,
+    createTeam,
+    updateTeam,
+    deleteTeam,
+    addPokemonToTeam,
+    removePokemonFromTeam,
+    getTeamMembers
+  ]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
