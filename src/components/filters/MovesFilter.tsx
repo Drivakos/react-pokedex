@@ -1,4 +1,4 @@
-import React, { memo } from 'react';
+import React, { memo, useMemo } from 'react';
 import { Search } from 'lucide-react';
 
 // Helper function to format move names
@@ -24,14 +24,20 @@ export const MovesFilter: React.FC<MovesFilterProps> = memo(({
   onSearchChange,
   onMoveToggle
 }) => {
-  // Filter moves based on search term
-  const filteredMoves = availableMoves
-    .filter(move => {
-      const formattedMove = move.toLowerCase().replace(/-/g, ' ');
-      const search = searchTerm.toLowerCase();
-      return formattedMove.includes(search) || move.toLowerCase().includes(search);
-    })
-    .slice(0, 20);
+  // Memoize filtered moves for better performance
+  const filteredMoves = useMemo(() => {
+    if (!searchTerm) {
+      return availableMoves.slice(0, 20);
+    }
+
+    const search = searchTerm.toLowerCase();
+    return availableMoves
+      .filter(move => {
+        const formattedMove = move.toLowerCase().replace(/-/g, ' ');
+        return formattedMove.includes(search) || move.toLowerCase().includes(search);
+      })
+      .slice(0, 20);
+  }, [availableMoves, searchTerm]);
 
   return (
     <div className="space-y-4">

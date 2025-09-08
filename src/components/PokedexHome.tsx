@@ -51,8 +51,8 @@ const PokedexHome: React.FC = () => {
     }
   };
 
-  // Calculate total active filters for display
-  const getTotalFiltersCount = () => {
+  // Calculate total active filters for display - memoized for performance
+  const totalFiltersCount = React.useMemo(() => {
     let count = 0;
     count += filters.types.length;
     count += filters.moves.length;
@@ -61,7 +61,7 @@ const PokedexHome: React.FC = () => {
     if (filters.height.min > 0 || (filters.height.max > 0 && filters.height.max < 100)) count++;
     if (filters.hasEvolutions !== null) count++;
     return count;
-  };
+  }, [filters]);
   
   const resetFilters = () => {
     handleFilterChange({
@@ -122,7 +122,7 @@ const PokedexHome: React.FC = () => {
               onChange={setSearchTerm}
               isSearching={isSearching}
               onToggleFilters={() => setShowDesktopFilters(!showDesktopFilters)}
-              filterCount={getTotalFiltersCount()}
+              filterCount={totalFiltersCount}
               showFilterButton={false}
             />
           </div>
@@ -130,18 +130,18 @@ const PokedexHome: React.FC = () => {
           <div className="flex items-center justify-end md:w-1/5 md:h-12">
             <button
               onClick={() => setShowDesktopFilters(!showDesktopFilters)}
-              className={`hidden md:flex items-center gap-2 px-5 py-3 rounded-md text-base font-semibold shadow-md transition-colors duration-200 ${getTotalFiltersCount() > 0 ? 'bg-blue-600 text-white hover:bg-blue-700' : 'bg-blue-500 text-white hover:bg-blue-600'}`} data-component-name="PokedexHome"
+              className={`hidden md:flex items-center gap-2 px-5 py-3 rounded-md text-base font-semibold shadow-md transition-colors duration-200 ${totalFiltersCount > 0 ? 'bg-blue-600 text-white hover:bg-blue-700' : 'bg-blue-500 text-white hover:bg-blue-600'}`} data-component-name="PokedexHome"
             >
               <SlidersHorizontal size={16} />
               <span>Filters</span>
-              {getTotalFiltersCount() > 0 && (
+              {totalFiltersCount > 0 && (
                 <span className="bg-white text-blue-500 px-1.5 py-0.5 rounded-full text-xs font-bold ml-1">
-                  {getTotalFiltersCount()}
+                  {totalFiltersCount}
                 </span>
               )}
             </button>
             
-            {getTotalFiltersCount() > 0 && (
+            {totalFiltersCount > 0 && (
               <button
                 onClick={resetFilters}
                 className="hidden md:flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors duration-200"
@@ -161,7 +161,7 @@ const PokedexHome: React.FC = () => {
             <div className="bg-white p-4 rounded-lg shadow-sm">
               <div className="flex justify-between items-center mb-4">
                 <h2 className="text-lg font-bold">Filters</h2>
-                {getTotalFiltersCount() > 0 && (
+                {totalFiltersCount > 0 && (
                   <button
                     onClick={resetFilters}
                     className="text-sm text-gray-500 hover:text-gray-700 flex items-center gap-1"
@@ -177,12 +177,7 @@ const PokedexHome: React.FC = () => {
                 setActiveTab={setActiveFilterTab}
                 typeCount={filters.types.length}
                 moveCount={filters.moves.length}
-                otherCount={
-                  (filters.generation ? 1 : 0) +
-                  ((filters.weight.min > 0 || (filters.weight.max > 0 && filters.weight.max < 1000)) ? 1 : 0) +
-                  ((filters.height.min > 0 || (filters.height.max > 0 && filters.height.max < 100)) ? 1 : 0) +
-                  (filters.hasEvolutions !== null ? 1 : 0)
-                }
+                otherCount={totalFiltersCount - filters.types.length - filters.moves.length}
               />
               
               <div className="mt-4">
@@ -271,12 +266,7 @@ const PokedexHome: React.FC = () => {
               setActiveTab={setActiveFilterTab}
               typeCount={filters.types.length}
               moveCount={filters.moves.length}
-              otherCount={
-                (filters.generation ? 1 : 0) +
-                ((filters.weight.min > 0 || (filters.weight.max > 0 && filters.weight.max < 1000)) ? 1 : 0) +
-                ((filters.height.min > 0 || (filters.height.max > 0 && filters.height.max < 100)) ? 1 : 0) +
-                (filters.hasEvolutions !== null ? 1 : 0)
-              }
+              otherCount={totalFiltersCount - filters.types.length - filters.moves.length}
             />
             
             <div className="mt-4">
@@ -352,9 +342,9 @@ const PokedexHome: React.FC = () => {
         onClick={() => setShowMobileFilters(true)}
         className="fixed bottom-4 right-4 z-20 p-3 bg-blue-500 text-white rounded-full shadow-lg md:hidden flex items-center justify-center">
         <SlidersHorizontal size={24} />
-        {getTotalFiltersCount() > 0 && (
+        {totalFiltersCount > 0 && (
           <span className="absolute -top-2 -right-2 bg-red-500 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold">
-            {getTotalFiltersCount()}
+            {totalFiltersCount}
           </span>
         )}
       </button>

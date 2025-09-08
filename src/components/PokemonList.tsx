@@ -17,35 +17,24 @@ export const PokemonList: React.FC<PokemonListProps> = ({
 }) => {
   return (
     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 mb-8">
-      {pokemon.map((pokemonItem, index) => {
-        // Apply ref to last element for infinite scrolling
-        if (index === pokemon.length - 1) {
-          return (
-            <div key={pokemonItem.id} ref={lastPokemonRef}>
-              <PokemonCard 
-                pokemon={pokemonItem}
-                onClick={() => onSelectPokemon(pokemonItem)}
-              />
-            </div>
-          );
-        } else {
-          return (
-            <div key={pokemonItem.id}>
-              <PokemonCard 
-                pokemon={pokemonItem}
-                onClick={() => onSelectPokemon(pokemonItem)}
-              />
-            </div>
-          );
-        }
-      })}
-      
-      {/* Loading placeholders */}
+      {pokemon.map((pokemonItem, index) => (
+        <div
+          key={pokemonItem.id}
+          ref={index === pokemon.length - 1 ? lastPokemonRef : undefined}
+        >
+          <PokemonCard
+            pokemon={pokemonItem}
+            onClick={() => onSelectPokemon(pokemonItem)}
+          />
+        </div>
+      ))}
+
+      {/* Loading placeholders - show fewer for better performance */}
       {isLoading && (
         <>
-          {[...Array(10)].map((_, i) => (
-            <div 
-              key={`skeleton-${i}`} 
+          {[...Array(5)].map((_, i) => (
+            <div
+              key={`skeleton-${i}`}
               className="bg-gray-100 rounded-lg animate-pulse h-48"
             />
           ))}
