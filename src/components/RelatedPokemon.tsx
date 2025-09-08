@@ -72,8 +72,7 @@ const RelatedPokemon: React.FC<RelatedPokemonProps> = ({
         151: { name: 'mew', types: ['psychic'] }
       };
       
-      // Create a delay to simulate API call
-      await new Promise(resolve => setTimeout(resolve, 500));
+      // No delay needed - using local data
       
       const mockPokemon: Pokemon[] = [];
       

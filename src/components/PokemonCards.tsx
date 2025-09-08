@@ -336,7 +336,7 @@ const PokemonCards: React.FC<PokemonCardsProps> = ({ pokemonName, pokemonId }) =
         query = `nationalPokedexNumbers:${pokemonId}`;
       }
 
-      const apiUrl = `https://api.pokemontcg.io/v2/cards?q=${query}&orderBy=set.releaseDate&page=${page}&pageSize=20`;
+      const apiUrl = `https://api.pokemontcg.io/v2/cards?q=${query}&orderBy=set.releaseDate&page=${page}&pageSize=12`;
 
       const response = await fetch(apiUrl, {
         headers: { 'X-Api-Key': POKEMONTCG_API_KEY || '' }
@@ -356,7 +356,7 @@ const PokemonCards: React.FC<PokemonCardsProps> = ({ pokemonName, pokemonId }) =
       }
 
       // Check if there are more pages (API returns totalCount)
-      setHasMore(data.totalCount > (page * 20));
+      setHasMore(data.totalCount > (page * 12));
 
     } catch (err: any) {
       setError('Failed to load Pokémon cards. Please try again later.');

@@ -308,7 +308,7 @@ export const transformSinglePokemon = (p: RawPokemonData): Pokemon => {
 };
 
 /**
- * Fetches detailed Pokemon data from the REST API
+ * Fetches detailed Pokemon data from GraphQL API (simplified, single call)
  */
 export const fetchPokemonDetails = async (id: number): Promise<PokemonDetails> => {
   // Try cached version first if enabled
@@ -320,139 +320,178 @@ export const fetchPokemonDetails = async (id: number): Promise<PokemonDetails> =
     }
   }
 
-  // Fallback to direct API call
+  // Use GraphQL for single API call instead of multiple REST calls
   try {
-    // Fetch basic Pokemon data
-    const pokemonResponse = await fetch(`${REST_ENDPOINT}/pokemon/${id}`);
-    const pokemonData = await pokemonResponse.json();
-    
-    // Fetch species data for evolution chain and flavor text
-    const speciesResponse = await fetch(`${REST_ENDPOINT}/pokemon-species/${id}`);
-    const speciesData = await speciesResponse.json();
-    
-    // Fetch evolution chain data
-    let evolutionData = null;
-    if (speciesData.evolution_chain?.url) {
-      const evolutionResponse = await fetch(speciesData.evolution_chain.url);
-      evolutionData = await evolutionResponse.json();
+    const query = `
+      query GetPokemonDetails($id: Int!) {
+        pokemon_v2_pokemon_by_pk(id: $id) {
+          id
+          name
+          height
+          weight
+          base_experience
+          types: pokemon_v2_pokemontypes {
+            type: pokemon_v2_type {
+              name
+            }
+          }
+          abilities: pokemon_v2_pokemonabilities {
+            ability: pokemon_v2_ability {
+              name
+              pokemon_v2_abilityflavortexts(where: { pokemon_v2_language: { name: { _eq: "en" } } }) {
+                flavor_text
+              }
+            }
+            is_hidden
+          }
+          moves: pokemon_v2_pokemonmoves(where: { pokemon_v2_versiongroup: { name: { _eq: "red-blue" } } }) {
+            move: pokemon_v2_move {
+              name
+            }
+            level
+            pokemon_v2_movelearnmethod {
+              name
+            }
+          }
+          stats: pokemon_v2_pokemonstats {
+            base_stat
+            pokemon_v2_stat {
+              name
+            }
+          }
+          sprites: pokemon_v2_pokemonsprites {
+            data: sprites
+          }
+          species: pokemon_v2_pokemonspecy {
+            flavor_text: pokemon_v2_pokemonspeciesflavortexts(where: { pokemon_v2_language: { name: { _eq: "en" } } }, limit: 1) {
+              flavor_text
+            }
+            genera: pokemon_v2_pokemonspeciesnames(where: { pokemon_v2_language: { name: { _eq: "en" } } }) {
+              genus
+            }
+            generation: pokemon_v2_generation {
+              name
+            }
+            evolution_chain: pokemon_v2_evolutionchain {
+              pokemon_v2_pokemonspecies {
+                id
+                name
+                pokemon_v2_pokemonspeciesnames(where: { pokemon_v2_language: { name: { _eq: "en" } } }) {
+                  name
+                }
+                pokemon_v2_pokemonevolutions {
+                  min_level
+                  pokemon_v2_item {
+                    name
+                  }
+                  pokemon_v2_evolutiontrigger {
+                    name
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    `;
+
+    const response = await fetch(GRAPHQL_ENDPOINT, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ query, variables: { id } }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! Status: ${response.status}`);
     }
-    
-    // Extract English flavor text
-    const englishFlavorText = speciesData.flavor_text_entries
-      .find((entry: any) => entry.language.name === 'en')?.flavor_text
-      .replace(/\f/g, ' ')
-      .replace(/\n/g, ' ') || '';
-    
-    // Format stats
-    const stats = pokemonData.stats.reduce((acc: any, stat: any) => {
-      const statName = stat.stat.name.replace('-', '_');
+
+    const result = await response.json();
+
+    if (result.errors) {
+      throw new Error(result.errors[0].message);
+    }
+
+    const pokemon = result.data.pokemon_v2_pokemon_by_pk;
+
+    if (!pokemon) {
+      throw new Error(`Pokemon with ID ${id} not found`);
+    }
+
+    // Transform GraphQL data to our format
+    const stats = pokemon.stats.reduce((acc: any, stat: any) => {
+      const statName = stat.pokemon_v2_stat.name.replace('-', '_');
       acc[statName] = stat.base_stat;
       return acc;
     }, {});
-    
-    // Fetch abilities with descriptions
-    const abilitiesPromises = pokemonData.abilities.map(async (ability: any) => {
-      const abilityResponse = await fetch(`${REST_ENDPOINT}/ability/${ability.ability.name}`);
-      const abilityData = await abilityResponse.json();
-      
-      // Find English description
-      const englishEntry = abilityData.flavor_text_entries.find(
-        (entry: any) => entry.language.name === 'en'
-      );
-      
-      return {
-        name: ability.ability.name.replace('-', ' '),
-        is_hidden: ability.is_hidden,
-        description: englishEntry ? englishEntry.flavor_text : 'No description available.'
-      };
-    });
-    
-    const abilities = await Promise.all(abilitiesPromises);
-    
-    // Process evolution chain with species IDs
+
+    const abilities = pokemon.abilities.map((ability: any) => ({
+      name: ability.ability.name.replace('-', ' '),
+      is_hidden: ability.is_hidden,
+      description: ability.ability.pokemon_v2_abilityflavortexts?.[0]?.flavor_text || 'No description available.'
+    }));
+
+    const moves = pokemon.moves.map((move: any) => ({
+      name: move.move.name,
+      learned_at_level: move.level || 0,
+      learn_method: move.pokemon_v2_movelearnmethod?.name || 'unknown'
+    }));
+
+    // Process evolution chain
     const evolutions = [];
-    if (evolutionData) {
-      const evoData = evolutionData.chain;
-      
-      // Fetch species data for the base form
-      const baseSpeciesResponse = await fetch(`${REST_ENDPOINT}/pokemon-species/${evoData.species.name}`);
-      const baseSpeciesData = await baseSpeciesResponse.json();
-      
-      const evoDetails = {
-        species_name: evoData.species.name,
-        species_id: baseSpeciesData.id,
-        min_level: 1,
-        trigger_name: null,
-        item: null
-      };
-      evolutions.push(evoDetails);
-      
-      // Process first evolution
-      if (evoData.evolves_to.length > 0) {
-        // Use Promise.all to fetch all first evolution species data in parallel
-        const firstEvoPromises = evoData.evolves_to.map(async (evo1: any) => {
-          const speciesResponse = await fetch(`${REST_ENDPOINT}/pokemon-species/${evo1.species.name}`);
-          const speciesData = await speciesResponse.json();
-          
-          const evoDetails = {
-            species_name: evo1.species.name,
-            species_id: speciesData.id,
-            min_level: evo1.evolution_details[0]?.min_level || null,
-            trigger_name: evo1.evolution_details[0]?.trigger?.name || null,
-            item: evo1.evolution_details[0]?.item?.name || null
-          };
-          evolutions.push(evoDetails);
-          
-          // Process second evolution
-          if (evo1.evolves_to.length > 0) {
-            // Use Promise.all to fetch all second evolution species data in parallel
-            const secondEvoPromises = evo1.evolves_to.map(async (evo2: any) => {
-              const speciesResponse = await fetch(`${REST_ENDPOINT}/pokemon-species/${evo2.species.name}`);
-              const speciesData = await speciesResponse.json();
-              
-              const evoDetails = {
-                species_name: evo2.species.name,
-                species_id: speciesData.id,
-                min_level: evo2.evolution_details[0]?.min_level || null,
-                trigger_name: evo2.evolution_details[0]?.trigger?.name || null,
-                item: evo2.evolution_details[0]?.item?.name || null
-              };
-              evolutions.push(evoDetails);
-            });
-            
-            await Promise.all(secondEvoPromises);
-          }
+    if (pokemon.species?.evolution_chain?.pokemon_v2_pokemonspecies) {
+      const species = pokemon.species.evolution_chain.pokemon_v2_pokemonspecies;
+      species.forEach((evo: any) => {
+        const evolutionDetails = evo.pokemon_v2_pokemonevolutions?.[0];
+        evolutions.push({
+          species_name: evo.name,
+          species_id: evo.id,
+          min_level: evolutionDetails?.min_level || null,
+          trigger_name: evolutionDetails?.pokemon_v2_evolutiontrigger?.name || null,
+          item: evolutionDetails?.pokemon_v2_item?.name || null
         });
-        
-        await Promise.all(firstEvoPromises);
+      });
+    }
+
+    // Get sprites from GraphQL data
+    const spritesData = pokemon.sprites?.[0]?.data;
+    let sprites = {
+      front_default: '',
+      back_default: '',
+      front_shiny: '',
+      back_shiny: '',
+      official_artwork: ''
+    };
+
+    if (spritesData) {
+      try {
+        const parsedSprites = JSON.parse(spritesData);
+        sprites = {
+          front_default: parsedSprites.front_default || '',
+          back_default: parsedSprites.back_default || '',
+          front_shiny: parsedSprites.front_shiny || '',
+          back_shiny: parsedSprites.back_shiny || '',
+          official_artwork: parsedSprites.other?.['official-artwork']?.front_default || ''
+        };
+      } catch (e) {
+        // If parsing fails, use defaults
       }
     }
-    
+
     return {
-      id: pokemonData.id,
-      name: pokemonData.name,
-      height: pokemonData.height,
-      weight: pokemonData.weight,
-      types: pokemonData.types.map((t: any) => t.type.name),
+      id: pokemon.id,
+      name: pokemon.name,
+      height: pokemon.height,
+      weight: pokemon.weight,
+      types: pokemon.types.map((t: any) => t.type.name),
       abilities,
       stats,
-      sprites: {
-        front_default: pokemonData.sprites.front_default,
-        back_default: pokemonData.sprites.back_default,
-        front_shiny: pokemonData.sprites.front_shiny,
-        back_shiny: pokemonData.sprites.back_shiny,
-        official_artwork: pokemonData.sprites.other['official-artwork'].front_default
-      },
-      moves: pokemonData.moves.map((m: any) => ({
-        name: m.move.name,
-        learned_at_level: m.version_group_details[0]?.level_learned_at || 0,
-        learn_method: m.version_group_details[0]?.move_learn_method.name || 'unknown'
-      })),
-      flavor_text: englishFlavorText,
-      genera: speciesData.genera.find((g: any) => g.language.name === 'en')?.genus || '',
-      generation: speciesData.generation.name,
+      sprites,
+      moves,
+      flavor_text: pokemon.species?.flavor_text?.[0]?.flavor_text || '',
+      genera: pokemon.species?.genera?.[0]?.genus || '',
+      generation: pokemon.species?.generation?.name || 'unknown',
       evolution_chain: evolutions,
-      base_experience: pokemonData.base_experience,
+      base_experience: pokemon.base_experience,
       has_evolutions: evolutions.length > 1
     };
   } catch (error) {
