@@ -1,0 +1,8 @@
+<svg width="60" height="60" viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <pattern id="flying" x="0" y="0" width="30" height="30" patternUnits="userSpaceOnUse">
+      <path d="M5 15 Q15 10 25 15" fill="none" stroke="currentColor" stroke-width="2" opacity="0.3"/>
+    </pattern>
+  </defs>
+  <rect width="60" height="60" fill="url(#flying)"/>
+</svg>

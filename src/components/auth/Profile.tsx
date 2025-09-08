@@ -1,28 +1,39 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
+import { TeamMember } from '../../lib/supabase';
 
 const Profile: React.FC = () => {
-  const { user, profile, signOut, updateProfile, teams, favorites } = useAuth();
+  const { user, profile, signOut, updateProfile, teams, favorites, getTeamMembers } = useAuth();
   const [status, setStatus] = useState<{ type: 'success' | 'error' | null; message: string }>({ type: null, message: '' });
-
-  // No loading states needed - data is already available from useAuth
+  const [teamMembers, setTeamMembers] = useState<Record<number, TeamMember[]>>({});
   const navigate = useNavigate();
-
-  // Simple data access - no complex memoization needed
   const favoritePokemonIds = user?.id ? (favorites ?? []).map(f => f.pokemon_id) : [];
   const userTeams = user?.id ? (teams ?? []) : [];
 
 
-  // Controlled form with local state for editing (React best practice)
   const [formData, setFormData] = useState({ username: profile?.username || '' });
 
-  // Update local state when profile changes
   useEffect(() => {
       if (profile && profile.username !== formData.username) {
         setFormData({ username: profile.username ?? '' });
       }
     }, [profile?.username]);
+
+  useEffect(() => {
+    const fetchTeamMembers = async () => {
+      if (userTeams.length > 0) {
+        const members: Record<number, TeamMember[]> = {};
+        for (const team of userTeams.slice(0, 3)) {
+          const teamMembersData = await getTeamMembers(team.id);
+          members[team.id] = teamMembersData;
+        }
+        setTeamMembers(members);
+      }
+    };
+
+    fetchTeamMembers();
+  }, [userTeams, getTeamMembers]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -64,7 +75,6 @@ const Profile: React.FC = () => {
     );
   }
 
-  // Status notification component
   const StatusMessage = () => {
     if (!status.type) return null;
 
@@ -203,13 +213,27 @@ const Profile: React.FC = () => {
                   {/* Team preview - show Pokemon in team */}
                   <div className="flex gap-2">
                     {[1, 2, 3, 4, 5, 6].map((position) => {
+                      const member = teamMembers[team.id]?.find(m => m.position === position);
                       return (
                         <div
                           key={position}
                           className="w-10 h-10 bg-gray-100 rounded border-2 border-gray-200 flex items-center justify-center overflow-hidden"
-                          title={`Position ${position}: Empty`}
+                          title={member ? `Position ${position}: Pokémon #${member.pokemon_id}` : `Position ${position}: Empty`}
                         >
-                          <span className="text-xs text-gray-400">{position}</span>
+                          {member ? (
+                            <img
+                              src={`https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${member.pokemon_id}.png`}
+                              alt={`Pokémon ${member.pokemon_id}`}
+                              className="w-full h-full object-contain"
+                              onError={(e) => {
+                                // Fallback to question mark if image fails to load
+                                const target = e.target as HTMLImageElement;
+                                target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHBhdGggZD0iTTEyIDJDMTMuMSAyIDE0IDIuOSAxNCA0QzE0IDUuMSAxMy4xIDYgMTIgNkMxMC45IDYgMTAgNS4xIDEwIDRDMTAgMi45IDEwLjkgMiAxMiAyWk0xMiAxNEM5LjggMTQgNy41IDE1LjMgNy41IDE3VjE5SDR2LTIuNUM0IDE0LjY3IDYuNjcgMTIgMTIgMTJDMTcuMzMgMTIgMjAgMTQuNjcgMjAgMTcuNVYyMEgxOS41VjE3QzE5LjUgMTUuMyAxNy4yIDE0IDEyIDE0WiIgZmlsbD0iIzk5YTNhZiIvPgo8L3N2Zz4K';
+                              }}
+                            />
+                          ) : (
+                            <span className="text-xs text-gray-400">{position}</span>
+                          )}
                         </div>
                       );
                     })}

@@ -1,0 +1,9 @@
+<svg width="60" height="60" viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <pattern id="bug" x="0" y="0" width="20" height="20" patternUnits="userSpaceOnUse">
+      <path d="M5 10 L15 10 M10 5 L10 15" stroke="currentColor" stroke-width="1" opacity="0.3"/>
+      <circle cx="10" cy="10" r="1" fill="currentColor" opacity="0.3"/>
+    </pattern>
+  </defs>
+  <rect width="60" height="60" fill="url(#bug)"/>
+</svg>

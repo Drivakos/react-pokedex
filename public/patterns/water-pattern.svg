@@ -1,0 +1,8 @@
+<svg width="60" height="60" viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <pattern id="water" x="0" y="0" width="20" height="20" patternUnits="userSpaceOnUse">
+      <path d="M5 10 Q10 5 15 10 Q10 15 5 10" fill="currentColor" opacity="0.3"/>
+    </pattern>
+  </defs>
+  <rect width="60" height="60" fill="url(#water)"/>
+</svg>

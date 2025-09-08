@@ -1,0 +1,8 @@
+<svg width="60" height="60" viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <pattern id="psychic" x="0" y="0" width="25" height="25" patternUnits="userSpaceOnUse">
+      <path d="M12.5 5 Q17.5 12.5 12.5 20 Q7.5 12.5 12.5 5" fill="none" stroke="currentColor" stroke-width="2" opacity="0.3"/>
+    </pattern>
+  </defs>
+  <rect width="60" height="60" fill="url(#psychic)"/>
+</svg>

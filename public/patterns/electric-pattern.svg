@@ -1,0 +1,8 @@
+<svg width="60" height="60" viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <pattern id="electric" x="0" y="0" width="20" height="20" patternUnits="userSpaceOnUse">
+      <path d="M10 5 L12 8 L8 8 L10 15 L6 10 L14 10 Z" fill="currentColor" opacity="0.3"/>
+    </pattern>
+  </defs>
+  <rect width="60" height="60" fill="url(#electric)"/>
+</svg>

@@ -1,0 +1,8 @@
+<svg width="60" height="60" viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <pattern id="dark" x="0" y="0" width="20" height="20" patternUnits="userSpaceOnUse">
+      <polygon points="10,4 14,10 10,16 6,10" fill="currentColor" opacity="0.3"/>
+    </pattern>
+  </defs>
+  <rect width="60" height="60" fill="url(#dark)"/>
+</svg>
