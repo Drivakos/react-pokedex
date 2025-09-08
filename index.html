@@ -32,19 +32,6 @@
     <meta name="twitter:description" content="Browse the complete Pokédex with detailed information on all Pokémon including stats, abilities, evolutions, and more." />
     <meta name="twitter:image" content="https://pokehelper.gr/images/pokedex.svg" />
     
-    <!-- Suppress React StrictMode warnings from third-party libraries -->
-    <script>
-      // Suppress specific React warnings in development mode
-      const originalConsoleError = console.error;
-      console.error = function(msg) {
-        if (msg && typeof msg === 'string' && 
-            (msg.includes('UNSAFE_componentWillMount') || 
-             msg.includes('SideEffect(NullComponent'))) {
-          return;
-        }
-        originalConsoleError.apply(console, arguments);
-      };
-    </script>
   </head>
   <body>
     <div id="root"></div>
