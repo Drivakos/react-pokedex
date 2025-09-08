@@ -38,6 +38,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const { refreshSession } = useSessionRefresher();
   const [favorites, setFavorites] = useState<Favorite[]>([]);
   const [teams, setTeams] = useState<any[]>([]);
+
+
   
   // Memoize all methods for stable references
   const profileMethods = useMemo(() => ProfileMethods({
@@ -223,8 +225,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
   }, [user]);
   
-  // Memoize context value to prevent unnecessary re-renders (React best practice)
-  const value = useMemo(() => ({
+  // Simple context value - no complex memoization needed
+  const value = {
     session,
     user,
     profile,
@@ -242,21 +244,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     ...authMethods,
     ...profileMethods,
     ...favoritesMethods
-  }), [
-    session,
-    user,
-    profile,
-    loading,
-    favorites,
-    teams,
-    fetchTeams,
-    createTeam,
-    updateTeam,
-    deleteTeam,
-    addPokemonToTeam,
-    removePokemonFromTeam,
-    getTeamMembers
-  ]);
+  };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };

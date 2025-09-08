@@ -13,6 +13,7 @@ const Profile: React.FC = () => {
   const favoritePokemonIds = user?.id ? (favorites ?? []).map(f => f.pokemon_id) : [];
   const userTeams = user?.id ? (teams ?? []) : [];
 
+
   // Controlled form with local state for editing (React best practice)
   const [formData, setFormData] = useState({ username: profile?.username || '' });
 
@@ -171,6 +172,7 @@ const Profile: React.FC = () => {
               Manage Teams
             </button>
           </div>
+
 
           {userTeams.length === 0 ? (
             <div className="text-center py-8">

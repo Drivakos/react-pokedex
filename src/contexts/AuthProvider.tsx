@@ -60,6 +60,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [profile, setProfile] = useState<Profile | null>(null);
   const [favorites, setFavorites] = useState<Favorite[]>([]);
   const [teams, setTeams] = useState<any[]>([]);
+  const [teamsLoaded, setTeamsLoaded] = useState(false);
+
+  // Track when teams are loaded
+  React.useEffect(() => {
+    if (teams.length > 0) {
+      setTeamsLoaded(true);
+    }
+  }, [teams, teamsLoaded]);
+
+  // Fetch teams when user becomes available and teams aren't loaded yet
+  React.useEffect(() => {
+    if (user && !teamsLoaded) {
+      fetchTeams();
+    }
+  }, [user, teamsLoaded]);
+
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -79,7 +95,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             }
             
             await fetchFavorites(session.user.id);
-            await fetchTeams();
+            // Teams will be fetched by useEffect when user state is available
           }
         } else {
           setSession(null);
@@ -109,7 +125,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               if (session) {
                 setSession(session);
                 setUser(session.user);
-                
+
                 if (session.user) {
                   const userProfile = await authService.fetchProfile(session.user.id);
                   if (userProfile) {
@@ -119,9 +135,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                     const newProfile = await authService.fetchProfile(session.user.id);
                     setProfile(newProfile);
                   }
-                  
+
                   await fetchFavorites(session.user.id);
-                  await fetchTeams();
+                  // Teams will be fetched by useEffect when user state is available
                 }
               }
               break;
@@ -146,6 +162,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               setProfile(null);
               setFavorites([]);
               setTeams([]);
+              setTeamsLoaded(false);
               break;
           }
         } catch (err) {
