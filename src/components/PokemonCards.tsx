@@ -26,15 +26,18 @@ const POKEMONTCG_API_KEY = import.meta.env.VITE_POKEMONTCG_API_KEY;
 const PokemonCards: React.FC<PokemonCardsProps> = ({ pokemonName, pokemonId }) => {
   const [cards, setCards] = useState<PokemonCard[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
+  const [loadingMore, setLoadingMore] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedCard, setSelectedCard] = useState<PokemonCard | null>(null);
-  const [visibleCards, setVisibleCards] = useState<number>(10);
+  const [currentPage, setCurrentPage] = useState<number>(1);
   const [hasMore, setHasMore] = useState<boolean>(true);
+  const [lastFetchedPokemon, setLastFetchedPokemon] = useState<string>('');
   
 
   const animationFrameIdRef = useRef<number | null>(null);
   const previousRotationRef = useRef<{x: number, y: number}>({ x: 0, y: 0 });
   const currentCardRef = useRef<HTMLDivElement | null>(null);
+  const isRequestInProgressRef = useRef<boolean>(false);
   
 
   const getRarityClass = (rarity?: string): string => {
@@ -285,109 +288,111 @@ const PokemonCards: React.FC<PokemonCardsProps> = ({ pokemonName, pokemonId }) =
     }
   };
 
-  useEffect(() => {
-
-    setVisibleCards(10);
-    setHasMore(true);
-
-    const fetchPokemonCards = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-
-
-        const formattedName = pokemonName.toLowerCase().replace(/[^a-z0-9]/g, '');
-
-
-        let searchName = formattedName;
-        const specialCases: Record<string, string> = {
-          'nidoranf': 'nidoran female',
-          'nidoranm': 'nidoran male',
-          'mrmime': 'mr mime',
-          'mimejr': 'mime jr',
-          'farfetchd': 'farfetch d',
-          'hooh': 'ho oh',
-          'jangmoo': 'jangmo o',
-          'hakamoo': 'hakamo o',
-          'kommoo': 'kommo o',
-          'porygonz': 'porygon z',
-          'typenull': 'type null',
-          'flabebe': 'flabébé',
-          'sirfetchd': 'sirfetch d',
-          'mrrime': 'mr rime'
-        };
-
-        if (specialCases[formattedName]) {
-          searchName = specialCases[formattedName];
-        }
-
-
-        let allCards: PokemonCard[] = [];
-
-
-        const exactMatchResponse = await fetch(
-          `https://api.pokemontcg.io/v2/cards?q=name:"${searchName}"&orderBy=set.releaseDate&pageSize=50`,
-          { headers: { 'X-Api-Key': POKEMONTCG_API_KEY || '' } }
-        );
-
-        if (exactMatchResponse.ok) {
-          const exactMatchData = await exactMatchResponse.json();
-          allCards = [...allCards, ...exactMatchData.data];
-        }
-
-
-        if (allCards.length < 20) {
-          const partialMatchResponse = await fetch(
-            `https://api.pokemontcg.io/v2/cards?q=name:*${searchName}*&orderBy=set.releaseDate&pageSize=50`,
-            { headers: { 'X-Api-Key': POKEMONTCG_API_KEY || '' } }
-          );
-
-          if (partialMatchResponse.ok) {
-            const partialMatchData = await partialMatchResponse.json();
-            allCards = [...allCards, ...partialMatchData.data];
-          }
-        }
-
-
-        if (pokemonId) {
-          const dexNumberResponse = await fetch(
-            `https://api.pokemontcg.io/v2/cards?q=nationalPokedexNumbers:${pokemonId}&orderBy=set.releaseDate&pageSize=50`,
-            { headers: { 'X-Api-Key': POKEMONTCG_API_KEY || '' } }
-          );
-
-          if (dexNumberResponse.ok) {
-            const dexNumberData = await dexNumberResponse.json();
-            allCards = [...allCards, ...dexNumberData.data];
-          }
-        }
-
-
-        const uniqueCards = allCards.filter((card: PokemonCard, index: number, self: PokemonCard[]) =>
-          index === self.findIndex((c) => c.id === card.id)
-        );
-
-
-        uniqueCards.sort((a, b) => {
-          if (a.set.releaseDate && b.set.releaseDate) {
-            return new Date(b.set.releaseDate).getTime() - new Date(a.set.releaseDate).getTime();
-          }
-          return 0;
-        });
-
-        setCards(uniqueCards);
-        setHasMore(uniqueCards.length > visibleCards);
-      } catch (err) {
-        console.error('Error fetching Pokémon cards:', err);
-        setError('Failed to load Pokémon cards. Please try again later.');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    if (pokemonName) {
-      fetchPokemonCards();
+  // Simplified fetch function
+  const fetchCards = async (page: number = 1, append: boolean = false) => {
+    // Prevent duplicate requests
+    if (isRequestInProgressRef.current && !append) {
+      return;
     }
-  }, [pokemonName, pokemonId, visibleCards]);
+
+    if (!append) {
+      isRequestInProgressRef.current = true;
+    }
+
+    try {
+      if (!append) {
+        setLoading(true);
+      } else {
+        setLoadingMore(true);
+      }
+      setError(null);
+
+      // Format Pokemon name for search
+      const formattedName = pokemonName.toLowerCase().replace(/[^a-z0-9]/g, '');
+
+      // Handle special cases
+      const specialCases: Record<string, string> = {
+        'nidoranf': 'nidoran female',
+        'nidoranm': 'nidoran male',
+        'mrmime': 'mr mime',
+        'mimejr': 'mime jr',
+        'farfetchd': 'farfetch d',
+        'hooh': 'ho oh',
+        'jangmoo': 'jangmo o',
+        'hakamoo': 'hakamo o',
+        'kommoo': 'kommo o',
+        'porygonz': 'porygon z',
+        'typenull': 'type null',
+        'flabebe': 'flabébé',
+        'sirfetchd': 'sirfetch d',
+        'mrrime': 'mr rime'
+      };
+
+      const searchName = specialCases[formattedName] || formattedName;
+
+      // Build search query - prefer exact match, fallback to partial
+      let query = `name:"${searchName}"`;
+      if (pokemonId) {
+        query = `nationalPokedexNumbers:${pokemonId}`;
+      }
+
+      const apiUrl = `https://api.pokemontcg.io/v2/cards?q=${query}&orderBy=set.releaseDate&page=${page}&pageSize=20`;
+
+      const response = await fetch(apiUrl, {
+        headers: { 'X-Api-Key': POKEMONTCG_API_KEY || '' }
+      });
+
+      if (!response.ok) {
+        throw new Error(`API request failed: ${response.status}`);
+      }
+
+      const data = await response.json();
+      const newCards = data.data || [];
+
+      if (append) {
+        setCards(prev => [...prev, ...newCards]);
+      } else {
+        setCards(newCards);
+      }
+
+      // Check if there are more pages (API returns totalCount)
+      setHasMore(data.totalCount > (page * 20));
+
+    } catch (err: any) {
+      setError('Failed to load Pokémon cards. Please try again later.');
+    } finally {
+      setLoading(false);
+      setLoadingMore(false);
+      if (!append) {
+        isRequestInProgressRef.current = false;
+      }
+    }
+  };
+
+  // Load more cards
+  const loadMoreCards = () => {
+    const nextPage = currentPage + 1;
+    setCurrentPage(nextPage);
+    fetchCards(nextPage, true);
+  };
+
+  // Use a combined key to prevent duplicate calls when both pokemonName and pokemonId change
+  const pokemonKey = `${pokemonName}-${pokemonId}`;
+
+  useEffect(() => {
+    // Prevent duplicate requests for the same Pokemon
+    if (pokemonName && pokemonKey !== lastFetchedPokemon) {
+      setLastFetchedPokemon(pokemonKey);
+      setCurrentPage(1);
+      setHasMore(true);
+      fetchCards(1, false);
+    }
+
+    return () => {
+      // Reset request flag on cleanup to allow new requests after hot reload
+      isRequestInProgressRef.current = false;
+    };
+  }, [pokemonKey, lastFetchedPokemon]);
 
   const openCardModal = (card: PokemonCard) => {
     setSelectedCard(card);
@@ -398,7 +403,14 @@ const PokemonCards: React.FC<PokemonCardsProps> = ({ pokemonName, pokemonId }) =
   };
 
   if (loading) {
-    return <div className="my-6 text-center">Loading Pokémon cards...</div>;
+    return (
+      <div className="my-6 text-center">
+        <div className="flex items-center justify-center">
+          <div className="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin mr-3"></div>
+          Loading Pokémon cards...
+        </div>
+      </div>
+    );
   }
 
   if (error) {
@@ -416,7 +428,7 @@ const PokemonCards: React.FC<PokemonCardsProps> = ({ pokemonName, pokemonId }) =
       <h3 className="text-xl font-bold mb-4">Trading Cards</h3>
       
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-        {cards.slice(0, visibleCards).map((card) => {
+        {cards.map((card) => {
           const rarityClass = getRarityClass(card.rarity);
           return (
             <div key={card.id} className="card-container cursor-pointer">
@@ -538,13 +550,21 @@ const PokemonCards: React.FC<PokemonCardsProps> = ({ pokemonName, pokemonId }) =
       </div>
       
 
-      {hasMore && cards.length > visibleCards && (
+      {hasMore && cards.length > 0 && (
         <div className="mt-6 text-center">
           <button
-            onClick={() => setVisibleCards(prev => prev + 10)}
-            className="bg-blue-500 hover:bg-blue-600 text-white font-medium py-2 px-6 rounded-lg transition-colors"
+            onClick={loadMoreCards}
+            disabled={loadingMore}
+            className="bg-blue-500 hover:bg-blue-600 disabled:bg-blue-300 disabled:cursor-not-allowed text-white font-medium py-2 px-6 rounded-lg transition-colors"
           >
-            Show More Cards
+            {loadingMore ? (
+              <div className="flex items-center">
+                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+                Loading...
+              </div>
+            ) : (
+              'Show More Cards'
+            )}
           </button>
         </div>
       )}
