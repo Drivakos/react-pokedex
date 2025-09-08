@@ -65,16 +65,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     refreshSession,
     teams,
     setTeams
-  }), [user, refreshSession, teams, setTeams]);
+  }), [user, refreshSession]); // Removed teams and setTeams from deps to avoid unnecessary recreation
 
   // Use callback to ensure stable references
   const addPokemonToTeam = useCallback(teamsMethods.addPokemonToTeam, [teamsMethods]);
   const removePokemonFromTeam = useCallback(teamsMethods.removePokemonFromTeam, [teamsMethods]);
   const getTeamMembers = useCallback(teamsMethods.getTeamMembers, [teamsMethods]);
+  const updateTeamMemberBuild = teamsMethods.updateTeamMemberBuild; // Direct reference instead of callback
   const fetchTeams = useCallback(teamsMethods.fetchTeams, [teamsMethods]);
   const createTeam = useCallback(teamsMethods.createTeam, [teamsMethods]);
   const updateTeam = useCallback(teamsMethods.updateTeam, [teamsMethods]);
   const deleteTeam = useCallback(teamsMethods.deleteTeam, [teamsMethods]);
+
   
   const resetAuthState = () => {
     setSession(null);
@@ -241,6 +243,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     addPokemonToTeam,
     removePokemonFromTeam,
     getTeamMembers,
+    updateTeamMemberBuild,
     ...authMethods,
     ...profileMethods,
     ...favoritesMethods

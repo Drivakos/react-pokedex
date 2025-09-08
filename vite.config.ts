@@ -25,7 +25,10 @@ export default defineConfig(({ mode }) => {
   // Load env file based on `mode` in the current working directory.
   // Set the third parameter to '' to load all env regardless of the `VITE_` prefix.
   const env = loadEnv(mode, process.cwd(), '');
-  
+
+  // For local development, we use unsafe-inline for styles and scripts
+  // Production CSP is handled by netlify.toml
+
   return {
   plugins: [
     react(),
@@ -94,7 +97,8 @@ export default defineConfig(({ mode }) => {
       'X-Content-Type-Options': 'nosniff',
       'X-Frame-Options': 'DENY',
       'Referrer-Policy': 'strict-origin-when-cross-origin',
-      'Content-Security-Policy': "default-src 'self'; connect-src 'self' http://localhost:* https://localhost:* https://kefcxvcbpadksfizrckw.supabase.co https://pokeapi.co https://beta.pokeapi.co https://api.pokemontcg.io https://*.supabase.co https://*.google.com https://*.googleapis.com; img-src 'self' https://raw.githubusercontent.com https://images.pokemontcg.io https://*.googleusercontent.com data:; style-src 'self' 'sha256-Nqnn8clbgv+5l0PgxcTOldg8mkMKrFn4TvPL+rYUUGg=' 'sha256-13vrThxdyT64GcXoTNGVoRRoL0a7EGBmOJ+lemEWyws=' 'sha256-QZ52fjvWgIOIOPr+gRIJZ7KjzNeTBm50Z+z9dH4N1/8=' 'sha256-yOU6eaJ75xfag0gVFUvld5ipLRGUy94G17B1uL683EU=' 'sha256-OpTmykz0m3o5HoX53cykwPhUeU4OECxHQlKXpB0QJPQ=' 'sha256-SSIM0kI/u45y4gqkri9aH+la6wn2R+xtcBj3Lzh7qQo=' 'sha256-ZH/+PJIjvP1BctwYxclIuiMu1wItb0aasjpXYXOmU0Y=' 'sha256-58jqDtherY9NOM+ziRgSqQY0078tAZ+qtTBjMgbM9po=' 'sha256-7Ri/I+PfhgtpcL7hT4A0VJKI6g3pK0ZvIN09RQV4ZhI=' 'sha256-uEvq29Gia+5yISklLH7mdEEjErdiBONR1Jd+xZ6k+3E=' 'sha256-O+dNMIawgFeaXkzGkCpSH4HBc/bMAuZg/3E7NFwYHyA='; script-src 'self' 'sha256-Z2/iFzh9VMlVkEOar1f/oSHWwQk3ve1qk/C2WdsC4Xk='; font-src 'self' data:; frame-src 'self' http://localhost:* https://localhost:* https://*.supabase.co https://*.google.com;",
+      // Temporarily disable CSP for development testing
+      // 'Content-Security-Policy': "default-src 'self'; connect-src 'self' http://localhost:* https://localhost:* https://kefcxvcbpadksfizrckw.supabase.co https://pokeapi.co https://beta.pokeapi.co https://api.pokemontcg.io https://*.supabase.co https://*.google.com https://*.googleapis.com; img-src 'self' https://raw.githubusercontent.com https://images.pokemontcg.io https://*.googleusercontent.com data:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; font-src 'self' data:; frame-src 'self' http://localhost:* https://localhost:* https://*.supabase.co https://*.google.com;",
       'Strict-Transport-Security': 'max-age=31536000; includeSubDomains',
       'Permissions-Policy': 'camera=(), microphone=(), geolocation=()',
     },
@@ -107,7 +111,8 @@ export default defineConfig(({ mode }) => {
       'X-Content-Type-Options': 'nosniff',
       'X-Frame-Options': 'DENY',
       'Referrer-Policy': 'strict-origin-when-cross-origin',
-      'Content-Security-Policy': "default-src 'self'; connect-src 'self' http://localhost:* https://localhost:* https://kefcxvcbpadksfizrckw.supabase.co https://pokeapi.co https://beta.pokeapi.co https://api.pokemontcg.io https://*.supabase.co https://*.google.com https://*.googleapis.com; img-src 'self' https://raw.githubusercontent.com https://images.pokemontcg.io https://*.googleusercontent.com data:; style-src 'self' 'sha256-Nqnn8clbgv+5l0PgxcTOldg8mkMKrFn4TvPL+rYUUGg=' 'sha256-13vrThxdyT64GcXoTNGVoRRoL0a7EGBmOJ+lemEWyws=' 'sha256-QZ52fjvWgIOIOPr+gRIJZ7KjzNeTBm50Z+z9dH4N1/8=' 'sha256-yOU6eaJ75xfag0gVFUvld5ipLRGUy94G17B1uL683EU=' 'sha256-OpTmykz0m3o5HoX53cykwPhUeU4OECxHQlKXpB0QJPQ=' 'sha256-SSIM0kI/u45y4gqkri9aH+la6wn2R+xtcBj3Lzh7qQo=' 'sha256-ZH/+PJIjvP1BctwYxclIuiMu1wItb0aasjpXYXOmU0Y=' 'sha256-58jqDtherY9NOM+ziRgSqQY0078tAZ+qtTBjMgbM9po=' 'sha256-7Ri/I+PfhgtpcL7hT4A0VJKI6g3pK0ZvIN09RQV4ZhI=' 'sha256-uEvq29Gia+5yISklLH7mdEEjErdiBONR1Jd+xZ6k+3E=' 'sha256-O+dNMIawgFeaXkzGkCpSH4HBc/bMAuZg/3E7NFwYHyA='; script-src 'self' 'sha256-Z2/iFzh9VMlVkEOar1f/oSHWwQk3ve1qk/C2WdsC4Xk='; font-src 'self' data:; frame-src 'self' http://localhost:* https://localhost:* https://*.supabase.co https://*.google.com;",
+      // Temporarily disable CSP for development testing
+      // 'Content-Security-Policy': "default-src 'self'; connect-src 'self' http://localhost:* https://localhost:* https://kefcxvcbpadksfizrckw.supabase.co https://pokeapi.co https://beta.pokeapi.co https://api.pokemontcg.io https://*.supabase.co https://*.google.com https://*.googleapis.com; img-src 'self' https://raw.githubusercontent.com https://images.pokemontcg.io https://*.googleusercontent.com data:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; font-src 'self' data:; frame-src 'self' http://localhost:* https://localhost:* https://*.supabase.co https://*.google.com;",
       'Strict-Transport-Security': 'max-age=31536000; includeSubDomains',
       'Permissions-Policy': 'camera=(), microphone=(), geolocation=()',
     },

@@ -3,6 +3,7 @@ import { ArrowLeft, Save, Trash2, Plus, Zap, Settings, Award, ChevronUp, Chevron
 import toast from 'react-hot-toast';
 import { formatName, getOfficialArtwork } from '../../utils/helpers';
 import MovesFilter from '../filters/MovesFilter';
+import { fetchPokemonMoves, fetchMoveDetails, fetchPokemonAbilities, fetchCompetitiveItems } from '../../services/api';
 
 interface PokemonWithMoves {
   id: number;
@@ -26,6 +27,8 @@ interface MovesetEditorProps {
   pokemon: PokemonWithMoves;
   teamId: number;
   onBack: () => void;
+  initialBuild?: PokemonBuild;
+  onSave?: (buildData: PokemonBuild) => void;
 }
 
 interface PokemonMove {
@@ -99,7 +102,7 @@ interface PokemonBuild {
 
 const EV_PRESETS = {
   'Physical Attacker': {
-    hp: 4,
+    hp: 6,
     attack: 252,
     defense: 0,
     'special-attack': 0,
@@ -107,7 +110,7 @@ const EV_PRESETS = {
     speed: 252
   },
   'Special Attacker': {
-    hp: 4,
+    hp: 6,
     attack: 0,
     defense: 0,
     'special-attack': 252,
@@ -119,13 +122,13 @@ const EV_PRESETS = {
     attack: 0,
     defense: 252,
     'special-attack': 0,
-    'special-defense': 4,
+    'special-defense': 6,
     speed: 0
   },
   'Special Tank': {
     hp: 252,
     attack: 0,
-    defense: 4,
+    defense: 6,
     'special-attack': 0,
     'special-defense': 252,
     speed: 0
@@ -133,7 +136,7 @@ const EV_PRESETS = {
   'Mixed Tank': {
     hp: 252,
     attack: 0,
-    defense: 128,
+    defense: 130,
     'special-attack': 0,
     'special-defense': 128,
     speed: 0
@@ -141,7 +144,7 @@ const EV_PRESETS = {
   'Fast Support': {
     hp: 252,
     attack: 0,
-    defense: 4,
+    defense: 6,
     'special-attack': 0,
     'special-defense': 0,
     speed: 252
@@ -267,7 +270,7 @@ const HELD_ITEMS = [
   'Fairy Feather'
 ];
 
-const MovesetEditorContent: React.FC<MovesetEditorProps> = ({ pokemon, teamId, onBack }) => {
+const MovesetEditorContent: React.FC<MovesetEditorProps> = ({ pokemon, teamId, onBack, initialBuild, onSave }) => {
   const [selectedMoves, setSelectedMoves] = useState<string[]>([]);
   const [availableMoves, setAvailableMoves] = useState<string[]>([]);
   const [moveDetails, setMoveDetails] = useState<Record<string, MoveDetails>>({});
@@ -276,31 +279,33 @@ const MovesetEditorContent: React.FC<MovesetEditorProps> = ({ pokemon, teamId, o
   const [showMoveSelector, setShowMoveSelector] = useState(false);
   
   // New build customization states
-  const [pokemonBuild, setPokemonBuild] = useState<PokemonBuild>({
-    moves: [],
-    nature: 'hardy',
-    ability: '',
-    gender: null,
-    heldItem: '',
-    nickname: '',
-    teraType: '',
-    ivs: {
-      hp: 31,
-      attack: 31,
-      defense: 31,
-      'special-attack': 31,
-      'special-defense': 31,
-      speed: 31
-    },
-    evs: {
-      hp: 0,
-      attack: 0,
-      defense: 0,
-      'special-attack': 0,
-      'special-defense': 0,
-      speed: 0
+  const [pokemonBuild, setPokemonBuild] = useState<PokemonBuild>(
+    initialBuild || {
+      moves: [],
+      nature: 'hardy',
+      ability: '',
+      gender: null,
+      heldItem: '',
+      nickname: '',
+      teraType: '',
+      ivs: {
+        hp: 31,
+        attack: 31,
+        defense: 31,
+        'special-attack': 31,
+        'special-defense': 31,
+        speed: 31
+      },
+      evs: {
+        hp: 0,
+        attack: 0,
+        defense: 0,
+        'special-attack': 0,
+        'special-defense': 0,
+        speed: 0
+      }
     }
-  });
+  );
   
   const [availableNatures, setAvailableNatures] = useState<Nature[]>([]);
   const [availableAbilities, setAvailableAbilities] = useState<string[]>([]);
@@ -318,62 +323,53 @@ const MovesetEditorContent: React.FC<MovesetEditorProps> = ({ pokemon, teamId, o
     const loadPokemonData = async () => {
       setLoading(true);
       try {
-        // Fetch detailed Pokemon data
-        const isDevelopment = import.meta.env.DEV;
-        const apiUrl = isDevelopment
-          ? `/api/pokeapi/pokemon/${pokemon.id}`
-          : `https://pokeapi.co/api/v2/pokemon/${pokemon.id}`;
-        const response = await fetch(apiUrl);
-        if (response.ok) {
-          const pokemonData = await response.json();
-          const moves = pokemonData.moves.map((move: PokemonMove) => move.move.name);
-          setAvailableMoves(moves);
-          
-          // Get abilities and fetch their descriptions
-          const abilities = pokemonData.abilities.map((ability: any) => ability.ability.name);
-          setAvailableAbilities(abilities);
-          
-          // Fetch ability descriptions
+        // Fetch detailed Pokemon data using GraphQL
+        try {
+          // Fetch moves
+          const movesData = await fetchPokemonMoves(pokemon.id);
+          const moves = movesData
+            .filter((moveData: any) => moveData?.move?.name)
+            .map((moveData: any) => moveData.move.name);
+
+          // Remove duplicates since Pokemon can learn moves through multiple methods
+          const uniqueMoves = [...new Set(moves)];
+          setAvailableMoves(uniqueMoves);
+
+          // Fetch abilities
+          const abilitiesData = await fetchPokemonAbilities(pokemon.id);
+          const abilities = abilitiesData
+            .filter((abilityData: any) => abilityData?.ability?.name)
+            .map((abilityData: any) => abilityData.ability.name);
+
+          // Remove duplicates if any
+          const uniqueAbilities = [...new Set(abilities)];
+          setAvailableAbilities(uniqueAbilities);
+
+          // Process ability descriptions
           const abilityDescs: Record<string, string> = {};
-          for (const ability of abilities) {
-            try {
-              const abilityUrl = isDevelopment
-                ? `/api/pokeapi/ability/${ability}`
-                : `https://pokeapi.co/api/v2/ability/${ability}`;
-              const abilityResponse = await fetch(abilityUrl);
-              if (abilityResponse.ok) {
-                const abilityData = await abilityResponse.json();
-                const englishEntry = abilityData.effect_entries.find((entry: any) => entry.language.name === 'en');
-                abilityDescs[ability] = englishEntry?.short_effect || 'No description available';
-              }
-                      } catch {
-              console.warn(`Failed to fetch description for ability: ${ability}`);
-              abilityDescs[ability] = 'Description not available';
+          abilitiesData.forEach((abilityData: any) => {
+            if (abilityData?.ability?.name) {
+              const abilityName = abilityData.ability.name;
+              const englishEntry = abilityData.ability.effect_entries?.find((entry: any) => entry?.language?.name === 'en');
+              abilityDescs[abilityName] = englishEntry?.short_effect || englishEntry?.effect || 'No description available';
             }
-          }
+          });
           setAbilityDescriptions(abilityDescs);
-          
-          // Check for gender differences
-          setHasGenderDifference(pokemonData.species ? true : false);
-          
+
+          // Check for gender differences (simplified - assume false for now)
+          setHasGenderDifference(false);
+
           // Set default ability
           setPokemonBuild(prev => ({
             ...prev,
             ability: abilities[0] || ''
           }));
 
-          // Fetch Pokemon species description
-          try {
-            const speciesResponse = await fetch(pokemonData.species.url);
-            if (speciesResponse.ok) {
-              const speciesData = await speciesResponse.json();
-              const englishEntry = speciesData.flavor_text_entries.find((entry: any) => entry.language.name === 'en');
-              setPokemonDescription(englishEntry?.flavor_text?.replace(/\f/g, ' ') || 'No description available');
-            }
-          } catch {
-            console.warn('Failed to fetch Pokemon species description');
-            setPokemonDescription('Description not available');
-          }
+          // Set Pokemon description (we'll get this from the detailed Pokemon data later)
+          setPokemonDescription('Loading description...');
+        } catch (error) {
+          console.error('Failed to fetch Pokemon data:', error);
+          toast.error('Failed to load Pokemon data');
         }
         
         // Set available natures
@@ -405,50 +401,51 @@ const MovesetEditorContent: React.FC<MovesetEditorProps> = ({ pokemon, teamId, o
           { name: 'quirky', description: 'Neutral nature (no stat changes)' }
         ]);
 
-        // Fetch item descriptions for competitive items
-        const itemDescs: Record<string, string> = {};
-        for (const item of HELD_ITEMS) { // Fetch all items, not just first 20
-          try {
-            const itemUrl = isDevelopment
-              ? `/api/pokeapi/item/${item.toLowerCase().replace(' ', '-')}`
-              : `https://pokeapi.co/api/v2/item/${item.toLowerCase().replace(' ', '-')}`;
-            const itemResponse = await fetch(itemUrl);
-            if (itemResponse.ok) {
-              const itemData = await itemResponse.json();
-              const englishEntry = itemData.effect_entries.find((entry: any) => entry.language.name === 'en');
-              itemDescs[item] = englishEntry?.short_effect || englishEntry?.effect || 'Competitive battle item';
+        // Fetch item descriptions for competitive items using GraphQL
+        try {
+          const itemsData = await fetchCompetitiveItems();
+          const itemDescs: Record<string, string> = {};
+          itemsData.forEach((itemData: any) => {
+            if (itemData?.name) {
+              const itemName = itemData.name;
+              const englishEntry = itemData.effect_entries?.find((entry: any) => entry?.language?.name === 'en');
+              itemDescs[itemName] = englishEntry?.short_effect || englishEntry?.effect || 'Competitive battle item';
             }
-          } catch {
-            console.warn(`Failed to fetch description for item: ${item}`);
-            // Provide fallback descriptions for common items
-            const fallbackDescriptions: Record<string, string> = {
-              'leftovers': 'Restores HP gradually each turn',
-              'choice-band': 'Boosts Attack but locks you into one move',
-              'choice-scarf': 'Boosts Speed but locks you into one move',
-              'choice-specs': 'Boosts Sp. Attack but locks you into one move',
-              'life-orb': 'Boosts move power but causes recoil damage',
-              'focus-sash': 'Survives a KO hit with 1 HP when at full health',
-              'assault-vest': 'Boosts Sp. Defense but prevents status moves',
-              'rocky-helmet': 'Damages attackers who make contact',
-              'sitrus-berry': 'Restores HP when health is low',
-              'lum-berry': 'Cures any status condition',
-              'flame-orb': 'Inflicts burn status after one turn',
-              'toxic-orb': 'Inflicts poison status after one turn',
-              'black-sludge': 'Restores HP for Poison-types, damages others',
-              'eviolite': 'Boosts defenses of Pokémon that can still evolve',
-              'air-balloon': 'Makes holder immune to Ground moves until popped'
-            };
-            itemDescs[item] = fallbackDescriptions[item.toLowerCase().replace(' ', '-')] || 'Competitive battle item';
-          }
+          });
+          setItemDescriptions(itemDescs);
+        } catch (error) {
+          console.warn('Failed to fetch item descriptions:', error);
+          // Provide fallback descriptions
+          const fallbackDescriptions: Record<string, string> = {
+            'leftovers': 'Restores HP gradually each turn',
+            'choice-band': 'Boosts Attack but locks you into one move',
+            'choice-scarf': 'Boosts Speed but locks you into one move',
+            'choice-specs': 'Boosts Sp. Attack but locks you into one move',
+            'life-orb': 'Boosts move power but causes recoil damage',
+            'focus-sash': 'Survives a KO hit with 1 HP when at full health',
+            'assault-vest': 'Boosts Sp. Defense but prevents status moves',
+            'rocky-helmet': 'Damages attackers who make contact',
+            'sitrus-berry': 'Restores HP when health is low',
+            'lum-berry': 'Cures any status condition',
+            'flame-orb': 'Inflicts burn status after one turn',
+            'toxic-orb': 'Inflicts poison status after one turn',
+            'black-sludge': 'Restores HP for Poison-types, damages others',
+            'air-balloon': 'Makes holder immune to Ground moves until popped'
+          };
+          setItemDescriptions(fallbackDescriptions);
         }
-        setItemDescriptions(itemDescs);
         
-        // Load saved build from localStorage
-        const savedBuild = localStorage.getItem(`build_${teamId}_${pokemon.id}`);
-        if (savedBuild) {
-          const build = JSON.parse(savedBuild);
-          setPokemonBuild(build);
-          setSelectedMoves(build.moves || []);
+        // Load saved build - use initialBuild if provided, otherwise try localStorage
+        if (initialBuild) {
+          setPokemonBuild(initialBuild);
+          setSelectedMoves(initialBuild.moves || []);
+        } else {
+          const savedBuild = localStorage.getItem(`build_${teamId}_${pokemon.id}`);
+          if (savedBuild) {
+            const build = JSON.parse(savedBuild);
+            setPokemonBuild(build);
+            setSelectedMoves(build.moves || []);
+          }
         }
       } catch (error) {
         console.error('Error loading Pokemon data:', error);
@@ -481,8 +478,14 @@ const MovesetEditorContent: React.FC<MovesetEditorProps> = ({ pokemon, teamId, o
       ...pokemonBuild,
       moves: selectedMoves
     };
-    localStorage.setItem(`build_${teamId}_${pokemon.id}`, JSON.stringify(completeBuild));
-    toast.success(`Complete build saved for ${formatName(pokemon.name)}!`);
+
+    if (onSave) {
+      onSave(completeBuild);
+    } else {
+      // Fallback to localStorage for standalone usage
+      localStorage.setItem(`build_${teamId}_${pokemon.id}`, JSON.stringify(completeBuild));
+      toast.success(`Complete build saved for ${formatName(pokemon.name)}!`);
+    }
   };
 
   const validateAndFormatInput = (value: string, min: number, max: number): number => {
@@ -601,33 +604,28 @@ const MovesetEditorContent: React.FC<MovesetEditorProps> = ({ pokemon, teamId, o
     }
 
     try {
-      const isDevelopment = import.meta.env.DEV;
-      const moveUrl = isDevelopment
-        ? `/api/pokeapi/move/${moveName}`
-        : `https://pokeapi.co/api/v2/move/${moveName}`;
-      const response = await fetch(moveUrl);
-      if (response.ok) {
-        const move = await response.json();
+      const moveData = await fetchMoveDetails(moveName);
+      if (moveData) {
         const details: MoveDetails = {
-          name: move.name,
-          type: move.type,
-          power: move.power,
-          accuracy: move.accuracy,
-          pp: move.pp,
-          damage_class: move.damage_class,
-          effect_entries: move.effect_entries || [],
-          flavor_text_entries: move.flavor_text_entries || [],
-          target: move.target,
-          priority: move.priority
+          name: moveData.name,
+          type: moveData.type,
+          power: moveData.power,
+          accuracy: moveData.accuracy,
+          pp: moveData.pp,
+          damage_class: moveData.damage_class,
+          effect_entries: moveData.effect_entries || [],
+          flavor_text_entries: moveData.flavor_text_entries || [],
+          target: moveData.target,
+          priority: moveData.priority
         };
-        
+
         setMoveDetails(prev => ({ ...prev, [moveName]: details }));
         return details;
       }
     } catch (error) {
       console.error(`Error loading move details for ${moveName}:`, error);
     }
-    
+
     return null;
   };
 
@@ -814,10 +812,11 @@ const MovesetEditorContent: React.FC<MovesetEditorProps> = ({ pokemon, teamId, o
                         </div>
                         
                         {/* Always show short effect/description */}
-                        {move.effect_entries.length > 0 && (
+                        {move.effect_entries && move.effect_entries.length > 0 && (
                           <p className="text-gray-600 text-sm leading-relaxed mt-2 italic">
-                            {move.effect_entries.find(entry => entry.language.name === 'en')?.short_effect || 
-                             move.effect_entries[0]?.short_effect}
+                            {move.effect_entries.find(entry => entry.language.name === 'en')?.short_effect ||
+                             move.effect_entries[0]?.short_effect ||
+                             'No description available'}
                           </p>
                         )}
                         
@@ -827,8 +826,9 @@ const MovesetEditorContent: React.FC<MovesetEditorProps> = ({ pokemon, teamId, o
                               <div>
                                 <h4 className="font-medium text-gray-800 mb-1">Game Description:</h4>
                                 <p className="text-gray-600 text-xs italic leading-relaxed">
-                                  "{move.flavor_text_entries.find((entry: any) => entry.language.name === 'en')?.flavor_text || 
-                                    move.flavor_text_entries[0]?.flavor_text}"
+                                  "{move.flavor_text_entries.find((entry: any) => entry.language.name === 'en')?.flavor_text ||
+                                    move.flavor_text_entries[0]?.flavor_text ||
+                                    'No game description available'}"
                                 </p>
                               </div>
                             )}
@@ -1141,9 +1141,9 @@ const MovesetEditorContent: React.FC<MovesetEditorProps> = ({ pokemon, teamId, o
 };
 
 // Error boundary wrapper for MovesetEditor component
-const MovesetEditor: React.FC<MovesetEditorProps> = ({ pokemon, teamId, onBack }) => {
+const MovesetEditor: React.FC<MovesetEditorProps> = ({ pokemon, teamId, onBack, initialBuild, onSave }) => {
   try {
-    return <MovesetEditorContent pokemon={pokemon} teamId={teamId} onBack={onBack} />;
+    return <MovesetEditorContent pokemon={pokemon} teamId={teamId} onBack={onBack} initialBuild={initialBuild} onSave={onSave} />;
   } catch (error) {
     console.error('MovesetEditor component error:', error);
     toast.error(`Error loading moveset editor: ${error instanceof Error ? error.message : 'Unknown error'}`);

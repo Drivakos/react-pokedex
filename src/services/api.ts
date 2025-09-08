@@ -501,6 +501,267 @@ export const fetchPokemonDetails = async (id: number): Promise<PokemonDetails> =
 };
 
 /**
+ * Fetches Pokemon moves for moveset editor
+ */
+export const fetchPokemonMoves = async (pokemonId: number) => {
+  try {
+    const query = `
+      query GetPokemonMoves($pokemonId: Int!) {
+        pokemon_v2_pokemon_by_pk(id: $pokemonId) {
+          moves: pokemon_v2_pokemonmoves(
+            where: {
+              pokemon_v2_versiongroup: {
+                pokemon_v2_versions: {
+                  pokemon_v2_versionnames: {
+                    pokemon_v2_language: { name: { _eq: "en" } }
+                  }
+                }
+              }
+            }
+            order_by: { level: asc }
+          ) {
+            move: pokemon_v2_move {
+              id
+              name
+              type: pokemon_v2_type {
+                name
+              }
+              power
+              accuracy
+              pp
+              damage_class: pokemon_v2_movedamageclass {
+                name
+              }
+              target: pokemon_v2_movetarget {
+                name
+              }
+              priority
+            }
+            level
+            pokemon_v2_movelearnmethod {
+              name
+            }
+          }
+        }
+      }
+    `;
+
+    const response = await fetch(GRAPHQL_ENDPOINT, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ query, variables: { pokemonId } }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`GraphQL HTTP error! Status: ${response.status}`);
+    }
+
+    const result = await response.json();
+
+    if (result.errors) {
+      throw new Error(result.errors[0].message);
+    }
+
+    return result.data.pokemon_v2_pokemon_by_pk.moves || [];
+  } catch (error) {
+    console.error('Error fetching Pokemon moves:', error);
+    throw error;
+  }
+};
+
+/**
+ * Fetches move details by name
+ */
+export const fetchMoveDetails = async (moveName: string) => {
+  try {
+    const query = `
+      query GetMoveDetails($moveName: String!) {
+        pokemon_v2_move(where: { name: { _eq: $moveName } }) {
+          id
+          name
+          type: pokemon_v2_type {
+            name
+          }
+          power
+          accuracy
+          pp
+          damage_class: pokemon_v2_movedamageclass {
+            name
+          }
+          target: pokemon_v2_movetarget {
+            name
+          }
+          priority
+        }
+      }
+    `;
+
+    const response = await fetch(GRAPHQL_ENDPOINT, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ query, variables: { moveName } }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`GraphQL HTTP error! Status: ${response.status}`);
+    }
+
+    const result = await response.json();
+
+    if (result.errors) {
+      throw new Error(result.errors[0].message);
+    }
+
+    const move = result.data.pokemon_v2_move[0];
+    if (move) {
+      return {
+        ...move,
+        effect_entries: [{
+          short_effect: 'Move description',
+          language: { name: 'en' }
+        }],
+        flavor_text_entries: [{
+          flavor_text: 'Move flavor text',
+          language: { name: 'en' }
+        }]
+      };
+    }
+    return null;
+  } catch (error) {
+    console.error('Error fetching move details:', error);
+    throw error;
+  }
+};
+
+/**
+ * Fetches Pokemon abilities
+ */
+export const fetchPokemonAbilities = async (pokemonId: number) => {
+  try {
+    const query = `
+      query GetPokemonAbilities($pokemonId: Int!) {
+        pokemon_v2_pokemon_by_pk(id: $pokemonId) {
+          abilities: pokemon_v2_pokemonabilities {
+            ability: pokemon_v2_ability {
+              id
+              name
+            }
+            is_hidden
+          }
+        }
+      }
+    `;
+
+    const response = await fetch(GRAPHQL_ENDPOINT, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ query, variables: { pokemonId } }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`GraphQL HTTP error! Status: ${response.status}`);
+    }
+
+    const result = await response.json();
+
+    if (result.errors) {
+      throw new Error(result.errors[0].message);
+    }
+
+    return result.data.pokemon_v2_pokemon_by_pk.abilities.map((ability: any) => ({
+      ...ability,
+      ability: {
+        ...ability.ability,
+        effect_entries: [{
+          short_effect: 'Ability description',
+          language: { name: 'en' }
+        }]
+      }
+    })) || [];
+  } catch (error) {
+    console.error('Error fetching Pokemon abilities:', error);
+    throw error;
+  }
+};
+
+/**
+ * Fetches competitive items
+ */
+export const fetchCompetitiveItems = async () => {
+  try {
+    const competitiveItems = [
+      'Choice Band', 'Choice Specs', 'Choice Scarf',
+      'Leftovers', 'Heavy-Duty Boots', 'Assault Vest',
+      'Rocky Helmet', 'Black Sludge', 'Life Orb',
+      'Expert Belt', 'Muscle Band', 'Wise Glasses',
+      'Focus Sash', 'Focus Band', 'Sitrus Berry',
+      'Lum Berry', 'Chesto Berry', 'Leppa Berry',
+      'Liechi Berry', 'Ganlon Berry', 'Salac Berry',
+      'Petaya Berry', 'Apicot Berry', 'Occa Berry',
+      'Passho Berry', 'Wacan Berry', 'Rindo Berry',
+      'Yache Berry', 'Chople Berry', 'Kebia Berry',
+      'Shuca Berry', 'Coba Berry', 'Payapa Berry',
+      'Tanga Berry', 'Charti Berry', 'Kasib Berry',
+      'Haban Berry', 'Colbur Berry', 'Babiri Berry',
+      'Chilan Berry', 'Roseli Berry', 'Air Balloon',
+      'Mental Herb', 'Power Herb', 'Quick Claw',
+      'King\'s Rock', 'Razor Claw', 'Scope Lens',
+      'Wide Lens', 'Zoom Lens', 'Flame Orb',
+      'Toxic Orb', 'Electric Seed', 'Grassy Seed',
+      'Misty Seed', 'Psychic Seed', 'Heat Rock',
+      'Damp Rock', 'Smooth Rock', 'Icy Rock',
+      'Eject Button', 'Red Card', 'Shed Shell',
+      'Safety Goggles', 'Protective Pads', 'Clear Amulet',
+      'Covert Cloak', 'Loaded Dice', 'Booster Energy',
+      'Mirror Herb', 'Punching Glove'
+    ];
+
+    const query = `
+      query GetCompetitiveItems($itemNames: [String!]!) {
+        pokemon_v2_item(where: { name: { _in: $itemNames } }) {
+          id
+          name
+          cost
+          category: pokemon_v2_itemcategory {
+            name
+          }
+        }
+      }
+    `;
+
+    const response = await fetch(GRAPHQL_ENDPOINT, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ query, variables: { itemNames: competitiveItems } }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`GraphQL HTTP error! Status: ${response.status}`);
+    }
+
+    const result = await response.json();
+
+    if (result.errors) {
+      throw new Error(result.errors[0].message);
+    }
+
+    return result.data.pokemon_v2_item.map((item: any) => ({
+      ...item,
+      effect_entries: [{
+        short_effect: 'Competitive battle item',
+        language: { name: 'en' }
+      }],
+      flavor_text_entries: [{
+        flavor_text: 'Competitive battle item'
+      }]
+    })) || [];
+  } catch (error) {
+    console.error('Error fetching competitive items:', error);
+    throw error;
+  }
+};
+
+/**
  * Fetches available filter options (types, moves, generations)
  */
 export const fetchFilterOptions = async () => {

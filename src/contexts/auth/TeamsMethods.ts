@@ -16,6 +16,7 @@ export interface TeamsMethods {
   addPokemonToTeam: (teamId: number, pokemonId: number, position: number) => Promise<void>;
   removePokemonFromTeam: (teamId: number, position: number) => Promise<void>;
   getTeamMembers: (teamId: number) => Promise<TeamMember[]>;
+  updateTeamMemberBuild: (teamId: number, position: number, buildData: Partial<TeamMember>) => Promise<void>;
 }
 
 export const TeamsMethods = ({
@@ -305,7 +306,7 @@ export const TeamsMethods = ({
 
     try {
       const { success, session } = await refreshSession();
-      
+
       if (!success || !session) {
         return [];
       }
@@ -341,6 +342,70 @@ export const TeamsMethods = ({
     }
   };
 
+  const updateTeamMemberBuild = async (teamId: number, position: number, buildData: Partial<TeamMember>): Promise<void> => {
+    if (!user) {
+      toast.error('You must be logged in to update team member builds');
+      return;
+    }
+
+    try {
+      const { success, session } = await refreshSession();
+
+      if (!success || !session) {
+        return;
+      }
+
+      // First check if the team belongs to the user
+      const { data: teamData, error: teamError } = await supabase
+        .from('teams')
+        .select('*')
+        .eq('id', teamId)
+        .eq('user_id', user.id)
+        .single();
+
+      if (teamError || !teamData) {
+        toast.error('Team not found or you don\'t have permission to modify it');
+        return;
+      }
+
+      // Prepare the update data
+      const updateData: any = {
+        updated_at: new Date().toISOString()
+      };
+
+      // Only include fields that are provided and not undefined
+      if (buildData.moves !== undefined) updateData.moves = buildData.moves;
+      if (buildData.item !== undefined) updateData.item = buildData.item;
+      if (buildData.ability !== undefined) updateData.ability = buildData.ability;
+      if (buildData.nature !== undefined) updateData.nature = buildData.nature;
+      if (buildData.evs !== undefined) updateData.evs = buildData.evs;
+      if (buildData.ivs !== undefined) updateData.ivs = buildData.ivs;
+      if (buildData.level !== undefined) updateData.level = buildData.level;
+      if (buildData.gender !== undefined) updateData.gender = buildData.gender;
+      if (buildData.tera_type !== undefined) updateData.tera_type = buildData.tera_type;
+
+      const { error } = await supabase
+        .from('team_members')
+        .update(updateData)
+        .eq('team_id', teamId)
+        .eq('position', position);
+
+      if (error) {
+        if (error.code === '42501' || error.message?.includes('permission denied')) {
+          toast.error('You don\'t have permission to update this team member. Please sign in again.');
+        } else {
+          toast.error('Failed to update team member build');
+        }
+        return;
+      }
+
+      toast.success('Team member build updated successfully!');
+    } catch (err) {
+      console.error('Failed to update team member build:', err);
+      toast.error('Failed to update team member build');
+    }
+  };
+
   return {
     fetchTeams,
     createTeam,
@@ -348,6 +413,7 @@ export const TeamsMethods = ({
     deleteTeam,
     addPokemonToTeam,
     removePokemonFromTeam,
-    getTeamMembers
+    getTeamMembers,
+    updateTeamMemberBuild
   };
 };
