@@ -1,12 +1,14 @@
 import { Pokemon, RawPokemonData, Filters, PokemonDetails } from '../types/pokemon';
 
-// Detect if we're in development or if functions are available
+// Detect if we're in development or if Supabase functions are available
 const isLocalDevelopment = import.meta.env.DEV;
-const netlifyFunctionsAvailable = !isLocalDevelopment && typeof window !== 'undefined';
+const supabaseFunctionsAvailable = !isLocalDevelopment && typeof window !== 'undefined';
 
-// Use cached Netlify Functions only in production when available
-const CACHED_GRAPHQL_ENDPOINT = netlifyFunctionsAvailable ? '/api/pokemon/graphql' : null;
-const CACHED_REST_ENDPOINT = netlifyFunctionsAvailable ? '/api/pokemon/rest' : null;
+// Use cached Supabase Edge Functions in production when available
+const CACHED_GRAPHQL_ENDPOINT = supabaseFunctionsAvailable ?
+  `https://kefcxvcbpadksfizrckw.supabase.co/functions/v1/graphql` : null;
+const CACHED_REST_ENDPOINT = supabaseFunctionsAvailable ?
+  `https://kefcxvcbpadksfizrckw.supabase.co/functions/v1/rest` : null;
 
 /**
  * Checks if cached endpoints are available
@@ -34,7 +36,7 @@ const areCachedEndpointsAvailable = async (): Promise<boolean> => {
 };
 
 /**
- * Makes a cached GraphQL request through Netlify Functions
+ * Makes a cached GraphQL request through Supabase Edge Functions
  */
 const fetchCachedGraphQL = async (query: string, variables?: any) => {
   if (!CACHED_GRAPHQL_ENDPOINT) {
@@ -46,6 +48,7 @@ const fetchCachedGraphQL = async (query: string, variables?: any) => {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
       },
       body: JSON.stringify({ query, variables }),
     });
@@ -68,7 +71,7 @@ const fetchCachedGraphQL = async (query: string, variables?: any) => {
 };
 
 /**
- * Makes a cached REST request through Netlify Functions
+ * Makes a cached REST request through Supabase Edge Functions
  */
 const fetchCachedREST = async (endpoint: string) => {
   if (!CACHED_REST_ENDPOINT) {
@@ -76,7 +79,11 @@ const fetchCachedREST = async (endpoint: string) => {
   }
 
   try {
-    const response = await fetch(`${CACHED_REST_ENDPOINT}/${endpoint}`);
+    const response = await fetch(`${CACHED_REST_ENDPOINT}/${endpoint}`, {
+      headers: {
+        'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+      },
+    });
 
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
