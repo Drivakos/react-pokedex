@@ -10,8 +10,12 @@ import ResetPasswordConfirm from './components/auth/ResetPasswordConfirm';
 import MagicLinkLogin from './components/auth/MagicLinkLogin';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 import Navigation from './components/Navigation';
+import React, { Suspense } from 'react';
 import Teams from './components/teams/Teams';
 import TeamEditor from './components/teams/TeamEditor';
+
+// Lazy load the memory game for better bundle splitting
+const PokemonMemoryGame = React.lazy(() => import('./components/PokemonMemoryGame'));
 
 function App() {
   return (
@@ -42,6 +46,11 @@ function App() {
             <ProtectedRoute>
               <TeamEditor />
             </ProtectedRoute>
+          } />
+          <Route path="/memory-game" element={
+            <Suspense>
+              <PokemonMemoryGame />
+            </Suspense>
           } />
         </Routes>
       </div>

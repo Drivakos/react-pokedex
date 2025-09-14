@@ -1,11 +1,12 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
-import { User, LogOut } from 'lucide-react';
+import { User, LogOut, Gamepad2, ChevronDown } from 'lucide-react';
 
 const Navigation: React.FC = () => {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
+  const [gamesMenuOpen, setGamesMenuOpen] = useState(false);
 
   const handleSignOut = async () => {
     try {
@@ -15,6 +16,19 @@ const Navigation: React.FC = () => {
       console.error('Error signing out:', error);
     }
   };
+
+  // Close games menu when clicking outside
+  React.useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Element;
+      if (gamesMenuOpen && !target.closest('.games-menu')) {
+        setGamesMenuOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [gamesMenuOpen]);
 
   return (
     <nav className="bg-gradient-to-r from-red-600 to-red-700 shadow-lg sticky top-0 z-50">
@@ -35,6 +49,36 @@ const Navigation: React.FC = () => {
           </div>
           
           <div className="hidden sm:ml-6 sm:flex sm:items-center">
+            {/* Games Menu */}
+            <div className="relative mr-4 games-menu">
+              <button
+                onClick={() => setGamesMenuOpen(!gamesMenuOpen)}
+                className="text-white hover:bg-white/20 px-3 py-2 rounded-full text-sm font-medium flex items-center transition-colors duration-200"
+              >
+                <Gamepad2 className="h-4 w-4 mr-1" />
+                Games
+                <ChevronDown className={`h-4 w-4 ml-1 transition-transform ${gamesMenuOpen ? 'rotate-180' : ''}`} />
+              </button>
+
+              {gamesMenuOpen && (
+                <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-50">
+                  <Link
+                    to="/memory-game"
+                    className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center"
+                    onClick={() => setGamesMenuOpen(false)}
+                  >
+                    <span className="mr-2">🧠</span>
+                    Memory Match
+                  </Link>
+                  {/* Future games can be added here */}
+                  <div className="border-t border-gray-200 my-1"></div>
+                  <span className="block px-4 py-2 text-xs text-gray-500 italic">
+                    More games coming soon!
+                  </span>
+                </div>
+              )}
+            </div>
+
             {user ? (
               <div className="flex items-center space-x-4">
                 <Link 
@@ -66,17 +110,45 @@ const Navigation: React.FC = () => {
           </div>
           
           <div className="flex items-center sm:hidden">
+            {/* Mobile Games Menu */}
+            <div className="relative mr-2">
+              <button
+                onClick={() => setGamesMenuOpen(!gamesMenuOpen)}
+                className="inline-flex items-center justify-center p-2 rounded-full text-white hover:bg-white/20 focus:outline-none transition-colors duration-200"
+                title="Games"
+              >
+                <Gamepad2 className="h-6 w-6" />
+              </button>
+
+              {gamesMenuOpen && (
+                <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-50">
+                  <Link
+                    to="/memory-game"
+                    className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center"
+                    onClick={() => setGamesMenuOpen(false)}
+                  >
+                    <span className="mr-2">🧠</span>
+                    Memory Match
+                  </Link>
+                  <div className="border-t border-gray-200 my-1"></div>
+                  <span className="block px-4 py-2 text-xs text-gray-500 italic">
+                    More games coming soon!
+                  </span>
+                </div>
+              )}
+            </div>
+
             {user ? (
-              <Link 
-                to="/profile" 
+              <Link
+                to="/profile"
                 className="inline-flex items-center justify-center p-2 rounded-full text-white hover:bg-white/20 focus:outline-none transition-colors duration-200"
                 title="Profile"
               >
                 <User className="h-6 w-6" />
               </Link>
             ) : (
-              <Link 
-                to="/login" 
+              <Link
+                to="/login"
                 className="inline-flex items-center justify-center p-2 rounded-full text-white hover:bg-white/20 focus:outline-none transition-colors duration-200"
                 title="Sign In"
               >
