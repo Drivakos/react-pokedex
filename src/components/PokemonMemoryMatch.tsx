@@ -68,7 +68,7 @@ export const PokemonMemoryMatch: React.FC<PokemonMemoryMatchProps> = ({
   const [gameCompleted, setGameCompleted] = useState<boolean>(false);
   const [isChecking, setIsChecking] = useState<boolean>(false);
   const [wrongMatch, setWrongMatch] = useState<boolean>(false);
-  const [celebration, setCelebration] = useState<boolean>(false);
+  const [showStats, setShowStats] = useState<boolean>(false);
   const [showConfirmModal, setShowConfirmModal] = useState<boolean>(false);
   const [pendingDifficulty, setPendingDifficulty] = useState<keyof typeof DIFFICULTY_LEVELS | null>(null);
   const [isTimerPaused, setIsTimerPaused] = useState<boolean>(false);
@@ -227,7 +227,6 @@ export const PokemonMemoryMatch: React.FC<PokemonMemoryMatchProps> = ({
     setGameCompleted(false);
     setIsChecking(false);
     setWrongMatch(false);
-    setCelebration(false);
     setShowConfirmModal(false);
     setPendingDifficulty(null);
     setIsTimerPaused(false);
@@ -265,10 +264,6 @@ export const PokemonMemoryMatch: React.FC<PokemonMemoryMatchProps> = ({
           setMatchedPairs(prev => prev + 1);
           setFlippedCards([]);
           setIsChecking(false);
-          setCelebration(true);
-
-          // Reset celebration after animation
-          setTimeout(() => setCelebration(false), GAME_CONSTANTS.CELEBRATION_DURATION);
         }, GAME_CONSTANTS.MATCH_ANIMATION_DELAY);
       } else {
         // No match
@@ -413,12 +408,45 @@ export const PokemonMemoryMatch: React.FC<PokemonMemoryMatchProps> = ({
     return () => window.removeEventListener('keydown', handleKeyPress);
   }, [handleNewGame, gameCompleted]);
 
+  // Mobile stats toggle keyboard shortcut
+  useEffect(() => {
+    const handleKeyPress = (e: KeyboardEvent) => {
+      if (window.innerWidth < 640 && e.key === 's' && !gameCompleted) {
+        setShowStats(prev => !prev);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyPress);
+    return () => window.removeEventListener('keydown', handleKeyPress);
+  }, [gameCompleted]);
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-red-50 py-6 px-4 sm:px-6 relative">
-      {/* Fixed Stats Panel - Top left */}
-      <div className={`fixed top-18 left-6 z-40 bg-white/60 backdrop-blur-sm rounded-lg p-4 shadow-lg border border-gray-200/30`}
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-red-50 py-4 px-3 sm:px-6 relative">
+      {/* Mobile Stats Overlay */}
+      {showStats && (
+        <div
+          className="sm:hidden fixed inset-0 bg-black/20 backdrop-blur-sm z-35"
+          onClick={() => setShowStats(false)}
+        />
+      )}
+
+      {/* Fixed Stats Panel - Desktop only or mobile when shown */}
+      <div className={`fixed top-18 left-3 right-3 sm:left-6 sm:right-auto z-40 bg-white/60 backdrop-blur-sm rounded-lg p-3 sm:p-4 shadow-lg border border-gray-200/30 transition-all duration-300 ${
+        showStats ? 'opacity-100 scale-100' : 'opacity-0 scale-95 pointer-events-none'
+      } sm:opacity-100 sm:scale-100 sm:pointer-events-auto`}
            style={{ minWidth: '160px' }}>
-        <h4 className="text-sm font-semibold text-gray-800 mb-3 text-center">Game Stats</h4>
+        <div className="flex justify-between items-center mb-3">
+          <h4 className="text-sm font-semibold text-gray-800">Game Stats</h4>
+          <button
+            onClick={() => setShowStats(false)}
+            className="sm:hidden text-gray-500 hover:text-gray-700 p-1"
+            aria-label="Close stats"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
         <div className="space-y-3">
           <div className="flex justify-between items-center">
             <span className="text-sm font-medium text-gray-600">Moves</span>
@@ -435,43 +463,61 @@ export const PokemonMemoryMatch: React.FC<PokemonMemoryMatchProps> = ({
         </div>
       </div>
 
+      {/* Floating Stats Button - Mobile only */}
+      <button
+        onClick={() => setShowStats(true)}
+        className={`sm:hidden fixed top-4 right-4 z-30 bg-blue-500 text-white rounded-full p-3 shadow-lg hover:bg-blue-600 transition-all duration-200 hover:scale-105 relative ${
+          showStats ? 'opacity-0 pointer-events-none' : 'opacity-100'
+        }`}
+        aria-label="Show game stats"
+      >
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+        </svg>
+        {/* Progress indicator */}
+        <div className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold">
+          {moves}
+        </div>
+      </button>
+
       {/* Game Header */}
-      <div className="text-center mb-8">
-        <div className="mb-4">
-          <h1 className="text-3xl sm:text-4xl font-bold text-gray-800 mb-2">
+      <div className="text-center mb-6 sm:mb-8">
+        <div className="mb-3 sm:mb-4">
+          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-800 mb-2">
             Pokémon Memory Match
           </h1>
-          <div className="w-32 h-1 bg-gradient-to-r from-red-500 to-blue-500 rounded-full mx-auto"></div>
+          <div className="w-24 sm:w-32 h-1 bg-gradient-to-r from-red-500 to-blue-500 rounded-full mx-auto"></div>
         </div>
-        <p className="text-gray-700 text-lg font-medium mb-2">
+        <p className="text-gray-700 text-base sm:text-lg font-medium mb-2">
           Find matching pairs of Pokémon cards!
         </p>
-        <p className="text-gray-600 text-sm">
+        <p className="text-gray-600 text-xs sm:text-sm">
           Test your memory and Pokémon knowledge
         </p>
 
         {/* Game Controls */}
-        <div className="bg-white/60 backdrop-blur-sm rounded-xl p-4 shadow-lg border border-gray-200/30 mb-8">
-          <div className="flex flex-wrap gap-4 justify-center items-center">
+        <div className="bg-white/60 backdrop-blur-sm rounded-xl p-3 sm:p-4 shadow-lg border border-gray-200/30 mb-6 sm:mb-8">
+          <div className="flex flex-wrap gap-3 sm:gap-4 justify-center items-center">
             {/* Difficulty Buttons */}
             {Object.entries(DIFFICULTY_LEVELS).map(([key, { pairs }]) => (
               <button
                 key={key}
                 onClick={() => handleDifficultyChange(key as keyof typeof DIFFICULTY_LEVELS)}
-                className={`px-6 py-3 rounded-lg font-semibold transition-all duration-200 transform hover:scale-105 ${
+                className={`px-4 py-3 sm:px-6 sm:py-3 rounded-lg font-semibold transition-all duration-200 transform hover:scale-105 min-h-[44px] touch-manipulation ${
                   difficulty === key
                     ? 'bg-red-500 text-white shadow-lg ring-2 ring-red-300'
                     : 'bg-white/80 backdrop-blur-sm text-gray-700 hover:bg-white shadow-md border border-gray-200/50'
                 }`}
               >
-                {key.charAt(0).toUpperCase() + key.slice(1)} ({pairs})
+                <span className="text-sm sm:text-base">{key.charAt(0).toUpperCase() + key.slice(1)}</span>
+                <span className="text-xs sm:text-sm ml-1">({pairs})</span>
               </button>
             ))}
 
             {/* New Game Button */}
             <button
               onClick={handleNewGame}
-              className="px-6 py-3 bg-green-500 text-white rounded-lg font-semibold hover:bg-green-600 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105"
+              className="px-4 py-3 sm:px-6 sm:py-3 bg-green-500 text-white rounded-lg font-semibold hover:bg-green-600 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105 min-h-[44px] touch-manipulation"
             >
               New Game
             </button>
@@ -480,19 +526,19 @@ export const PokemonMemoryMatch: React.FC<PokemonMemoryMatchProps> = ({
 
 
       {/* Progress Bar - Fixed at bottom */}
-      <div className="fixed bottom-6 left-1/2 transform -translate-x-1/2 z-40">
-        <div className="bg-white/60 backdrop-blur-sm rounded-xl p-4 shadow-lg border border-gray-200/30 min-w-[320px] max-w-sm">
-          <div className="flex justify-between text-sm text-gray-700 mb-3">
-            <span className="font-semibold">Game Progress</span>
+      <div className="fixed bottom-4 left-1/2 transform -translate-x-1/2 z-40 px-3 sm:px-0 sm:min-w-[600px]">
+        <div className="w-full bg-white/60 backdrop-blur-sm rounded-xl p-4 sm:p-4 shadow-lg border border-gray-200/30 w-4/5 sm:min-w-[600px] sm:max-w-lg">
+          <div className="flex justify-between text-sm sm:text-sm text-gray-700 mb-3 sm:mb-3">
+            <span className="font-semibold">Progress</span>
             <span className="font-bold">{Math.round((matchedPairs / DIFFICULTY_LEVELS[difficulty].pairs) * 100)}%</span>
           </div>
           <div className={`w-full bg-gray-200/70 rounded-full overflow-hidden backdrop-blur-sm`}
-               style={{ height: `${GAME_CONSTANTS.PROGRESS_BAR_HEIGHT + 2}px` }}>
+               style={{ height: `${GAME_CONSTANTS.PROGRESS_BAR_HEIGHT + 6}px` }}>
             <div
               className="bg-gradient-to-r from-red-500 to-red-600 rounded-full transition-all duration-500 shadow-sm"
               style={{
                 width: `${(matchedPairs / DIFFICULTY_LEVELS[difficulty].pairs) * 100}%`,
-                height: `${GAME_CONSTANTS.PROGRESS_BAR_HEIGHT + 2}px`
+                height: `${GAME_CONSTANTS.PROGRESS_BAR_HEIGHT + 6}px`
               }}
             ></div>
           </div>
@@ -506,23 +552,23 @@ export const PokemonMemoryMatch: React.FC<PokemonMemoryMatchProps> = ({
             onClick={() => setGameCompleted(false)}
           >
             <div
-              className="bg-white/90 backdrop-blur-sm border border-gray-200/30 rounded-xl p-8 shadow-2xl max-w-md w-full mx-4 transform animate-in fade-in-0 zoom-in-95 duration-300 relative"
+              className="bg-white/90 backdrop-blur-sm border border-gray-200/30 rounded-xl p-4 sm:p-8 shadow-2xl max-w-md w-full mx-3 sm:mx-4 transform animate-in fade-in-0 zoom-in-95 duration-300 relative"
               onClick={(e) => e.stopPropagation()}
             >
               {/* Close Button */}
               <button
                 onClick={() => setGameCompleted(false)}
-                className="absolute top-4 right-4 text-green-600 hover:text-green-800 hover:bg-green-100 rounded-full p-2 transition-colors duration-200"
+                className="absolute top-2 right-2 sm:top-4 sm:right-4 text-green-600 hover:text-green-800 hover:bg-green-100 rounded-full p-1.5 sm:p-2 transition-colors duration-200"
                 aria-label="Close notification"
               >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                 </svg>
               </button>
 
               <div className="text-center">
-                <div className="text-6xl mb-4">🏆</div>
-                <h2 className="text-2xl font-bold text-green-800 mb-3">
+                <div className="text-4xl sm:text-6xl mb-3 sm:mb-4">🏆</div>
+                <h2 className="text-xl sm:text-2xl font-bold text-green-800 mb-3">
                   Congratulations!
                 </h2>
                 <p className="text-green-700 mb-4 text-lg">
@@ -552,9 +598,9 @@ export const PokemonMemoryMatch: React.FC<PokemonMemoryMatchProps> = ({
       </div>
 
       {/* Main Game Area */}
-      <div className="max-w-4xl mx-auto">
+      <div className="max-w-4xl mx-auto pb-20 sm:pb-24">
         {/* Game Board */}
-        <div className={`grid gap-3 sm:gap-4 max-w-4xl mx-auto transition-transform duration-300 px-4 sm:px-0 ${wrongMatch ? 'memory-shake' : ''} ${getGridClasses()}`}>
+        <div className={`grid gap-2 sm:gap-3 lg:gap-4 max-w-4xl mx-auto transition-transform duration-300 px-2 sm:px-4 lg:px-0 ${wrongMatch ? 'memory-shake' : ''} ${getGridClasses()}`}>
         {gameCards.map((card) => (
           <MemoryCard
             key={card.id}
@@ -568,23 +614,24 @@ export const PokemonMemoryMatch: React.FC<PokemonMemoryMatchProps> = ({
         </div>
 
         {/* Instructions */}
-        <div className="mt-8 text-center text-gray-600 px-4 sm:px-0">
-          <p className="mb-2 text-sm sm:text-base">
-            <strong>How to play:</strong> Click cards to flip them over and find matching pairs.
+        <div className="mt-6 sm:mt-8 text-center text-gray-600 px-3 sm:px-0">
+          <p className="mb-2 text-xs sm:text-sm lg:text-base">
+            <strong>How to play:</strong> Tap cards to flip them and find matching pairs.
           </p>
-          <p className="mb-2 text-sm sm:text-base">
-            Match all {DIFFICULTY_LEVELS[difficulty].pairs} pairs as quickly as possible with the fewest moves!
+          <p className="mb-2 text-xs sm:text-sm lg:text-base">
+            Match all {DIFFICULTY_LEVELS[difficulty].pairs} pairs quickly with fewest moves!
           </p>
-          <p className="text-xs sm:text-sm text-gray-500">
-            <strong>Tip:</strong> Press <kbd className="bg-gray-200 px-2 py-1 rounded text-xs">Space</kbd> for a new game
+          <p className="text-xs text-gray-500">
+            <strong>Tip:</strong> Press <kbd className="bg-gray-200 px-1.5 py-0.5 rounded text-xs">Space</kbd> for new game
+            <span className="sm:hidden"> • Press <kbd className="bg-gray-200 px-1.5 py-0.5 rounded text-xs">S</kbd> for stats</span>
           </p>
         </div>
       </div>
 
       {/* Confirmation Modal */}
       {showConfirmModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-lg max-w-sm w-full mx-4">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-3 sm:p-4">
+          <div className="bg-white rounded-lg shadow-lg max-w-sm w-full mx-3 sm:mx-4">
             <div className="text-center p-6">
               <h3 className="text-lg font-bold text-gray-800 mb-3">
                 Lose Current Progress?

@@ -86,7 +86,7 @@ const PokemonMemoryGame: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-red-50 py-6 px-4 sm:px-6">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-red-50 py-4 px-3 sm:px-6">
       <PokemonMemoryMatch
         pokemonList={gamePokemon}
         onGameComplete={handleGameComplete}

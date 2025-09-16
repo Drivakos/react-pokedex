@@ -17,17 +17,31 @@ const Navigation: React.FC = () => {
     }
   };
 
-  // Close games menu when clicking outside
   React.useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
+    const handleClickOutside = (event: Event) => {
       const target = event.target as Element;
       if (gamesMenuOpen && !target.closest('.games-menu')) {
         setGamesMenuOpen(false);
       }
     };
 
+    const handleScroll = () => {
+      if (gamesMenuOpen) {
+        setGamesMenuOpen(false);
+      }
+    };
+
+    // Handle both mouse and touch events for better mobile support
     document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    document.addEventListener('touchstart', handleClickOutside);
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('touchstart', handleClickOutside);
+      window.removeEventListener('scroll', handleScroll);
+    };
   }, [gamesMenuOpen]);
 
   return (
@@ -53,7 +67,10 @@ const Navigation: React.FC = () => {
             <div className="relative mr-4 games-menu">
               <button
                 onClick={() => setGamesMenuOpen(!gamesMenuOpen)}
-                className="text-white hover:bg-white/20 px-3 py-2 rounded-full text-sm font-medium flex items-center transition-colors duration-200"
+                className="text-white hover:bg-white/20 active:bg-white/30 px-3 py-2 rounded-full text-sm font-medium flex items-center transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-white/50"
+                aria-label="Games menu"
+                aria-expanded={gamesMenuOpen}
+                aria-haspopup="true"
               >
                 <Gamepad2 className="h-4 w-4 mr-1" />
                 Games
@@ -61,7 +78,7 @@ const Navigation: React.FC = () => {
               </button>
 
               {gamesMenuOpen && (
-                <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-50">
+                <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-[60]">
                   <Link
                     to="/memory-game"
                     className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center"
@@ -111,17 +128,20 @@ const Navigation: React.FC = () => {
           
           <div className="flex items-center sm:hidden">
             {/* Mobile Games Menu */}
-            <div className="relative mr-2">
+            <div className="relative mr-2 games-menu">
               <button
                 onClick={() => setGamesMenuOpen(!gamesMenuOpen)}
-                className="inline-flex items-center justify-center p-2 rounded-full text-white hover:bg-white/20 focus:outline-none transition-colors duration-200"
+                className="inline-flex items-center justify-center p-2 rounded-full text-white hover:bg-white/20 active:bg-white/30 focus:outline-none focus:ring-2 focus:ring-white/50 transition-colors duration-200 touch-manipulation select-none"
                 title="Games"
+                aria-label="Games menu"
+                aria-expanded={gamesMenuOpen}
+                aria-haspopup="true"
               >
                 <Gamepad2 className="h-6 w-6" />
               </button>
 
               {gamesMenuOpen && (
-                <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-50">
+                <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-[60]">
                   <Link
                     to="/memory-game"
                     className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center"
