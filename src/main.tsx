@@ -6,6 +6,7 @@ import ErrorBoundary from './components/ErrorBoundary';
 import App from './App.tsx';
 import './index.css';
 import './styles/card-animations.css';
+import './styles/pokemon-types.css';
 import { Toaster } from 'react-hot-toast';
 
 window.addEventListener('error', (event) => {

@@ -62,26 +62,26 @@ const PokéGridChallenge: React.FC = () => {
   const MAX_GUESSES_PER_CELL = 3;
 
   // Authentic PokéGrid constraint definitions
-  // ROWS: Always Pokémon Types
+  // ROWS: Always Pokémon Types with SVG Icons
   const typeConstraints: GridConstraint[] = [
-    { id: 'fire-type', type: 'type', value: 'fire', label: 'Fire', description: 'Fire-type Pokémon', icon: '🔥' },
-    { id: 'water-type', type: 'type', value: 'water', label: 'Water', description: 'Water-type Pokémon', icon: '💧' },
-    { id: 'grass-type', type: 'type', value: 'grass', label: 'Grass', description: 'Grass-type Pokémon', icon: '🌿' },
-    { id: 'electric-type', type: 'type', value: 'electric', label: 'Electric', description: 'Electric-type Pokémon', icon: '⚡' },
-    { id: 'psychic-type', type: 'type', value: 'psychic', label: 'Psychic', description: 'Psychic-type Pokémon', icon: '🔮' },
-    { id: 'ice-type', type: 'type', value: 'ice', label: 'Ice', description: 'Ice-type Pokémon', icon: '❄️' },
-    { id: 'dragon-type', type: 'type', value: 'dragon', label: 'Dragon', description: 'Dragon-type Pokémon', icon: '🐲' },
-    { id: 'flying-type', type: 'type', value: 'flying', label: 'Flying', description: 'Flying-type Pokémon', icon: '🦅' },
-    { id: 'normal-type', type: 'type', value: 'normal', label: 'Normal', description: 'Normal-type Pokémon', icon: '⚪' },
-    { id: 'fighting-type', type: 'type', value: 'fighting', label: 'Fighting', description: 'Fighting-type Pokémon', icon: '👊' },
-    { id: 'poison-type', type: 'type', value: 'poison', label: 'Poison', description: 'Poison-type Pokémon', icon: '☠️' },
-    { id: 'ground-type', type: 'type', value: 'ground', label: 'Ground', description: 'Ground-type Pokémon', icon: '🌍' },
-    { id: 'rock-type', type: 'type', value: 'rock', label: 'Rock', description: 'Rock-type Pokémon', icon: '🗿' },
-    { id: 'bug-type', type: 'type', value: 'bug', label: 'Bug', description: 'Bug-type Pokémon', icon: '🐛' },
-    { id: 'ghost-type', type: 'type', value: 'ghost', label: 'Ghost', description: 'Ghost-type Pokémon', icon: '👻' },
-    { id: 'steel-type', type: 'type', value: 'steel', label: 'Steel', description: 'Steel-type Pokémon', icon: '🔩' },
-    { id: 'dark-type', type: 'type', value: 'dark', label: 'Dark', description: 'Dark-type Pokémon', icon: '🌙' },
-    { id: 'fairy-type', type: 'type', value: 'fairy', label: 'Fairy', description: 'Fairy-type Pokémon', icon: '🧚' },
+    { id: 'fire-type', type: 'type', value: 'fire', label: 'Fire', description: 'Fire-type Pokémon', icon: '🔥', svgIcon: '/icons/types/fire.svg' },
+    { id: 'water-type', type: 'type', value: 'water', label: 'Water', description: 'Water-type Pokémon', icon: '💧', svgIcon: '/icons/types/water.svg' },
+    { id: 'grass-type', type: 'type', value: 'grass', label: 'Grass', description: 'Grass-type Pokémon', icon: '🌿', svgIcon: '/icons/types/grass.svg' },
+    { id: 'electric-type', type: 'type', value: 'electric', label: 'Electric', description: 'Electric-type Pokémon', icon: '⚡', svgIcon: '/icons/types/electric.svg' },
+    { id: 'psychic-type', type: 'type', value: 'psychic', label: 'Psychic', description: 'Psychic-type Pokémon', icon: '🔮', svgIcon: '/icons/types/psychic.svg' },
+    { id: 'ice-type', type: 'type', value: 'ice', label: 'Ice', description: 'Ice-type Pokémon', icon: '❄️', svgIcon: '/icons/types/ice.svg' },
+    { id: 'dragon-type', type: 'type', value: 'dragon', label: 'Dragon', description: 'Dragon-type Pokémon', icon: '🐲', svgIcon: '/icons/types/dragon.svg' },
+    { id: 'flying-type', type: 'type', value: 'flying', label: 'Flying', description: 'Flying-type Pokémon', icon: '🦅', svgIcon: '/icons/types/flying.svg' },
+    { id: 'normal-type', type: 'type', value: 'normal', label: 'Normal', description: 'Normal-type Pokémon', icon: '⚪', svgIcon: '/icons/types/normal.svg' },
+    { id: 'fighting-type', type: 'type', value: 'fighting', label: 'Fighting', description: 'Fighting-type Pokémon', icon: '👊', svgIcon: '/icons/types/fighting.svg' },
+    { id: 'poison-type', type: 'type', value: 'poison', label: 'Poison', description: 'Poison-type Pokémon', icon: '☠️', svgIcon: '/icons/types/poison.svg' },
+    { id: 'ground-type', type: 'type', value: 'ground', label: 'Ground', description: 'Ground-type Pokémon', icon: '🌍', svgIcon: '/icons/types/ground.svg' },
+    { id: 'rock-type', type: 'type', value: 'rock', label: 'Rock', description: 'Rock-type Pokémon', icon: '🗿', svgIcon: '/icons/types/rock.svg' },
+    { id: 'bug-type', type: 'type', value: 'bug', label: 'Bug', description: 'Bug-type Pokémon', icon: '🐛', svgIcon: '/icons/types/bug.svg' },
+    { id: 'ghost-type', type: 'type', value: 'ghost', label: 'Ghost', description: 'Ghost-type Pokémon', icon: '👻', svgIcon: '/icons/types/ghost.svg' },
+    { id: 'steel-type', type: 'type', value: 'steel', label: 'Steel', description: 'Steel-type Pokémon', icon: '🔩', svgIcon: '/icons/types/steel.svg' },
+    { id: 'dark-type', type: 'type', value: 'dark', label: 'Dark', description: 'Dark-type Pokémon', icon: '🌙', svgIcon: '/icons/types/dark.svg' },
+    { id: 'fairy-type', type: 'type', value: 'fairy', label: 'Fairy', description: 'Fairy-type Pokémon', icon: '🧚', svgIcon: '/icons/types/fairy.svg' },
   ];
 
   // COLUMNS: Various other constraints
@@ -517,8 +517,16 @@ const PokéGridChallenge: React.FC = () => {
         searchResults={searchResults}
         onPokemonSelect={handlePokemonSelect}
         selectedCell={selectedCell ? {
-          rowConstraint: selectedCell.rowConstraint,
-          colConstraint: selectedCell.colConstraint,
+          rowConstraint: {
+            ...selectedCell.rowConstraint,
+            type: selectedCell.rowConstraint.type,
+            value: selectedCell.rowConstraint.value
+          },
+          colConstraint: {
+            ...selectedCell.colConstraint,
+            type: selectedCell.colConstraint.type,
+            value: selectedCell.colConstraint.value
+          },
           guessesLeft: selectedCell.guessesLeft
         } : null}
       />

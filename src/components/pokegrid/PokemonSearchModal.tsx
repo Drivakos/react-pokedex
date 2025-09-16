@@ -11,8 +11,8 @@ interface PokemonSearchModalProps {
   searchResults: Pokemon[];
   onPokemonSelect: (pokemon: Pokemon) => void;
   selectedCell: {
-    rowConstraint: { label: string; icon: string };
-    colConstraint: { label: string; icon: string };
+    rowConstraint: { label: string; icon: string; svgIcon?: string; type: string; value: string | number };
+    colConstraint: { label: string; icon: string; svgIcon?: string; type: string; value: string | number };
     guessesLeft: number;
   } | null;
 }
@@ -36,15 +36,24 @@ export const PokemonSearchModal: React.FC<PokemonSearchModalProps> = ({
           <div className="flex justify-between items-start mb-4">
             <div>
               <h2 className="text-xl font-bold text-gray-800 mb-2">Select Pokémon</h2>
-              <div className="flex items-center gap-4 text-sm text-gray-600">
-                <div className="flex items-center gap-1">
-                  <span>{selectedCell.rowConstraint.icon}</span>
-                  <span>{selectedCell.rowConstraint.label}</span>
+              <div className="flex items-center gap-4 text-sm">
+                <div className="flex items-center gap-2">
+                  {selectedCell.rowConstraint.svgIcon ? (
+                    <div className={`icon small ${selectedCell.rowConstraint.value}`}>
+                      <img
+                        src={selectedCell.rowConstraint.svgIcon}
+                        alt={selectedCell.rowConstraint.label}
+                      />
+                    </div>
+                  ) : (
+                    <span className="text-lg">{selectedCell.rowConstraint.icon}</span>
+                  )}
+                  <span className="font-semibold text-gray-700">{selectedCell.rowConstraint.label}</span>
                 </div>
-                <span>+</span>
-                <div className="flex items-center gap-1">
-                  <span>{selectedCell.colConstraint.icon}</span>
-                  <span className="whitespace-pre-line">{selectedCell.colConstraint.label}</span>
+                <span className="text-lg font-bold text-gray-400">+</span>
+                <div className="flex items-center gap-2">
+                  <span className="text-lg">{selectedCell.colConstraint.icon}</span>
+                  <span className="whitespace-pre-line font-semibold text-gray-700">{selectedCell.colConstraint.label}</span>
                 </div>
               </div>
               <div className="text-xs text-orange-600 font-medium mt-1">
