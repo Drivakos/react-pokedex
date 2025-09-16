@@ -72,6 +72,7 @@ export const PokemonMemoryMatch: React.FC<PokemonMemoryMatchProps> = ({
   const [showConfirmModal, setShowConfirmModal] = useState<boolean>(false);
   const [pendingDifficulty, setPendingDifficulty] = useState<keyof typeof DIFFICULTY_LEVELS | null>(null);
   const [isTimerPaused, setIsTimerPaused] = useState<boolean>(false);
+  const [completionHandled, setCompletionHandled] = useState<boolean>(false);
 
   // Initialize game
   const initializeGame = useCallback(() => {
@@ -230,6 +231,7 @@ export const PokemonMemoryMatch: React.FC<PokemonMemoryMatchProps> = ({
     setShowConfirmModal(false);
     setPendingDifficulty(null);
     setIsTimerPaused(false);
+    setCompletionHandled(false);
   }, [pokemonList, difficulty]);
 
   // Timer effect
@@ -287,7 +289,8 @@ export const PokemonMemoryMatch: React.FC<PokemonMemoryMatchProps> = ({
   // Check for game completion
   useEffect(() => {
     const totalPairs = DIFFICULTY_LEVELS[difficulty].pairs;
-    if (matchedPairs === totalPairs && totalPairs > 0 && !gameCompleted) {
+    if (matchedPairs === totalPairs && totalPairs > 0 && !completionHandled) {
+      setCompletionHandled(true);
       setGameCompleted(true);
       const score = Math.max(
         GAME_CONSTANTS.BASE_SCORE -
@@ -304,7 +307,7 @@ export const PokemonMemoryMatch: React.FC<PokemonMemoryMatchProps> = ({
         });
       }
     }
-  }, [matchedPairs, difficulty, moves, time, onGameComplete, gameCompleted]);
+  }, [matchedPairs, difficulty, moves, time, onGameComplete, completionHandled]);
 
   // Handle difficulty change
   const handleDifficultyChange = (newDifficulty: keyof typeof DIFFICULTY_LEVELS) => {
@@ -491,51 +494,55 @@ export const PokemonMemoryMatch: React.FC<PokemonMemoryMatchProps> = ({
         <p className="text-gray-700 text-base sm:text-lg font-medium mb-2">
           Find matching pairs of Pokémon cards!
         </p>
-        <p className="text-gray-600 text-xs sm:text-sm">
+        <p className="text-gray-600 text-xs sm:text-sm mb-2">
           Test your memory and Pokémon knowledge
         </p>
 
         {/* Game Controls */}
-        <div className="bg-white/60 backdrop-blur-sm rounded-xl p-3 sm:p-4 shadow-lg border border-gray-200/30 mb-6 sm:mb-8">
-          <div className="flex flex-wrap gap-3 sm:gap-4 justify-center items-center">
-            {/* Difficulty Buttons */}
-            {Object.entries(DIFFICULTY_LEVELS).map(([key, { pairs }]) => (
-              <button
-                key={key}
-                onClick={() => handleDifficultyChange(key as keyof typeof DIFFICULTY_LEVELS)}
-                className={`px-4 py-3 sm:px-6 sm:py-3 rounded-lg font-semibold transition-all duration-200 transform hover:scale-105 min-h-[44px] touch-manipulation ${
-                  difficulty === key
-                    ? 'bg-red-500 text-white shadow-lg ring-2 ring-red-300'
-                    : 'bg-white/80 backdrop-blur-sm text-gray-700 hover:bg-white shadow-md border border-gray-200/50'
-                }`}
-              >
-                <span className="text-sm sm:text-base">{key.charAt(0).toUpperCase() + key.slice(1)}</span>
-                <span className="text-xs sm:text-sm ml-1">({pairs})</span>
-              </button>
-            ))}
-
-            {/* New Game Button */}
+        <div className="flex flex-wrap gap-3 sm:gap-4 justify-center items-center">
+          {/* Difficulty Buttons */}
+          {Object.entries(DIFFICULTY_LEVELS).map(([key, { pairs }]) => (
             <button
-              onClick={handleNewGame}
-              className="px-4 py-3 sm:px-6 sm:py-3 bg-green-500 text-white rounded-lg font-semibold hover:bg-green-600 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105 min-h-[44px] touch-manipulation"
+              key={key}
+              onClick={() => handleDifficultyChange(key as keyof typeof DIFFICULTY_LEVELS)}
+              className={`px-4 py-3 sm:px-6 sm:py-3 rounded-lg font-semibold transition-all duration-200 transform hover:scale-105 min-h-[44px] touch-manipulation ${
+                difficulty === key
+                  ? 'bg-red-500 text-white shadow-lg ring-2 ring-red-300'
+                  : 'bg-white/80 backdrop-blur-sm text-gray-700 hover:bg-white shadow-md border border-gray-200/50'
+              }`}
             >
-              New Game
+              <span className="text-sm sm:text-base">{key.charAt(0).toUpperCase() + key.slice(1)}</span>
+              <span className="text-xs sm:text-sm ml-1">({pairs})</span>
             </button>
-          </div>
+          ))}
+
+          {/* New Game Button */}
+          <button
+            onClick={handleNewGame}
+            className="px-4 py-3 sm:px-6 sm:py-3 bg-green-500 text-white rounded-lg font-semibold hover:bg-green-600 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105 min-h-[44px] touch-manipulation"
+          >
+            New Game
+          </button>
         </div>
 
 
       {/* Progress Bar - Fixed at bottom */}
       <div className="fixed bottom-4 left-1/2 transform -translate-x-1/2 z-40 px-3 sm:px-0 sm:min-w-[600px]">
         <div className="w-full bg-white/60 backdrop-blur-sm rounded-xl p-4 sm:p-4 shadow-lg border border-gray-200/30 w-4/5 sm:min-w-[600px] sm:max-w-lg">
-          <div className="flex justify-between text-sm sm:text-sm text-gray-700 mb-3 sm:mb-3">
+          <div className={`flex justify-between text-sm sm:text-sm mb-3 sm:mb-3 ${
+            (gameCompleted || completionHandled) ? 'text-green-700' : 'text-gray-700'
+          }`}>
             <span className="font-semibold">Progress</span>
             <span className="font-bold">{Math.round((matchedPairs / DIFFICULTY_LEVELS[difficulty].pairs) * 100)}%</span>
           </div>
           <div className={`w-full bg-gray-200/70 rounded-full overflow-hidden backdrop-blur-sm`}
                style={{ height: `${GAME_CONSTANTS.PROGRESS_BAR_HEIGHT + 6}px` }}>
             <div
-              className="bg-gradient-to-r from-red-500 to-red-600 rounded-full transition-all duration-500 shadow-sm"
+              className={`rounded-full transition-all duration-500 shadow-sm ${
+                (gameCompleted || completionHandled)
+                  ? 'bg-gradient-to-r from-green-500 to-green-600'
+                  : 'bg-gradient-to-r from-red-500 to-red-600'
+              }`}
               style={{
                 width: `${(matchedPairs / DIFFICULTY_LEVELS[difficulty].pairs) * 100}%`,
                 height: `${GAME_CONSTANTS.PROGRESS_BAR_HEIGHT + 6}px`
