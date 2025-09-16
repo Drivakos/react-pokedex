@@ -16,6 +16,11 @@ interface PokemonSearchModalProps {
     rowConstraint: { label: string; icon: string; svgIcon?: string; type: string; value: string | number };
     colConstraint: { label: string; icon: string; svgIcon?: string; type: string; value: string | number };
   } | null;
+  onUndo?: () => void;
+  sessionUndos?: number;
+  maxSessionUndos?: number;
+  hasRecentMistake?: boolean; // Show undo only after a wrong guess
+  mistakePokemon?: any; // The specific Pokemon that was the wrong choice
 }
 
 export const PokemonSearchModal: React.FC<PokemonSearchModalProps> = ({
@@ -27,7 +32,12 @@ export const PokemonSearchModal: React.FC<PokemonSearchModalProps> = ({
   onPokemonSelect,
   totalGuesses,
   maxTotalGuesses,
-  selectedCell
+  selectedCell,
+  onUndo,
+  sessionUndos = 0,
+  maxSessionUndos = 3,
+  hasRecentMistake = false,
+  mistakePokemon = null
 }) => {
 
   if (!isOpen || !selectedCell) return null;
@@ -58,6 +68,7 @@ export const PokemonSearchModal: React.FC<PokemonSearchModalProps> = ({
                 </span>
               </div>
             </div>
+            {/* Close Button */}
             <button
               onClick={onClose}
               className="text-gray-400 hover:text-gray-600"
@@ -104,12 +115,18 @@ export const PokemonSearchModal: React.FC<PokemonSearchModalProps> = ({
           <div className="max-h-80 sm:max-h-96 overflow-y-auto">
             {searchResults.length > 0 ? (
               <div className="space-y-2">
-                {searchResults.map((pokemon) => (
-                  <div
-                    key={pokemon.id}
-                    onClick={() => onPokemonSelect(pokemon)}
-                    className="group flex items-center gap-3 sm:gap-4 p-3 sm:p-4 bg-white border-2 border-gray-100 rounded-xl hover:border-blue-300 hover:shadow-md active:scale-[0.98] cursor-pointer transition-all duration-200"
-                  >
+                {searchResults.map((pokemon) => {
+                  // Check if this Pokemon was the wrong choice
+                  const isMistakePokemon = mistakePokemon && pokemon.id === mistakePokemon.id;
+
+                  return (
+                    <div
+                      key={pokemon.id}
+                      onClick={() => onPokemonSelect(pokemon)}
+                      className={`group flex items-center gap-3 sm:gap-4 p-3 sm:p-4 bg-white border-2 border-gray-100 rounded-xl hover:border-blue-300 hover:shadow-md active:scale-[0.98] cursor-pointer transition-all duration-200 ${
+                        isMistakePokemon ? 'ring-2 ring-red-200 bg-red-50/50' : ''
+                      }`}
+                    >
                     <div className="relative flex-shrink-0">
                       <img
                         src={getOfficialArtwork(pokemon.sprites)}
@@ -135,13 +152,33 @@ export const PokemonSearchModal: React.FC<PokemonSearchModalProps> = ({
                         ))}
                       </div>
                     </div>
-                    <div className="text-gray-400 group-hover:text-blue-500 transition-colors flex-shrink-0">
-                      <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                      </svg>
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      {/* Undo Button - Only show on the specific wrong Pokemon */}
+                      {onUndo && sessionUndos < maxSessionUndos && hasRecentMistake && isMistakePokemon && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation(); // Prevent triggering Pokemon selection
+                            onUndo();
+                          }}
+                          className="text-red-500 hover:text-red-700 p-1 rounded-lg hover:bg-red-50 transition-colors animate-pulse ring-1 ring-red-300"
+                          title={`Undo ${pokemon.name} choice (${maxSessionUndos - sessionUndos} undos remaining)`}
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
+                          </svg>
+                        </button>
+                      )}
+
+                      {/* Select Arrow */}
+                      <div className="text-gray-400 group-hover:text-blue-500 transition-colors">
+                        <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                        </svg>
+                      </div>
                     </div>
                   </div>
-                ))}
+                  );
+                })}
               </div>
             ) : searchQuery.length > 0 ? (
               <div className="text-center py-8 sm:py-12">

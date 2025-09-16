@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { usePokemon } from '../hooks/usePokemon';
+import { useAuth } from '../contexts/AuthProvider';
 import { Pokemon } from '../types/pokemon';
+import { supabase } from '../lib/supabase';
 import { 
   GameGrid, 
   GameStats, 
@@ -26,6 +28,8 @@ export type ConstraintType =
 export interface GridCell extends GridCellData {
   rowConstraint: GridConstraint;
   colConstraint: GridConstraint;
+  hasMistake?: boolean; // Track if this cell had a wrong guess
+  mistakeCount?: number; // Number of wrong guesses on this cell
 }
 
 export interface GridGame {
@@ -49,17 +53,24 @@ export interface GridGame {
 
 const PokéGridChallenge: React.FC = () => {
   const { displayedPokemon, loading } = usePokemon();
+  const { user, session } = useAuth();
   const [currentGame, setCurrentGame] = useState<GridGame | null>(null);
   const [selectedCell, setSelectedCell] = useState<GridCell | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<Pokemon[]>([]);
-  const [gameMode, setGameMode] = useState<'daily' | 'endless'>('daily');
-  const [showStats, setShowStats] = useState(false);
-  const [showLeaderboard, setShowLeaderboard] = useState(false);
+  const [gameMode, setGameMode] = useState<'daily' | 'historical'>('daily');
+  const [currentGridDate, setCurrentGridDate] = useState<Date>(new Date());
   const [showShareModal, setShowShareModal] = useState(false);
+  const [bonusRetries, setBonusRetries] = useState(0); // Available bonus retries
+  const [sessionUndos, setSessionUndos] = useState(0); // Undos used in current session
+  const [lastAction, setLastAction] = useState<any>(null); // For undo functionality
+  const [hasRecentMistake, setHasRecentMistake] = useState(false); // Track if user just made a mistake
+  const [mistakePokemon, setMistakePokemon] = useState<Pokemon | null>(null); // Track the specific wrong Pokemon
   
   // Game constants
-  const MAX_TOTAL_GUESSES = 3;
+  const MAX_TOTAL_GUESSES = 9; // Start with 9 guesses (one per cell)
+  const BONUS_RETRIES = 3; // Bonus retries for perfect first-try completion
+  const MAX_UNDO_PER_SESSION = 3; // Maximum undo actions per session
 
   // Authentic PokéGrid constraint definitions
   // ROWS: Always Pokémon Types with SVG Icons
@@ -119,12 +130,12 @@ const PokéGridChallenge: React.FC = () => {
     { id: 'high-speed', type: 'stat-range', value: 'speed-100', label: 'High Speed\n(≥100)', description: 'Speed stat 100 or higher', icon: 'SPD' },
   ];
 
-  // Get today's date seed for daily puzzles
-  const getTodaySeed = (): number => {
-    const today = new Date();
-    const dateString = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+  // Get date seed for daily puzzles (works for any date)
+  const getDateSeed = (date: Date): number => {
+    const dateString = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
     return dateString.split('').reduce((a, b) => a + b.charCodeAt(0), 0);
   };
+
 
   // Seeded random function for consistent daily grids
   const seededRandom = (seed: number, index: number = 0) => {
@@ -203,21 +214,22 @@ const PokéGridChallenge: React.FC = () => {
   };
 
   // Generate daily grid
-  const generateDailyGrid = useCallback((): GridGame => {
-    const seed = getTodaySeed();
-    const today = new Date().toISOString().split('T')[0];
-    
+  const generateDailyGrid = useCallback((date?: Date): GridGame => {
+    const targetDate = date || currentGridDate;
+    const seed = getDateSeed(targetDate);
+    const dateString = targetDate.toISOString().split('T')[0];
+
     // ROWS: Always 3 random Pokémon types
     const shuffledTypes = [...typeConstraints].sort(() => seededRandom(seed) - 0.5);
     const rowConstraints = shuffledTypes.slice(0, 3);
-    
+
     // COLUMNS: 3 random other constraints
     const shuffledOthers = [...otherConstraints].sort(() => seededRandom(seed + 1000) - 0.5);
     const colConstraints = shuffledOthers.slice(0, 3);
-    
+
     // Create 3x3 grid
     const cells: GridCell[] = [];
-    
+
     for (let row = 0; row < 3; row++) {
       for (let col = 0; col < 3; col++) {
         cells.push({
@@ -231,13 +243,15 @@ const PokéGridChallenge: React.FC = () => {
           attempts: 0,
           rarity: 0,
           isLocked: false,
+          hasMistake: false,
+          mistakeCount: 0,
         });
       }
     }
 
     return {
-      id: `daily-${today}`,
-      date: today,
+      id: `daily-${dateString}`,
+      date: dateString,
       size: 3,
       cells,
       constraints: {
@@ -252,7 +266,7 @@ const PokéGridChallenge: React.FC = () => {
       correctGuesses: 0,
       streak: 0
     };
-  }, []);
+  }, [currentGridDate]);
 
   // Generate endless grid
   const generateEndlessGrid = useCallback((): GridGame => {
@@ -281,6 +295,8 @@ const PokéGridChallenge: React.FC = () => {
           attempts: 0,
           rarity: 0,
           isLocked: false,
+          hasMistake: false,
+          mistakeCount: 0,
         });
       }
     }
@@ -304,16 +320,140 @@ const PokéGridChallenge: React.FC = () => {
     };
   }, []);
 
-  // Initialize game when component mounts or game mode changes
-  useEffect(() => {
-    if (!loading && displayedPokemon.length > 0) {
-      if (gameMode === 'daily') {
-        setCurrentGame(generateDailyGrid());
-      } else {
-        setCurrentGame(generateEndlessGrid());
+  // Load user progress for a specific date
+  const loadUserProgress = useCallback(async (date: Date) => {
+    if (!user || !session) return null;
+
+    try {
+      const dateString = date.toISOString().split('T')[0];
+      const { data, error } = await supabase
+        .rpc('get_user_pokegrid_progress', {
+          p_user_id: user.id,
+          p_grid_date: dateString
+        });
+
+      if (error) {
+        console.error('Error loading user progress:', error);
+        return null;
       }
+
+      if (data && data.length > 0) {
+        const progress = data[0];
+        return progress;
+      }
+
+      return null;
+    } catch (error) {
+      console.error('Error loading user progress:', error);
+      return null;
     }
-  }, [loading, displayedPokemon, gameMode, generateDailyGrid, generateEndlessGrid]);
+  }, [user, session]);
+
+  // Save user progress
+  const saveUserProgress = useCallback(async (game: GridGame) => {
+    if (!user || !session) return;
+
+    try {
+      const dateString = game.date;
+      const gameData = {
+        cells: game.cells.map(cell => ({
+          id: cell.id,
+          row: cell.row,
+          col: cell.col,
+          pokemon: cell.pokemon,
+          isCorrect: cell.isCorrect,
+          attempts: cell.attempts,
+          rarity: cell.rarity,
+          isLocked: cell.isLocked,
+          hasMistake: cell.hasMistake,
+          mistakeCount: cell.mistakeCount
+        })),
+        constraints: game.constraints,
+        score: game.score,
+        completed: game.completed,
+        perfectGame: game.perfectGame,
+        startTime: game.startTime,
+        endTime: game.endTime,
+        totalGuesses: game.totalGuesses,
+        correctGuesses: game.correctGuesses,
+        streak: game.streak,
+        bonusRetries: bonusRetries
+      };
+
+      const { error } = await supabase.rpc('save_pokegrid_progress', {
+        p_user_id: user.id,
+        p_grid_date: dateString,
+        p_game_data: gameData,
+        p_completed: game.completed,
+        p_score: game.score,
+        p_total_guesses: game.totalGuesses,
+        p_correct_guesses: game.correctGuesses
+      });
+
+      if (error) {
+        console.error('Error saving user progress:', error);
+      }
+    } catch (error) {
+      console.error('Error saving user progress:', error);
+    }
+  }, [user, session]);
+
+  // Check if user can access historical grids (requires login)
+  const canAccessHistoricalGrids = useCallback(() => {
+    return !!user && !!session;
+  }, [user, session]);
+
+
+  // Initialize game when component mounts or game mode/date changes
+  useEffect(() => {
+    const initializeGame = async () => {
+      if (!loading && displayedPokemon.length > 0) {
+        if (gameMode === 'daily') {
+          const game = generateDailyGrid(currentGridDate);
+
+          // Try to load existing user progress
+          const progress = await loadUserProgress(currentGridDate);
+          if (progress && progress.game_data) {
+            // Restore game state from saved progress
+            const restoredGame = {
+              ...game,
+              cells: game.cells.map(cell => {
+                const savedCell = progress.game_data.cells.find((c: any) => c.id === cell.id);
+                return savedCell ? {
+                  ...cell,
+                  pokemon: savedCell.pokemon,
+                  isCorrect: savedCell.isCorrect,
+                  attempts: savedCell.attempts,
+                  rarity: savedCell.rarity,
+                  isLocked: savedCell.isLocked,
+                  hasMistake: savedCell.hasMistake || false,
+                  mistakeCount: savedCell.mistakeCount || 0
+                } : cell;
+              }),
+              score: progress.game_data.score || 0,
+              completed: progress.completed || false,
+              perfectGame: progress.game_data.perfectGame || false,
+              totalGuesses: progress.total_guesses || 0,
+              correctGuesses: progress.correct_guesses || 0,
+              streak: progress.game_data.streak || 0
+            };
+            setCurrentGame(restoredGame);
+
+            // Restore bonus retries if perfect game was achieved
+            if (restoredGame.perfectGame) {
+              setBonusRetries(BONUS_RETRIES);
+            }
+          } else {
+            setCurrentGame(game);
+          }
+        } else {
+          setCurrentGame(generateEndlessGrid());
+        }
+      }
+    };
+
+    initializeGame();
+  }, [loading, displayedPokemon, gameMode, currentGridDate, generateDailyGrid, generateEndlessGrid, loadUserProgress]);
 
   // Handle search with prioritized filtering
   useEffect(() => {
@@ -381,30 +521,54 @@ const PokéGridChallenge: React.FC = () => {
     return rarity;
   };
 
-  // Handle Pokemon selection with guess limits
+  // Handle Pokemon selection with new mistake/retry system
   const handlePokemonSelect = (pokemon: Pokemon) => {
-    if (!currentGame || !selectedCell || selectedCell.isLocked || currentGame.totalGuesses >= MAX_TOTAL_GUESSES) return;
+    if (!currentGame || !selectedCell || selectedCell.isLocked) return;
 
-    const isValid = checkConstraint(pokemon, selectedCell.rowConstraint) && 
+    const isValid = checkConstraint(pokemon, selectedCell.rowConstraint) &&
                    checkConstraint(pokemon, selectedCell.colConstraint);
-    
+
     const rarity = calculateRarity(pokemon, selectedCell);
-    
+
+    // Save previous state for undo functionality
+    const previousState = {
+      cells: currentGame.cells.map(cell => ({ ...cell })),
+      totalGuesses: currentGame.totalGuesses,
+      score: currentGame.score,
+      selectedCell: selectedCell.id
+    };
+    setLastAction(previousState);
+
     const updatedCells = currentGame.cells.map(cell => {
       if (cell.id === selectedCell.id) {
-        return {
-          ...cell,
-          pokemon: isValid ? pokemon : cell.pokemon, // Only update if correct
-          isCorrect: isValid,
-          attempts: cell.attempts + 1,
-          isLocked: isValid, // Lock only if correct
-          rarity: isValid ? rarity : 0
-        };
+        if (isValid) {
+          // Correct guess - lock the cell
+          return {
+            ...cell,
+            pokemon,
+            isCorrect: true,
+            attempts: cell.attempts + 1,
+            isLocked: true,
+            rarity,
+            hasMistake: false, // Clear any previous mistake
+            mistakeCount: cell.mistakeCount || 0
+          };
+        } else {
+          // Wrong guess - mark as mistake, use a guess
+          return {
+            ...cell,
+            pokemon, // Still show the wrong pokemon
+            isCorrect: false,
+            attempts: cell.attempts + 1,
+            hasMistake: true,
+            mistakeCount: (cell.mistakeCount || 0) + 1
+          };
+        }
       }
       return cell;
     });
 
-    // Calculate score
+    // Calculate score (only for correct cells)
     const score = updatedCells.reduce((total, cell) => {
       if (cell.isCorrect && cell.pokemon) {
         const baseScore = 100;
@@ -415,38 +579,105 @@ const PokéGridChallenge: React.FC = () => {
       return total;
     }, 0);
 
-    // Update game statistics
-    const totalGuesses = currentGame.totalGuesses + 1;
+    // Update game statistics - only count guesses for wrong attempts
+    const totalGuesses = currentGame.totalGuesses + (isValid ? 0 : 1);
     const correctGuesses = currentGame.correctGuesses + (isValid ? 1 : 0);
     const newStreak = isValid ? currentGame.streak + 1 : 0;
-    
+
     // Check completion
     const completed = updatedCells.every(cell => cell.pokemon && cell.isCorrect);
     const perfectGame = completed && updatedCells.every(cell => cell.attempts === 1);
 
-    setCurrentGame({
+    // Award bonus retries for perfect game
+    if (perfectGame && bonusRetries === 0) {
+      setBonusRetries(BONUS_RETRIES);
+    }
+
+    // Check if out of guesses (considering bonus retries)
+    const effectiveTotalGuesses = totalGuesses;
+    const maxEffectiveGuesses = MAX_TOTAL_GUESSES + (perfectGame ? BONUS_RETRIES : 0);
+    const isOutOfGuesses = effectiveTotalGuesses >= maxEffectiveGuesses;
+
+    const updatedGame = {
       ...currentGame,
       cells: updatedCells,
       score,
-      completed,
+      completed: completed && !isOutOfGuesses,
       perfectGame,
-      totalGuesses,
+      totalGuesses: effectiveTotalGuesses,
       correctGuesses,
       streak: newStreak,
-      endTime: completed ? new Date() : undefined
-    });
+      endTime: (completed && !isOutOfGuesses) ? new Date() : undefined
+    };
 
-    setSelectedCell(null);
-    setSearchQuery('');
+    setCurrentGame(updatedGame);
+
+    // Update mistake state
+    if (isValid) {
+      setHasRecentMistake(false); // Correct guess clears mistake state
+      setMistakePokemon(null); // Clear the specific mistake Pokemon
+    } else {
+      setHasRecentMistake(true); // Wrong guess sets mistake state
+      setMistakePokemon(pokemon); // Track the specific wrong Pokemon
+    }
+
+    // Save progress for daily mode
+    if (gameMode === 'daily') {
+      saveUserProgress(updatedGame);
+    }
+
+    // Only close modal and clear selection if correct OR out of guesses
+    if (isValid || isOutOfGuesses) {
+      setSelectedCell(null);
+      setSearchQuery('');
+      setHasRecentMistake(false); // Clear mistake state when modal closes
+      setMistakePokemon(null); // Clear the specific mistake Pokemon
+    }
+    // If wrong guess, keep modal open for retry
   };
 
-  // Handle cell click
+  // Handle cell click - allow clicking mistake cells for retry
   const handleCellClick = (cellData: GridCellData) => {
     // Find the full GridCell with constraints
     const fullCell = currentGame?.cells.find(c => c.id === cellData.id);
-    if (fullCell && !fullCell.isLocked && currentGame && currentGame.totalGuesses < MAX_TOTAL_GUESSES) {
+    if (!fullCell || !currentGame) return;
+
+    // Allow clicking on:
+    // 1. Empty cells (not locked)
+    // 2. Cells with mistakes (hasMistake = true)
+    const canClick = !fullCell.isLocked || fullCell.hasMistake;
+
+    if (canClick) {
       setSelectedCell(fullCell);
+      // Clear mistake state when switching to a different cell
+      setHasRecentMistake(false);
+      setMistakePokemon(null);
     }
+  };
+
+  // Handle undo functionality
+  const handleUndo = () => {
+    if (!lastAction || !currentGame || sessionUndos >= MAX_UNDO_PER_SESSION) return;
+
+    // Restore previous state
+    setCurrentGame({
+      ...currentGame,
+      cells: lastAction.cells,
+      totalGuesses: lastAction.totalGuesses,
+      score: lastAction.score
+    });
+
+    // Find and restore the selected cell
+    const restoredCell = lastAction.cells.find((c: any) => c.id === lastAction.selectedCell);
+    setSelectedCell(restoredCell || null);
+
+    // Clear last action and increment undo count
+    setLastAction(null);
+    setSessionUndos(prev => prev + 1);
+
+    // Clear mistake state since we're undoing the mistake
+    setHasRecentMistake(false);
+    setMistakePokemon(null);
   };
 
   if (loading || !currentGame) {
@@ -473,21 +704,40 @@ const PokéGridChallenge: React.FC = () => {
           The daily Pokémon grid game
         </p>
         <p className="text-gray-500 text-sm mt-2">
-          {gameMode === 'daily' ? `Daily Challenge - ${currentGame.date}` : 'Endless Mode'}
+          {gameMode === 'daily'
+            ? `Daily Challenge - ${currentGame.date}`
+            : gameMode === 'historical'
+              ? `Historical Challenge - ${currentGame.date}`
+              : 'Endless Mode'
+          }
         </p>
       </div>
 
       {/* Game Controls */}
       <div className="max-w-4xl mx-auto mb-6">
-          <div className="flex flex-wrap gap-4 justify-center items-center">
-            {/* Game Stats */}
+        <div className="flex flex-col gap-4">
+          {/* Mode Controls */}
+          <GameControls
+            gameMode={gameMode}
+            currentGridDate={currentGridDate}
+            onGameModeChange={setGameMode}
+            onGridDateChange={setCurrentGridDate}
+            onShowShare={currentGame.completed ? () => setShowShareModal(true) : undefined}
+            gameCompleted={currentGame.completed}
+            canAccessHistorical={canAccessHistoricalGrids()}
+          />
+
+          {/* Game Stats */}
+          <div className="flex justify-center">
             <GameStats
               score={currentGame.score}
               totalGuesses={currentGame.totalGuesses}
               maxTotalGuesses={MAX_TOTAL_GUESSES}
+              bonusRetries={bonusRetries}
+              perfectGame={currentGame.perfectGame}
             />
-            
           </div>
+        </div>
       </div>
 
       {/* Main Grid - Modular Component */}
@@ -512,7 +762,11 @@ const PokéGridChallenge: React.FC = () => {
       {/* Pokemon Search Modal */}
       <PokemonSearchModal
         isOpen={!!selectedCell}
-        onClose={() => setSelectedCell(null)}
+        onClose={() => {
+          setSelectedCell(null);
+          setHasRecentMistake(false); // Clear mistake state when modal closes
+          setMistakePokemon(null); // Clear the specific mistake Pokemon
+        }}
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
         searchResults={searchResults}
@@ -531,6 +785,11 @@ const PokéGridChallenge: React.FC = () => {
             value: selectedCell.colConstraint.value
           }
         } : null}
+        onUndo={handleUndo}
+        sessionUndos={sessionUndos}
+        maxSessionUndos={MAX_UNDO_PER_SESSION}
+        hasRecentMistake={hasRecentMistake}
+        mistakePokemon={mistakePokemon}
       />
 
 

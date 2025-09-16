@@ -4,14 +4,19 @@ interface GameStatsProps {
   score: number;
   totalGuesses: number;
   maxTotalGuesses: number;
+  bonusRetries?: number;
+  perfectGame?: boolean;
 }
 
-export const GameStats: React.FC<GameStatsProps> = ({ 
-  score, 
+export const GameStats: React.FC<GameStatsProps> = ({
+  score,
   totalGuesses,
-  maxTotalGuesses
+  maxTotalGuesses,
+  bonusRetries = 0,
+  perfectGame = false
 }) => {
-  const guessesRemaining = maxTotalGuesses - totalGuesses;
+  const effectiveMaxGuesses = maxTotalGuesses + (perfectGame ? bonusRetries : 0);
+  const guessesRemaining = effectiveMaxGuesses - totalGuesses;
   
   return (
     <div className="flex items-center gap-6">

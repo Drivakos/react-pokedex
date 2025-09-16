@@ -14,7 +14,7 @@ interface ShareResultsModalProps {
   isOpen: boolean;
   onClose: () => void;
   gameResult: GameResult;
-  gameMode: 'daily' | 'endless';
+  gameMode: 'daily' | 'historical' | 'endless';
 }
 
 export const ShareResultsModal: React.FC<ShareResultsModalProps> = ({
@@ -78,7 +78,7 @@ export const ShareResultsModal: React.FC<ShareResultsModalProps> = ({
             </div>
             
             <div className="text-xs text-gray-500 mb-4">
-              PokéGrid #{gameResult.date} • {gameMode === 'daily' ? 'Daily' : 'Endless'} Mode
+              PokéGrid #{gameResult.date} • {gameMode === 'daily' ? 'Daily' : gameMode === 'historical' ? 'Historical' : 'Endless'} Mode
             </div>
             
             <button
