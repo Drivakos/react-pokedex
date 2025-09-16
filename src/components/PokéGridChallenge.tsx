@@ -479,41 +479,15 @@ const PokéGridChallenge: React.FC = () => {
 
       {/* Game Controls */}
       <div className="max-w-4xl mx-auto mb-6">
-        <div className="bg-white/80 backdrop-blur-sm rounded-xl p-4 shadow-lg border border-gray-200/30">
-          <div className="flex flex-wrap gap-4 justify-between items-center">
-            {/* Mode Toggle */}
-            <div className="flex gap-2">
-              {(['daily', 'endless'] as const).map((mode) => (
-                <button
-                  key={mode}
-                  onClick={() => setGameMode(mode)}
-                  className={`px-4 py-2 rounded-lg font-semibold transition-all duration-200 ${
-                    gameMode === mode
-                      ? 'bg-red-500 text-white shadow-lg'
-                      : 'bg-white text-gray-700 hover:bg-gray-50 shadow'
-                  }`}
-                >
-                  {mode.charAt(0).toUpperCase() + mode.slice(1)}
-                </button>
-              ))}
-            </div>
-
+        <div className="bg-white/80 backdrop-blur-sm rounded-xl p-4">
+          <div className="flex flex-wrap gap-4 justify-center items-center">
             {/* Game Stats */}
             <GameStats
               score={currentGame.score}
               totalGuesses={currentGame.totalGuesses}
               maxTotalGuesses={MAX_TOTAL_GUESSES}
             />
-
-            {/* Game Controls */}
-            <GameControls
-              gameMode={gameMode}
-              onGameModeChange={setGameMode}
-              onShowStats={() => setShowStats(true)}
-              onShowShare={currentGame.completed ? () => setShowShareModal(true) : undefined}
-              onShowLeaderboard={() => setShowLeaderboard(true)}
-              gameCompleted={currentGame.completed}
-            />
+            
           </div>
         </div>
       </div>

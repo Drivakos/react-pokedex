@@ -18,9 +18,9 @@ export const GameControls: React.FC<GameControlsProps> = ({
   gameCompleted
 }) => {
   return (
-    <div className="flex flex-wrap gap-4 justify-between items-center">
-      {/* Mode Toggle */}
-      <div className="flex gap-2">
+    <div className="flex flex-wrap gap-4 justify-center sm:justify-between items-center">
+      {/* Mode Toggle - Hidden on mobile */}
+      <div className="hidden sm:flex gap-2">
         {(['daily', 'endless'] as const).map((mode) => (
           <button
             key={mode}

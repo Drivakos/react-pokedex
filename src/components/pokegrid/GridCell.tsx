@@ -36,7 +36,7 @@ export const GridCell: React.FC<GridCellProps> = ({ cell, totalGuesses, maxTotal
       return 'bg-yellow-50 border-2 border-yellow-400 hover:bg-yellow-100';
     }
     
-    return 'bg-gray-50 hover:bg-blue-50 border-2 border-transparent hover:border-blue-300';
+    return 'bg-gray-200 hover:bg-blue-100 border-2 border-transparent hover:border-blue-400';
   };
 
   return (
