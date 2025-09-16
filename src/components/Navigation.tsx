@@ -35,6 +35,7 @@ const Navigation: React.FC = () => {
     document.addEventListener('mousedown', handleClickOutside);
     document.addEventListener('touchstart', handleClickOutside);
 
+    // Close dropdown on scroll for better UX
     window.addEventListener('scroll', handleScroll, { passive: true });
 
     return () => {
@@ -52,10 +53,10 @@ const Navigation: React.FC = () => {
             <div className="flex-shrink-0 flex items-center">
               <Link to="/" className="text-white font-bold text-xl flex items-center">
                 <svg className="w-6 h-6 mr-2" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <circle cx="12" cy="12" r="10" stroke="white" strokeWidth="2" />
-                  <circle cx="12" cy="12" r="3" fill="white" />
-                  <line x1="2" y1="12" x2="8" y2="12" stroke="white" strokeWidth="2" />
-                  <line x1="16" y1="12" x2="22" y2="12" stroke="white" strokeWidth="2" />
+                  <circle cx="12" cy="12" r="10" stroke="white" stroke-width="2"></circle>
+                  <circle cx="12" cy="12" r="3" fill="white"></circle>
+                  <line x1="2" y1="12" x2="8" y2="12" stroke="white" stroke-width="2"></line>
+                  <line x1="16" y1="12" x2="22" y2="12" stroke="white" stroke-width="2"></line>
                 </svg>
                 Pokédex
               </Link>
