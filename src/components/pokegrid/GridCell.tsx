@@ -67,12 +67,6 @@ export const GridCell: React.FC<GridCellProps> = ({ cell, totalGuesses, maxTotal
           </>
         ) : (
           <>
-            <div className="text-gray-400 text-3xl">?</div>
-            {totalGuesses > 0 && totalGuesses < maxTotalGuesses && (
-              <div className="absolute bottom-1 right-1 bg-blue-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs font-bold">
-                {maxTotalGuesses - totalGuesses}
-              </div>
-            )}
           </>
         )}
       </div>

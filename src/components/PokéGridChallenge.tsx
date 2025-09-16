@@ -315,13 +315,47 @@ const PokéGridChallenge: React.FC = () => {
     }
   }, [loading, displayedPokemon, gameMode, generateDailyGrid, generateEndlessGrid]);
 
-  // Handle search
+  // Handle search with prioritized filtering
   useEffect(() => {
-    if (searchQuery.length > 1) {
-      const filtered = displayedPokemon.filter(pokemon =>
-        pokemon.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        pokemon.id.toString().includes(searchQuery)
-      ).slice(0, 20);
+    if (searchQuery.length > 0) {
+      const query = searchQuery.toLowerCase().trim();
+      
+      // Separate Pokemon into different priority groups
+      const startsWithName: Pokemon[] = [];
+      const startsWithId: Pokemon[] = [];
+      const containsName: Pokemon[] = [];
+      const containsId: Pokemon[] = [];
+      
+      displayedPokemon.forEach(pokemon => {
+        const lowerName = pokemon.name.toLowerCase();
+        const idString = pokemon.id.toString();
+        
+        // Highest priority: name starts with query
+        if (lowerName.startsWith(query)) {
+          startsWithName.push(pokemon);
+        }
+        // Second priority: ID starts with query
+        else if (idString.startsWith(query)) {
+          startsWithId.push(pokemon);
+        }
+        // Third priority: name contains query
+        else if (lowerName.includes(query)) {
+          containsName.push(pokemon);
+        }
+        // Lowest priority: ID contains query
+        else if (idString.includes(query)) {
+          containsId.push(pokemon);
+        }
+      });
+      
+      // Combine results in priority order and limit to 20
+      const filtered = [
+        ...startsWithName,
+        ...startsWithId,
+        ...containsName,
+        ...containsId
+      ].slice(0, 20);
+      
       setSearchResults(filtered);
     } else {
       setSearchResults([]);
@@ -467,10 +501,8 @@ const PokéGridChallenge: React.FC = () => {
             {/* Game Stats */}
             <GameStats
               score={currentGame.score}
-              solvedCount={currentGame.cells.filter(cell => cell.isCorrect).length}
-              totalCells={9}
-              accuracy={currentGame.totalGuesses > 0 ? Math.round((currentGame.correctGuesses / currentGame.totalGuesses) * 100) : 0}
-              streak={currentGame.streak}
+              totalGuesses={currentGame.totalGuesses}
+              maxTotalGuesses={MAX_TOTAL_GUESSES}
             />
 
             {/* Game Controls */}
@@ -501,9 +533,6 @@ const PokéGridChallenge: React.FC = () => {
         <div className="mt-6 text-center text-gray-600">
           <p className="text-sm">
             Click a cell to find a Pokémon that matches both the row and column constraints.
-          </p>
-          <p className="text-xs mt-1 text-orange-600 font-medium">
-            {MAX_TOTAL_GUESSES - currentGame.totalGuesses} total guesses remaining
           </p>
         </div>
       </div>

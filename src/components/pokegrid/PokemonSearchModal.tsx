@@ -29,6 +29,22 @@ export const PokemonSearchModal: React.FC<PokemonSearchModalProps> = ({
   maxTotalGuesses,
   selectedCell
 }) => {
+  // Helper function to highlight matching text
+  const highlightMatch = (text: string, query: string) => {
+    if (!query || query.length === 0) return text;
+    
+    const regex = new RegExp(`(${query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
+    const parts = text.split(regex);
+    
+    return parts.map((part, index) => 
+      regex.test(part) ? (
+        <span key={index} className="bg-yellow-200 font-semibold">{part}</span>
+      ) : (
+        part
+      )
+    );
+  };
+
   if (!isOpen || !selectedCell) return null;
 
   return (
@@ -75,14 +91,26 @@ export const PokemonSearchModal: React.FC<PokemonSearchModalProps> = ({
 
           {/* Search Input */}
           <div className="mb-4">
-            <input
-              type="text"
-              placeholder="Search Pokémon by name or number..."
-              value={searchQuery}
-              onChange={(e) => onSearchChange(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              autoFocus
-            />
+            <div className="relative">
+              <input
+                type="text"
+                placeholder="Type Pokémon name (e.g. 'Pika' for Pikachu)..."
+                value={searchQuery}
+                onChange={(e) => onSearchChange(e.target.value)}
+                className="w-full px-4 py-3 pl-10 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                autoFocus
+              />
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+              </div>
+            </div>
+            {searchQuery.length > 0 && (
+              <div className="text-xs text-gray-500 mt-1">
+                Showing results for "{searchQuery}" • {searchResults.length} found
+              </div>
+            )}
           </div>
 
           {/* Search Results */}
@@ -102,9 +130,11 @@ export const PokemonSearchModal: React.FC<PokemonSearchModalProps> = ({
                     />
                     <div className="flex-1">
                       <div className="font-medium text-gray-800">
-                        {formatName(pokemon.name)}
+                        {highlightMatch(formatName(pokemon.name), searchQuery)}
                       </div>
-                      <div className="text-xs text-gray-500">#{pokemon.id}</div>
+                      <div className="text-xs text-gray-500">
+                        #{highlightMatch(pokemon.id.toString(), searchQuery)}
+                      </div>
                       <div className="flex gap-1 mt-1">
                         {pokemon.types.map((type) => (
                           <span
@@ -119,15 +149,17 @@ export const PokemonSearchModal: React.FC<PokemonSearchModalProps> = ({
                   </div>
                 ))}
               </div>
-            ) : searchQuery.length > 1 ? (
+            ) : searchQuery.length > 0 ? (
               <div className="text-center text-gray-500 py-8">
                 <div className="text-lg font-semibold mb-2 text-gray-600">No Results</div>
                 <p>No Pokémon found matching "{searchQuery}"</p>
+                <p className="text-sm mt-2">Try searching for a different name or number</p>
               </div>
             ) : (
               <div className="text-center text-gray-500 py-8">
-                <div className="text-lg font-semibold mb-2 text-gray-600">Search</div>
-                <p>Start typing to search for Pokémon...</p>
+                <div className="text-lg font-semibold mb-2 text-gray-600">Search Pokémon</div>
+                <p>Start typing a Pokémon name to find matches</p>
+                <p className="text-sm mt-2 text-gray-400">Example: "pika", "char", "bulb"</p>
               </div>
             )}
           </div>
