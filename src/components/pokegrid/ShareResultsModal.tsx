@@ -26,7 +26,7 @@ export const ShareResultsModal: React.FC<ShareResultsModalProps> = ({
   if (!isOpen) return null;
 
   const handleShare = () => {
-    const shareText = `🎯 PokéGrid ${gameResult.date}\n${gameResult.solvedCount}/${gameResult.totalCells} solved • ${gameResult.score} points\n${gameResult.accuracy}% accuracy in ${gameResult.totalGuesses} guesses${gameResult.perfectGame ? ' 🏆' : ''}\n\nPlay at: ${window.location.origin}`;
+    const shareText = `PokéGrid ${gameResult.date}\n${gameResult.solvedCount}/${gameResult.totalCells} solved • ${gameResult.score} points\n${gameResult.accuracy}% accuracy in ${gameResult.totalGuesses} guesses${gameResult.perfectGame ? ' [PERFECT]' : ''}\n\nPlay at: ${window.location.origin}`;
     
     if (navigator.share) {
       navigator.share({ text: shareText });
@@ -53,8 +53,7 @@ export const ShareResultsModal: React.FC<ShareResultsModalProps> = ({
           </div>
           
           <div className="text-center mb-6">
-            <div className="text-4xl mb-2">{gameResult.perfectGame ? '🏆' : '🎯'}</div>
-            <h3 className="text-lg font-bold text-gray-800 mb-2">
+            <h3 className="text-xl font-bold text-gray-800 mb-2">
               {gameResult.perfectGame ? 'Perfect Game!' : 'Game Complete!'}
             </h3>
             <div className="bg-gray-100 rounded-lg p-4 mb-4">

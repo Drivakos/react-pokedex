@@ -11,16 +11,16 @@ export interface GridCellData {
   attempts: number;
   rarity: number;
   isLocked: boolean;
-  guessesLeft: number;
 }
 
 interface GridCellProps {
   cell: GridCellData;
-  maxGuesses: number;
+  totalGuesses: number;
+  maxTotalGuesses: number;
   onClick: (cell: GridCellData) => void;
 }
 
-export const GridCell: React.FC<GridCellProps> = ({ cell, maxGuesses, onClick }) => {
+export const GridCell: React.FC<GridCellProps> = ({ cell, totalGuesses, maxTotalGuesses, onClick }) => {
   const getCellStyle = () => {
     if (cell.isLocked) {
       return cell.isCorrect 
@@ -28,7 +28,11 @@ export const GridCell: React.FC<GridCellProps> = ({ cell, maxGuesses, onClick })
         : 'bg-red-100 border-2 border-red-500 opacity-75';
     }
     
-    if (cell.guessesLeft < maxGuesses) {
+    if (totalGuesses >= maxTotalGuesses) {
+      return 'bg-gray-100 border-2 border-gray-300 opacity-75 cursor-not-allowed';
+    }
+    
+    if (cell.attempts > 0) {
       return 'bg-yellow-50 border-2 border-yellow-400 hover:bg-yellow-100';
     }
     
@@ -64,9 +68,9 @@ export const GridCell: React.FC<GridCellProps> = ({ cell, maxGuesses, onClick })
         ) : (
           <>
             <div className="text-gray-400 text-3xl">?</div>
-            {cell.guessesLeft < maxGuesses && (
-              <div className="absolute bottom-1 right-1 bg-yellow-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs font-bold">
-                {cell.guessesLeft}
+            {totalGuesses > 0 && totalGuesses < maxTotalGuesses && (
+              <div className="absolute bottom-1 right-1 bg-blue-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs font-bold">
+                {maxTotalGuesses - totalGuesses}
               </div>
             )}
           </>

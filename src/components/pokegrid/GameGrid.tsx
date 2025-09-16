@@ -6,7 +6,8 @@ interface GameGridProps {
   cells: GridCellData[];
   rowConstraints: GridConstraint[];
   colConstraints: GridConstraint[];
-  maxGuesses: number;
+  totalGuesses: number;
+  maxTotalGuesses: number;
   onCellClick: (cell: GridCellData) => void;
 }
 
@@ -14,7 +15,8 @@ export const GameGrid: React.FC<GameGridProps> = ({
   cells,
   rowConstraints,
   colConstraints,
-  maxGuesses,
+  totalGuesses,
+  maxTotalGuesses,
   onCellClick
 }) => {
   return (
@@ -23,7 +25,7 @@ export const GameGrid: React.FC<GameGridProps> = ({
         {/* Top-left corner with PokéGrid branding */}
         <div className="aspect-square bg-gradient-to-br from-purple-600 to-purple-700 flex items-center justify-center">
           <div className="text-white text-center">
-            <div className="text-lg font-bold">⚡</div>
+            <div className="text-lg font-bold">Challenge</div>
             <div className="text-xs font-medium">GRID</div>
           </div>
         </div>
@@ -55,7 +57,8 @@ export const GameGrid: React.FC<GameGridProps> = ({
                 <GridCell
                   key={cell.id}
                   cell={cell}
-                  maxGuesses={maxGuesses}
+                  totalGuesses={totalGuesses}
+                  maxTotalGuesses={maxTotalGuesses}
                   onClick={onCellClick}
                 />
               );

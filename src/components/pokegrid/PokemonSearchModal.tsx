@@ -10,10 +10,11 @@ interface PokemonSearchModalProps {
   onSearchChange: (query: string) => void;
   searchResults: Pokemon[];
   onPokemonSelect: (pokemon: Pokemon) => void;
+  totalGuesses: number;
+  maxTotalGuesses: number;
   selectedCell: {
     rowConstraint: { label: string; icon: string; svgIcon?: string; type: string; value: string | number };
     colConstraint: { label: string; icon: string; svgIcon?: string; type: string; value: string | number };
-    guessesLeft: number;
   } | null;
 }
 
@@ -24,6 +25,8 @@ export const PokemonSearchModal: React.FC<PokemonSearchModalProps> = ({
   onSearchChange,
   searchResults,
   onPokemonSelect,
+  totalGuesses,
+  maxTotalGuesses,
   selectedCell
 }) => {
   if (!isOpen || !selectedCell) return null;
@@ -45,19 +48,19 @@ export const PokemonSearchModal: React.FC<PokemonSearchModalProps> = ({
                         alt={selectedCell.rowConstraint.label}
                       />
                     </div>
-                  ) : (
+                  ) : selectedCell.rowConstraint.icon ? (
                     <span className="text-lg">{selectedCell.rowConstraint.icon}</span>
-                  )}
+                  ) : null}
                   <span className="font-semibold text-gray-700">{selectedCell.rowConstraint.label}</span>
                 </div>
                 <span className="text-lg font-bold text-gray-400">+</span>
                 <div className="flex items-center gap-2">
-                  <span className="text-lg">{selectedCell.colConstraint.icon}</span>
+                  {selectedCell.colConstraint.icon && <span className="text-sm font-bold">{selectedCell.colConstraint.icon}</span>}
                   <span className="whitespace-pre-line font-semibold text-gray-700">{selectedCell.colConstraint.label}</span>
                 </div>
               </div>
               <div className="text-xs text-orange-600 font-medium mt-1">
-                {selectedCell.guessesLeft} guess{selectedCell.guessesLeft !== 1 ? 'es' : ''} remaining
+                {maxTotalGuesses - totalGuesses} guess{(maxTotalGuesses - totalGuesses) !== 1 ? 'es' : ''} remaining
               </div>
             </div>
             <button
@@ -118,12 +121,12 @@ export const PokemonSearchModal: React.FC<PokemonSearchModalProps> = ({
               </div>
             ) : searchQuery.length > 1 ? (
               <div className="text-center text-gray-500 py-8">
-                <div className="text-2xl mb-2">🔍</div>
+                <div className="text-lg font-semibold mb-2 text-gray-600">No Results</div>
                 <p>No Pokémon found matching "{searchQuery}"</p>
               </div>
             ) : (
               <div className="text-center text-gray-500 py-8">
-                <div className="text-2xl mb-2">⌨️</div>
+                <div className="text-lg font-semibold mb-2 text-gray-600">Search</div>
                 <p>Start typing to search for Pokémon...</p>
               </div>
             )}

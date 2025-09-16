@@ -59,64 +59,64 @@ const PokéGridChallenge: React.FC = () => {
   const [showShareModal, setShowShareModal] = useState(false);
   
   // Game constants
-  const MAX_GUESSES_PER_CELL = 3;
+  const MAX_TOTAL_GUESSES = 3;
 
   // Authentic PokéGrid constraint definitions
   // ROWS: Always Pokémon Types with SVG Icons
   const typeConstraints: GridConstraint[] = [
-    { id: 'fire-type', type: 'type', value: 'fire', label: 'Fire', description: 'Fire-type Pokémon', icon: '🔥', svgIcon: '/icons/types/fire.svg' },
-    { id: 'water-type', type: 'type', value: 'water', label: 'Water', description: 'Water-type Pokémon', icon: '💧', svgIcon: '/icons/types/water.svg' },
-    { id: 'grass-type', type: 'type', value: 'grass', label: 'Grass', description: 'Grass-type Pokémon', icon: '🌿', svgIcon: '/icons/types/grass.svg' },
-    { id: 'electric-type', type: 'type', value: 'electric', label: 'Electric', description: 'Electric-type Pokémon', icon: '⚡', svgIcon: '/icons/types/electric.svg' },
-    { id: 'psychic-type', type: 'type', value: 'psychic', label: 'Psychic', description: 'Psychic-type Pokémon', icon: '🔮', svgIcon: '/icons/types/psychic.svg' },
-    { id: 'ice-type', type: 'type', value: 'ice', label: 'Ice', description: 'Ice-type Pokémon', icon: '❄️', svgIcon: '/icons/types/ice.svg' },
-    { id: 'dragon-type', type: 'type', value: 'dragon', label: 'Dragon', description: 'Dragon-type Pokémon', icon: '🐲', svgIcon: '/icons/types/dragon.svg' },
-    { id: 'flying-type', type: 'type', value: 'flying', label: 'Flying', description: 'Flying-type Pokémon', icon: '🦅', svgIcon: '/icons/types/flying.svg' },
-    { id: 'normal-type', type: 'type', value: 'normal', label: 'Normal', description: 'Normal-type Pokémon', icon: '⚪', svgIcon: '/icons/types/normal.svg' },
-    { id: 'fighting-type', type: 'type', value: 'fighting', label: 'Fighting', description: 'Fighting-type Pokémon', icon: '👊', svgIcon: '/icons/types/fighting.svg' },
-    { id: 'poison-type', type: 'type', value: 'poison', label: 'Poison', description: 'Poison-type Pokémon', icon: '☠️', svgIcon: '/icons/types/poison.svg' },
-    { id: 'ground-type', type: 'type', value: 'ground', label: 'Ground', description: 'Ground-type Pokémon', icon: '🌍', svgIcon: '/icons/types/ground.svg' },
-    { id: 'rock-type', type: 'type', value: 'rock', label: 'Rock', description: 'Rock-type Pokémon', icon: '🗿', svgIcon: '/icons/types/rock.svg' },
-    { id: 'bug-type', type: 'type', value: 'bug', label: 'Bug', description: 'Bug-type Pokémon', icon: '🐛', svgIcon: '/icons/types/bug.svg' },
-    { id: 'ghost-type', type: 'type', value: 'ghost', label: 'Ghost', description: 'Ghost-type Pokémon', icon: '👻', svgIcon: '/icons/types/ghost.svg' },
-    { id: 'steel-type', type: 'type', value: 'steel', label: 'Steel', description: 'Steel-type Pokémon', icon: '🔩', svgIcon: '/icons/types/steel.svg' },
-    { id: 'dark-type', type: 'type', value: 'dark', label: 'Dark', description: 'Dark-type Pokémon', icon: '🌙', svgIcon: '/icons/types/dark.svg' },
-    { id: 'fairy-type', type: 'type', value: 'fairy', label: 'Fairy', description: 'Fairy-type Pokémon', icon: '🧚', svgIcon: '/icons/types/fairy.svg' },
+    { id: 'fire-type', type: 'type', value: 'fire', label: 'Fire', description: 'Fire-type Pokémon', icon: '', svgIcon: '/icons/types/fire.svg' },
+    { id: 'water-type', type: 'type', value: 'water', label: 'Water', description: 'Water-type Pokémon', icon: '', svgIcon: '/icons/types/water.svg' },
+    { id: 'grass-type', type: 'type', value: 'grass', label: 'Grass', description: 'Grass-type Pokémon', icon: '', svgIcon: '/icons/types/grass.svg' },
+    { id: 'electric-type', type: 'type', value: 'electric', label: 'Electric', description: 'Electric-type Pokémon', icon: '', svgIcon: '/icons/types/electric.svg' },
+    { id: 'psychic-type', type: 'type', value: 'psychic', label: 'Psychic', description: 'Psychic-type Pokémon', icon: '', svgIcon: '/icons/types/psychic.svg' },
+    { id: 'ice-type', type: 'type', value: 'ice', label: 'Ice', description: 'Ice-type Pokémon', icon: '', svgIcon: '/icons/types/ice.svg' },
+    { id: 'dragon-type', type: 'type', value: 'dragon', label: 'Dragon', description: 'Dragon-type Pokémon', icon: '', svgIcon: '/icons/types/dragon.svg' },
+    { id: 'flying-type', type: 'type', value: 'flying', label: 'Flying', description: 'Flying-type Pokémon', icon: '', svgIcon: '/icons/types/flying.svg' },
+    { id: 'normal-type', type: 'type', value: 'normal', label: 'Normal', description: 'Normal-type Pokémon', icon: '', svgIcon: '/icons/types/normal.svg' },
+    { id: 'fighting-type', type: 'type', value: 'fighting', label: 'Fighting', description: 'Fighting-type Pokémon', icon: '', svgIcon: '/icons/types/fighting.svg' },
+    { id: 'poison-type', type: 'type', value: 'poison', label: 'Poison', description: 'Poison-type Pokémon', icon: '', svgIcon: '/icons/types/poison.svg' },
+    { id: 'ground-type', type: 'type', value: 'ground', label: 'Ground', description: 'Ground-type Pokémon', icon: '', svgIcon: '/icons/types/ground.svg' },
+    { id: 'rock-type', type: 'type', value: 'rock', label: 'Rock', description: 'Rock-type Pokémon', icon: '', svgIcon: '/icons/types/rock.svg' },
+    { id: 'bug-type', type: 'type', value: 'bug', label: 'Bug', description: 'Bug-type Pokémon', icon: '', svgIcon: '/icons/types/bug.svg' },
+    { id: 'ghost-type', type: 'type', value: 'ghost', label: 'Ghost', description: 'Ghost-type Pokémon', icon: '', svgIcon: '/icons/types/ghost.svg' },
+    { id: 'steel-type', type: 'type', value: 'steel', label: 'Steel', description: 'Steel-type Pokémon', icon: '', svgIcon: '/icons/types/steel.svg' },
+    { id: 'dark-type', type: 'type', value: 'dark', label: 'Dark', description: 'Dark-type Pokémon', icon: '', svgIcon: '/icons/types/dark.svg' },
+    { id: 'fairy-type', type: 'type', value: 'fairy', label: 'Fairy', description: 'Fairy-type Pokémon', icon: '', svgIcon: '/icons/types/fairy.svg' },
   ];
 
   // COLUMNS: Various other constraints
   const otherConstraints: GridConstraint[] = [
     // Move-based constraints
-    { id: 'learns-brave-bird', type: 'move-category', value: 'brave-bird', label: 'Can Learn\nBrave Bird', description: 'Can learn Brave Bird', icon: '🪶' },
-    { id: 'learns-earthquake', type: 'move-category', value: 'earthquake', label: 'Can Learn\nEarthquake', description: 'Can learn Earthquake', icon: '🌍' },
-    { id: 'learns-surf', type: 'move-category', value: 'surf', label: 'Can Learn\nSurf', description: 'Can learn Surf', icon: '🌊' },
-    { id: 'learns-flamethrower', type: 'move-category', value: 'flamethrower', label: 'Can Learn\nFlamethrower', description: 'Can learn Flamethrower', icon: '🔥' },
+    { id: 'learns-brave-bird', type: 'move-category', value: 'brave-bird', label: 'Can Learn\nBrave Bird', description: 'Can learn Brave Bird', icon: 'BB' },
+    { id: 'learns-earthquake', type: 'move-category', value: 'earthquake', label: 'Can Learn\nEarthquake', description: 'Can learn Earthquake', icon: 'EQ' },
+    { id: 'learns-surf', type: 'move-category', value: 'surf', label: 'Can Learn\nSurf', description: 'Can learn Surf', icon: 'SF' },
+    { id: 'learns-flamethrower', type: 'move-category', value: 'flamethrower', label: 'Can Learn\nFlamethrower', description: 'Can learn Flamethrower', icon: 'FT' },
     
     // Type effectiveness constraints
-    { id: 'neutral-electric', type: 'type-effectiveness', value: 'neutral-electric', label: 'Neutral to\nElectric', description: 'Takes neutral damage from Electric', icon: '⚡' },
-    { id: 'weak-ice', type: 'type-effectiveness', value: 'weak-ice', label: 'Weak to\nIce', description: 'Takes super effective damage from Ice', icon: '❄️' },
-    { id: 'resist-fire', type: 'type-effectiveness', value: 'resist-fire', label: 'Resists\nFire', description: 'Takes reduced damage from Fire', icon: '🔥' },
-    { id: 'weak-rock', type: 'type-effectiveness', value: 'weak-rock', label: 'Weak to\nRock', description: 'Takes super effective damage from Rock', icon: '🗿' },
+    { id: 'neutral-electric', type: 'type-effectiveness', value: 'neutral-electric', label: 'Neutral to\nElectric', description: 'Takes neutral damage from Electric', icon: '1x' },
+    { id: 'weak-ice', type: 'type-effectiveness', value: 'weak-ice', label: 'Weak to\nIce', description: 'Takes super effective damage from Ice', icon: '2x' },
+    { id: 'resist-fire', type: 'type-effectiveness', value: 'resist-fire', label: 'Resists\nFire', description: 'Takes reduced damage from Fire', icon: '½x' },
+    { id: 'weak-rock', type: 'type-effectiveness', value: 'weak-rock', label: 'Weak to\nRock', description: 'Takes super effective damage from Rock', icon: '2x' },
     
     // Generation/Region constraints
-    { id: 'gen-1-kanto', type: 'generation', value: '1', label: 'Gen I\nKanto', description: 'Generation I Pokémon', icon: '1️⃣' },
-    { id: 'gen-2-johto', type: 'generation', value: '2', label: 'Gen II\nJohto', description: 'Generation II Pokémon', icon: '2️⃣' },
-    { id: 'gen-3-hoenn', type: 'generation', value: '3', label: 'Gen III\nHoenn', description: 'Generation III Pokémon', icon: '3️⃣' },
-    { id: 'gen-4-sinnoh', type: 'generation', value: '4', label: 'Gen IV\nSinnoh', description: 'Generation IV Pokémon', icon: '4️⃣' },
+    { id: 'gen-1-kanto', type: 'generation', value: '1', label: 'Gen I\nKanto', description: 'Generation I Pokémon', icon: 'I' },
+    { id: 'gen-2-johto', type: 'generation', value: '2', label: 'Gen II\nJohto', description: 'Generation II Pokémon', icon: 'II' },
+    { id: 'gen-3-hoenn', type: 'generation', value: '3', label: 'Gen III\nHoenn', description: 'Generation III Pokémon', icon: 'III' },
+    { id: 'gen-4-sinnoh', type: 'generation', value: '4', label: 'Gen IV\nSinnoh', description: 'Generation IV Pokémon', icon: 'IV' },
     
     // Type count constraints
-    { id: 'mono-type', type: 'type-count', value: 'mono', label: 'Mono-Type', description: 'Has only one type', icon: '1️⃣' },
-    { id: 'dual-type', type: 'type-count', value: 'dual', label: 'Dual-Type', description: 'Has two types', icon: '2️⃣' },
+    { id: 'mono-type', type: 'type-count', value: 'mono', label: 'Mono-Type', description: 'Has only one type', icon: '1' },
+    { id: 'dual-type', type: 'type-count', value: 'dual', label: 'Dual-Type', description: 'Has two types', icon: '2' },
     
     // Evolution constraints
-    { id: 'no-evo-line', type: 'evolution-stage', value: 'no-evolution', label: 'No Evolution\nLine', description: 'Standalone Pokémon', icon: '🔒' },
-    { id: 'first-evo', type: 'evolution-stage', value: 'first-stage', label: 'First\nEvolution', description: 'First stage that can evolve', icon: '🥚' },
-    { id: 'final-evo', type: 'evolution-stage', value: 'final-stage', label: 'Final\nEvolution', description: 'Final evolution stage', icon: '👑' },
+    { id: 'no-evo-line', type: 'evolution-stage', value: 'no-evolution', label: 'No Evolution\nLine', description: 'Standalone Pokémon', icon: '◯' },
+    { id: 'first-evo', type: 'evolution-stage', value: 'first-stage', label: 'First\nEvolution', description: 'First stage that can evolve', icon: '①' },
+    { id: 'final-evo', type: 'evolution-stage', value: 'final-stage', label: 'Final\nEvolution', description: 'Final evolution stage', icon: '③' },
     
     // Stat-based constraints
-    { id: 'high-hp', type: 'stat-range', value: 'hp-100', label: 'High HP\n(≥100)', description: 'HP stat 100 or higher', icon: '❤️' },
-    { id: 'high-attack', type: 'stat-range', value: 'attack-100', label: 'High Attack\n(≥100)', description: 'Attack stat 100 or higher', icon: '⚔️' },
-    { id: 'high-speed', type: 'stat-range', value: 'speed-100', label: 'High Speed\n(≥100)', description: 'Speed stat 100 or higher', icon: '💨' },
+    { id: 'high-hp', type: 'stat-range', value: 'hp-100', label: 'High HP\n(≥100)', description: 'HP stat 100 or higher', icon: 'HP' },
+    { id: 'high-attack', type: 'stat-range', value: 'attack-100', label: 'High Attack\n(≥100)', description: 'Attack stat 100 or higher', icon: 'ATK' },
+    { id: 'high-speed', type: 'stat-range', value: 'speed-100', label: 'High Speed\n(≥100)', description: 'Speed stat 100 or higher', icon: 'SPD' },
   ];
 
   // Get today's date seed for daily puzzles
@@ -231,7 +231,6 @@ const PokéGridChallenge: React.FC = () => {
           attempts: 0,
           rarity: 0,
           isLocked: false,
-          guessesLeft: MAX_GUESSES_PER_CELL
         });
       }
     }
@@ -282,7 +281,6 @@ const PokéGridChallenge: React.FC = () => {
           attempts: 0,
           rarity: 0,
           isLocked: false,
-          guessesLeft: MAX_GUESSES_PER_CELL
         });
       }
     }
@@ -351,7 +349,7 @@ const PokéGridChallenge: React.FC = () => {
 
   // Handle Pokemon selection with guess limits
   const handlePokemonSelect = (pokemon: Pokemon) => {
-    if (!currentGame || !selectedCell || selectedCell.isLocked || selectedCell.guessesLeft <= 0) return;
+    if (!currentGame || !selectedCell || selectedCell.isLocked || currentGame.totalGuesses >= MAX_TOTAL_GUESSES) return;
 
     const isValid = checkConstraint(pokemon, selectedCell.rowConstraint) && 
                    checkConstraint(pokemon, selectedCell.colConstraint);
@@ -365,8 +363,7 @@ const PokéGridChallenge: React.FC = () => {
           pokemon: isValid ? pokemon : cell.pokemon, // Only update if correct
           isCorrect: isValid,
           attempts: cell.attempts + 1,
-          guessesLeft: cell.guessesLeft - 1,
-          isLocked: isValid || cell.guessesLeft <= 1, // Lock if correct or out of guesses
+          isLocked: isValid, // Lock only if correct
           rarity: isValid ? rarity : 0
         };
       }
@@ -413,7 +410,7 @@ const PokéGridChallenge: React.FC = () => {
   const handleCellClick = (cellData: GridCellData) => {
     // Find the full GridCell with constraints
     const fullCell = currentGame?.cells.find(c => c.id === cellData.id);
-    if (fullCell && !fullCell.isLocked && fullCell.guessesLeft > 0) {
+    if (fullCell && !fullCell.isLocked && currentGame && currentGame.totalGuesses < MAX_TOTAL_GUESSES) {
       setSelectedCell(fullCell);
     }
   };
@@ -437,7 +434,6 @@ const PokéGridChallenge: React.FC = () => {
           <h1 className="text-3xl sm:text-4xl font-bold text-gray-800">
             Poké<span className="text-blue-600">Grid</span>
           </h1>
-          <div className="ml-3 text-2xl">⚡</div>
         </div>
         <p className="text-gray-600 text-lg font-medium">
           The daily Pokémon grid game
@@ -496,7 +492,8 @@ const PokéGridChallenge: React.FC = () => {
           cells={currentGame.cells}
           rowConstraints={currentGame.constraints.rows}
           colConstraints={currentGame.constraints.cols}
-          maxGuesses={MAX_GUESSES_PER_CELL}
+          totalGuesses={currentGame.totalGuesses}
+          maxTotalGuesses={MAX_TOTAL_GUESSES}
           onCellClick={handleCellClick}
         />
 
@@ -504,6 +501,9 @@ const PokéGridChallenge: React.FC = () => {
         <div className="mt-6 text-center text-gray-600">
           <p className="text-sm">
             Click a cell to find a Pokémon that matches both the row and column constraints.
+          </p>
+          <p className="text-xs mt-1 text-orange-600 font-medium">
+            {MAX_TOTAL_GUESSES - currentGame.totalGuesses} total guesses remaining
           </p>
         </div>
       </div>
@@ -516,6 +516,8 @@ const PokéGridChallenge: React.FC = () => {
         onSearchChange={setSearchQuery}
         searchResults={searchResults}
         onPokemonSelect={handlePokemonSelect}
+        totalGuesses={currentGame.totalGuesses}
+        maxTotalGuesses={MAX_TOTAL_GUESSES}
         selectedCell={selectedCell ? {
           rowConstraint: {
             ...selectedCell.rowConstraint,
@@ -526,8 +528,7 @@ const PokéGridChallenge: React.FC = () => {
             ...selectedCell.colConstraint,
             type: selectedCell.colConstraint.type,
             value: selectedCell.colConstraint.value
-          },
-          guessesLeft: selectedCell.guessesLeft
+          }
         } : null}
       />
 
@@ -548,7 +549,7 @@ const PokéGridChallenge: React.FC = () => {
                 </button>
               </div>
               <div className="text-center text-gray-600">
-                <div className="text-4xl mb-4">📊</div>
+                <div className="text-lg font-bold mb-4 text-gray-700">Game Statistics</div>
                 <p>Detailed statistics and analytics coming soon!</p>
                 <p className="text-sm mt-2">Track your progress and improvement over time!</p>
               </div>
@@ -574,7 +575,7 @@ const PokéGridChallenge: React.FC = () => {
                 </button>
               </div>
               <div className="text-center text-gray-600">
-                <div className="text-4xl mb-4">🏆</div>
+                <div className="text-lg font-bold mb-4 text-gray-700">Leaderboard</div>
                 <p>Leaderboards and competitive features coming soon!</p>
                 <p className="text-sm mt-2">Challenge your friends and climb the ranks!</p>
               </div>

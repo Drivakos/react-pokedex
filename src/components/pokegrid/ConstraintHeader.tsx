@@ -53,7 +53,7 @@ export const ConstraintHeader: React.FC<ConstraintHeaderProps> = ({ constraint, 
     // For non-type headers, use the original structure
     return (
       <>
-        <div className="text-xl mb-1">{constraint.icon}</div>
+        {constraint.icon && <div className="text-sm font-bold mb-1">{constraint.icon}</div>}
         <div className="text-xs font-semibold leading-tight whitespace-pre-line">
           {constraint.label}
         </div>
