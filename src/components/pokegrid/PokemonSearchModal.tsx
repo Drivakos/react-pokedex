@@ -129,7 +129,7 @@ export const PokemonSearchModal: React.FC<PokemonSearchModalProps> = ({
 
                   // Calculate popularity level
                   let popularityColor = 'text-gray-400';
-                  let popularityText = '?';
+                  let popularityText = popularityData.length === 0 ? '—' : '?';
 
                   if (pokemonPopularity && pokemonPopularity.popularity_percentage !== null) {
                     const percentage = pokemonPopularity.popularity_percentage;
@@ -158,7 +158,10 @@ export const PokemonSearchModal: React.FC<PokemonSearchModalProps> = ({
                       className={`group flex items-center gap-3 sm:gap-4 p-3 sm:p-4 bg-white border-2 border-gray-100 rounded-xl hover:border-blue-300 hover:shadow-md active:scale-[0.98] cursor-pointer transition-all duration-200 ${
                         isMistakePokemon ? 'ring-2 ring-red-200 bg-red-50/50' : ''
                       }`}
-                      title={`${pokemon.name} - ${popularityText} choice`}
+                      title={popularityData.length === 0
+                        ? `${pokemon.name} - Popularity tracking coming soon`
+                        : `${pokemon.name} - ${popularityText} choice`
+                      }
                     >
                     <div className="relative flex-shrink-0">
                       <img

@@ -89,7 +89,6 @@ export const PokemonMemoryMatch: React.FC<PokemonMemoryMatchProps> = ({
 
     // Validate Pokemon data and create a copy to avoid mutating the original
     if (!pokemonList || pokemonList.length === 0) {
-      console.error('❌ No Pokemon data available for the game');
       return;
     }
 
@@ -99,7 +98,6 @@ export const PokemonMemoryMatch: React.FC<PokemonMemoryMatchProps> = ({
     );
 
     if (validPokemon.length === 0) {
-      console.error('❌ No valid Pokemon found in the data');
       return;
     }
 
@@ -122,12 +120,6 @@ export const PokemonMemoryMatch: React.FC<PokemonMemoryMatchProps> = ({
       [availablePokemon[i], availablePokemon[j]] = [availablePokemon[j], availablePokemon[i]];
     }
 
-    // Debug: Log generation distribution
-    if (process.env.NODE_ENV === 'development') {
-      console.log('🎯 Generation distribution in available Pokemon:', Object.keys(pokemonByGeneration).map(gen =>
-        `${gen}: ${pokemonByGeneration[gen].length} Pokemon`
-      ));
-    }
 
     // Phase 1: Select unique Pokemon by ID with generation diversity
     const uniquePokemon = new Set<number>();
@@ -173,7 +165,6 @@ export const PokemonMemoryMatch: React.FC<PokemonMemoryMatchProps> = ({
 
     // Phase 3: Emergency fallback - allow duplicates if absolutely necessary
     if (selectedPokemon.length < pairs) {
-      console.warn(`⚠️ Only found ${selectedPokemon.length} unique Pokemon out of ${pairs} needed. Using some duplicates to complete the game.`);
       // Fill remaining slots with random Pokemon from the available list
       while (selectedPokemon.length < pairs) {
         const randomPokemon = availablePokemon[Math.floor(Math.random() * availablePokemon.length)];
@@ -206,18 +197,6 @@ export const PokemonMemoryMatch: React.FC<PokemonMemoryMatchProps> = ({
       [shuffledCards[i], shuffledCards[j]] = [shuffledCards[j], shuffledCards[i]];
     }
 
-    // Debug: Log selected Pokemon for testing purposes
-    if (process.env.NODE_ENV === 'development') {
-      const selectedGenerations = selectedPokemon.reduce((acc, p) => {
-        const gen = p.generation || 'unknown';
-        acc[gen] = (acc[gen] || 0) + 1;
-        return acc;
-      }, {} as Record<string, number>);
-
-      console.log('🎯 Selected Pokemon for Memory Match:', selectedPokemon.map(p => `${p.name} (#${p.id}, Gen: ${p.generation})`));
-      console.log('📊 Total unique Pokemon:', new Set(selectedPokemon.map(p => p.id)).size);
-      console.log('🌍 Generation distribution in selection:', Object.entries(selectedGenerations).map(([gen, count]) => `${gen}: ${count} Pokemon`));
-    }
 
     setGameCards(shuffledCards);
     setFlippedCards([]);

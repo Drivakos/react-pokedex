@@ -35,16 +35,7 @@ const PokemonMemoryGame: React.FC = () => {
 
         setGamePokemon(pokemon);
 
-        // Debug info in development
-        if (process.env.NODE_ENV === 'development') {
-          const genCount = pokemon.reduce((acc, p) => {
-            acc[p.generation || 'unknown'] = (acc[p.generation || 'unknown'] || 0) + 1;
-            return acc;
-          }, {} as Record<string, number>);
-          console.log('🎮 Memory Game Pokemon loaded:', { total: pokemon.length, generations: genCount });
-        }
       } catch (error) {
-        console.error('Error loading Pokemon for game:', error);
         // Fallback to displayed Pokemon
         setGamePokemon(displayedPokemon);
       } finally {
@@ -56,7 +47,6 @@ const PokemonMemoryGame: React.FC = () => {
   }, [loading, displayedPokemon]);
 
   const handleGameComplete = (stats: GameStats) => {
-    console.log('Game completed!', stats);
   };
 
   if (loading || gameLoading) {
