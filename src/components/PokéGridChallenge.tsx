@@ -479,7 +479,6 @@ const PokéGridChallenge: React.FC = () => {
 
       {/* Game Controls */}
       <div className="max-w-4xl mx-auto mb-6">
-        <div className="bg-white/80 backdrop-blur-sm rounded-xl p-4">
           <div className="flex flex-wrap gap-4 justify-center items-center">
             {/* Game Stats */}
             <GameStats
@@ -489,7 +488,6 @@ const PokéGridChallenge: React.FC = () => {
             />
             
           </div>
-        </div>
       </div>
 
       {/* Main Grid - Modular Component */}
@@ -535,57 +533,6 @@ const PokéGridChallenge: React.FC = () => {
         } : null}
       />
 
-      {/* Stats Modal */}
-      {showStats && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-2xl max-w-md w-full mx-4">
-            <div className="p-6">
-              <div className="flex justify-between items-start mb-4">
-                <h2 className="text-xl font-bold text-gray-800">Game Statistics</h2>
-                <button
-                  onClick={() => setShowStats(false)}
-                  className="text-gray-400 hover:text-gray-600"
-                >
-                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
-              </div>
-              <div className="text-center text-gray-600">
-                <div className="text-lg font-bold mb-4 text-gray-700">Game Statistics</div>
-                <p>Detailed statistics and analytics coming soon!</p>
-                <p className="text-sm mt-2">Track your progress and improvement over time!</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Leaderboard Modal */}
-      {showLeaderboard && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-2xl max-w-md w-full mx-4">
-            <div className="p-6">
-              <div className="flex justify-between items-start mb-4">
-                <h2 className="text-xl font-bold text-gray-800">Leaderboard</h2>
-                <button
-                  onClick={() => setShowLeaderboard(false)}
-                  className="text-gray-400 hover:text-gray-600"
-                >
-                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
-              </div>
-              <div className="text-center text-gray-600">
-                <div className="text-lg font-bold mb-4 text-gray-700">Leaderboard</div>
-                <p>Leaderboards and competitive features coming soon!</p>
-                <p className="text-sm mt-2">Challenge your friends and climb the ranks!</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Share Results Modal */}
       <ShareResultsModal
