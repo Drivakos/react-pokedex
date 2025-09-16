@@ -16,6 +16,7 @@ import TeamEditor from './components/teams/TeamEditor';
 
 // Lazy load the memory game for better bundle splitting
 const PokemonMemoryGame = React.lazy(() => import('./components/PokemonMemoryGame'));
+const PokéGridChallenge = React.lazy(() => import('./components/PokéGridChallenge'));
 
 function App() {
   return (
@@ -50,6 +51,11 @@ function App() {
           <Route path="/memory-game" element={
             <Suspense>
               <PokemonMemoryGame />
+            </Suspense>
+          } />
+          <Route path="/pokegrid-challenge" element={
+            <Suspense>
+              <PokéGridChallenge />
             </Suspense>
           } />
         </Routes>
