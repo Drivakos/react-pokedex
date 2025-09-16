@@ -66,6 +66,8 @@ const PokéGridChallenge: React.FC = () => {
   const [lastAction, setLastAction] = useState<any>(null); // For undo functionality
   const [hasRecentMistake, setHasRecentMistake] = useState(false); // Track if user just made a mistake
   const [mistakePokemon, setMistakePokemon] = useState<Pokemon | null>(null); // Track the specific wrong Pokemon
+  const [popularityData, setPopularityData] = useState<any[]>([]); // Track guess popularity data
+  // const [userGuessStats, setUserGuessStats] = useState<any[]>([]); // User's guess statistics - reserved for future use
   
   // Game constants
   const MAX_TOTAL_GUESSES = 9; // Start with 9 guesses (one per cell)
@@ -398,6 +400,80 @@ const PokéGridChallenge: React.FC = () => {
     }
   }, [user, session]);
 
+  // Save individual guess
+  const saveIndividualGuess = useCallback(async (
+    cell: GridCell,
+    pokemon: Pokemon,
+    attemptNumber: number,
+    isCorrect: boolean
+  ) => {
+    if (!user || !session || gameMode !== 'daily') return;
+
+    try {
+      const dateString = currentGridDate.toISOString().split('T')[0];
+      const { error } = await supabase.rpc('save_pokegrid_guess', {
+        p_user_id: user.id,
+        p_grid_date: dateString,
+        p_cell_id: cell.id,
+        p_pokemon_id: pokemon.id,
+        p_pokemon_name: pokemon.name,
+        p_attempt_number: attemptNumber,
+        p_is_correct: isCorrect
+      });
+
+      if (error) {
+        console.error('Error saving individual guess:', error);
+      }
+    } catch (error) {
+      console.error('Error saving individual guess:', error);
+    }
+  }, [user, session, currentGridDate, gameMode]);
+
+  // Load popularity data for current grid
+  const loadPopularityData = useCallback(async (date: Date) => {
+    try {
+      const dateString = date.toISOString().split('T')[0];
+      const { data, error } = await supabase.rpc('get_pokegrid_popularity', {
+        p_grid_date: dateString
+      });
+
+      if (error) {
+        console.error('Error loading popularity data:', error);
+        return;
+      }
+
+      if (data) {
+        setPopularityData(data);
+      }
+    } catch (error) {
+      console.error('Error loading popularity data:', error);
+    }
+  }, []);
+
+  // Load user's guess statistics
+  const loadUserGuessStats = useCallback(async (date: Date) => {
+    if (!user || !session) return;
+
+    try {
+      const dateString = date.toISOString().split('T')[0];
+      const { data, error } = await supabase.rpc('get_user_pokegrid_statistics', {
+        p_user_id: user.id,
+        p_grid_date: dateString
+      });
+
+      if (error) {
+        console.error('Error loading user guess stats:', error);
+        return;
+      }
+
+      if (data) {
+        // setUserGuessStats(data); // Reserved for future use
+      }
+    } catch (error) {
+      console.error('Error loading user guess stats:', error);
+    }
+  }, [user, session]);
+
   // Check if user can access historical grids (requires login)
   const canAccessHistoricalGrids = useCallback(() => {
     return !!user && !!session;
@@ -410,6 +486,12 @@ const PokéGridChallenge: React.FC = () => {
       if (!loading && displayedPokemon.length > 0) {
         if (gameMode === 'daily') {
           const game = generateDailyGrid(currentGridDate);
+
+          // Load popularity data for current grid
+          await loadPopularityData(currentGridDate);
+
+          // Load user's guess statistics
+          await loadUserGuessStats(currentGridDate);
 
           // Try to load existing user progress
           const progress = await loadUserProgress(currentGridDate);
@@ -453,7 +535,7 @@ const PokéGridChallenge: React.FC = () => {
     };
 
     initializeGame();
-  }, [loading, displayedPokemon, gameMode, currentGridDate, generateDailyGrid, generateEndlessGrid, loadUserProgress]);
+  }, [loading, displayedPokemon, gameMode, currentGridDate, generateDailyGrid, generateEndlessGrid, loadUserProgress, loadPopularityData, loadUserGuessStats]);
 
   // Handle search with prioritized filtering
   useEffect(() => {
@@ -568,13 +650,36 @@ const PokéGridChallenge: React.FC = () => {
       return cell;
     });
 
-    // Calculate score (only for correct cells)
+    // Calculate score with popularity-based algorithm
     const score = updatedCells.reduce((total, cell) => {
       if (cell.isCorrect && cell.pokemon) {
         const baseScore = 100;
         const rarityBonus = cell.rarity * 20;
         const attemptPenalty = Math.max(0, cell.attempts - 1) * 10;
-        return total + baseScore + rarityBonus - attemptPenalty;
+
+        // Find popularity data for this cell and pokemon
+        const cellPopularity = popularityData.find(
+          (p: any) => p.cell_id === cell.id && p.pokemon_id === cell.pokemon?.id
+        );
+
+        let popularityMultiplier = 1.0;
+        if (cellPopularity && cellPopularity.popularity_percentage !== null) {
+          // Inverse relationship: more popular = lower score, less popular = higher score
+          if (cellPopularity.popularity_percentage < 0.1) {
+            popularityMultiplier = 2.0; // High bonus for very rare guesses
+          } else if (cellPopularity.popularity_percentage < 0.25) {
+            popularityMultiplier = 1.5; // Good bonus for uncommon guesses
+          } else if (cellPopularity.popularity_percentage < 0.5) {
+            popularityMultiplier = 1.2; // Moderate bonus
+          } else if (cellPopularity.popularity_percentage < 0.75) {
+            popularityMultiplier = 0.9; // Small penalty for somewhat popular
+          } else {
+            popularityMultiplier = 0.7; // Larger penalty for very popular guesses
+          }
+        }
+
+        const cellScore = Math.round((baseScore + rarityBonus) * popularityMultiplier - attemptPenalty);
+        return total + Math.max(0, cellScore);
       }
       return total;
     }, 0);
@@ -609,6 +714,9 @@ const PokéGridChallenge: React.FC = () => {
       streak: newStreak,
       endTime: (completed && !isOutOfGuesses) ? new Date() : undefined
     };
+
+    // Save individual guess for popularity tracking
+    saveIndividualGuess(selectedCell, pokemon, selectedCell.attempts, isValid);
 
     setCurrentGame(updatedGame);
 
@@ -774,6 +882,7 @@ const PokéGridChallenge: React.FC = () => {
         totalGuesses={currentGame.totalGuesses}
         maxTotalGuesses={MAX_TOTAL_GUESSES}
         selectedCell={selectedCell ? {
+          id: selectedCell.id,
           rowConstraint: {
             ...selectedCell.rowConstraint,
             type: selectedCell.rowConstraint.type,
@@ -790,6 +899,7 @@ const PokéGridChallenge: React.FC = () => {
         maxSessionUndos={MAX_UNDO_PER_SESSION}
         hasRecentMistake={hasRecentMistake}
         mistakePokemon={mistakePokemon}
+        popularityData={popularityData}
       />
 
 

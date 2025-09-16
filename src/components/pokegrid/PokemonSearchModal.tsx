@@ -13,6 +13,7 @@ interface PokemonSearchModalProps {
   totalGuesses: number;
   maxTotalGuesses: number;
   selectedCell: {
+    id?: string; // Add id property
     rowConstraint: { label: string; icon: string; svgIcon?: string; type: string; value: string | number };
     colConstraint: { label: string; icon: string; svgIcon?: string; type: string; value: string | number };
   } | null;
@@ -21,6 +22,7 @@ interface PokemonSearchModalProps {
   maxSessionUndos?: number;
   hasRecentMistake?: boolean; // Show undo only after a wrong guess
   mistakePokemon?: any; // The specific Pokemon that was the wrong choice
+  popularityData?: any[]; // Popularity data for the current grid
 }
 
 export const PokemonSearchModal: React.FC<PokemonSearchModalProps> = ({
@@ -37,7 +39,8 @@ export const PokemonSearchModal: React.FC<PokemonSearchModalProps> = ({
   sessionUndos = 0,
   maxSessionUndos = 3,
   hasRecentMistake = false,
-  mistakePokemon = null
+  mistakePokemon = null,
+  popularityData = []
 }) => {
 
   if (!isOpen || !selectedCell) return null;
@@ -119,6 +122,35 @@ export const PokemonSearchModal: React.FC<PokemonSearchModalProps> = ({
                   // Check if this Pokemon was the wrong choice
                   const isMistakePokemon = mistakePokemon && pokemon.id === mistakePokemon.id;
 
+                  // Find popularity data for this Pokemon in the current cell
+                  const pokemonPopularity = popularityData.find(
+                    (p: any) => p.cell_id === selectedCell?.id && p.pokemon_id === pokemon.id
+                  );
+
+                  // Calculate popularity level
+                  let popularityColor = 'text-gray-400';
+                  let popularityText = '?';
+
+                  if (pokemonPopularity && pokemonPopularity.popularity_percentage !== null) {
+                    const percentage = pokemonPopularity.popularity_percentage;
+                    if (percentage < 0.1) {
+                      popularityColor = 'text-green-600';
+                      popularityText = 'Rare';
+                    } else if (percentage < 0.25) {
+                      popularityColor = 'text-blue-600';
+                      popularityText = 'Uncommon';
+                    } else if (percentage < 0.5) {
+                      popularityColor = 'text-yellow-600';
+                      popularityText = 'Common';
+                    } else if (percentage < 0.75) {
+                      popularityColor = 'text-orange-600';
+                      popularityText = 'Popular';
+                    } else {
+                      popularityColor = 'text-red-600';
+                      popularityText = 'Very Popular';
+                    }
+                  }
+
                   return (
                     <div
                       key={pokemon.id}
@@ -126,6 +158,7 @@ export const PokemonSearchModal: React.FC<PokemonSearchModalProps> = ({
                       className={`group flex items-center gap-3 sm:gap-4 p-3 sm:p-4 bg-white border-2 border-gray-100 rounded-xl hover:border-blue-300 hover:shadow-md active:scale-[0.98] cursor-pointer transition-all duration-200 ${
                         isMistakePokemon ? 'ring-2 ring-red-200 bg-red-50/50' : ''
                       }`}
+                      title={`${pokemon.name} - ${popularityText} choice`}
                     >
                     <div className="relative flex-shrink-0">
                       <img
@@ -135,6 +168,12 @@ export const PokemonSearchModal: React.FC<PokemonSearchModalProps> = ({
                       />
                       <div className="absolute -top-1 -right-1 bg-gray-200 text-gray-600 rounded-full px-1.5 py-0.5 text-xs font-bold">
                         #{pokemon.id.toString().padStart(3, '0')}
+                      </div>
+                      {/* Popularity indicator */}
+                      <div className="absolute -bottom-1 -right-1">
+                        <div className={`w-4 h-4 rounded-full border border-white shadow-sm ${popularityColor} flex items-center justify-center text-[10px] font-bold`}>
+                          {popularityText.charAt(0)}
+                        </div>
                       </div>
                     </div>
                     <div className="flex-1 min-w-0">
