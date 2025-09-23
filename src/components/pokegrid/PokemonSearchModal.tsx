@@ -23,6 +23,7 @@ interface PokemonSearchModalProps {
   hasRecentMistake?: boolean; // Show undo only after a wrong guess
   mistakePokemon?: any; // The specific Pokemon that was the wrong choice
   popularityData?: any[]; // Popularity data for the current grid
+  isSearching?: boolean; // Show loading state when searching
 }
 
 export const PokemonSearchModal: React.FC<PokemonSearchModalProps> = ({
@@ -40,7 +41,8 @@ export const PokemonSearchModal: React.FC<PokemonSearchModalProps> = ({
   maxSessionUndos = 3,
   hasRecentMistake = false,
   mistakePokemon = null,
-  popularityData = []
+  popularityData = [],
+  isSearching = false
 }) => {
 
   if (!isOpen || !selectedCell) return null;
@@ -116,7 +118,13 @@ export const PokemonSearchModal: React.FC<PokemonSearchModalProps> = ({
         {/* Search Results Section */}
         <div className="px-4 sm:px-6 py-3 sm:py-4">
           <div className="max-h-80 sm:max-h-96 overflow-y-auto">
-            {searchResults.length > 0 ? (
+            {isSearching ? (
+              <div className="text-center py-8 sm:py-12">
+                <div className="w-8 h-8 sm:w-10 sm:h-10 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin mx-auto mb-3 sm:mb-4"></div>
+                <div className="text-sm sm:text-base font-semibold mb-2 text-gray-700">Searching Pokémon...</div>
+                <p className="text-xs sm:text-sm text-gray-500">Finding matches for "{searchQuery}"</p>
+              </div>
+            ) : searchResults.length > 0 ? (
               <div className="space-y-2">
                 {searchResults.map((pokemon) => {
                   // Check if this Pokemon was the wrong choice

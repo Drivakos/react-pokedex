@@ -21,7 +21,7 @@ const PokéGridChallenge: React.FC = () => {
 
   // Custom hooks for game logic
   const gameState = usePokegridGame(displayedPokemon, gameMode);
-  const searchState = usePokegridSearch(displayedPokemon);
+  const searchState = usePokegridSearch();
 
   // Initialize game when Pokemon data is ready
   useEffect(() => {
@@ -134,6 +134,7 @@ const PokéGridChallenge: React.FC = () => {
             hasRecentMistake={gameState.hasRecentMistake}
             mistakePokemon={gameState.mistakePokemon}
             popularityData={gameState.popularityData}
+            isSearching={searchState.isSearching}
           />
         )}
 

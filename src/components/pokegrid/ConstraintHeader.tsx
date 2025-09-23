@@ -42,6 +42,7 @@ export const ConstraintHeader: React.FC<ConstraintHeaderProps> = ({ constraint, 
           <img
             src={constraint.svgIcon}
             alt={constraint.label}
+            title={constraint.label}
           />
           <div className="absolute bottom-1 left-0 right-0 text-xs font-semibold text-white text-center">
             {constraint.label}
