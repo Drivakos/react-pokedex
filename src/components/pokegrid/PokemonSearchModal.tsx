@@ -56,15 +56,6 @@ export const PokemonSearchModal: React.FC<PokemonSearchModalProps> = ({
             <div className="flex-1">
               <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2">Select Pokémon</h2>
               
-              {/* Challenge Mode - No Constraints Shown */}
-              <div className="bg-gradient-to-r from-amber-50 to-orange-50 rounded-lg p-3 mb-3">
-                <div className="flex items-center gap-2 mb-1">
-                  <div className="w-2 h-2 bg-amber-500 rounded-full"></div>
-                  <span className="text-sm font-semibold text-amber-700">Challenge Mode</span>
-                </div>
-                <p className="text-sm text-amber-600">Choose a Pokémon that matches both row and column constraints</p>
-              </div>
-              
               {/* Guesses Remaining */}
               <div className="flex items-center gap-2">
                 <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
@@ -103,16 +94,6 @@ export const PokemonSearchModal: React.FC<PokemonSearchModalProps> = ({
               </svg>
             </div>
           </div>
-          {searchQuery.length > 0 && (
-            <div className="flex items-center justify-between mt-2">
-              <div className="text-sm text-gray-600 truncate flex-1 mr-2">
-                Results for "<span className="font-semibold text-gray-800">{searchQuery}</span>"
-              </div>
-              <div className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs font-medium flex-shrink-0">
-                {searchResults.length}
-              </div>
-            </div>
-          )}
         </div>
 
         {/* Search Results Section */}
