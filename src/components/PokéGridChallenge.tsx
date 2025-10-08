@@ -7,7 +7,11 @@ import {
   GameStats, 
   GameControls, 
   PokemonSearchModal, 
-  ShareResultsModal
+  ShareResultsModal,
+  StatsModal,
+  HintModal,
+  LeaderboardModal,
+  AchievementsModal
 } from './pokegrid';
 import { GAME_CONSTANTS } from './pokegrid/constants';
 
@@ -18,6 +22,11 @@ const PokéGridChallenge: React.FC = () => {
   const [gameMode, setGameMode] = useState<'daily' | 'historical'>('daily');
   const [currentGridDate, setCurrentGridDate] = useState<Date>(new Date());
   const [showShareModal, setShowShareModal] = useState(false);
+  const [showStatsModal, setShowStatsModal] = useState(false);
+  const [showHintModal, setShowHintModal] = useState(false);
+  const [showLeaderboardModal, setShowLeaderboardModal] = useState(false);
+  const [showAchievementsModal, setShowAchievementsModal] = useState(false);
+  const [hintsRemaining, setHintsRemaining] = useState(3);
 
   // Custom hooks for game logic
   const gameState = usePokegridGame(displayedPokemon, gameMode);
@@ -44,9 +53,38 @@ const PokéGridChallenge: React.FC = () => {
     gameState.initializeGame(date, gameMode);
   };
 
-  // Handle share modal
+  // Handle modals
   const handleShowShare = () => {
     setShowShareModal(true);
+  };
+
+  const handleShowStats = () => {
+    setShowStatsModal(true);
+  };
+
+  const handleShowHint = () => {
+    if (selectedCell && hintsRemaining > 0) {
+      setShowHintModal(true);
+    }
+  };
+
+  const handleHintUsed = () => {
+    setHintsRemaining(prev => Math.max(0, prev - 1));
+  };
+
+  const handleShowLeaderboard = () => {
+    setShowLeaderboardModal(true);
+  };
+
+  const handleShowAchievements = () => {
+    setShowAchievementsModal(true);
+  };
+
+  const handleNewGame = () => {
+    if (gameMode !== 'daily') {
+      gameState.initializeGame(new Date(), 'endless');
+      setHintsRemaining(3); // Reset hints for new game
+    }
   };
 
   if (loading || !gameState.currentGame) {
@@ -86,8 +124,15 @@ const PokéGridChallenge: React.FC = () => {
             onGameModeChange={handleGameModeChange}
             onGridDateChange={handleGridDateChange}
             onShowShare={handleShowShare}
+            onShowStats={handleShowStats}
+            onShowHint={handleShowHint}
+            onShowLeaderboard={handleShowLeaderboard}
+            onShowAchievements={handleShowAchievements}
+            onNewGame={handleNewGame}
             gameCompleted={currentGame.completed}
-            canAccessHistorical={true} // Simplified for now
+            canAccessHistorical={true}
+            hintsRemaining={hintsRemaining}
+            canUseHint={!!selectedCell}
           />
         </div>
 
@@ -154,6 +199,39 @@ const PokéGridChallenge: React.FC = () => {
             date: currentGame.date
           }}
           gameMode={gameMode}
+        />
+
+        {/* Statistics Modal */}
+        <StatsModal
+          isOpen={showStatsModal}
+          onClose={() => setShowStatsModal(false)}
+        />
+
+        {/* Hint Modal */}
+        <HintModal
+          isOpen={showHintModal}
+          onClose={() => setShowHintModal(false)}
+          selectedCell={selectedCell ? {
+            id: selectedCell.id,
+            rowConstraint: selectedCell.rowConstraint,
+            colConstraint: selectedCell.colConstraint
+          } : null}
+          allPokemon={displayedPokemon}
+          onHintUsed={handleHintUsed}
+          hintsRemaining={hintsRemaining}
+        />
+
+        {/* Leaderboard Modal */}
+        <LeaderboardModal
+          isOpen={showLeaderboardModal}
+          onClose={() => setShowLeaderboardModal(false)}
+          gridDate={currentGame.date}
+        />
+
+        {/* Achievements Modal */}
+        <AchievementsModal
+          isOpen={showAchievementsModal}
+          onClose={() => setShowAchievementsModal(false)}
         />
       </div>
     </div>

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Pokemon } from '../../types/pokemon';
 import { formatName, getOfficialArtwork } from '../../utils/helpers';
 import { TYPE_COLORS } from '../../types/pokemon';
@@ -45,6 +45,23 @@ export const PokemonSearchModal: React.FC<PokemonSearchModalProps> = ({
   isSearching = false
 }) => {
 
+  // Handle ESC key to close modal
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && isOpen) {
+        onClose();
+      }
+    };
+
+    if (isOpen) {
+      document.addEventListener('keydown', handleKeyDown);
+    }
+
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isOpen, onClose]);
+
   if (!isOpen || !selectedCell) return null;
 
   return (
@@ -55,7 +72,27 @@ export const PokemonSearchModal: React.FC<PokemonSearchModalProps> = ({
           <div className="flex justify-between items-center mb-4 sm:mb-6">
             <div className="flex-1">
               <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2">Select Pokémon</h2>
-              
+
+              {/* Constraint Combination Description */}
+              <div className="mb-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                <p className="text-sm font-medium text-blue-800 mb-1">
+                  Find a Pokémon that's:
+                </p>
+                <div className="flex flex-wrap gap-2 text-xs">
+                  <span className="bg-blue-100 text-blue-700 px-2 py-1 rounded-full font-semibold">
+                    {selectedCell.rowConstraint.label}
+                  </span>
+                  <span className="text-blue-600 font-bold">AND</span>
+                  <span className="bg-blue-100 text-blue-700 px-2 py-1 rounded-full font-semibold">
+                    {selectedCell.colConstraint.label}
+                  </span>
+                </div>
+                <div className="mt-2 text-xs text-blue-600">
+                  <div>• <strong>{selectedCell.rowConstraint.label}:</strong> {(selectedCell.rowConstraint as any).description}</div>
+                  <div>• <strong>{selectedCell.colConstraint.label}:</strong> {(selectedCell.colConstraint as any).description}</div>
+                </div>
+              </div>
+
               {/* Guesses Remaining */}
               <div className="flex items-center gap-2">
                 <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
@@ -76,7 +113,7 @@ export const PokemonSearchModal: React.FC<PokemonSearchModalProps> = ({
           </div>
 
         </div>
-        
+
         {/* Search Input Section */}
         <div className="px-4 sm:px-6 pb-3 sm:pb-4 border-b border-gray-100">
           <div className="relative">
@@ -144,70 +181,69 @@ export const PokemonSearchModal: React.FC<PokemonSearchModalProps> = ({
                     <div
                       key={pokemon.id}
                       onClick={() => onPokemonSelect(pokemon)}
-                      className={`group flex items-center gap-3 sm:gap-4 p-3 sm:p-4 bg-white border-2 border-gray-100 rounded-xl hover:border-blue-300 hover:shadow-md active:scale-[0.98] cursor-pointer transition-all duration-200 ${
-                        isMistakePokemon ? 'ring-2 ring-red-200 bg-red-50/50' : ''
-                      }`}
+                      className={`group flex items-center gap-3 sm:gap-4 p-3 sm:p-4 bg-white border-2 border-gray-100 rounded-xl hover:border-blue-300 hover:shadow-md active:scale-[0.98] cursor-pointer transition-all duration-200 ${isMistakePokemon ? 'ring-2 ring-red-200 bg-red-50/50' : ''
+                        }`}
                       title={popularityData.length === 0
                         ? `${pokemon.name} - Popularity tracking coming soon`
                         : `${pokemon.name} - ${popularityText} choice`
                       }
                     >
-                    <div className="relative flex-shrink-0">
-                      <img
-                        src={getOfficialArtwork(pokemon.sprites)}
-                        alt={pokemon.name}
-                        className="w-12 h-12 sm:w-16 sm:h-16 object-contain"
-                      />
-                      <div className="absolute -top-1 -right-1 bg-gray-200 text-gray-600 rounded-full px-1.5 py-0.5 text-xs font-bold">
-                        #{pokemon.id.toString().padStart(3, '0')}
+                      <div className="relative flex-shrink-0">
+                        <img
+                          src={getOfficialArtwork(pokemon.sprites)}
+                          alt={pokemon.name}
+                          className="w-12 h-12 sm:w-16 sm:h-16 object-contain"
+                        />
+                        <div className="absolute -top-1 -right-1 bg-gray-200 text-gray-600 rounded-full px-1.5 py-0.5 text-xs font-bold">
+                          #{pokemon.id.toString().padStart(3, '0')}
+                        </div>
+                        {/* Popularity indicator */}
+                        <div className="absolute -bottom-1 -right-1">
+                          <div className={`w-4 h-4 rounded-full border border-white shadow-sm ${popularityColor} flex items-center justify-center text-[10px] font-bold`}>
+                            {popularityText.charAt(0)}
+                          </div>
+                        </div>
                       </div>
-                      {/* Popularity indicator */}
-                      <div className="absolute -bottom-1 -right-1">
-                        <div className={`w-4 h-4 rounded-full border border-white shadow-sm ${popularityColor} flex items-center justify-center text-[10px] font-bold`}>
-                          {popularityText.charAt(0)}
+                      <div className="flex-1 min-w-0">
+                        <div className="text-base sm:text-lg font-bold text-gray-900 mb-1 truncate">
+                          {formatName(pokemon.name)}
+                        </div>
+                        <div className="flex flex-wrap gap-1">
+                          {pokemon.types.map((type) => (
+                            <span
+                              key={type}
+                              className={`${TYPE_COLORS[type]} text-white px-2 py-0.5 sm:px-3 sm:py-1 rounded-full text-xs font-semibold capitalize`}
+                            >
+                              {type}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        {/* Undo Button - Only show on the specific wrong Pokemon */}
+                        {onUndo && sessionUndos < maxSessionUndos && hasRecentMistake && isMistakePokemon && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation(); // Prevent triggering Pokemon selection
+                              onUndo();
+                            }}
+                            className="text-red-500 hover:text-red-700 p-1 rounded-lg hover:bg-red-50 transition-colors animate-pulse ring-1 ring-red-300"
+                            title={`Undo ${pokemon.name} choice (${maxSessionUndos - sessionUndos} undos remaining)`}
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
+                            </svg>
+                          </button>
+                        )}
+
+                        {/* Select Arrow */}
+                        <div className="text-gray-400 group-hover:text-blue-500 transition-colors">
+                          <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                          </svg>
                         </div>
                       </div>
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="text-base sm:text-lg font-bold text-gray-900 mb-1 truncate">
-                        {formatName(pokemon.name)}
-                      </div>
-                      <div className="flex flex-wrap gap-1">
-                        {pokemon.types.map((type) => (
-                          <span
-                            key={type}
-                            className={`${TYPE_COLORS[type]} text-white px-2 py-0.5 sm:px-3 sm:py-1 rounded-full text-xs font-semibold capitalize`}
-                          >
-                            {type}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2 flex-shrink-0">
-                      {/* Undo Button - Only show on the specific wrong Pokemon */}
-                      {onUndo && sessionUndos < maxSessionUndos && hasRecentMistake && isMistakePokemon && (
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation(); // Prevent triggering Pokemon selection
-                            onUndo();
-                          }}
-                          className="text-red-500 hover:text-red-700 p-1 rounded-lg hover:bg-red-50 transition-colors animate-pulse ring-1 ring-red-300"
-                          title={`Undo ${pokemon.name} choice (${maxSessionUndos - sessionUndos} undos remaining)`}
-                        >
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
-                          </svg>
-                        </button>
-                      )}
-
-                      {/* Select Arrow */}
-                      <div className="text-gray-400 group-hover:text-blue-500 transition-colors">
-                        <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                        </svg>
-                      </div>
-                    </div>
-                  </div>
                   );
                 })}
               </div>

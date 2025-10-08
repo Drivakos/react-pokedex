@@ -6,6 +6,10 @@ export { GameControls } from './GameControls';
 export { PokemonSearchModal } from './PokemonSearchModal';
 export { ShareResultsModal } from './ShareResultsModal';
 export { GameGrid } from './GameGrid';
+export { StatsModal } from './StatsModal';
+export { HintModal } from './HintModal';
+export { LeaderboardModal } from './LeaderboardModal';
+export { AchievementsModal } from './AchievementsModal';
 
 // Export types
 export * from './types';

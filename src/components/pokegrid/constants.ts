@@ -28,21 +28,75 @@ export const TYPE_CONSTRAINTS = [
   { id: 'fairy-type', type: 'type' as const, value: 'fairy', label: 'Fairy', description: 'Fairy-type Pokémon', icon: '', svgIcon: '/icons/types/fairy.svg' },
 ];
 
-export const OTHER_CONSTRAINTS = [
+export const GENERATION_CONSTRAINTS = [
   { id: 'gen-1', type: 'generation' as const, value: 'generation-i', label: 'Generation I', description: 'Kanto region Pokémon', icon: 'I' },
   { id: 'gen-2', type: 'generation' as const, value: 'generation-ii', label: 'Generation II', description: 'Johto region Pokémon', icon: 'II' },
   { id: 'gen-3', type: 'generation' as const, value: 'generation-iii', label: 'Generation III', description: 'Hoenn region Pokémon', icon: 'III' },
   { id: 'gen-4', type: 'generation' as const, value: 'generation-iv', label: 'Generation IV', description: 'Sinnoh region Pokémon', icon: 'IV' },
   { id: 'gen-5', type: 'generation' as const, value: 'generation-v', label: 'Generation V', description: 'Unova region Pokémon', icon: 'V' },
+  { id: 'gen-6', type: 'generation' as const, value: 'generation-vi', label: 'Generation VI', description: 'Kalos region Pokémon', icon: 'VI' },
+  { id: 'gen-7', type: 'generation' as const, value: 'generation-vii', label: 'Generation VII', description: 'Alola region Pokémon', icon: 'VII' },
+  { id: 'gen-8', type: 'generation' as const, value: 'generation-viii', label: 'Generation VIII', description: 'Galar region Pokémon', icon: 'VIII' },
+  { id: 'gen-9', type: 'generation' as const, value: 'generation-ix', label: 'Generation IX', description: 'Paldea region Pokémon', icon: 'IX' },
+];
+
+export const EVOLUTION_CONSTRAINTS = [
   { id: 'starter', type: 'evolution-stage' as const, value: 'starter', label: 'Starter', description: 'Starter Pokémon', icon: 'S' },
-  { id: 'final-evo', type: 'evolution-stage' as const, value: 'final', label: 'Final Evolution', description: 'Final evolution Pokémon', icon: 'F' },
+  { id: 'first-evo', type: 'evolution-stage' as const, value: 'first', label: 'First Evolution', description: 'First evolution stage', icon: '1E' },
+  { id: 'final-evo', type: 'evolution-stage' as const, value: 'final', label: 'Final Evolution', description: 'Final evolution Pokémon', icon: 'FE' },
+  { id: 'no-evolution', type: 'evolution-stage' as const, value: 'none', label: 'No Evolution', description: 'Does not evolve', icon: 'NE' },
   { id: 'legendary', type: 'evolution-stage' as const, value: 'legendary', label: 'Legendary', description: 'Legendary Pokémon', icon: 'L' },
-  { id: 'single-type', type: 'type-count' as const, value: 'single', label: 'Single Type', description: 'Single-type Pokémon', icon: '1' },
-  { id: 'dual-type', type: 'type-count' as const, value: 'dual', label: 'Dual Type', description: 'Dual-type Pokémon', icon: '2' },
-  { id: 'high-hp', type: 'stat-range' as const, value: 'hp-high', label: 'High HP', description: 'HP ≥ 100', icon: 'HP' },
-  { id: 'high-attack', type: 'stat-range' as const, value: 'attack-high', label: 'High Attack', description: 'Attack ≥ 120', icon: 'ATK' },
-  { id: 'high-speed', type: 'stat-range' as const, value: 'speed-high', label: 'High Speed', description: 'Speed ≥ 100', icon: 'SPD' },
-  { id: 'small-size', type: 'height-weight' as const, value: 'small', label: 'Small Size', description: 'Height < 1m, Weight < 30kg', icon: 'SM' },
-  { id: 'large-size', type: 'height-weight' as const, value: 'large', label: 'Large Size', description: 'Height > 2m or Weight > 100kg', icon: 'LG' },
-  { id: 'physical-moves', type: 'move-category' as const, value: 'physical', label: 'Physical Moves', description: 'Can learn physical moves', icon: 'PHY' },
+  { id: 'mythical', type: 'evolution-stage' as const, value: 'mythical', label: 'Mythical', description: 'Mythical Pokémon', icon: 'M' },
+];
+
+export const STAT_CONSTRAINTS = [
+  { id: 'high-hp', type: 'stat-range' as const, value: 'hp-high', label: 'High HP', description: 'HP ≥ 100', icon: 'HP+' },
+  { id: 'low-hp', type: 'stat-range' as const, value: 'hp-low', label: 'Low HP', description: 'HP ≤ 50', icon: 'HP-' },
+  { id: 'high-attack', type: 'stat-range' as const, value: 'attack-high', label: 'High Attack', description: 'Attack ≥ 120', icon: 'ATK+' },
+  { id: 'low-attack', type: 'stat-range' as const, value: 'attack-low', label: 'Low Attack', description: 'Attack ≤ 60', icon: 'ATK-' },
+  { id: 'high-defense', type: 'stat-range' as const, value: 'defense-high', label: 'High Defense', description: 'Defense ≥ 100', icon: 'DEF+' },
+  { id: 'low-defense', type: 'stat-range' as const, value: 'defense-low', label: 'Low Defense', description: 'Defense ≤ 60', icon: 'DEF-' },
+  { id: 'high-speed', type: 'stat-range' as const, value: 'speed-high', label: 'High Speed', description: 'Speed ≥ 100', icon: 'SPD+' },
+  { id: 'low-speed', type: 'stat-range' as const, value: 'speed-low', label: 'Low Speed', description: 'Speed ≤ 50', icon: 'SPD-' },
+];
+
+export const SIZE_CONSTRAINTS = [
+  { id: 'small-size', type: 'height-weight' as const, value: 'small', label: 'Small', description: 'Height < 1.0m AND Weight < 30kg', icon: 'SM' },
+  { id: 'medium-size', type: 'height-weight' as const, value: 'medium', label: 'Medium', description: 'Height 1.0m - 2.0m', icon: 'MD' },
+  { id: 'large-size', type: 'height-weight' as const, value: 'large', label: 'Large', description: 'Height > 2.0m OR Weight > 100kg', icon: 'LG' },
+  { id: 'light-weight', type: 'height-weight' as const, value: 'light', label: 'Light', description: 'Weight < 10kg', icon: 'LT' },
+  { id: 'heavy-weight', type: 'height-weight' as const, value: 'heavy', label: 'Heavy', description: 'Weight > 200kg', icon: 'HV' },
+];
+
+export const TYPE_COUNT_CONSTRAINTS = [
+  { id: 'single-type', type: 'type-count' as const, value: 'single', label: 'Single Type', description: 'Single-type Pokémon', icon: '1T' },
+  { id: 'dual-type', type: 'type-count' as const, value: 'dual', label: 'Dual Type', description: 'Dual-type Pokémon', icon: '2T' },
+];
+
+export const MOVE_CONSTRAINTS = [
+  { id: 'learns-earthquake', type: 'move-category' as const, value: 'earthquake', label: 'Learns Earthquake', description: 'Can learn Earthquake', icon: 'EQ' },
+  { id: 'learns-surf', type: 'move-category' as const, value: 'surf', label: 'Learns Surf', description: 'Can learn Surf', icon: 'SF' },
+  { id: 'learns-fly', type: 'move-category' as const, value: 'fly', label: 'Learns Fly', description: 'Can learn Fly', icon: 'FLY' },
+  { id: 'learns-thunder-wave', type: 'move-category' as const, value: 'thunder-wave', label: 'Learns Thunder Wave', description: 'Can learn Thunder Wave', icon: 'TW' },
+  { id: 'learns-toxic', type: 'move-category' as const, value: 'toxic', label: 'Learns Toxic', description: 'Can learn Toxic', icon: 'TOX' },
+  { id: 'learns-ice-beam', type: 'move-category' as const, value: 'ice-beam', label: 'Learns Ice Beam', description: 'Can learn Ice Beam', icon: 'IB' },
+];
+
+export const TYPE_EFFECTIVENESS_CONSTRAINTS = [
+  { id: 'weak-to-fire', type: 'type-effectiveness' as const, value: 'weak-fire', label: 'Weak to Fire', description: 'Takes super effective damage from Fire', icon: 'W🔥' },
+  { id: 'weak-to-water', type: 'type-effectiveness' as const, value: 'weak-water', label: 'Weak to Water', description: 'Takes super effective damage from Water', icon: 'W💧' },
+  { id: 'weak-to-electric', type: 'type-effectiveness' as const, value: 'weak-electric', label: 'Weak to Electric', description: 'Takes super effective damage from Electric', icon: 'W⚡' },
+  { id: 'resists-fire', type: 'type-effectiveness' as const, value: 'resist-fire', label: 'Resists Fire', description: 'Takes reduced damage from Fire', icon: 'R🔥' },
+  { id: 'resists-water', type: 'type-effectiveness' as const, value: 'resist-water', label: 'Resists Water', description: 'Takes reduced damage from Water', icon: 'R💧' },
+  { id: 'resists-grass', type: 'type-effectiveness' as const, value: 'resist-grass', label: 'Resists Grass', description: 'Takes reduced damage from Grass', icon: 'R🌿' },
+];
+
+export const OTHER_CONSTRAINTS = [
+  ...GENERATION_CONSTRAINTS,
+  ...EVOLUTION_CONSTRAINTS,
+  ...STAT_CONSTRAINTS,
+  ...SIZE_CONSTRAINTS,
+  ...TYPE_COUNT_CONSTRAINTS,
+  ...MOVE_CONSTRAINTS,
+  ...TYPE_EFFECTIVENESS_CONSTRAINTS,
 ];
