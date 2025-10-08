@@ -50,22 +50,22 @@ export const EVOLUTION_CONSTRAINTS = [
 ];
 
 export const STAT_CONSTRAINTS = [
-  { id: 'high-hp', type: 'stat-range' as const, value: 'hp-high', label: 'High HP', description: 'HP ≥ 100', icon: 'HP+' },
-  { id: 'low-hp', type: 'stat-range' as const, value: 'hp-low', label: 'Low HP', description: 'HP ≤ 50', icon: 'HP-' },
-  { id: 'high-attack', type: 'stat-range' as const, value: 'attack-high', label: 'High Attack', description: 'Attack ≥ 120', icon: 'ATK+' },
-  { id: 'low-attack', type: 'stat-range' as const, value: 'attack-low', label: 'Low Attack', description: 'Attack ≤ 60', icon: 'ATK-' },
-  { id: 'high-defense', type: 'stat-range' as const, value: 'defense-high', label: 'High Defense', description: 'Defense ≥ 100', icon: 'DEF+' },
-  { id: 'low-defense', type: 'stat-range' as const, value: 'defense-low', label: 'Low Defense', description: 'Defense ≤ 60', icon: 'DEF-' },
-  { id: 'high-speed', type: 'stat-range' as const, value: 'speed-high', label: 'High Speed', description: 'Speed ≥ 100', icon: 'SPD+' },
-  { id: 'low-speed', type: 'stat-range' as const, value: 'speed-low', label: 'Low Speed', description: 'Speed ≤ 50', icon: 'SPD-' },
+  { id: 'high-hp', type: 'stat-range' as const, value: 'hp-high', label: 'High HP (≥ 100)', description: 'HP ≥ 100', icon: 'HP+' },
+  { id: 'low-hp', type: 'stat-range' as const, value: 'hp-low', label: 'Low HP (≤ 50)', description: 'HP ≤ 50', icon: 'HP-' },
+  { id: 'high-attack', type: 'stat-range' as const, value: 'attack-high', label: 'High Attack (≥ 120)', description: 'Attack ≥ 120', icon: 'ATK+' },
+  { id: 'low-attack', type: 'stat-range' as const, value: 'attack-low', label: 'Low Attack (≤ 60)', description: 'Attack ≤ 60', icon: 'ATK-' },
+  { id: 'high-defense', type: 'stat-range' as const, value: 'defense-high', label: 'High Defense (≥ 100)', description: 'Defense ≥ 100', icon: 'DEF+' },
+  { id: 'low-defense', type: 'stat-range' as const, value: 'defense-low', label: 'Low Defense (≤ 60)', description: 'Defense ≤ 60', icon: 'DEF-' },
+  { id: 'high-speed', type: 'stat-range' as const, value: 'speed-high', label: 'High Speed (≥ 100)', description: 'Speed ≥ 100', icon: 'SPD+' },
+  { id: 'low-speed', type: 'stat-range' as const, value: 'speed-low', label: 'Low Speed (≤ 50)', description: 'Speed ≤ 50', icon: 'SPD-' },
 ];
 
 export const SIZE_CONSTRAINTS = [
-  { id: 'small-size', type: 'height-weight' as const, value: 'small', label: 'Small', description: 'Height < 1.0m AND Weight < 30kg', icon: 'SM' },
-  { id: 'medium-size', type: 'height-weight' as const, value: 'medium', label: 'Medium', description: 'Height 1.0m - 2.0m', icon: 'MD' },
-  { id: 'large-size', type: 'height-weight' as const, value: 'large', label: 'Large', description: 'Height > 2.0m OR Weight > 100kg', icon: 'LG' },
-  { id: 'light-weight', type: 'height-weight' as const, value: 'light', label: 'Light', description: 'Weight < 10kg', icon: 'LT' },
-  { id: 'heavy-weight', type: 'height-weight' as const, value: 'heavy', label: 'Heavy', description: 'Weight > 200kg', icon: 'HV' },
+  { id: 'small-size', type: 'height-weight' as const, value: 'small', label: 'Small (< 1m & < 30kg)', description: 'Height < 1.0m AND Weight < 30kg', icon: 'SM' },
+  { id: 'medium-size', type: 'height-weight' as const, value: 'medium', label: 'Medium (1-2m)', description: 'Height 1.0m - 2.0m', icon: 'MD' },
+  { id: 'large-size', type: 'height-weight' as const, value: 'large', label: 'Large (> 2m or > 100kg)', description: 'Height > 2.0m OR Weight > 100kg', icon: 'LG' },
+  { id: 'light-weight', type: 'height-weight' as const, value: 'light', label: 'Light (< 10kg)', description: 'Weight < 10kg', icon: 'LT' },
+  { id: 'heavy-weight', type: 'height-weight' as const, value: 'heavy', label: 'Heavy (> 200kg)', description: 'Weight > 200kg', icon: 'HV' },
 ];
 
 export const TYPE_COUNT_CONSTRAINTS = [
@@ -83,12 +83,16 @@ export const MOVE_CONSTRAINTS = [
 ];
 
 export const TYPE_EFFECTIVENESS_CONSTRAINTS = [
-  { id: 'weak-to-fire', type: 'type-effectiveness' as const, value: 'weak-fire', label: 'Weak to Fire', description: 'Takes super effective damage from Fire', icon: 'W🔥' },
-  { id: 'weak-to-water', type: 'type-effectiveness' as const, value: 'weak-water', label: 'Weak to Water', description: 'Takes super effective damage from Water', icon: 'W💧' },
-  { id: 'weak-to-electric', type: 'type-effectiveness' as const, value: 'weak-electric', label: 'Weak to Electric', description: 'Takes super effective damage from Electric', icon: 'W⚡' },
-  { id: 'resists-fire', type: 'type-effectiveness' as const, value: 'resist-fire', label: 'Resists Fire', description: 'Takes reduced damage from Fire', icon: 'R🔥' },
-  { id: 'resists-water', type: 'type-effectiveness' as const, value: 'resist-water', label: 'Resists Water', description: 'Takes reduced damage from Water', icon: 'R💧' },
-  { id: 'resists-grass', type: 'type-effectiveness' as const, value: 'resist-grass', label: 'Resists Grass', description: 'Takes reduced damage from Grass', icon: 'R🌿' },
+  { id: 'weak-to-fire', type: 'type-effectiveness' as const, value: 'weak-fire', label: 'Weak to Fire', description: 'Takes super effective damage from Fire', icon: 'W', svgIcon: '/icons/types/fire.svg' },
+  { id: 'weak-to-water', type: 'type-effectiveness' as const, value: 'weak-water', label: 'Weak to Water', description: 'Takes super effective damage from Water', icon: 'W', svgIcon: '/icons/types/water.svg' },
+  { id: 'weak-to-electric', type: 'type-effectiveness' as const, value: 'weak-electric', label: 'Weak to Electric', description: 'Takes super effective damage from Electric', icon: 'W', svgIcon: '/icons/types/electric.svg' },
+  { id: 'weak-to-grass', type: 'type-effectiveness' as const, value: 'weak-grass', label: 'Weak to Grass', description: 'Takes super effective damage from Grass', icon: 'W', svgIcon: '/icons/types/grass.svg' },
+  { id: 'weak-to-ice', type: 'type-effectiveness' as const, value: 'weak-ice', label: 'Weak to Ice', description: 'Takes super effective damage from Ice', icon: 'W', svgIcon: '/icons/types/ice.svg' },
+  { id: 'weak-to-fighting', type: 'type-effectiveness' as const, value: 'weak-fighting', label: 'Weak to Fighting', description: 'Takes super effective damage from Fighting', icon: 'W', svgIcon: '/icons/types/fighting.svg' },
+  { id: 'resists-fire', type: 'type-effectiveness' as const, value: 'resist-fire', label: 'Resists Fire', description: 'Takes reduced damage from Fire', icon: 'R', svgIcon: '/icons/types/fire.svg' },
+  { id: 'resists-water', type: 'type-effectiveness' as const, value: 'resist-water', label: 'Resists Water', description: 'Takes reduced damage from Water', icon: 'R', svgIcon: '/icons/types/water.svg' },
+  { id: 'resists-grass', type: 'type-effectiveness' as const, value: 'resist-grass', label: 'Resists Grass', description: 'Takes reduced damage from Grass', icon: 'R', svgIcon: '/icons/types/grass.svg' },
+  { id: 'resists-steel', type: 'type-effectiveness' as const, value: 'resist-steel', label: 'Resists Steel', description: 'Takes reduced damage from Steel', icon: 'R', svgIcon: '/icons/types/steel.svg' },
 ];
 
 export const OTHER_CONSTRAINTS = [
