@@ -21,7 +21,7 @@ const PokéGridChallenge: React.FC = () => {
 
   // Custom hooks for game logic
   const gameState = usePokegridGame(displayedPokemon, 'daily');
-  const searchState = usePokegridSearch(displayedPokemon);
+  const searchState = usePokegridSearch();
   const { currentGame, selectedCell } = gameState;
 
   // Reset search when modal opens (always call this hook)

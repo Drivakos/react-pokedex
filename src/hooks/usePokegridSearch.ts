@@ -1,23 +1,19 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useCallback } from 'react';
 import { Pokemon } from '../types/pokemon';
 import { fetchPokemonData } from '../services/api';
+import { sortPokemonByRelevance } from '../utils/pokemon-search';
+import { useSearch } from './useSearch';
 
-export function usePokegridSearch(displayedPokemon: Pokemon[]) {
-  const [searchQuery, setSearchQuery] = useState('');
-  const [searchResults, setSearchResults] = useState<Pokemon[]>([]);
-  const [isSearching, setIsSearching] = useState(false);
-
-  // Track the current search request ID to prevent race conditions
-  const currentSearchIdRef = useRef<number>(0);
-
-  // Dynamic search function that makes GraphQL requests
-  const performSearch = useCallback(async (query: string, searchId: number) => {
+/**
+ * Specialized search hook for Pokegrid challenge
+ * Uses the generic useSearch hook with Pokemon-specific sorting logic
+ */
+export function usePokegridSearch() {
+  // Search function that fetches and sorts Pokemon
+  const searchFn = useCallback(async (query: string) => {
     if (query.length === 0) {
-      setSearchResults([]);
-      return;
+      return [];
     }
-
-    setIsSearching(true);
 
     try {
       // For the challenge, we want to search through ALL Pokemon (no filters, just search term)
@@ -36,105 +32,29 @@ export function usePokegridSearch(displayedPokemon: Pokemon[]) {
         }
       );
 
-      // Check if this is still the most recent search before updating results
-      if (searchId !== currentSearchIdRef.current) {
-        // This search is outdated, ignore the results
-        return;
-      }
-
-      // Sort results by relevance (similar to the original logic)
-      const queryLower = query.toLowerCase().trim();
-
-      // Separate Pokemon into different priority groups
-      const startsWithName: Pokemon[] = [];
-      const startsWithId: Pokemon[] = [];
-      const containsName: Pokemon[] = [];
-      const containsId: Pokemon[] = [];
-
-      results.forEach(pokemon => {
-        const lowerName = pokemon.name.toLowerCase();
-        const idString = pokemon.id.toString();
-
-        if (lowerName.startsWith(queryLower)) {
-          startsWithName.push(pokemon);
-        } else if (idString.startsWith(queryLower)) {
-          startsWithId.push(pokemon);
-        } else if (lowerName.includes(queryLower)) {
-          containsName.push(pokemon);
-        } else if (idString.includes(queryLower)) {
-          containsId.push(pokemon);
-        }
-      });
-
-      // Sort each group by relevance
-      const sortByRelevance = (a: Pokemon, b: Pokemon) => {
-        const aName = a.name.toLowerCase();
-        const bName = b.name.toLowerCase();
-
-        // Exact match first
-        if (aName === queryLower && bName !== queryLower) return -1;
-        if (bName === queryLower && aName !== queryLower) return 1;
-
-        // Then alphabetical
-        return aName.localeCompare(bName);
-      };
-
-      startsWithName.sort(sortByRelevance);
-      startsWithId.sort((a, b) => a.id - b.id);
-      containsName.sort(sortByRelevance);
-      containsId.sort((a, b) => a.id - b.id);
-
-      // Combine in priority order and limit results to 50 for performance
-      const combinedResults = [
-        ...startsWithName,
-        ...startsWithId,
-        ...containsName,
-        ...containsId
-      ].slice(0, 50);
-
-      // Double-check this is still the current search before updating results
-      if (searchId === currentSearchIdRef.current) {
-        setSearchResults(combinedResults);
-      }
+      // Sort results by relevance using centralized utility
+      const sorted = sortPokemonByRelevance(results, query);
+      
+      // Limit results to 50 for performance
+      return sorted.slice(0, 50);
     } catch (error) {
       console.error('Error searching Pokemon:', error);
-      // Only clear results if this is still the current search
-      if (searchId === currentSearchIdRef.current) {
-        setSearchResults([]);
-      }
-    } finally {
-      // Only update loading state if this is still the current search
-      if (searchId === currentSearchIdRef.current) {
-        setIsSearching(false);
-      }
+      return [];
     }
   }, []);
 
-  // Debounced search effect
-  useEffect(() => {
-    if (searchQuery.length === 0) {
-      setSearchResults([]);
-      setIsSearching(false);
-      currentSearchIdRef.current = 0; // Reset search ID
-      return;
-    }
-
-    // Increment search ID for this new search
-    const searchId = ++currentSearchIdRef.current;
-
-    const timeoutId = setTimeout(() => {
-      performSearch(searchQuery, searchId);
-    }, 150); // Short debounce for responsive feel
-
-    return () => clearTimeout(timeoutId);
-  }, [searchQuery, performSearch]);
-
-  const resetSearch = useCallback(() => {
-    setSearchQuery('');
-    setSearchResults([]);
-    setIsSearching(false);
-    currentSearchIdRef.current = 0;
-  }, []);
+  // Use the generic search hook
+  const {
+    query: searchQuery,
+    setQuery: setSearchQuery,
+    results: searchResults,
+    isSearching,
+    reset: resetSearch
+  } = useSearch<Pokemon>({
+    searchFn,
+    debounceMs: 150, // Short debounce for responsive feel
+    minQueryLength: 0
+  });
 
   return {
     searchQuery,
