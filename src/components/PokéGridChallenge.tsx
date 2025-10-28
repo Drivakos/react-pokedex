@@ -2,18 +2,18 @@ import React, { useState, useEffect } from 'react';
 import { usePokemon } from '../hooks/usePokemon';
 import { usePokegridGame } from '../hooks/usePokegridGame';
 import { usePokegridSearch } from '../hooks/usePokegridSearch';
-import { 
-  GameGrid, 
-  GameStats, 
-  GameControls, 
-  PokemonSearchModal, 
+import {
+  GameGrid,
+  GameStats,
+  GameControls,
+  PokemonSearchModal,
   ShareResultsModal
 } from './pokegrid';
 import { GAME_CONSTANTS } from './pokegrid/constants';
 
 const PokéGridChallenge: React.FC = () => {
   const { displayedPokemon, loading } = usePokemon();
-  
+
   // UI state
   const [currentGridDate, setCurrentGridDate] = useState<Date>(new Date());
   const [showShareModal, setShowShareModal] = useState(false);
@@ -28,13 +28,13 @@ const PokéGridChallenge: React.FC = () => {
     const loadAvailableDates = () => {
       const dates = [];
       const today = new Date();
-      
+
       for (let i = 6; i >= 0; i--) {
         const date = new Date(today);
         date.setDate(today.getDate() - i);
         dates.push(date.toISOString().split('T')[0]);
       }
-      
+
       setAvailableDates(dates);
     };
 
@@ -61,14 +61,10 @@ const PokéGridChallenge: React.FC = () => {
     }
   };
 
-  const { currentGame, selectedCell } = gameState;
-
-  // Reset search when modal opens (always call this hook)
-  useEffect(() => {
-    if (selectedCell && currentGame) {
-      searchState.resetSearch();
-    }
-  }, [selectedCell, currentGame, searchState.resetSearch]);
+  // Handle share modal
+  const handleShowShare = () => {
+    setShowShareModal(true);
+  };
 
   // Check if selected date is today
   const isToday = currentGridDate.toISOString().split('T')[0] === new Date().toISOString().split('T')[0];
@@ -84,6 +80,15 @@ const PokéGridChallenge: React.FC = () => {
     );
   }
 
+  const { currentGame, selectedCell } = gameState;
+
+  // Reset search when modal opens
+  useEffect(() => {
+    if (selectedCell) {
+      searchState.resetSearch();
+    }
+  }, [selectedCell, searchState.resetSearch]);
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-white-50 to-indigo-100 py-8">
       <div className="max-w-4xl mx-auto px-4">
@@ -93,7 +98,7 @@ const PokéGridChallenge: React.FC = () => {
             PokéGrid Challenge
           </h1>
           <p className="text-lg text-gray-600">
-            {isToday 
+            {isToday
               ? `Today's Grid - ${currentGridDate.toLocaleDateString()}`
               : `Past Grid - ${currentGridDate.toLocaleDateString()}`
             }
@@ -108,7 +113,7 @@ const PokéGridChallenge: React.FC = () => {
                 const date = new Date(dateString);
                 const isSelected = dateString === currentGridDate.toISOString().split('T')[0];
                 const isCurrentDay = dateString === new Date().toISOString().split('T')[0];
-                
+
                 return (
                   <button
                     key={dateString}
@@ -184,8 +189,8 @@ const PokéGridChallenge: React.FC = () => {
             score: currentGame.score,
             solvedCount: currentGame.cells.filter((cell: any) => cell.isCorrect).length,
             totalCells: 9,
-            accuracy: currentGame.totalGuesses > 0 
-              ? Math.round((currentGame.correctGuesses / currentGame.totalGuesses) * 100) 
+            accuracy: currentGame.totalGuesses > 0
+              ? Math.round((currentGame.correctGuesses / currentGame.totalGuesses) * 100)
               : 0,
             totalGuesses: currentGame.totalGuesses,
             perfectGame: currentGame.perfectGame,

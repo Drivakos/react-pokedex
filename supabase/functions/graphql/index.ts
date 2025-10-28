@@ -1,8 +1,6 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
-console.log('GraphQL Edge Function loaded')
-
 // Environment variables
 const GRAPHQL_ENDPOINT = Deno.env.get('VITE_API_GRAPHQL_URL')
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
@@ -59,6 +57,10 @@ serve(async (req: Request) => {
       )
     }
 
+    // Determine cache duration based on query type
+    const isFilteredPokemonQuery = query.includes('GetFilteredPokemon');
+    const cacheDurationHours = isFilteredPokemonQuery ? 8760 : 1; // 1 year = 8760 hours for filtered queries, 1 hour for others
+
     // Create a cache key based on the query and variables
     const cacheKey = `graphql:${btoa(JSON.stringify({ query, variables }))}`
 
@@ -71,19 +73,17 @@ serve(async (req: Request) => {
       .single()
 
     if (cachedData && !cacheError) {
-      console.log('Cache hit for:', cacheKey)
+      const cacheControlValue = `public, max-age=${cacheDurationHours * 3600}, s-maxage=${cacheDurationHours * 3600}`;
       return new Response(cachedData.data, {
         status: 200,
         headers: {
           ...corsHeaders,
           'Content-Type': 'application/json',
-          'Cache-Control': 'public, max-age=3600, s-maxage=3600',
+          'Cache-Control': cacheControlValue,
           'X-Cache': 'HIT',
         }
       })
     }
-
-    console.log('Cache miss for:', cacheKey)
 
     // Make the GraphQL request
     const response = await fetch(GRAPHQL_ENDPOINT, {
@@ -101,8 +101,8 @@ serve(async (req: Request) => {
     const data = await response.json()
     const responseBody = JSON.stringify(data)
 
-    // Cache the response for 1 hour
-    const expiresAt = new Date(Date.now() + 3600000).toISOString() // 1 hour from now
+    // Cache the response based on query type
+    const expiresAt = new Date(Date.now() + (cacheDurationHours * 3600000)).toISOString() // cacheDurationHours from now
 
     const { error: insertError } = await supabase
       .from('api_cache')
@@ -117,12 +117,13 @@ serve(async (req: Request) => {
     }
 
     // Return the fresh data
+    const cacheControlValue = `public, max-age=${cacheDurationHours * 3600}, s-maxage=${cacheDurationHours * 3600}`;
     return new Response(responseBody, {
       status: 200,
       headers: {
         ...corsHeaders,
         'Content-Type': 'application/json',
-        'Cache-Control': 'public, max-age=3600, s-maxage=3600',
+        'Cache-Control': cacheControlValue,
         'X-Cache': 'MISS',
       }
     })

@@ -1,8 +1,6 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
-console.log('REST Edge Function loaded')
-
 // Environment variables
 const REST_ENDPOINT = Deno.env.get('VITE_API_REST_URL') || Deno.env.get('VITE_API_URL')
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
@@ -62,8 +60,6 @@ serve(async (req: Request) => {
     const queryString = url.searchParams.toString()
     const fullApiUrl = `${REST_ENDPOINT}/${apiPath}${queryString ? `?${queryString}` : ''}`
 
-    console.log('Fetching from:', fullApiUrl)
-
     // Create a cache key based on the full API URL
     const cacheKey = `rest:${btoa(fullApiUrl)}`
 
@@ -90,7 +86,6 @@ serve(async (req: Request) => {
       .single()
 
     if (cachedData && !cacheError) {
-      console.log('Cache hit for:', cacheKey)
       return new Response(cachedData.data, {
         status: 200,
         headers: {
@@ -102,8 +97,6 @@ serve(async (req: Request) => {
         }
       })
     }
-
-    console.log('Cache miss for:', cacheKey)
 
     // Make the API request
     const apiResponse = await fetch(fullApiUrl, {

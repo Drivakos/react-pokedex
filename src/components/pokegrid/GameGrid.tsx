@@ -23,8 +23,8 @@ export const GameGrid: React.FC<GameGridProps> = ({
     <div className="">
       <div className="grid grid-cols-4 gap-1 max-w-2xl mx-auto">
         {/* Top-left corner with PokéGrid branding */}
-        <div className="aspect-square bg-gradient-to-br from-purple-600 to-purple-700 flex items-center justify-center">
-          <div className="text-white text-center">
+        <div className="aspect-square flex items-center justify-center">
+          <div className="text-center">
             <div className="text-lg font-bold">Challenge</div>
             <div className="text-xs font-medium">GRID</div>
           </div>

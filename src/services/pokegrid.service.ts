@@ -209,8 +209,8 @@ class PokegridService {
   }
 
   async saveGridConfiguration(
-    gridDate: string, 
-    configuration: any, 
+    gridDate: string,
+    configuration: any,
     difficulty: string = 'medium',
     seed?: string
   ): Promise<boolean> {
@@ -237,6 +237,93 @@ class PokegridService {
       const { data, error } = await supabase.rpc('get_weekly_pokegrid_leaderboard', {
         p_start_date: startDate,
         p_limit: limit
+      });
+
+      if (error) {
+        return [];
+      }
+
+      return data || [];
+    } catch (error) {
+      return [];
+    }
+  }
+
+  async getUserStats(userId: string): Promise<any> {
+    if (!userId) return null;
+
+    try {
+      const { data, error } = await supabase.rpc('get_user_pokegrid_stats', {
+        p_user_id: userId
+      });
+
+      if (error) {
+        // Return default stats if function doesn't exist
+        return {
+          totalGames: 0,
+          completedGames: 0,
+          perfectGames: 0,
+          averageScore: 0,
+          bestScore: 0,
+          currentStreak: 0,
+          longestStreak: 0,
+          averageGuesses: 0,
+          totalGuesses: 0,
+          accuracy: 0
+        };
+      }
+
+      return data?.[0] || {
+        totalGames: 0,
+        completedGames: 0,
+        perfectGames: 0,
+        averageScore: 0,
+        bestScore: 0,
+        currentStreak: 0,
+        longestStreak: 0,
+        averageGuesses: 0,
+        totalGuesses: 0,
+        accuracy: 0
+      };
+    } catch (error) {
+      return {
+        totalGames: 0,
+        completedGames: 0,
+        perfectGames: 0,
+        averageScore: 0,
+        bestScore: 0,
+        currentStreak: 0,
+        longestStreak: 0,
+        averageGuesses: 0,
+        totalGuesses: 0,
+        accuracy: 0
+      };
+    }
+  }
+
+  async getLeaderboard(timeframe: 'daily' | 'weekly' | 'all-time', gridDate?: string): Promise<any[]> {
+    try {
+      const { data, error } = await supabase.rpc('get_pokegrid_leaderboard', {
+        p_timeframe: timeframe,
+        p_grid_date: gridDate
+      });
+
+      if (error) {
+        return [];
+      }
+
+      return data || [];
+    } catch (error) {
+      return [];
+    }
+  }
+
+  async getUserAchievements(userId: string): Promise<any[]> {
+    if (!userId) return [];
+
+    try {
+      const { data, error } = await supabase.rpc('get_user_achievements', {
+        p_user_id: userId
       });
 
       if (error) {

@@ -20,25 +20,79 @@ export function createSeededRandom(seed: string) {
   };
 }
 
+// Type effectiveness chart for checking weaknesses and resistances
+const TYPE_EFFECTIVENESS: Record<string, { weak_to: string[], resists: string[] }> = {
+  fire: { weak_to: ['water', 'ground', 'rock'], resists: ['fire', 'grass', 'ice', 'bug', 'steel', 'fairy'] },
+  water: { weak_to: ['electric', 'grass'], resists: ['fire', 'water', 'ice', 'steel'] },
+  grass: { weak_to: ['fire', 'ice', 'poison', 'flying', 'bug'], resists: ['water', 'electric', 'grass', 'ground'] },
+  electric: { weak_to: ['ground'], resists: ['electric', 'flying', 'steel'] },
+  psychic: { weak_to: ['bug', 'ghost', 'dark'], resists: ['fighting', 'psychic'] },
+  ice: { weak_to: ['fire', 'fighting', 'rock', 'steel'], resists: ['ice'] },
+  dragon: { weak_to: ['ice', 'dragon', 'fairy'], resists: ['fire', 'water', 'electric', 'grass'] },
+  flying: { weak_to: ['electric', 'ice', 'rock'], resists: ['grass', 'fighting', 'bug'] },
+  normal: { weak_to: ['fighting'], resists: [] },
+  fighting: { weak_to: ['flying', 'psychic', 'fairy'], resists: ['rock', 'bug', 'dark'] },
+  poison: { weak_to: ['ground', 'psychic'], resists: ['grass', 'fighting', 'poison', 'bug', 'fairy'] },
+  ground: { weak_to: ['water', 'grass', 'ice'], resists: ['poison', 'rock'] },
+  rock: { weak_to: ['water', 'grass', 'fighting', 'ground', 'steel'], resists: ['normal', 'fire', 'poison', 'flying'] },
+  bug: { weak_to: ['fire', 'flying', 'rock'], resists: ['grass', 'fighting', 'ground'] },
+  ghost: { weak_to: ['ghost', 'dark'], resists: ['poison', 'bug'] },
+  steel: { weak_to: ['fire', 'fighting', 'ground'], resists: ['normal', 'grass', 'ice', 'flying', 'psychic', 'bug', 'rock', 'dragon', 'steel', 'fairy'] },
+  dark: { weak_to: ['fighting', 'bug', 'fairy'], resists: ['ghost', 'dark'] },
+  fairy: { weak_to: ['poison', 'steel'], resists: ['fighting', 'bug', 'dark'] },
+};
+
+// Common starter Pokemon names for better detection
+const STARTER_POKEMON = [
+  'bulbasaur', 'charmander', 'squirtle', // Gen 1
+  'chikorita', 'cyndaquil', 'totodile', // Gen 2
+  'treecko', 'torchic', 'mudkip', // Gen 3
+  'turtwig', 'chimchar', 'piplup', // Gen 4
+  'snivy', 'tepig', 'oshawott', // Gen 5
+  'chespin', 'fennekin', 'froakie', // Gen 6
+  'rowlet', 'litten', 'popplio', // Gen 7
+  'grookey', 'scorbunny', 'sobble', // Gen 8
+  'sprigatito', 'fuecoco', 'quaxly', // Gen 9
+];
+
+// Legendary and Mythical Pokemon (partial list - would need complete data)
+const LEGENDARY_POKEMON = [
+  'articuno', 'zapdos', 'moltres', 'mewtwo', 'mew',
+  'raikou', 'entei', 'suicune', 'lugia', 'ho-oh', 'celebi',
+  'regirock', 'regice', 'registeel', 'latios', 'latias', 'kyogre', 'groudon', 'rayquaza', 'jirachi', 'deoxys',
+];
+
 export function checkConstraint(pokemon: Pokemon, constraint: GridConstraint): boolean {
   switch (constraint.type) {
     case 'type':
-      return pokemon.types.includes(constraint.value);
+      return pokemon.types.includes(constraint.value as string);
     
     case 'generation':
       return pokemon.generation === constraint.value;
     
     case 'evolution-stage':
+      const pokemonName = pokemon.name.toLowerCase();
+      
       if (constraint.value === 'starter') {
-        return pokemon.name.toLowerCase().includes('bulbasaur') || 
-               pokemon.name.toLowerCase().includes('charmander') || 
-               pokemon.name.toLowerCase().includes('squirtle');
+        return STARTER_POKEMON.includes(pokemonName) || pokemon.is_starter === true;
+      }
+      if (constraint.value === 'first') {
+        // First evolution - has evolved from something but can still evolve
+        return pokemon.evolution_chain?.evolves_from && pokemon.has_evolutions;
       }
       if (constraint.value === 'final') {
         return !pokemon.has_evolutions;
       }
+      if (constraint.value === 'none') {
+        return !pokemon.has_evolutions && !pokemon.evolution_chain?.evolves_from;
+      }
       if (constraint.value === 'legendary') {
-        return pokemon.base_experience > 300;
+        return pokemon.is_legendary === true || 
+               LEGENDARY_POKEMON.includes(pokemonName) ||
+               pokemon.base_experience > 300;
+      }
+      if (constraint.value === 'mythical') {
+        return pokemon.is_mythical === true;
       }
       return false;
     
@@ -48,20 +102,68 @@ export function checkConstraint(pokemon: Pokemon, constraint: GridConstraint): b
       return false;
     
     case 'stat-range':
-      // Note: This would need actual stat data from Pokemon
-      return true; // Placeholder for now
+      if (!pokemon.stats) return false; // No stat data available
+      
+      const statValue = constraint.value as string;
+      if (statValue === 'hp-high') return pokemon.stats.hp >= 100;
+      if (statValue === 'hp-low') return pokemon.stats.hp <= 50;
+      if (statValue === 'attack-high') return pokemon.stats.attack >= 120;
+      if (statValue === 'attack-low') return pokemon.stats.attack <= 60;
+      if (statValue === 'defense-high') return pokemon.stats.defense >= 100;
+      if (statValue === 'defense-low') return pokemon.stats.defense <= 60;
+      if (statValue === 'speed-high') return pokemon.stats.speed >= 100;
+      if (statValue === 'speed-low') return pokemon.stats.speed <= 50;
+      return false;
     
     case 'height-weight':
-      if (constraint.value === 'small') {
-        return pokemon.height < 10 && pokemon.weight < 300;
+      const sizeValue = constraint.value as string;
+      if (sizeValue === 'small') {
+        return pokemon.height < 10 && pokemon.weight < 300; // height in decimeters, weight in hectograms
       }
-      if (constraint.value === 'large') {
+      if (sizeValue === 'medium') {
+        return pokemon.height >= 10 && pokemon.height <= 20;
+      }
+      if (sizeValue === 'large') {
         return pokemon.height > 20 || pokemon.weight > 1000;
+      }
+      if (sizeValue === 'light') {
+        return pokemon.weight < 100; // < 10kg
+      }
+      if (sizeValue === 'heavy') {
+        return pokemon.weight > 2000; // > 200kg
       }
       return false;
     
     case 'move-category':
-      return pokemon.moves.length > 0; // Simplified check
+      const moveValue = constraint.value as string;
+      const pokemonMoves = pokemon.moves.map(move => move.toLowerCase().replace(/[^a-z]/g, ''));
+      
+      if (moveValue === 'earthquake') return pokemonMoves.includes('earthquake');
+      if (moveValue === 'surf') return pokemonMoves.includes('surf');
+      if (moveValue === 'fly') return pokemonMoves.includes('fly');
+      if (moveValue === 'thunder-wave') return pokemonMoves.includes('thunderwave');
+      if (moveValue === 'toxic') return pokemonMoves.includes('toxic');
+      if (moveValue === 'ice-beam') return pokemonMoves.includes('icebeam');
+      return false;
+    
+    case 'type-effectiveness':
+      const effectValue = constraint.value as string;
+      
+      if (effectValue.startsWith('weak-')) {
+        const attackingType = effectValue.replace('weak-', '');
+        return pokemon.types.some(type => 
+          TYPE_EFFECTIVENESS[type]?.weak_to.includes(attackingType)
+        );
+      }
+      
+      if (effectValue.startsWith('resist-')) {
+        const attackingType = effectValue.replace('resist-', '');
+        return pokemon.types.some(type => 
+          TYPE_EFFECTIVENESS[type]?.resists.includes(attackingType)
+        );
+      }
+      
+      return false;
     
     default:
       return false;

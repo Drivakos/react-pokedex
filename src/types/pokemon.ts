@@ -10,6 +10,18 @@ export interface Pokemon {
   has_evolutions: boolean;
   is_default: boolean;
   base_experience: number;
+  // Enhanced data for pokegrid constraints
+  stats?: PokemonStats;
+  abilities?: string[];
+  evolution_chain?: {
+    evolves_from?: string;
+    evolves_to?: string[];
+    evolution_method?: string;
+  };
+  habitat?: string;
+  is_legendary?: boolean;
+  is_mythical?: boolean;
+  is_starter?: boolean;
 }
 
 export interface PokemonAbility {

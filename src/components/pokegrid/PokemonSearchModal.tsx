@@ -50,57 +50,43 @@ export const PokemonSearchModal: React.FC<PokemonSearchModalProps> = ({
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-2 sm:p-4">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg sm:max-w-2xl mx-2 sm:mx-4 max-h-[90vh] sm:max-h-[85vh] overflow-hidden">
-        <div className="p-4 sm:p-6 pb-0">
-          {/* Header */}
-          <div className="flex justify-between items-center mb-4 sm:mb-6">
+        {/* Header */}
+        <div className="px-4 sm:px-6 py-4 sm:py-5 border-b border-gray-200">
+          <div className="flex items-center justify-between">
             <div className="flex-1">
-              <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2">Select Pokémon</h2>
-              
-              {/* Challenge Mode - No Constraints Shown */}
-              <div className="bg-gradient-to-r from-amber-50 to-orange-50 rounded-lg p-3 mb-3">
-                <div className="flex items-center gap-2 mb-1">
-                  <div className="w-2 h-2 bg-amber-500 rounded-full"></div>
-                  <span className="text-sm font-semibold text-amber-700">Challenge Mode</span>
-                </div>
-                <p className="text-sm text-amber-600">Choose a Pokémon that matches both row and column constraints</p>
-              </div>
-              
-              {/* Guesses Remaining */}
-              <div className="flex items-center gap-2">
-                <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
-                <span className="text-sm text-orange-600 font-medium">
-                  {maxTotalGuesses - totalGuesses} guess{(maxTotalGuesses - totalGuesses) !== 1 ? 'es' : ''} remaining
-                </span>
-              </div>
+              <h2 className="text-lg sm:text-xl font-bold text-gray-900 mb-1">
+                {selectedCell.rowConstraint.label} × {selectedCell.colConstraint.label}
+              </h2>
+              <p className="text-sm text-gray-600">
+                Guess #{totalGuesses + 1} of {maxTotalGuesses}
+              </p>
             </div>
-            {/* Close Button */}
             <button
               onClick={onClose}
-              className="text-gray-400 hover:text-gray-600"
+              className="p-2 hover:bg-gray-100 rounded-full transition-colors"
             >
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-5 h-5 sm:w-6 sm:h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
               </svg>
             </button>
           </div>
 
-        </div>
-        
-        {/* Search Input Section */}
-        <div className="px-4 sm:px-6 pb-3 sm:pb-4 border-b border-gray-100">
-          <div className="relative">
-            <input
-              type="text"
-              placeholder="Search Pokémon..."
-              value={searchQuery}
-              onChange={(e) => onSearchChange(e.target.value)}
-              className="w-full px-3 sm:px-4 py-3 sm:py-4 pl-10 sm:pl-12 text-base sm:text-lg border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
-              autoFocus
-            />
-            <div className="absolute inset-y-0 left-0 pl-3 sm:pl-4 flex items-center pointer-events-none">
-              <svg className="h-5 w-5 sm:h-6 sm:w-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
+          {/* Search Input */}
+          <div className="mt-4">
+            <div className="relative">
+              <input
+                type="text"
+                placeholder="Search for a Pokémon..."
+                value={searchQuery}
+                onChange={(e) => onSearchChange(e.target.value)}
+                className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm sm:text-base"
+                autoFocus
+              />
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <svg className="w-4 h-4 sm:w-5 sm:h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+              </div>
             </div>
           </div>
           {searchQuery.length > 0 && (
@@ -142,81 +128,58 @@ export const PokemonSearchModal: React.FC<PokemonSearchModalProps> = ({
                     const percentage = pokemonPopularity.popularity_percentage;
                     if (percentage < 0.1) {
                       popularityColor = 'text-green-600';
-                      popularityText = 'Rare';
                     } else if (percentage < 0.25) {
-                      popularityColor = 'text-blue-600';
-                      popularityText = 'Uncommon';
-                    } else if (percentage < 0.5) {
                       popularityColor = 'text-yellow-600';
-                      popularityText = 'Common';
-                    } else if (percentage < 0.75) {
+                    } else if (percentage < 0.5) {
                       popularityColor = 'text-orange-600';
-                      popularityText = 'Popular';
                     } else {
                       popularityColor = 'text-red-600';
-                      popularityText = 'Very Popular';
                     }
+                    popularityText = `${Math.round(percentage * 100)}%`;
                   }
 
                   return (
                     <div
                       key={pokemon.id}
                       onClick={() => onPokemonSelect(pokemon)}
-                      className={`group flex items-center gap-3 sm:gap-4 p-3 sm:p-4 bg-white border-2 border-gray-100 rounded-xl hover:border-blue-300 hover:shadow-md active:scale-[0.98] cursor-pointer transition-all duration-200 ${
-                        isMistakePokemon ? 'ring-2 ring-red-200 bg-red-50/50' : ''
+                      className={`flex items-center p-3 rounded-lg border transition-all cursor-pointer hover:bg-gray-50 hover:border-gray-300 ${
+                        isMistakePokemon ? 'border-red-300 bg-red-50' : 'border-gray-200'
                       }`}
-                      title={popularityData.length === 0
-                        ? `${pokemon.name} - Popularity tracking coming soon`
-                        : `${pokemon.name} - ${popularityText} choice`
-                      }
                     >
-                    <div className="relative flex-shrink-0">
-                      <img
-                        src={getOfficialArtwork(pokemon.sprites)}
-                        alt={pokemon.name}
-                        className="w-12 h-12 sm:w-16 sm:h-16 object-contain"
-                      />
-                      <div className="absolute -top-1 -right-1 bg-gray-200 text-gray-600 rounded-full px-1.5 py-0.5 text-xs font-bold">
-                        #{pokemon.id.toString().padStart(3, '0')}
+                      {/* Pokemon Image */}
+                      <div className="flex-shrink-0 mr-3">
+                        <img
+                          src={getOfficialArtwork(pokemon.sprites)}
+                          alt={formatName(pokemon.name)}
+                          className="w-12 h-12 sm:w-14 sm:h-14 object-contain"
+                          loading="lazy"
+                        />
                       </div>
-                      {/* Popularity indicator */}
-                      <div className="absolute -bottom-1 -right-1">
-                        <div className={`w-4 h-4 rounded-full border border-white shadow-sm ${popularityColor} flex items-center justify-center text-[10px] font-bold`}>
-                          {popularityText.charAt(0)}
+
+                      {/* Pokemon Info */}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between">
+                          <h3 className="text-sm sm:text-base font-semibold text-gray-900 truncate">
+                            {formatName(pokemon.name)}
+                          </h3>
+                          <span className={`text-xs font-medium ml-2 ${popularityColor}`}>
+                            {popularityText}
+                          </span>
+                        </div>
+                        <div className="flex items-center mt-1">
+                          <span className="text-xs text-gray-500 mr-2">#{pokemon.id.toString().padStart(3, '0')}</span>
+                          <div className="flex gap-1">
+                            {pokemon.types.slice(0, 2).map((type) => (
+                              <span
+                                key={type}
+                                className={`px-1.5 py-0.5 rounded text-xs font-medium text-white ${TYPE_COLORS[type] || 'bg-gray-400'}`}
+                              >
+                                {type}
+                              </span>
+                            ))}
+                          </div>
                         </div>
                       </div>
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="text-base sm:text-lg font-bold text-gray-900 mb-1 truncate">
-                        {formatName(pokemon.name)}
-                      </div>
-                      <div className="flex flex-wrap gap-1">
-                        {pokemon.types.map((type) => (
-                          <span
-                            key={type}
-                            className={`${TYPE_COLORS[type]} text-white px-2 py-0.5 sm:px-3 sm:py-1 rounded-full text-xs font-semibold capitalize`}
-                          >
-                            {type}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2 flex-shrink-0">
-                      {/* Undo Button - Only show on the specific wrong Pokemon */}
-                      {onUndo && sessionUndos < maxSessionUndos && hasRecentMistake && isMistakePokemon && (
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation(); // Prevent triggering Pokemon selection
-                            onUndo();
-                          }}
-                          className="text-red-500 hover:text-red-700 p-1 rounded-lg hover:bg-red-50 transition-colors animate-pulse ring-1 ring-red-300"
-                          title={`Undo ${pokemon.name} choice (${maxSessionUndos - sessionUndos} undos remaining)`}
-                        >
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
-                          </svg>
-                        </button>
-                      )}
 
                       {/* Select Arrow */}
                       <div className="text-gray-400 group-hover:text-blue-500 transition-colors">
@@ -225,7 +188,6 @@ export const PokemonSearchModal: React.FC<PokemonSearchModalProps> = ({
                         </svg>
                       </div>
                     </div>
-                  </div>
                   );
                 })}
               </div>
@@ -252,12 +214,37 @@ export const PokemonSearchModal: React.FC<PokemonSearchModalProps> = ({
                 <div className="flex flex-wrap gap-1.5 sm:gap-2 justify-center px-4">
                   <span className="bg-gray-100 text-gray-600 px-2 py-1 sm:px-3 rounded-full text-xs sm:text-sm">Example: "pika"</span>
                   <span className="bg-gray-100 text-gray-600 px-2 py-1 sm:px-3 rounded-full text-xs sm:text-sm">"char"</span>
-                  <span className="bg-gray-100 text-gray-600 px-2 py-1 sm:px-3 rounded-full text-xs sm:text-sm">"bulb"</span>
+                  <span className="bg-gray-100 text-gray-600 px-2 py-1 sm:px-3 rounded-full text-xs sm:text-sm">"mew"</span>
                 </div>
               </div>
             )}
           </div>
         </div>
+
+        {/* Footer with Undo Button */}
+        {onUndo && (
+          <div className="px-4 sm:px-6 py-3 sm:py-4 border-t border-gray-200 bg-gray-50">
+            <div className="flex items-center justify-between">
+              <div className="text-xs sm:text-sm text-gray-600">
+                Session undos: {sessionUndos}/{maxSessionUndos}
+              </div>
+              <button
+                onClick={onUndo}
+                disabled={!hasRecentMistake}
+                className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  hasRecentMistake
+                    ? 'bg-orange-500 text-white hover:bg-orange-600'
+                    : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                }`}
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
+                </svg>
+                Undo Last Guess
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

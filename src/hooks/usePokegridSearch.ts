@@ -1,131 +1,79 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Pokemon } from '../types/pokemon';
 import { fetchPokemonData } from '../services/api';
 
-const DEBOUNCE_DELAY = 1000; // 1 second
-
 export function usePokegridSearch(displayedPokemon: Pokemon[]) {
   const [searchQuery, setSearchQuery] = useState('');
-  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<Pokemon[]>([]);
-  const [allPokemon, setAllPokemon] = useState<Pokemon[]>([]);
-  const [loadingAllPokemon, setLoadingAllPokemon] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
-  const [minLoadingTime, setMinLoadingTime] = useState(false);
-  const allPokemonLoadedRef = useRef(false);
-  const debounceTimeoutRef = useRef<NodeJS.Timeout>();
 
-  // Debounce search query
-  useEffect(() => {
-    if (debounceTimeoutRef.current) {
-      clearTimeout(debounceTimeoutRef.current);
+  // Track the current search request ID to prevent race conditions
+  const currentSearchIdRef = useRef<number>(0);
+
+  // Dynamic search function that makes GraphQL requests
+  const performSearch = useCallback(async (query: string, searchId: number) => {
+    if (query.length === 0) {
+      setSearchResults([]);
+      return;
     }
 
-    debounceTimeoutRef.current = setTimeout(() => {
-      setDebouncedSearchQuery(searchQuery);
-    }, DEBOUNCE_DELAY);
+    setIsSearching(true);
 
-    return () => {
-      if (debounceTimeoutRef.current) {
-        clearTimeout(debounceTimeoutRef.current);
-      }
-    };
-  }, [searchQuery]);
-
-  useEffect(() => {
-    if (allPokemonLoadedRef.current || loadingAllPokemon) return;
-
-    const loadPokemonForSearch = async () => {
-      setLoadingAllPokemon(true);
-      try {
-        const pokemonList: Pokemon[] = [];
-        const BATCH_SIZE = 100;
-        const MAX_POKEMON = 500;
-
-        for (let offset = 0; offset < MAX_POKEMON; offset += BATCH_SIZE) {
-          try {
-            const filters = {
-              types: [],
-              moves: [],
-              generation: '',
-              weight: { min: 0, max: 0 },
-              height: { min: 0, max: 0 },
-              hasEvolutions: null,
-            };
-
-            const batch = await fetchPokemonData(BATCH_SIZE, offset, '', filters);
-
-            if (batch.length === 0) break; // No more Pokemon
-            pokemonList.push(...batch);
-            await new Promise(resolve => setTimeout(resolve, 100));
-
-          } catch (error) {
-            console.warn(`Failed to load Pokemon batch at offset ${offset}:`, error);
-            break;
-          }
+    try {
+      // For the challenge, we want to search through ALL Pokemon (no filters, just search term)
+      // We'll fetch a larger batch to get comprehensive results
+      const results = await fetchPokemonData(
+        1000, // Large limit to get comprehensive results
+        0,
+        query,
+        {
+          types: [],
+          moves: [],
+          generation: '',
+          weight: { min: 0, max: 0 },
+          height: { min: 0, max: 0 },
+          hasEvolutions: null,
         }
+      );
 
-        if (pokemonList.length > 0) {
-          setAllPokemon(pokemonList);
-        } else {
-          setAllPokemon(displayedPokemon);
-        }
-
-      } catch (error) {
-        console.error('Error loading Pokemon for search:', error);
-        setAllPokemon(displayedPokemon);
-      } finally {
-        setLoadingAllPokemon(false);
-        allPokemonLoadedRef.current = true;
+      // Check if this is still the most recent search before updating results
+      if (searchId !== currentSearchIdRef.current) {
+        // This search is outdated, ignore the results
+        return;
       }
-    };
 
-    const timer = setTimeout(loadPokemonForSearch, 500);
-    return () => clearTimeout(timer);
-  }, [displayedPokemon, loadingAllPokemon]);
+      // Sort results by relevance (similar to the original logic)
+      const queryLower = query.toLowerCase().trim();
 
-  const pokemonForSearch = allPokemon.length > 0 ? allPokemon : displayedPokemon;
-
-  useEffect(() => {
-    if (debouncedSearchQuery.length > 0) {
-      setIsSearching(true);
-      setMinLoadingTime(true);
-
-      setTimeout(() => {
-        setMinLoadingTime(false);
-      }, 300);
-
-      const query = debouncedSearchQuery.toLowerCase().trim();
-
+      // Separate Pokemon into different priority groups
       const startsWithName: Pokemon[] = [];
       const startsWithId: Pokemon[] = [];
       const containsName: Pokemon[] = [];
       const containsId: Pokemon[] = [];
 
-      pokemonForSearch.forEach(pokemon => {
+      results.forEach(pokemon => {
         const lowerName = pokemon.name.toLowerCase();
         const idString = pokemon.id.toString();
 
-        if (lowerName.startsWith(query)) {
+        if (lowerName.startsWith(queryLower)) {
           startsWithName.push(pokemon);
-        } else if (idString.startsWith(query)) {
+        } else if (idString.startsWith(queryLower)) {
           startsWithId.push(pokemon);
-        } else if (lowerName.includes(query)) {
+        } else if (lowerName.includes(queryLower)) {
           containsName.push(pokemon);
-        } else if (idString.includes(query)) {
+        } else if (idString.includes(queryLower)) {
           containsId.push(pokemon);
         }
       });
 
-
-      // Sort each group by relevance (exact match first, then alphabetical)
+      // Sort each group by relevance
       const sortByRelevance = (a: Pokemon, b: Pokemon) => {
         const aName = a.name.toLowerCase();
         const bName = b.name.toLowerCase();
 
         // Exact match first
-        if (aName === query && bName !== query) return -1;
-        if (bName === query && aName !== query) return 1;
+        if (aName === queryLower && bName !== queryLower) return -1;
+        if (bName === queryLower && aName !== queryLower) return 1;
 
         // Then alphabetical
         return aName.localeCompare(bName);
@@ -136,7 +84,7 @@ export function usePokegridSearch(displayedPokemon: Pokemon[]) {
       containsName.sort(sortByRelevance);
       containsId.sort((a, b) => a.id - b.id);
 
-      // Combine in priority order and limit results
+      // Combine in priority order and limit results to 50 for performance
       const combinedResults = [
         ...startsWithName,
         ...startsWithId,
@@ -144,36 +92,54 @@ export function usePokegridSearch(displayedPokemon: Pokemon[]) {
         ...containsId
       ].slice(0, 50);
 
-      setSearchResults(combinedResults);
-    } else {
-      setSearchResults([]);
-    }
-  }, [debouncedSearchQuery, pokemonForSearch]);
-
-  // Handle minimum loading time
-  useEffect(() => {
-    if (minLoadingTime) {
-      const timer = setTimeout(() => {
-        setMinLoadingTime(false);
+      // Double-check this is still the current search before updating results
+      if (searchId === currentSearchIdRef.current) {
+        setSearchResults(combinedResults);
+      }
+    } catch (error) {
+      console.error('Error searching Pokemon:', error);
+      // Only clear results if this is still the current search
+      if (searchId === currentSearchIdRef.current) {
+        setSearchResults([]);
+      }
+    } finally {
+      // Only update loading state if this is still the current search
+      if (searchId === currentSearchIdRef.current) {
         setIsSearching(false);
-      }, 300);
-      return () => clearTimeout(timer);
+      }
     }
-  }, [minLoadingTime]);
+  }, []);
+
+  // Debounced search effect
+  useEffect(() => {
+    if (searchQuery.length === 0) {
+      setSearchResults([]);
+      setIsSearching(false);
+      currentSearchIdRef.current = 0; // Reset search ID
+      return;
+    }
+
+    // Increment search ID for this new search
+    const searchId = ++currentSearchIdRef.current;
+
+    const timeoutId = setTimeout(() => {
+      performSearch(searchQuery, searchId);
+    }, 150); // Short debounce for responsive feel
+
+    return () => clearTimeout(timeoutId);
+  }, [searchQuery, performSearch]);
 
   const resetSearch = useCallback(() => {
     setSearchQuery('');
-    setDebouncedSearchQuery('');
     setSearchResults([]);
     setIsSearching(false);
-    setMinLoadingTime(false);
+    currentSearchIdRef.current = 0;
   }, []);
 
   return {
     searchQuery,
     setSearchQuery,
     searchResults,
-    isLoadingAllPokemon: loadingAllPokemon && !allPokemonLoadedRef.current,
     isSearching,
     resetSearch
   };
