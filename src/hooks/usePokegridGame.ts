@@ -33,7 +33,7 @@ export interface PokegridGameState {
   popularityData: any[];
 }
 
-export function usePokegridGame(displayedPokemon: Pokemon[], gameMode: 'daily' | 'historical') {
+export function usePokegridGame(displayedPokemon: Pokemon[], gameMode: 'daily') {
   const { user } = useAuth();
   
   // Core game state
@@ -50,7 +50,7 @@ export function usePokegridGame(displayedPokemon: Pokemon[], gameMode: 'daily' |
   const initializedRef = useRef<{[key: string]: boolean}>({});
 
   // Initialize game
-  const initializeGame = useCallback(async (date: Date, mode: 'daily' | 'historical' | 'endless') => {
+  const initializeGame = useCallback(async (date: Date, mode: 'daily' | 'endless') => {
     const gridKey = `${mode}-${date.toISOString().split('T')[0]}`;
     
     if (mode === 'endless' || !initializedRef.current[gridKey]) {
@@ -59,16 +59,19 @@ export function usePokegridGame(displayedPokemon: Pokemon[], gameMode: 'daily' |
         initializedRef.current[gridKey] = true;
       }
 
-      if (mode === 'daily' || mode === 'historical') {
-        const game = generateDailyGrid(date);
+      if (mode === 'daily') {
         const dateString = date.toISOString().split('T')[0];
         
-        // Load data in parallel
-        const [popularityData, guessHistory, progress] = await Promise.all([
+        // Load data in parallel, including pre-generated grid configuration
+        const [gridConfig, popularityData, guessHistory, progress] = await Promise.all([
+          pokegridService.loadGridConfiguration(dateString),
           pokegridService.loadPopularityData(dateString),
           user ? pokegridService.loadGuessHistory(user.id, dateString) : Promise.resolve([]),
           user ? pokegridService.loadUserProgress(user.id, dateString) : Promise.resolve(null)
         ]);
+
+        // Generate game using pre-generated config or fallback to seeded random
+        const game = generateDailyGrid(date, gridConfig?.configuration);
 
         setPopularityData(popularityData);
 
@@ -161,8 +164,8 @@ export function usePokegridGame(displayedPokemon: Pokemon[], gameMode: 'daily' |
       endTime: (completed && !isOutOfGuess) ? new Date() : undefined
     };
 
-    // Save to database
-    if (user && (gameMode === 'daily' || gameMode === 'historical')) {
+        // Save to database
+        if (user && gameMode === 'daily') {
       await Promise.all([
         pokegridService.saveIndividualGuess(
           user.id,

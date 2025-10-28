@@ -191,6 +191,63 @@ class PokegridService {
       return [];
     }
   }
+
+  async loadGridConfiguration(gridDate: string): Promise<any | null> {
+    try {
+      const { data, error } = await supabase.rpc('get_pokegrid_configuration', {
+        p_grid_date: gridDate
+      });
+
+      if (error) {
+        return null;
+      }
+
+      return data?.[0] || null;
+    } catch (error) {
+      return null;
+    }
+  }
+
+  async saveGridConfiguration(
+    gridDate: string, 
+    configuration: any, 
+    difficulty: string = 'medium',
+    seed?: string
+  ): Promise<boolean> {
+    try {
+      const { error } = await supabase.rpc('save_pokegrid_configuration', {
+        p_grid_date: gridDate,
+        p_configuration: configuration,
+        p_difficulty_level: difficulty,
+        p_generation_seed: seed
+      });
+
+      if (error) {
+        return false;
+      }
+
+      return true;
+    } catch (error) {
+      return false;
+    }
+  }
+
+  async getWeeklyLeaderboard(startDate: string, limit: number = 50): Promise<any[]> {
+    try {
+      const { data, error } = await supabase.rpc('get_weekly_pokegrid_leaderboard', {
+        p_start_date: startDate,
+        p_limit: limit
+      });
+
+      if (error) {
+        return [];
+      }
+
+      return data || [];
+    } catch (error) {
+      return [];
+    }
+  }
 }
 
 export const pokegridService = new PokegridService();

@@ -1,0 +1,91 @@
+name: PokéGrid Daily Generator
+
+on:
+  schedule:
+    # Run every day at 23:30 UTC (generate tomorrow's grid)
+    - cron: '30 23 * * *'
+  workflow_dispatch: # Allow manual trigger
+    inputs:
+      target_date:
+        description: 'Target date (YYYY-MM-DD) - leave empty for tomorrow'
+        required: false
+        type: string
+
+jobs:
+  generate-daily-pokegrid:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Generate Daily PokéGrid
+        run: |
+          # Calculate target date (tomorrow if not specified)
+          if [ -z "${{ github.event.inputs.target_date }}" ]; then
+            TARGET_DATE=$(date -d "tomorrow" +%Y-%m-%d)
+          else
+            TARGET_DATE="${{ github.event.inputs.target_date }}"
+          fi
+          
+          echo "Generating PokéGrid for date: $TARGET_DATE"
+          
+          # Call the Supabase Edge Function
+          RESPONSE=$(curl -s -w "\n%{http_code}" -X POST \
+            "${{ secrets.SUPABASE_URL }}/functions/v1/pokegrid-scheduler?action=generate_daily&start_date=$TARGET_DATE" \
+            -H "Authorization: Bearer ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}" \
+            -H "Content-Type: application/json")
+          
+          # Extract HTTP status code
+          HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
+          BODY=$(echo "$RESPONSE" | head -n -1)
+          
+          echo "Response: $BODY"
+          echo "HTTP Code: $HTTP_CODE"
+          
+          # Check if successful
+          if [ "$HTTP_CODE" = "200" ]; then
+            echo "✅ Successfully generated PokéGrid for $TARGET_DATE"
+            
+            # Extract constraints for logging
+            ROWS=$(echo "$BODY" | jq -r '.result.constraints.rows | join(", ")')
+            COLS=$(echo "$BODY" | jq -r '.result.constraints.cols | join(", ")')
+            
+            echo "📊 Grid Details:"
+            echo "   Date: $TARGET_DATE"
+            echo "   Rows: $ROWS"
+            echo "   Cols: $COLS"
+          else
+            echo "❌ Failed to generate PokéGrid for $TARGET_DATE"
+            echo "Response: $BODY"
+            exit 1
+          fi
+
+      - name: Verify Generation
+        run: |
+          # Calculate target date again
+          if [ -z "${{ github.event.inputs.target_date }}" ]; then
+            TARGET_DATE=$(date -d "tomorrow" +%Y-%m-%d)
+          else
+            TARGET_DATE="${{ github.event.inputs.target_date }}"
+          fi
+          
+          echo "Verifying PokéGrid generation for $TARGET_DATE..."
+          
+          # Check if the grid was actually saved
+          VERIFY_RESPONSE=$(curl -s \
+            "${{ secrets.SUPABASE_URL }}/functions/v1/pokegrid-scheduler?action=get_daily_status" \
+            -H "Authorization: Bearer ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}")
+          
+          echo "Status check response: $VERIFY_RESPONSE"
+          
+          # Check if our target date appears in the available grids
+          if echo "$VERIFY_RESPONSE" | jq -e ".status[] | select(.date == \"$TARGET_DATE\" and .available == true)" > /dev/null; then
+            echo "✅ Verification successful - Grid is available for $TARGET_DATE"
+          else
+            echo "⚠️ Verification failed - Grid may not be available for $TARGET_DATE"
+          fi
+
+      - name: Cleanup Old Grids
+        run: |
+          echo "🧹 Cleanup step would remove grids older than 7 days"
+          echo "This could be implemented as a separate Supabase function if needed"
+          # Note: The database function already enforces 7-day access window
+          # Additional cleanup could be implemented here if needed
+

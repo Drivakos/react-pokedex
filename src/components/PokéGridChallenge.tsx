@@ -15,39 +15,63 @@ const PokéGridChallenge: React.FC = () => {
   const { displayedPokemon, loading } = usePokemon();
   
   // UI state
-  const [gameMode, setGameMode] = useState<'daily' | 'historical'>('daily');
   const [currentGridDate, setCurrentGridDate] = useState<Date>(new Date());
   const [showShareModal, setShowShareModal] = useState(false);
+  const [availableDates, setAvailableDates] = useState<string[]>([]);
 
   // Custom hooks for game logic
-  const gameState = usePokegridGame(displayedPokemon, gameMode);
+  const gameState = usePokegridGame(displayedPokemon, 'daily');
   const searchState = usePokegridSearch(displayedPokemon);
+
+  // Load available dates (today and last 6 days)
+  useEffect(() => {
+    const loadAvailableDates = () => {
+      const dates = [];
+      const today = new Date();
+      
+      for (let i = 6; i >= 0; i--) {
+        const date = new Date(today);
+        date.setDate(today.getDate() - i);
+        dates.push(date.toISOString().split('T')[0]);
+      }
+      
+      setAvailableDates(dates);
+    };
+
+    loadAvailableDates();
+  }, []);
 
   // Initialize game when Pokemon data is ready
   useEffect(() => {
     if (!loading && displayedPokemon.length > 0) {
-      gameState.initializeGame(currentGridDate, gameMode);
+      gameState.initializeGame(currentGridDate, 'daily');
     }
-  }, [loading, displayedPokemon.length, gameMode, currentGridDate, gameState.initializeGame]);
+  }, [loading, displayedPokemon.length, currentGridDate, gameState.initializeGame]);
 
-  // Handle game mode changes
-  const handleGameModeChange = (mode: 'daily' | 'historical') => {
-    setGameMode(mode);
-    if (mode === 'daily') {
-      setCurrentGridDate(new Date());
-    }
-  };
-
-  // Handle grid date changes
+  // Handle grid date changes (only allow today and last 6 days)
   const handleGridDateChange = (date: Date) => {
-    setCurrentGridDate(date);
-    gameState.initializeGame(date, gameMode);
+    const today = new Date();
+    const sixDaysAgo = new Date(today);
+    sixDaysAgo.setDate(today.getDate() - 6);
+
+    // Only allow dates within the last 7 days
+    if (date >= sixDaysAgo && date <= today) {
+      setCurrentGridDate(date);
+      gameState.initializeGame(date, 'daily');
+    }
   };
 
-  // Handle share modal
-  const handleShowShare = () => {
-    setShowShareModal(true);
-  };
+  const { currentGame, selectedCell } = gameState;
+
+  // Reset search when modal opens (always call this hook)
+  useEffect(() => {
+    if (selectedCell && currentGame) {
+      searchState.resetSearch();
+    }
+  }, [selectedCell, currentGame, searchState.resetSearch]);
+
+  // Check if selected date is today
+  const isToday = currentGridDate.toISOString().split('T')[0] === new Date().toISOString().split('T')[0];
 
   if (loading || !gameState.currentGame) {
     return (
@@ -60,8 +84,6 @@ const PokéGridChallenge: React.FC = () => {
     );
   }
 
-  const { currentGame, selectedCell } = gameState;
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-white-50 to-indigo-100 py-8">
       <div className="max-w-4xl mx-auto px-4">
@@ -71,24 +93,40 @@ const PokéGridChallenge: React.FC = () => {
             PokéGrid Challenge
           </h1>
           <p className="text-lg text-gray-600">
-            {gameMode === 'daily' 
-              ? `Daily Grid - ${currentGridDate.toLocaleDateString()}`
-              : `Historical Grid - ${currentGridDate.toLocaleDateString()}`
+            {isToday 
+              ? `Today's Grid - ${currentGridDate.toLocaleDateString()}`
+              : `Past Grid - ${currentGridDate.toLocaleDateString()}`
             }
           </p>
         </div>
 
-        {/* Game Controls */}
+        {/* Date Selector (7-day history) */}
         <div className="flex justify-center mb-6">
-          <GameControls
-            gameMode={gameMode}
-            currentGridDate={currentGridDate}
-            onGameModeChange={handleGameModeChange}
-            onGridDateChange={handleGridDateChange}
-            onShowShare={handleShowShare}
-            gameCompleted={currentGame.completed}
-            canAccessHistorical={true} // Simplified for now
-          />
+          <div className="bg-white rounded-lg shadow-md p-4">
+            <div className="flex flex-wrap gap-2 justify-center">
+              {availableDates.map((dateString) => {
+                const date = new Date(dateString);
+                const isSelected = dateString === currentGridDate.toISOString().split('T')[0];
+                const isCurrentDay = dateString === new Date().toISOString().split('T')[0];
+                
+                return (
+                  <button
+                    key={dateString}
+                    onClick={() => handleGridDateChange(date)}
+                    className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                      isSelected
+                        ? 'bg-blue-600 text-white'
+                        : isCurrentDay
+                        ? 'bg-blue-100 text-blue-800 hover:bg-blue-200'
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
+                  >
+                    {isCurrentDay ? 'Today' : date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
         </div>
 
         {/* Game Stats */}
@@ -120,6 +158,7 @@ const PokéGridChallenge: React.FC = () => {
             searchQuery={searchState.searchQuery}
             onSearchChange={searchState.setSearchQuery}
             searchResults={searchState.searchResults}
+            isSearching={searchState.isSearching}
             onPokemonSelect={gameState.handlePokemonSelect}
             totalGuesses={currentGame.totalGuesses}
             maxTotalGuesses={GAME_CONSTANTS.MAX_TOTAL_GUESSES}
@@ -152,7 +191,7 @@ const PokéGridChallenge: React.FC = () => {
             perfectGame: currentGame.perfectGame,
             date: currentGame.date
           }}
-          gameMode={gameMode}
+          gameMode="daily"
         />
       </div>
     </div>

@@ -77,17 +77,28 @@ export function shuffleArray<T>(array: T[], random: () => number): T[] {
   return shuffled;
 }
 
-export function generateDailyGrid(date: Date): GridGame {
+export function generateDailyGrid(date: Date, preGeneratedConfig?: any): GridGame {
   const dateString = date.toISOString().split('T')[0];
-  const random = createSeededRandom(dateString);
   
-  // Select 3 random type constraints for rows
-  const shuffledTypes = shuffleArray(TYPE_CONSTRAINTS, random);
-  const rowConstraints = shuffledTypes.slice(0, 3);
+  let rowConstraints: GridConstraint[];
+  let colConstraints: GridConstraint[];
   
-  // Select 3 random other constraints for columns
-  const shuffledOthers = shuffleArray(OTHER_CONSTRAINTS, random);
-  const colConstraints = shuffledOthers.slice(0, 3);
+  if (preGeneratedConfig && preGeneratedConfig.constraints) {
+    // Use pre-generated configuration from database
+    rowConstraints = preGeneratedConfig.constraints.rows;
+    colConstraints = preGeneratedConfig.constraints.cols;
+  } else {
+    // Fallback to seeded random generation
+    const random = createSeededRandom(dateString);
+    
+    // Select 3 random type constraints for rows
+    const shuffledTypes = shuffleArray(TYPE_CONSTRAINTS, random);
+    rowConstraints = shuffledTypes.slice(0, 3);
+    
+    // Select 3 random other constraints for columns
+    const shuffledOthers = shuffleArray(OTHER_CONSTRAINTS, random);
+    colConstraints = shuffledOthers.slice(0, 3);
+  }
   
   // Generate cells
   const cells: GridCell[] = [];

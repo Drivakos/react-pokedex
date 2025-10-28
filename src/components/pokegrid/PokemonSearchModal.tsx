@@ -9,6 +9,7 @@ interface PokemonSearchModalProps {
   searchQuery: string;
   onSearchChange: (query: string) => void;
   searchResults: Pokemon[];
+  isSearching?: boolean;
   onPokemonSelect: (pokemon: Pokemon) => void;
   totalGuesses: number;
   maxTotalGuesses: number;
@@ -31,6 +32,7 @@ export const PokemonSearchModal: React.FC<PokemonSearchModalProps> = ({
   searchQuery,
   onSearchChange,
   searchResults,
+  isSearching = false,
   onPokemonSelect,
   totalGuesses,
   maxTotalGuesses,
@@ -116,7 +118,12 @@ export const PokemonSearchModal: React.FC<PokemonSearchModalProps> = ({
         {/* Search Results Section */}
         <div className="px-4 sm:px-6 py-3 sm:py-4">
           <div className="max-h-80 sm:max-h-96 overflow-y-auto">
-            {searchResults.length > 0 ? (
+            {isSearching ? (
+              <div className="flex flex-col items-center justify-center py-8">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-3 border-blue-600 mb-4"></div>
+                <p className="text-base text-gray-700 font-medium">Searching Pokémon...</p>
+              </div>
+            ) : searchResults.length > 0 ? (
               <div className="space-y-2">
                 {searchResults.map((pokemon) => {
                   // Check if this Pokemon was the wrong choice
