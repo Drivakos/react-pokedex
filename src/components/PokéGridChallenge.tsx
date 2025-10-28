@@ -22,6 +22,14 @@ const PokéGridChallenge: React.FC = () => {
   // Custom hooks for game logic
   const gameState = usePokegridGame(displayedPokemon, 'daily');
   const searchState = usePokegridSearch(displayedPokemon);
+  const { currentGame, selectedCell } = gameState;
+
+  // Reset search when modal opens (always call this hook)
+  useEffect(() => {
+    if (selectedCell && currentGame) {
+      searchState.resetSearch();
+    }
+  }, [selectedCell, currentGame, searchState.resetSearch]);
 
   // Load available dates (today and last 6 days)
   useEffect(() => {
@@ -79,15 +87,6 @@ const PokéGridChallenge: React.FC = () => {
       </div>
     );
   }
-
-  const { currentGame, selectedCell } = gameState;
-
-  // Reset search when modal opens
-  useEffect(() => {
-    if (selectedCell) {
-      searchState.resetSearch();
-    }
-  }, [selectedCell, searchState.resetSearch]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-white-50 to-indigo-100 py-8">
