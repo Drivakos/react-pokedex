@@ -7,6 +7,7 @@ import {
 } from './cached-api';
 import { buildCompleteWhereClause, POKEMON_FIELDS } from '../utils/query-builder';
 import { transformSinglePokemon, transformRawData } from '../utils/pokemon-transform';
+import { cacheAside, CACHE_KEYS, CACHE_TTL, generateSearchCacheKey, isCacheEnabled } from '../lib/redis';
 
 // Use environment variables for API endpoints (fallback for direct calls)
 const GRAPHQL_ENDPOINT = import.meta.env.VITE_API_GRAPHQL_URL;
@@ -26,7 +27,25 @@ if (!GRAPHQL_ENDPOINT || !REST_ENDPOINT) {
  * Fetches a single Pokemon by ID with caching support
  */
 export const fetchPokemonById = async (id: number): Promise<Pokemon> => {
-  // Try cached version first if enabled
+  // Try Redis cache first if enabled
+  if (isCacheEnabled()) {
+    const cacheKey = `${CACHE_KEYS.POKEMON_BY_ID}${id}`;
+    return cacheAside(cacheKey, async () => {
+      // Try Supabase cached version if enabled
+      if (USE_CACHED_API) {
+        try {
+          return await fetchCachedPokemonById(id);
+        } catch (error) {
+          console.warn(`⚠️ Supabase cached API failed for Pokemon ${id}:`, error);
+        }
+      }
+      
+      // Fetch from direct GraphQL API
+      return fetchPokemonByIdDirect(id);
+    }, CACHE_TTL.POKEMON);
+  }
+
+  // Try cached version first if enabled (no Redis)
   if (USE_CACHED_API) {
     try {
       return await fetchCachedPokemonById(id);
@@ -36,6 +55,13 @@ export const fetchPokemonById = async (id: number): Promise<Pokemon> => {
   }
 
   // Fallback to direct API call
+  return fetchPokemonByIdDirect(id);
+};
+
+/**
+ * Direct fetch from GraphQL (internal helper)
+ */
+async function fetchPokemonByIdDirect(id: number): Promise<Pokemon> {
   try {
     const query = `
       query GetPokemonById($id: Int!) {
@@ -79,7 +105,25 @@ export const fetchPokemonData = async (
   searchTerm: string, 
   filters: Filters
 ): Promise<Pokemon[]> => {
-  // Try cached version first if enabled
+  // Try Redis cache first if enabled
+  if (isCacheEnabled()) {
+    const cacheKey = generateSearchCacheKey(limit, offset, searchTerm, filters);
+    return cacheAside(cacheKey, async () => {
+      // Try Supabase cached version if enabled
+      if (USE_CACHED_API) {
+        try {
+          return await fetchCachedPokemonData(limit, offset, searchTerm, filters);
+        } catch (error) {
+          console.warn(`⚠️ Supabase cached API failed for Pokemon data:`, error);
+        }
+      }
+      
+      // Fetch from direct GraphQL API
+      return fetchPokemonDataDirect(limit, offset, searchTerm, filters);
+    }, CACHE_TTL.POKEMON_LIST);
+  }
+
+  // Try cached version first if enabled (no Redis)
   if (USE_CACHED_API) {
     try {
       return await fetchCachedPokemonData(limit, offset, searchTerm, filters);
@@ -89,6 +133,18 @@ export const fetchPokemonData = async (
   }
 
   // Fallback to direct API call
+  return fetchPokemonDataDirect(limit, offset, searchTerm, filters);
+};
+
+/**
+ * Direct fetch from GraphQL (internal helper)
+ */
+async function fetchPokemonDataDirect(
+  limit: number,
+  offset: number,
+  searchTerm: string,
+  filters: Filters
+): Promise<Pokemon[]> {
   try {
     const whereClause = buildCompleteWhereClause(searchTerm, filters);
 

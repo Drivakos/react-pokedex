@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
+import { getAuthStorage } from './auth-storage';
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
@@ -12,7 +13,7 @@ const supabaseOptions = {
     autoRefreshToken: true,
     persistSession: true,
     detectSessionInUrl: true,
-    storage: localStorage,
+    storage: getAuthStorage(), // Use custom storage adapter
     flowType: 'pkce' as const,
   },
   db: {
@@ -40,7 +41,7 @@ supabase.auth.onAuthStateChange((event, session) => {
   if (session) {
     // User signed in - no debug log needed
   } else {
-    // User signed out - no debug log needed
+    // User signed out - clean up both storage types
     const authItems = [
       'supabase.auth.token',
       'access_token',
@@ -52,8 +53,14 @@ supabase.auth.onAuthStateChange((event, session) => {
       'sb-' + supabaseUrl.split('//')[1].split('.')[0] + '-auth-token'
     ];
     
+    // Clear localStorage
     authItems.forEach(item => {
       localStorage.removeItem(item);
+    });
+    
+    // Clear cookies
+    authItems.forEach(item => {
+      document.cookie = `${item}=; path=/; max-age=0`;
     });
   }
 });

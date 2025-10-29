@@ -88,11 +88,11 @@ const Navigation: React.FC = () => {
                     Memory Match
                   </Link>
                   <Link
-                    to="/pokegrid-challenge"
+                    to="/pkmn-grid-challenge"
                     className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center"
                     onClick={() => setGamesMenuOpen(false)}
                   >
-                    PokéGrid Challenge
+                    Pokemon Grid Challenge
                   </Link>
                   <div className="border-t border-gray-200 my-1"></div>
                   <span className="block px-4 py-2 text-xs text-gray-500 italic">
@@ -156,11 +156,11 @@ const Navigation: React.FC = () => {
                     Memory Match
                   </Link>
                   <Link
-                    to="/pokegrid-challenge"
+                    to="/pkmn-grid-challenge"
                     className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center"
                     onClick={() => setGamesMenuOpen(false)}
                   >
-                    PokéGrid Challenge
+                    Pokemon Grid Challenge
                   </Link>
                   <div className="border-t border-gray-200 my-1"></div>
                   <span className="block px-4 py-2 text-xs text-gray-500 italic">

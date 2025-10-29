@@ -122,6 +122,9 @@ export default defineConfig(({ mode }) => {
     'import.meta.env.VITE_SUPABASE_ANON_KEY': JSON.stringify(env.VITE_SUPABASE_ANON_KEY),
     'import.meta.env.VITE_APP_VERSION': JSON.stringify(process.env.npm_package_version),
     'import.meta.env.VITE_BUILD_TIME': JSON.stringify(new Date().toISOString()),
+    // Define process.env for browser compatibility with Upstash Redis
+    'process.env': JSON.stringify({}),
+    'global': 'globalThis',
   },
 };
 });

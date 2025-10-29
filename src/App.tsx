@@ -53,7 +53,7 @@ function App() {
               <PokemonMemoryGame />
             </Suspense>
           } />
-          <Route path="/pokegrid-challenge" element={
+          <Route path="/pkmn-grid-challenge" element={
             <Suspense>
               <PokéGridChallenge />
             </Suspense>

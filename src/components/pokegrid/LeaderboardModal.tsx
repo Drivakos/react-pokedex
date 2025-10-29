@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthProvider';
+import { pokegridService } from '../../services/pokegrid.service';
+import toast from 'react-hot-toast';
 
 interface LeaderboardEntry {
   user_id: string;
@@ -36,34 +38,19 @@ export const LeaderboardModal: React.FC<LeaderboardModalProps> = ({
   const loadLeaderboard = async () => {
     setLoading(true);
     try {
-      // This would need to be implemented in the service
-      // const data = await pokegridService.getLeaderboard(timeframe, gridDate);
-      // setLeaderboard(data);
+      const data = await pokegridService.getLeaderboard(timeframe, gridDate);
       
-      // Mock data for now
-      setLeaderboard([
-        {
-          user_id: '1',
-          username: 'PokeMaster',
-          score: 2700,
-          completed_at: '2024-01-15T10:30:00Z',
-          perfect_game: true,
-          total_guesses: 0,
-          rank: 1
-        },
-        {
-          user_id: '2',
-          username: 'GridGuru',
-          score: 2450,
-          completed_at: '2024-01-15T11:15:00Z',
-          perfect_game: false,
-          total_guesses: 2,
-          rank: 2
-        },
-        // Add more mock entries...
-      ]);
+      // Add ranking to the data
+      const rankedData = data.map((entry, index) => ({
+        ...entry,
+        rank: index + 1
+      }));
+      
+      setLeaderboard(rankedData);
     } catch (error) {
       console.error('Failed to load leaderboard:', error);
+      toast.error('Failed to load leaderboard');
+      setLeaderboard([]);
     } finally {
       setLoading(false);
     }

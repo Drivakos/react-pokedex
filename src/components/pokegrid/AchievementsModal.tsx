@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthProvider';
+import { pokegridService } from '../../services/pokegrid.service';
+import toast from 'react-hot-toast';
 
 interface Achievement {
   id: string;
@@ -34,79 +36,17 @@ export const AchievementsModal: React.FC<AchievementsModalProps> = ({
   const loadAchievements = async () => {
     setLoading(true);
     try {
-      // Mock achievements data - would be loaded from service
-      const mockAchievements: Achievement[] = [
-        {
-          id: 'first-win',
-          name: 'First Victory',
-          description: 'Complete your first PokéGrid',
-          icon: '🏆',
-          unlocked: true,
-          unlockedAt: '2024-01-15T10:30:00Z'
-        },
-        {
-          id: 'perfect-game',
-          name: 'Perfect Game',
-          description: 'Complete a grid with no wrong guesses',
-          icon: '⭐',
-          unlocked: true,
-          unlockedAt: '2024-01-16T14:20:00Z'
-        },
-        {
-          id: 'streak-3',
-          name: 'Hot Streak',
-          description: 'Win 3 games in a row',
-          icon: '🔥',
-          unlocked: false,
-          progress: 2,
-          maxProgress: 3
-        },
-        {
-          id: 'streak-7',
-          name: 'Weekly Warrior',
-          description: 'Win 7 games in a row',
-          icon: '⚡',
-          unlocked: false,
-          progress: 2,
-          maxProgress: 7
-        },
-        {
-          id: 'high-score',
-          name: 'High Scorer',
-          description: 'Score over 2500 points in a single game',
-          icon: '💎',
-          unlocked: false
-        },
-        {
-          id: 'speed-demon',
-          name: 'Speed Demon',
-          description: 'Complete a grid in under 2 minutes',
-          icon: '⚡',
-          unlocked: false
-        },
-        {
-          id: 'pokemon-master',
-          name: 'Pokémon Master',
-          description: 'Complete 50 grids',
-          icon: '👑',
-          unlocked: false,
-          progress: 23,
-          maxProgress: 50
-        },
-        {
-          id: 'type-specialist',
-          name: 'Type Specialist',
-          description: 'Correctly guess all 18 Pokémon types',
-          icon: '🌈',
-          unlocked: false,
-          progress: 12,
-          maxProgress: 18
-        }
-      ];
+      if (!user?.id) {
+        setAchievements([]);
+        return;
+      }
 
-      setAchievements(mockAchievements);
+      const data = await pokegridService.getUserAchievements(user.id);
+      setAchievements(data);
     } catch (error) {
       console.error('Failed to load achievements:', error);
+      toast.error('Failed to load achievements');
+      setAchievements([]);
     } finally {
       setLoading(false);
     }

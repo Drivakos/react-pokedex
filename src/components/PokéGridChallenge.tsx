@@ -82,7 +82,7 @@ const PokéGridChallenge: React.FC = () => {
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-lg text-gray-600">Loading PokéGrid Challenge...</p>
+          <p className="mt-4 text-lg text-gray-600">Loading Pokemon Grid Challenge...</p>
         </div>
       </div>
     );
@@ -94,7 +94,7 @@ const PokéGridChallenge: React.FC = () => {
         {/* Header */}
         <div className="text-center mb-8">
           <h1 className="text-4xl font-bold text-gray-900 mb-2">
-            PokéGrid Challenge
+            Pokemon Grid Challenge
           </h1>
           <p className="text-lg text-gray-600">
             {isToday
