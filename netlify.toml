@@ -2,7 +2,8 @@
   command = "npm run build:prod"
   publish = "dist"
   functions = "netlify/functions"
-  ignore = "git diff --quiet $CACHED_COMMIT_REF $COMMIT_REF ./src/"
+  # Ignore command disabled - build on all commits
+  # ignore = "git diff --quiet $CACHED_COMMIT_REF $COMMIT_REF ./src/"
 
 [dev]
   command = "npm run dev"
