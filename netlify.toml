@@ -76,6 +76,27 @@
   status = 200
   force = false
 
+# Serve static icon files
+[[redirects]]
+  from = "/icons/*"
+  to = "/icons/:splat"
+  status = 200
+  force = false
+
+# Serve static image files
+[[redirects]]
+  from = "/images/*"
+  to = "/images/:splat"
+  status = 200
+  force = false
+
+# Serve static pattern files
+[[redirects]]
+  from = "/patterns/*"
+  to = "/patterns/:splat"
+  status = 200
+  force = false
+
 # API redirects to Netlify Functions
 [[redirects]]
   from = "/api/pokemon/graphql"
@@ -96,12 +117,12 @@
   status = 301
   force = true
 
-# Handle SPA routing for everything else
+# Handle SPA routing for everything else (only if file doesn't exist)
 [[redirects]]
   from = "/*"
   to = "/index.html"
   status = 200
-  force = true
+  force = false
 
 # Enable brotli compression for better performance
 [build.processing]
