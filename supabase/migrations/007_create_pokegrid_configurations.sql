@@ -145,7 +145,7 @@ LANGUAGE plpgsql
 SECURITY DEFINER
 AS $$
 DECLARE
-  current_date DATE;
+  loop_date DATE;
   end_date DATE;
   daily_config JSONB;
   new_config_id BIGINT;
@@ -158,30 +158,30 @@ BEGIN
   base_seed := COALESCE(p_seed, 'week-' || p_start_date::TEXT);
   
   -- Generate configuration for each day
-  current_date := p_start_date;
+  loop_date := p_start_date;
   
-  WHILE current_date <= end_date LOOP
+  WHILE loop_date <= end_date LOOP
     -- Generate daily configuration (this will be implemented in the Edge Function)
     daily_config := jsonb_build_object(
-      'date', current_date,
-      'seed', base_seed || '-' || current_date::TEXT,
+      'date', loop_date,
+      'seed', base_seed || '-' || loop_date::TEXT,
       'generated_at', NOW(),
       'status', 'pending_generation'
     );
     
     -- Save configuration
     SELECT save_pokegrid_configuration(
-      current_date,
+      loop_date,
       daily_config,
       'medium',
-      base_seed || '-' || current_date::TEXT
+      base_seed || '-' || loop_date::TEXT
     ) INTO new_config_id;
     
     -- Return result
-    RETURN QUERY SELECT current_date, new_config_id, true;
+    RETURN QUERY SELECT loop_date, new_config_id, true;
     
     -- Move to next day
-    current_date := current_date + INTERVAL '1 day';
+    loop_date := loop_date + INTERVAL '1 day';
   END LOOP;
 END;
 $$;

@@ -28,7 +28,6 @@ build
 .env.local
 .env.*.local
 .env.production
-.env.development
 
 # Editor directories and files
 .idea
@@ -74,6 +73,8 @@ changelog.md
 
 # Supabase temp files and schema dumps
 supabase/.temp/
+supabase/.branches/
+supabase/.env
 schema_dump.sql
 
 # remove temp filesystem files

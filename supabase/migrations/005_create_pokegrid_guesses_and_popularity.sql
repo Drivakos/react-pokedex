@@ -134,8 +134,8 @@ CREATE TABLE IF NOT EXISTS pokegrid_daily_configs (
 
 -- Create index for grid configs
 CREATE INDEX IF NOT EXISTS idx_pokegrid_daily_configs_date ON pokegrid_daily_configs(grid_date);
--- Crea
-te function to get user statistics
+
+-- Create function to get user statistics
 CREATE OR REPLACE FUNCTION get_user_pokegrid_stats(p_user_id UUID)
 RETURNS TABLE (
   total_games BIGINT,
