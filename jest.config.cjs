@@ -44,7 +44,7 @@ module.exports = {
       ],
       setupFilesAfterEnv: ['<rootDir>/tests/setup-frontend.js'],
       transform: {
-        '^.+\\.ts$': ['babel-jest', {
+        '^.+\\.(ts|js|mjs)$': ['babel-jest', {
           presets: [
             ['@babel/preset-env', { targets: { node: 'current' } }],
             ['@babel/preset-typescript', { allowDeclareFields: true }]
@@ -52,10 +52,16 @@ module.exports = {
           plugins: ['babel-plugin-transform-vite-meta-env']
         }]
       },
-      moduleFileExtensions: ['ts', 'js', 'json'],
+      moduleFileExtensions: ['ts', 'js', 'mjs', 'json'],
       transformIgnorePatterns: [
-        'node_modules/(?!(.*\\.mjs$))'
-      ]
+        'node_modules/(?!(@upstash|uncrypto)/)'
+      ],
+      moduleNameMapper: {
+        '^@/(.*)$': '<rootDir>/src/$1',
+        '^@upstash/redis$': '<rootDir>/tests/__mocks__/lib/redis.js',
+        '^\\.\\./lib/redis$': '<rootDir>/tests/__mocks__/lib/redis.js',
+        '^src/lib/redis$': '<rootDir>/tests/__mocks__/lib/redis.js'
+      }
     }
   ],
   coverageDirectory: 'coverage',

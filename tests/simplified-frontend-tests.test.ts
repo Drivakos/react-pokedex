@@ -46,17 +46,17 @@ describe('Frontend Services Integration Tests', () => {
   describe('API Service Functions', () => {
     it('should have buildWhereConditions function available', async () => {
       // Import the function dynamically to test it exists
-      const { buildWhereConditions } = await import('../src/services/api');
+      const { buildWhereConditions } = await import('../src/utils/query-builder');
       expect(typeof buildWhereConditions).toBe('function');
     });
 
     it('should have buildTypeAndCondition function available', async () => {
-      const { buildTypeAndCondition } = await import('../src/services/api');
+      const { buildTypeAndCondition } = await import('../src/utils/query-builder');
       expect(typeof buildTypeAndCondition).toBe('function');
     });
 
     it('should handle buildWhereConditions with empty filters', async () => {
-      const { buildWhereConditions } = await import('../src/services/api');
+      const { buildWhereConditions } = await import('../src/utils/query-builder');
       const mockFilters = {
         types: [],
         moves: [],
@@ -71,7 +71,7 @@ describe('Frontend Services Integration Tests', () => {
     });
 
     it('should handle buildWhereConditions with type filters', async () => {
-      const { buildWhereConditions } = await import('../src/services/api');
+      const { buildWhereConditions } = await import('../src/utils/query-builder');
       const mockFilters = {
         types: ['fire', 'water'],
         moves: [],
@@ -88,7 +88,7 @@ describe('Frontend Services Integration Tests', () => {
     });
 
     it('should handle transformSinglePokemon function', async () => {
-      const { transformSinglePokemon } = await import('../src/services/api');
+      const { transformSinglePokemon } = await import('../src/utils/pokemon-transform');
       
       const mockRawData = {
         id: 1,
