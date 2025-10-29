@@ -23,6 +23,10 @@ CREATE INDEX IF NOT EXISTS idx_pokegrid_guesses_pokemon_id ON pokegrid_guesses(p
 -- Create RLS policies
 ALTER TABLE pokegrid_guesses ENABLE ROW LEVEL SECURITY;
 
+-- Drop existing policies if they exist
+DROP POLICY IF EXISTS "Users can read their own PokéGrid guesses" ON pokegrid_guesses;
+DROP POLICY IF EXISTS "Users can insert their own PokéGrid guesses" ON pokegrid_guesses;
+
 -- Allow users to read their own guesses
 CREATE POLICY "Users can read their own PokéGrid guesses" ON pokegrid_guesses
   FOR SELECT USING (auth.uid() = user_id);

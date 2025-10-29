@@ -86,6 +86,11 @@ CREATE INDEX IF NOT EXISTS idx_user_achievements_achievement_id ON user_achievem
 -- Enable RLS for achievements
 ALTER TABLE user_achievements ENABLE ROW LEVEL SECURITY;
 
+-- Drop existing policies if they exist
+DROP POLICY IF EXISTS "Users can read their own achievements" ON user_achievements;
+DROP POLICY IF EXISTS "Users can insert their own achievements" ON user_achievements;
+DROP POLICY IF EXISTS "Users can update their own achievements" ON user_achievements;
+
 -- Allow users to read their own achievements
 CREATE POLICY "Users can read their own achievements" ON user_achievements
   FOR SELECT USING (auth.uid() = user_id);

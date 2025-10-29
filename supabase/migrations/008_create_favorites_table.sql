@@ -16,6 +16,11 @@ CREATE INDEX IF NOT EXISTS idx_favorites_pokemon_id ON public.favorites(pokemon_
 -- Enable RLS
 ALTER TABLE public.favorites ENABLE ROW LEVEL SECURITY;
 
+-- Drop existing policies if they exist
+DROP POLICY IF EXISTS "Users can view their own favorites" ON public.favorites;
+DROP POLICY IF EXISTS "Users can create their own favorites" ON public.favorites;
+DROP POLICY IF EXISTS "Users can delete their own favorites" ON public.favorites;
+
 -- RLS policies for favorites
 CREATE POLICY "Users can view their own favorites"
 ON public.favorites

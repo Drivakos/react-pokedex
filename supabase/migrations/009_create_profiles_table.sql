@@ -15,6 +15,12 @@ CREATE INDEX IF NOT EXISTS idx_profiles_username ON public.profiles(username);
 -- Enable RLS
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 
+-- Drop existing policies if they exist
+DROP POLICY IF EXISTS "Anyone can view profiles" ON public.profiles;
+DROP POLICY IF EXISTS "Users can create their own profile" ON public.profiles;
+DROP POLICY IF EXISTS "Users can update their own profile" ON public.profiles;
+DROP POLICY IF EXISTS "Users can delete their own profile" ON public.profiles;
+
 -- RLS policies for profiles
 -- Everyone can view profiles (for leaderboards, etc.)
 CREATE POLICY "Anyone can view profiles"

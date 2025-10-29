@@ -29,6 +29,11 @@ CREATE INDEX IF NOT EXISTS idx_pokegrid_configurations_week ON pokegrid_configur
 -- Enable Row Level Security
 ALTER TABLE pokegrid_configurations ENABLE ROW LEVEL SECURITY;
 
+-- Drop existing policies if they exist
+DROP POLICY IF EXISTS "Anyone can read active grid configurations" ON pokegrid_configurations;
+DROP POLICY IF EXISTS "Authenticated users can insert grid configurations" ON pokegrid_configurations;
+DROP POLICY IF EXISTS "Creators can update their grid configurations" ON pokegrid_configurations;
+
 -- RLS Policies
 -- Anyone can read active configurations
 CREATE POLICY "Anyone can read active grid configurations" ON pokegrid_configurations

@@ -28,6 +28,11 @@ $$ LANGUAGE plpgsql;
 -- Create RLS policies
 ALTER TABLE api_cache ENABLE ROW LEVEL SECURITY;
 
+-- Drop existing policies if they exist
+DROP POLICY IF EXISTS "Allow anonymous read access" ON api_cache;
+DROP POLICY IF EXISTS "Allow anonymous insert access" ON api_cache;
+DROP POLICY IF EXISTS "Allow anonymous update access" ON api_cache;
+
 -- Allow anonymous read access (for edge functions)
 CREATE POLICY "Allow anonymous read access" ON api_cache
   FOR SELECT USING (true);

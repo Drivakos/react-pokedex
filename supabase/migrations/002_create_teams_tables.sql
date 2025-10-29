@@ -27,6 +27,13 @@ CREATE TABLE public.team_members (
 ALTER TABLE public.teams ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.team_members ENABLE ROW LEVEL SECURITY;
 
+-- Drop existing policies if they exist
+DROP POLICY IF EXISTS "Users can create their own teams" ON public.teams;
+DROP POLICY IF EXISTS "Users can view their own teams" ON public.teams;
+DROP POLICY IF EXISTS "Users can update their own teams" ON public.teams;
+DROP POLICY IF EXISTS "Users can delete their own teams" ON public.teams;
+DROP POLICY IF EXISTS "Users can manage team members for their teams" ON public.team_members;
+
 -- RLS policies for teams
 CREATE POLICY "Users can create their own teams"
 ON public.teams

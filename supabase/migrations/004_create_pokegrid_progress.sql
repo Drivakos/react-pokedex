@@ -24,6 +24,11 @@ CREATE INDEX IF NOT EXISTS idx_pokegrid_progress_completed ON pokegrid_progress(
 -- Create RLS policies
 ALTER TABLE pokegrid_progress ENABLE ROW LEVEL SECURITY;
 
+-- Drop existing policies if they exist
+DROP POLICY IF EXISTS "Users can read their own PokéGrid progress" ON pokegrid_progress;
+DROP POLICY IF EXISTS "Users can insert their own PokéGrid progress" ON pokegrid_progress;
+DROP POLICY IF EXISTS "Users can update their own PokéGrid progress" ON pokegrid_progress;
+
 -- Allow users to read their own progress
 CREATE POLICY "Users can read their own PokéGrid progress" ON pokegrid_progress
   FOR SELECT USING (auth.uid() = user_id);
