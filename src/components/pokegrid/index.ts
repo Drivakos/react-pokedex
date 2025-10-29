@@ -10,6 +10,8 @@ export { StatsModal } from './StatsModal';
 export { HintModal } from './HintModal';
 export { LeaderboardModal } from './LeaderboardModal';
 export { AchievementsModal } from './AchievementsModal';
+export { LeaderboardSidebar } from './LeaderboardSidebar';
+export { WeeklyStats } from './WeeklyStats';
 
 // Export types
 export * from './types';

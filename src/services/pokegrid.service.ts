@@ -30,6 +30,27 @@ export interface PopularityData {
   avg_attempts_for_correct: number;
 }
 
+export interface LeaderboardEntry {
+  user_id: string;
+  username: string;
+  score: number;
+  completed_at: string;
+  perfect_game: boolean;
+  total_guesses: number;
+  rank: number;
+  is_current_user?: boolean;
+}
+
+export interface WeeklyHistoryDay {
+  grid_date: string;
+  completed: boolean;
+  score: number;
+  total_guesses: number;
+  perfect_game: boolean;
+  rank_among_friends: number;
+  friends_completed_count: number;
+}
+
 class PokegridService {
   async loadUserProgress(userId: string, gridDate: string): Promise<GameProgress | null> {
     if (!userId) return null;
@@ -332,6 +353,114 @@ class PokegridService {
 
       return data || [];
     } catch (error) {
+      return [];
+    }
+  }
+
+  /**
+   * Get friends-only leaderboard for a specific timeframe and date
+   */
+  async getFriendsLeaderboard(
+    userId: string,
+    timeframe: 'daily' | 'weekly' | 'all-time',
+    gridDate?: string
+  ): Promise<LeaderboardEntry[]> {
+    if (!userId) return [];
+
+    try {
+      const { data, error } = await supabase.rpc('get_pokegrid_friends_leaderboard', {
+        p_user_id: userId,
+        p_timeframe: timeframe,
+        p_grid_date: gridDate
+      });
+
+      if (error) {
+        console.error('Error fetching friends leaderboard:', error);
+        return [];
+      }
+
+      return data || [];
+    } catch (error) {
+      console.error('Error in getFriendsLeaderboard:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Get user's weekly history (last 7 days)
+   */
+  async getWeeklyHistory(userId: string): Promise<WeeklyHistoryDay[]> {
+    if (!userId) return [];
+
+    try {
+      const { data, error } = await supabase.rpc('get_user_weekly_history', {
+        p_user_id: userId
+      });
+
+      if (error) {
+        console.error('Error fetching weekly history:', error);
+        return [];
+      }
+
+      return data || [];
+    } catch (error) {
+      console.error('Error in getWeeklyHistory:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Check if user has completed a specific date
+   */
+  async hasUserCompletedDate(userId: string, gridDate: string): Promise<boolean> {
+    if (!userId) return false;
+
+    try {
+      const { data, error } = await supabase
+        .from('pokegrid_progress')
+        .select('completed')
+        .eq('user_id', userId)
+        .eq('grid_date', gridDate)
+        .single();
+
+      if (error) {
+        return false;
+      }
+
+      return data?.completed || false;
+    } catch (error) {
+      return false;
+    }
+  }
+
+  /**
+   * Get all user submissions for a specific date (for friends view)
+   */
+  async getUserSubmissionsForDate(gridDate: string, userIds: string[]): Promise<any[]> {
+    if (userIds.length === 0) return [];
+
+    try {
+      const { data, error } = await supabase
+        .from('pokegrid_progress')
+        .select(`
+          user_id,
+          completed,
+          score,
+          total_guesses,
+          game_data,
+          completed_at
+        `)
+        .eq('grid_date', gridDate)
+        .in('user_id', userIds);
+
+      if (error) {
+        console.error('Error fetching user submissions:', error);
+        return [];
+      }
+
+      return data || [];
+    } catch (error) {
+      console.error('Error in getUserSubmissionsForDate:', error);
       return [];
     }
   }

@@ -7,7 +7,8 @@ if (!process.env.DEBUG) {
     log: jest.fn(),
     debug: jest.fn(),
     info: jest.fn(),
-    warn: jest.fn()
+    warn: jest.fn(),
+    error: jest.fn()
   };
 }
 
