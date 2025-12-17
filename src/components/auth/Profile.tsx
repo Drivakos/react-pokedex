@@ -1,12 +1,23 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
-import { TeamMember } from '../../lib/supabase';
+import { TeamMember, supabase } from '../../lib/supabase';
+import { friendsService, type FriendWithDetails } from '../../services/friends.service';
+import { FriendsModal } from '../friends';
+import { Copy, Check } from 'lucide-react';
+import toast from 'react-hot-toast';
 
 const Profile: React.FC = () => {
   const { user, profile, signOut, updateProfile, teams, favorites, getTeamMembers } = useAuth();
   const [status, setStatus] = useState<{ type: 'success' | 'error' | null; message: string }>({ type: null, message: '' });
   const [teamMembers, setTeamMembers] = useState<Record<number, TeamMember[]>>({});
+  const [friendsWithDetails, setFriendsWithDetails] = useState<FriendWithDetails[]>([]);
+  const [loadingFriends, setLoadingFriends] = useState(true);
+  const [showFriendsModal, setShowFriendsModal] = useState(false);
+  const [friendCode, setFriendCode] = useState<string>('');
+  const [copiedCode, setCopiedCode] = useState(false);
+  const [copiedFriendCodes, setCopiedFriendCodes] = useState<Set<string>>(new Set());
+  const [friendProfiles, setFriendProfiles] = useState<Record<string, { avatar_url?: string }>>({});
   const navigate = useNavigate();
   const favoritePokemonIds = user?.id ? (favorites ?? []).map(f => f.pokemon_id) : [];
   const userTeams = user?.id ? (teams ?? []) : [];
@@ -15,10 +26,10 @@ const Profile: React.FC = () => {
   const [formData, setFormData] = useState({ username: profile?.username || '' });
 
   useEffect(() => {
-      if (profile && profile.username !== formData.username) {
-        setFormData({ username: profile.username ?? '' });
-      }
-    }, [profile?.username]);
+    if (profile && profile.username !== formData.username) {
+      setFormData({ username: profile.username ?? '' });
+    }
+  }, [profile?.username]);
 
   useEffect(() => {
     const fetchTeamMembers = async () => {
@@ -34,6 +45,98 @@ const Profile: React.FC = () => {
 
     fetchTeamMembers();
   }, [userTeams, getTeamMembers]);
+
+  // Fetch friend profiles
+  const fetchFriendProfiles = async (friends: FriendWithDetails[]) => {
+    const profiles: Record<string, { avatar_url?: string }> = {};
+
+    for (const friend of friends) {
+      try {
+        const { data } = await supabase
+          .from('profiles')
+          .select('avatar_url')
+          .eq('id', friend.friend_id)
+          .single();
+
+        if (data) {
+          profiles[friend.friend_id] = data;
+        }
+      } catch (error) {
+        console.error(`Error fetching profile for ${friend.friend_name}:`, error);
+      }
+    }
+
+    setFriendProfiles(profiles);
+  };
+
+  // Load friends with details
+  const loadFriends = async () => {
+    if (user?.id) {
+      setLoadingFriends(true);
+      const friends = await friendsService.getFriendsWithDetails(user.id);
+      setFriendsWithDetails(friends);
+      await fetchFriendProfiles(friends);
+      setLoadingFriends(false);
+    }
+  };
+
+  useEffect(() => {
+    loadFriends();
+  }, [user?.id]);
+
+  // Load friend code
+  useEffect(() => {
+    const loadFriendCode = async () => {
+      if (user?.id) {
+        const code = await friendsService.getMyFriendCode();
+        if (code) {
+          setFriendCode(code);
+        } else {
+          // Fallback to generating from UUID
+          setFriendCode(friendsService.generateFriendCode(user.id));
+        }
+      }
+    };
+
+    loadFriendCode();
+  }, [user?.id]);
+
+  // Reload friends when modal closes (in case changes were made)
+  const handleFriendsModalClose = () => {
+    setShowFriendsModal(false);
+    loadFriends(); // Refresh friends list
+  };
+
+  // Copy friend code to clipboard
+  const handleCopyFriendCode = async () => {
+    try {
+      await navigator.clipboard.writeText(friendCode);
+      setCopiedCode(true);
+      toast.success('Friend Code copied to clipboard!');
+      setTimeout(() => setCopiedCode(false), 2000);
+    } catch (error) {
+      toast.error('Failed to copy Friend Code');
+    }
+  };
+
+  // Copy friend's code to clipboard
+  const handleCopyFriendCodeById = async (friendId: string, friendName: string) => {
+    try {
+      const friendCode = friendsService.generateFriendCode(friendId);
+      await navigator.clipboard.writeText(friendCode);
+      setCopiedFriendCodes(prev => new Set(prev).add(friendId));
+      toast.success(`${friendName}'s Friend Code copied to clipboard!`);
+      setTimeout(() => {
+        setCopiedFriendCodes(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(friendId);
+          return newSet;
+        });
+      }, 2000);
+    } catch (error) {
+      toast.error('Failed to copy Friend Code');
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -93,7 +196,7 @@ const Profile: React.FC = () => {
       <div className="max-w-4xl mx-auto space-y-6">
 
         {/* Profile Card */}
-        <div className="bg-white rounded-lg shadow-md p-6">
+        <div className="bg-white rounded-lg shadow-lg p-6">
           <div className="flex justify-between items-center mb-6">
             <h2 className="text-2xl font-bold text-gray-900">Your Profile</h2>
             <button onClick={handleSignOut} className="text-red-500 hover:text-red-700 font-medium">
@@ -110,13 +213,35 @@ const Profile: React.FC = () => {
                 {profile?.avatar_url ? (
                   <img src={profile.avatar_url} alt="Profile" className="w-full h-full object-cover" />
                 ) : (
-                  <div className="w-full h-full flex items-center justify-center bg-blue-50">
+                  <div className="w-full h-full flex items-center justify-center bg-gray-50">
                     <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/25.png" alt="Pokemon" className="w-20 h-20" />
                   </div>
                 )}
               </div>
               <h3 className="text-xl font-semibold">{profile?.username || 'Trainer'}</h3>
-              <p className="text-gray-500 text-sm">{user.email}</p>
+              <p className="text-gray-500 text-sm mb-3">{user.email}</p>
+
+              {/* Friend Code */}
+              <div className="mt-3">
+                <p className="text-xs text-gray-500 mb-1">Friend Code</p>
+                <div className="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-md px-3 py-2">
+                  <code className="text-sm font-mono font-bold text-blue-600 tracking-wider">
+                    {friendCode || '--------'}
+                  </code>
+                  <button
+                    onClick={handleCopyFriendCode}
+                    disabled={!friendCode}
+                    className="text-gray-600 hover:text-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    title="Copy Friend Code"
+                  >
+                    {copiedCode ? (
+                      <Check className="h-4 w-4 text-green-600" />
+                    ) : (
+                      <Copy className="h-4 w-4" />
+                    )}
+                  </button>
+                </div>
+              </div>
             </div>
 
             {/* Profile Form */}
@@ -142,15 +267,15 @@ const Profile: React.FC = () => {
             </div>
           </div>
         </div>
-        
+
         {/* Favorites Section */}
-        <div className="bg-white rounded-lg shadow-md p-6">
+        <div className="bg-white rounded-lg shadow-lg p-6">
           <h2 className="text-2xl font-bold text-gray-900 mb-6">Your Favorite Pokémon</h2>
 
           {favoritePokemonIds.length === 0 ? (
             <div className="text-center py-8">
-              <p className="text-gray-500 mb-4">No favorites yet</p>
-              <button onClick={() => navigate('/')} className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded">
+              <p className="text-gray-600 mb-4">No favorites yet</p>
+              <button onClick={() => navigate('/')} className="bg-blue-500 hover:bg-blue-600 text-white px-6 py-3 rounded-md font-medium">
                 Browse Pokémon
               </button>
             </div>
@@ -160,7 +285,7 @@ const Profile: React.FC = () => {
                 <div
                   key={pokemonId}
                   onClick={() => navigate(`/pokemon/${pokemonId}`)}
-                  className="bg-gray-50 rounded-lg p-4 text-center cursor-pointer hover:bg-gray-100 transition-colors"
+                  className="bg-gray-50 rounded-lg p-4 text-center cursor-pointer hover:bg-gray-100 transition-colors border border-gray-200"
                 >
                   <img
                     src={`https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${pokemonId}.png`}
@@ -174,20 +299,109 @@ const Profile: React.FC = () => {
           )}
         </div>
 
+        {/* Friends Section */}
+        <div className="bg-white rounded-lg shadow-lg p-6">
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="text-2xl font-bold text-gray-900">
+              Your Friends
+              {friendsWithDetails.length > 0 && (
+                <span className="text-sm font-normal text-gray-500 ml-2">
+                  ({friendsWithDetails.length})
+                </span>
+              )}
+            </h2>
+            <button
+              onClick={() => setShowFriendsModal(true)}
+              className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md text-sm font-medium"
+            >
+              Manage Friends
+            </button>
+          </div>
+
+          {loadingFriends ? (
+            <div className="text-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-4"></div>
+              <p className="text-gray-600">Loading friends...</p>
+            </div>
+          ) : friendsWithDetails.length === 0 ? (
+            <div className="text-center py-8">
+              <p className="text-gray-600 mb-4">You haven't added any friends yet.</p>
+              <p className="text-sm text-gray-500 mb-6">
+                Add friends to compete on leaderboards and see their favorite Pokémon!
+              </p>
+              <button
+                onClick={() => setShowFriendsModal(true)}
+                className="bg-blue-500 hover:bg-blue-600 text-white px-6 py-3 rounded-md font-medium"
+              >
+                Add Your First Friend
+              </button>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {friendsWithDetails.map((friend) => (
+                <div
+                  key={friend.friend_id}
+                  className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-200"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full overflow-hidden bg-gray-200 flex items-center justify-center">
+                      {friendProfiles[friend.friend_id]?.avatar_url ? (
+                        <img
+                          src={friendProfiles[friend.friend_id].avatar_url}
+                          alt={`${friend.friend_name}'s avatar`}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <span className="text-gray-600 font-bold text-sm">
+                          {friend.friend_name.charAt(0).toUpperCase()}
+                        </span>
+                      )}
+                    </div>
+                    <div>
+                      <h4 className="font-semibold text-gray-900">{friend.friend_name}</h4>
+                      <div className="flex items-center gap-2 mt-1">
+                        <p className="text-sm text-gray-600 font-mono">
+                          Code: <span className="font-bold text-blue-600">{friendsService.generateFriendCode(friend.friend_id)}</span>
+                        </p>
+                        <button
+                          onClick={() => handleCopyFriendCodeById(friend.friend_id, friend.friend_name)}
+                          className="text-gray-600 hover:text-blue-600 transition-colors"
+                          title={`Copy ${friend.friend_name}'s Friend Code`}
+                        >
+                          {copiedFriendCodes.has(friend.friend_id) ? (
+                            <Check className="h-4 w-4 text-green-600" />
+                          ) : (
+                            <Copy className="h-4 w-4" />
+                          )}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Friends Modal */}
+        <FriendsModal
+          isOpen={showFriendsModal}
+          onClose={handleFriendsModalClose}
+        />
+
         {/* Teams Section */}
-        <div className="bg-white rounded-lg shadow-md p-6">
+        <div className="bg-white rounded-lg shadow-lg p-6">
           <div className="flex justify-between items-center mb-6">
             <h2 className="text-2xl font-bold text-gray-900">Your Pokémon Teams</h2>
-            <button onClick={() => navigate('/teams')} className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded">
+            <button onClick={() => navigate('/teams')} className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md font-medium">
               Manage Teams
             </button>
           </div>
 
-
           {userTeams.length === 0 ? (
             <div className="text-center py-8">
-              <p className="text-gray-500 mb-4">You haven't created any teams yet.</p>
-              <button onClick={() => navigate('/teams')} className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded">
+              <p className="text-gray-600 mb-4">You haven't created any teams yet.</p>
+              <button onClick={() => navigate('/teams')} className="bg-blue-500 hover:bg-blue-600 text-white px-6 py-3 rounded-md font-medium">
                 Create Your First Team
               </button>
             </div>
@@ -217,7 +431,7 @@ const Profile: React.FC = () => {
                       return (
                         <div
                           key={position}
-                          className="w-10 h-10 bg-gray-100 rounded border-2 border-gray-200 flex items-center justify-center overflow-hidden"
+                          className="w-10 h-10 bg-gray-100 rounded border border-gray-200 flex items-center justify-center overflow-hidden"
                           title={member ? `Position ${position}: Pokémon #${member.pokemon_id}` : `Position ${position}: Empty`}
                         >
                           {member ? (

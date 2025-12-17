@@ -88,7 +88,18 @@ export default defineConfig(({ mode }) => {
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/api\/pokemontcg/, '/v2'),
         headers: {
-          'X-Api-Key': env.VITE_POKEMON_TCG_API_KEY || '',
+          'X-Api-Key': env.VITE_POKEMONTCG_API_KEY || '',
+        },
+        configure: (proxy, options) => {
+          proxy.on('error', (err, req, res) => {
+            console.log('❌ Pokemon TCG API proxy error:', err.message);
+          });
+          proxy.on('proxyReq', (proxyReq, req, res) => {
+            console.log('🎴 Proxying Pokemon TCG request:', req.url);
+          });
+          proxy.on('proxyRes', (proxyRes, req, res) => {
+            console.log('📦 Pokemon TCG response:', proxyRes.statusCode);
+          });
         },
       },
     },

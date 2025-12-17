@@ -20,16 +20,12 @@ export const LeaderboardSidebar: React.FC<LeaderboardSidebarProps> = ({
   const [timeframe, setTimeframe] = useState<TimeframeType>('daily');
   const [leaderboardData, setLeaderboardData] = useState<LeaderboardEntry[]>([]);
   const [loading, setLoading] = useState(true);
-  const [hasFriends, setHasFriends] = useState(false);
 
   // Check if user has friends to determine default tab
   useEffect(() => {
     const checkFriends = async () => {
       if (user) {
         const friendsCount = await friendsService.getFriendsCount(user.id);
-        setHasFriends(friendsCount > 0);
-        
-        // Default to friends tab if user has friends
         if (friendsCount > 0) {
           setActiveTab('friends');
         }
@@ -87,16 +83,14 @@ export const LeaderboardSidebar: React.FC<LeaderboardSidebarProps> = ({
       {/* Header */}
       <div className="p-4 border-b border-gray-200">
         <div className="flex items-center justify-between mb-3">
-          <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
-            <span>🏆</span>
-            <span>Leaderboard</span>
-          </h2>
+          <h2 className="text-lg font-bold text-gray-900">Leaderboard</h2>
           {onFriendsClick && (
             <button
               onClick={onFriendsClick}
-              className="text-sm text-blue-600 hover:text-blue-700 font-medium"
+              className="text-xs text-blue-600 hover:text-blue-700 font-medium"
+              title="Quick access to add friends"
             >
-              Manage Friends
+              + Friends
             </button>
           )}
         </div>
@@ -105,23 +99,21 @@ export const LeaderboardSidebar: React.FC<LeaderboardSidebarProps> = ({
         <div className="flex gap-2 mb-3">
           <button
             onClick={() => handleTabChange('worldwide')}
-            className={`flex-1 py-2 px-3 rounded-lg font-semibold transition-colors text-sm ${
-              activeTab === 'worldwide'
-                ? 'bg-blue-600 text-white'
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-            }`}
+            className={`flex-1 py-2 px-3 rounded-lg font-semibold transition-colors text-sm ${activeTab === 'worldwide'
+              ? 'bg-blue-600 text-white'
+              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
           >
             Worldwide
           </button>
           <button
             onClick={() => handleTabChange('friends')}
-            className={`flex-1 py-2 px-3 rounded-lg font-semibold transition-colors text-sm ${
-              activeTab === 'friends'
-                ? 'bg-blue-600 text-white'
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-            }`}
+            className={`flex-1 py-2 px-3 rounded-lg font-semibold transition-colors text-sm ${activeTab === 'friends'
+              ? 'bg-blue-600 text-white'
+              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
           >
-            Friends {hasFriends && <span className="ml-1">✓</span>}
+            Friends
           </button>
         </div>
 
@@ -131,11 +123,10 @@ export const LeaderboardSidebar: React.FC<LeaderboardSidebarProps> = ({
             <button
               key={tf}
               onClick={() => handleTimeframeChange(tf)}
-              className={`flex-1 py-1.5 px-2 rounded transition-colors ${
-                timeframe === tf
-                  ? 'bg-blue-100 text-blue-700 font-semibold'
-                  : 'bg-gray-50 text-gray-600 hover:bg-gray-100'
-              }`}
+              className={`flex-1 py-1.5 px-2 rounded transition-colors ${timeframe === tf
+                ? 'bg-blue-100 text-blue-700 font-semibold'
+                : 'bg-gray-50 text-gray-600 hover:bg-gray-100'
+                }`}
             >
               {tf === 'all-time' ? 'All Time' : tf.charAt(0).toUpperCase() + tf.slice(1)}
             </button>
@@ -154,10 +145,9 @@ export const LeaderboardSidebar: React.FC<LeaderboardSidebarProps> = ({
           <div className="flex flex-col items-center justify-center py-8 text-center">
             {activeTab === 'friends' ? (
               <>
-                <span className="text-4xl mb-3">👥</span>
                 <p className="text-gray-600 mb-2">No friends yet</p>
                 <p className="text-sm text-gray-500 mb-3">
-                  Add friends to compete with them!
+                  Add friends to compete!
                 </p>
                 {onFriendsClick && (
                   <button
@@ -170,7 +160,6 @@ export const LeaderboardSidebar: React.FC<LeaderboardSidebarProps> = ({
               </>
             ) : (
               <>
-                <span className="text-4xl mb-3">📊</span>
                 <p className="text-gray-600">No entries yet</p>
                 <p className="text-sm text-gray-500">Be the first to complete!</p>
               </>
@@ -181,23 +170,21 @@ export const LeaderboardSidebar: React.FC<LeaderboardSidebarProps> = ({
             {leaderboardData.map((entry) => (
               <div
                 key={entry.user_id}
-                className={`flex items-center gap-3 p-3 rounded-lg transition-colors ${
-                  entry.is_current_user || entry.user_id === user?.id
-                    ? 'bg-blue-50 border-2 border-blue-200'
-                    : 'bg-gray-50 hover:bg-gray-100'
-                }`}
+                className={`flex items-center gap-3 p-3 rounded-lg transition-colors ${entry.is_current_user || entry.user_id === user?.id
+                  ? 'bg-blue-50 border-2 border-blue-200'
+                  : 'bg-gray-50 hover:bg-gray-100'
+                  }`}
               >
                 {/* Rank Badge */}
                 <div
-                  className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm ${
-                    entry.rank === 1
-                      ? 'bg-yellow-400 text-yellow-900'
-                      : entry.rank === 2
+                  className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm ${entry.rank === 1
+                    ? 'bg-yellow-400 text-yellow-900'
+                    : entry.rank === 2
                       ? 'bg-gray-300 text-gray-700'
                       : entry.rank === 3
-                      ? 'bg-orange-400 text-orange-900'
-                      : 'bg-gray-200 text-gray-600'
-                  }`}
+                        ? 'bg-orange-400 text-orange-900'
+                        : 'bg-gray-200 text-gray-600'
+                    }`}
                 >
                   {entry.rank}
                 </div>
@@ -214,7 +201,7 @@ export const LeaderboardSidebar: React.FC<LeaderboardSidebarProps> = ({
                   </div>
                   <div className="text-xs text-gray-500">
                     {entry.perfect_game ? (
-                      <span className="text-green-600 font-semibold">⭐ Perfect!</span>
+                      <span className="text-green-600 font-semibold">Perfect!</span>
                     ) : (
                       <span>{entry.total_guesses} wrong</span>
                     )}

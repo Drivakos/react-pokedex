@@ -3,7 +3,6 @@ import { supabase } from '../lib/supabase';
 export interface Friend {
   friend_id: string;
   friend_name: string;
-  friend_email: string;
   friendship_created_at: string;
 }
 
@@ -11,14 +10,13 @@ export interface FriendRequest {
   request_id: number;
   sender_id: string;
   sender_name: string;
-  sender_email: string;
   created_at: string;
 }
 
 export interface UserSearchResult {
   user_id: string;
   username: string;
-  email: string;
+  friend_code: string;
   is_friend: boolean;
   has_pending_request: boolean;
 }
@@ -108,7 +106,7 @@ class FriendsService {
     }
 
     try {
-      const { data, error } = await supabase.rpc('send_friend_request', {
+      const { error } = await supabase.rpc('send_friend_request', {
         p_sender_id: senderId,
         p_receiver_id: receiverId
       });
@@ -199,7 +197,7 @@ class FriendsService {
     }
 
     try {
-      const { data, error } = await supabase.rpc('remove_friendship', {
+      const { data: result, error } = await supabase.rpc('remove_friendship', {
         p_user_id: userId,
         p_friend_id: friendId
       });
@@ -209,8 +207,8 @@ class FriendsService {
         return { success: false, error: error.message || 'Failed to remove friend' };
       }
 
-      // data is a boolean indicating success
-      if (data === false) {
+      // result is a boolean indicating success
+      if (result === false) {
         return { success: false, error: 'Friendship not found' };
       }
 
@@ -246,6 +244,148 @@ class FriendsService {
     const requests = await this.getPendingRequests(userId);
     return requests.length;
   }
+
+  /**
+   * Get the current user's friend code
+   */
+  async getMyFriendCode(): Promise<string | null> {
+    try {
+      const { data, error } = await supabase.rpc('get_my_friend_code');
+
+      if (error) {
+        console.error('Error fetching friend code:', error);
+        return null;
+      }
+
+      return data || null;
+    } catch (error) {
+      console.error('Error in getMyFriendCode:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Generate friend code from UUID (client-side fallback)
+   */
+  generateFriendCode(userId: string): string {
+    // Take first 8 characters of UUID (without hyphens) and uppercase
+    return userId.replace(/-/g, '').substring(0, 8).toUpperCase();
+  }
+
+  /**
+   * Get detailed friend data including favorites and game stats
+   */
+  async getFriendsWithDetails(userId: string): Promise<FriendWithDetails[]> {
+    if (!userId) return [];
+
+    try {
+      const friends = await this.getFriends(userId);
+
+      // Get additional details for each friend
+      const friendsWithDetails = await Promise.all(
+        friends.map(async (friend) => {
+          const [favorites, gameStats] = await Promise.all([
+            this.getFriendFavorites(friend.friend_id),
+            this.getFriendGameStats(friend.friend_id)
+          ]);
+
+          return {
+            ...friend,
+            favorites,
+            gameStats
+          };
+        })
+      );
+
+      return friendsWithDetails;
+    } catch (error) {
+      console.error('Error in getFriendsWithDetails:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Get a friend's favorite Pokémon
+   */
+  private async getFriendFavorites(friendId: string): Promise<number[]> {
+    try {
+      const { data, error } = await supabase
+        .from('favorites')
+        .select('pokemon_id')
+        .eq('user_id', friendId)
+        .order('created_at', { ascending: false })
+        .limit(6); // Get top 6 favorites
+
+      if (error) {
+        console.error('Error fetching friend favorites:', error);
+        return [];
+      }
+
+      return data?.map(f => f.pokemon_id) || [];
+    } catch (error) {
+      console.error('Error in getFriendFavorites:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Get a friend's game statistics
+   */
+  private async getFriendGameStats(friendId: string): Promise<GameStats> {
+    try {
+      // Get PokéGrid stats
+      const { data: pokegridData, error: pokegridError } = await supabase
+        .from('pokegrid_progress')
+        .select('score, completed, total_guesses, game_data')
+        .eq('user_id', friendId)
+        .order('grid_date', { ascending: false });
+
+      if (pokegridError) {
+        console.error('Error fetching pokegrid stats:', pokegridError);
+      }
+
+      const completedGames = pokegridData?.filter(g => g.completed).length || 0;
+      const totalScore = pokegridData?.reduce((sum, g) => sum + (g.score || 0), 0) || 0;
+      const perfectGames = pokegridData?.filter(g => g.game_data?.perfectGame).length || 0;
+      const bestScore = pokegridData?.reduce((max, g) => Math.max(max, g.score || 0), 0) || 0;
+
+      return {
+        pokegrid: {
+          totalGames: pokegridData?.length || 0,
+          completedGames,
+          totalScore,
+          bestScore,
+          perfectGames
+        }
+      };
+    } catch (error) {
+      console.error('Error in getFriendGameStats:', error);
+      return {
+        pokegrid: {
+          totalGames: 0,
+          completedGames: 0,
+          totalScore: 0,
+          bestScore: 0,
+          perfectGames: 0
+        }
+      };
+    }
+  }
+}
+
+export interface GameStats {
+  pokegrid: {
+    totalGames: number;
+    completedGames: number;
+    totalScore: number;
+    bestScore: number;
+    perfectGames: number;
+  };
+}
+
+export interface FriendWithDetails extends Friend {
+  favorites: number[];
+  gameStats: GameStats;
 }
 
 export const friendsService = new FriendsService();

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { usePokemon } from '../hooks/usePokemon';
 import { usePokegridGame } from '../hooks/usePokegridGame';
 import { usePokegridSearch } from '../hooks/usePokegridSearch';
@@ -12,7 +12,7 @@ import {
 } from './pokegrid';
 import { FriendsModal } from './friends';
 import { GAME_CONSTANTS } from './pokegrid/constants';
-import { ChevronDown, Trophy, Users, Calendar, Settings } from 'lucide-react';
+
 
 const PokéGridChallenge: React.FC = () => {
   const { displayedPokemon, loading } = usePokemon();
@@ -21,8 +21,6 @@ const PokéGridChallenge: React.FC = () => {
   const [currentGridDate, setCurrentGridDate] = useState<Date>(new Date());
   const [showShareModal, setShowShareModal] = useState(false);
   const [showFriendsModal, setShowFriendsModal] = useState(false);
-  const [showDropdown, setShowDropdown] = useState(false);
-  const dropdownRef = useRef<HTMLDivElement>(null);
 
   // Custom hooks for game logic
   const gameState = usePokegridGame(displayedPokemon, 'daily');
@@ -56,27 +54,8 @@ const PokéGridChallenge: React.FC = () => {
     }
   };
 
-  // Handle share modal
-  const handleShowShare = () => {
-    setShowShareModal(true);
-  };
-
   // Check if selected date is today
   const isToday = currentGridDate.toISOString().split('T')[0] === new Date().toISOString().split('T')[0];
-
-  // Handle click outside dropdown
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setShowDropdown(false);
-      }
-    };
-
-    if (showDropdown) {
-      document.addEventListener('mousedown', handleClickOutside);
-      return () => document.removeEventListener('mousedown', handleClickOutside);
-    }
-  }, [showDropdown]);
 
   if (loading || !currentGame) {
     return (
@@ -96,82 +75,14 @@ const PokéGridChallenge: React.FC = () => {
     <div className="min-h-screen bg-gradient-to-br from-white-50 to-indigo-100 py-8">
       <div className="max-w-7xl mx-auto px-4">
         {/* Header */}
-        <div className="text-center mb-6 relative">
-          <div className="flex items-center justify-center gap-3 mb-2">
-            <h1 className="text-4xl font-bold text-gray-900">
-              Pokemon Grid Challenge
-            </h1>
-            
-            {/* Dropdown Menu */}
-            <div className="relative" ref={dropdownRef}>
-              <button
-                onClick={() => setShowDropdown(!showDropdown)}
-                className="text-gray-700 hover:bg-gray-200 active:bg-gray-300 px-3 py-2 rounded-full text-sm font-medium flex items-center transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                aria-label="Options menu"
-                aria-expanded={showDropdown}
-                aria-haspopup="true"
-              >
-                <Settings className="h-4 w-4 mr-1" />
-                Options
-                <ChevronDown className={`h-4 w-4 ml-1 transition-transform duration-200 ${showDropdown ? 'rotate-180' : ''}`} />
-              </button>
-
-              {showDropdown && (
-                <div className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-lg py-1 z-50 border border-gray-200">
-                  <button
-                    onClick={() => {
-                      setShowFriendsModal(true);
-                      setShowDropdown(false);
-                    }}
-                    className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center transition-colors"
-                  >
-                    <Users className="h-4 w-4 mr-2 text-blue-600" />
-                    Manage Friends
-                  </button>
-                  
-                  <button
-                    onClick={() => {
-                      handleGridDateChange(new Date());
-                      setShowDropdown(false);
-                    }}
-                    className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center transition-colors"
-                  >
-                    <Calendar className="h-4 w-4 mr-2 text-green-600" />
-                    Jump to Today
-                  </button>
-                  
-                  <button
-                    onClick={() => {
-                      handleShowShare();
-                      setShowDropdown(false);
-                    }}
-                    disabled={!game.completed}
-                    className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    <Trophy className="h-4 w-4 mr-2 text-yellow-600" />
-                    Share Results
-                  </button>
-
-                  <div className="border-t border-gray-200 my-1"></div>
-                  
-                  <div className="px-4 py-2">
-                    <p className="text-xs text-gray-500">
-                      <span className="font-semibold">Stats:</span> {game.cells.filter((c: any) => c.isCorrect).length}/9 correct
-                    </p>
-                    <p className="text-xs text-gray-500 mt-1">
-                      <span className="font-semibold">Score:</span> {game.score.toLocaleString()}
-                    </p>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-          
-          <p className="text-lg text-gray-600">
+        <div className="text-center mb-6">
+          <h1 className="text-3xl font-bold text-gray-900 mb-1">
+            Pokemon Grid Challenge
+          </h1>
+          <p className="text-gray-600">
             {isToday
-              ? `Today's Grid - ${currentGridDate.toLocaleDateString()}`
-              : `Past Grid - ${currentGridDate.toLocaleDateString()}`
-            }
+              ? `Today's Grid`
+              : currentGridDate.toLocaleDateString()}
           </p>
         </div>
 
@@ -211,11 +122,25 @@ const PokéGridChallenge: React.FC = () => {
 
           {/* Right: Leaderboard Sidebar */}
           <div className="lg:col-span-1">
-            <div className="sticky top-4">
+            <div className="sticky top-4 space-y-4">
               <LeaderboardSidebar
                 gridDate={currentGridDate.toISOString().split('T')[0]}
                 onFriendsClick={() => setShowFriendsModal(true)}
               />
+
+              {/* Quick tip about friends */}
+              <div className="bg-gray-50 border border-gray-200 rounded-lg p-3">
+                <p className="text-xs text-gray-600">
+                  <span className="font-medium">Tip:</span> Visit your{' '}
+                  <button
+                    onClick={() => window.location.href = '/profile'}
+                    className="underline hover:text-gray-900"
+                  >
+                    Profile
+                  </button>
+                  {' '}to manage friends.
+                </p>
+              </div>
             </div>
           </div>
         </div>

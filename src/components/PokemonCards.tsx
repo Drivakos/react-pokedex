@@ -23,6 +23,17 @@ interface PokemonCardsProps {
 
 const POKEMONTCG_API_KEY = import.meta.env.VITE_POKEMONTCG_API_KEY;
 
+// Cache configuration
+const CACHE_KEY_PREFIX = 'pokemon_tcg_cards_';
+const CACHE_DURATION = 7 * 24 * 60 * 60 * 1000; // 7 days in milliseconds
+
+interface CachedData {
+  cards: PokemonCard[];
+  totalCount: number;
+  timestamp: number;
+  pokemonId: number;
+}
+
 const PokemonCards: React.FC<PokemonCardsProps> = ({ pokemonName, pokemonId }) => {
   const [cards, setCards] = useState<PokemonCard[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
@@ -32,6 +43,7 @@ const PokemonCards: React.FC<PokemonCardsProps> = ({ pokemonName, pokemonId }) =
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [hasMore, setHasMore] = useState<boolean>(true);
   const [lastFetchedPokemon, setLastFetchedPokemon] = useState<string>('');
+  const [loadedFromCache, setLoadedFromCache] = useState<boolean>(false);
   
 
   const animationFrameIdRef = useRef<number | null>(null);
@@ -288,10 +300,96 @@ const PokemonCards: React.FC<PokemonCardsProps> = ({ pokemonName, pokemonId }) =
     }
   };
 
+  // Get cache key for this pokemon
+  const getCacheKey = (id?: number): string => {
+    return `${CACHE_KEY_PREFIX}${id || pokemonName}`;
+  };
+
+  // Load cards from cache
+  const loadFromCache = (): CachedData | null => {
+    try {
+      const cacheKey = getCacheKey(pokemonId);
+      const cached = localStorage.getItem(cacheKey);
+      
+      if (!cached) {
+        console.log('📦 No cache found for', pokemonName);
+        return null;
+      }
+
+      const data: CachedData = JSON.parse(cached);
+      const now = Date.now();
+      const age = now - data.timestamp;
+
+      if (age > CACHE_DURATION) {
+        console.log('⏰ Cache expired for', pokemonName, `(${Math.round(age / (24 * 60 * 60 * 1000))} days old)`);
+        localStorage.removeItem(cacheKey);
+        return null;
+      }
+
+      console.log('✅ Loaded from cache:', pokemonName, `(${data.cards.length} cards, ${Math.round(age / (60 * 60 * 1000))} hours old)`);
+      return data;
+    } catch (err) {
+      console.error('❌ Error reading cache:', err);
+      return null;
+    }
+  };
+
+  // Save cards to cache
+  const saveToCache = (cardsData: PokemonCard[], totalCount: number) => {
+    try {
+      const cacheKey = getCacheKey(pokemonId);
+      const data: CachedData = {
+        cards: cardsData,
+        totalCount,
+        timestamp: Date.now(),
+        pokemonId: pokemonId || 0
+      };
+      
+      localStorage.setItem(cacheKey, JSON.stringify(data));
+      console.log('💾 Saved to cache:', pokemonName, `(${cardsData.length} cards)`);
+    } catch (err) {
+      console.error('❌ Error saving to cache:', err);
+      // If localStorage is full, try to clear old entries
+      if (err instanceof Error && err.name === 'QuotaExceededError') {
+        clearOldCache();
+      }
+    }
+  };
+
+  // Clear old cache entries
+  const clearOldCache = () => {
+    try {
+      const keysToRemove: string[] = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && key.startsWith(CACHE_KEY_PREFIX)) {
+          keysToRemove.push(key);
+        }
+      }
+      keysToRemove.forEach(key => localStorage.removeItem(key));
+      console.log('🧹 Cleared', keysToRemove.length, 'old cache entries');
+    } catch (err) {
+      console.error('❌ Error clearing cache:', err);
+    }
+  };
+
   // Simplified fetch function
   const fetchCards = async (page: number = 1, append: boolean = false) => {
+    // Check cache first (only for first page, not for "load more")
+    if (!append && page === 1) {
+      const cached = loadFromCache();
+      if (cached) {
+        setCards(cached.cards);
+        setHasMore(cached.totalCount > cached.cards.length);
+        setLoading(false);
+        setLoadedFromCache(true);
+        return;
+      }
+    }
+
     // Prevent duplicate requests
     if (isRequestInProgressRef.current && !append) {
+      console.log('🚫 Request already in progress, skipping...');
       return;
     }
 
@@ -306,6 +404,7 @@ const PokemonCards: React.FC<PokemonCardsProps> = ({ pokemonName, pokemonId }) =
         setLoadingMore(true);
       }
       setError(null);
+      setLoadedFromCache(false);
 
       // Format Pokemon name for search
       const formattedName = pokemonName.toLowerCase().replace(/[^a-z0-9]/g, '');
@@ -336,34 +435,81 @@ const PokemonCards: React.FC<PokemonCardsProps> = ({ pokemonName, pokemonId }) =
         query = `nationalPokedexNumbers:${pokemonId}`;
       }
 
-      // Use proxy in development to avoid CORS issues, direct API in production
+      // Try direct API call first (bypass proxy to test)
       const isDevelopment = import.meta.env.DEV;
-      const apiUrl = isDevelopment
-        ? `/api/pokemontcg/cards?q=${query}&orderBy=set.releaseDate&page=${page}&pageSize=12`
-        : `https://api.pokemontcg.io/v2/cards?q=${query}&orderBy=set.releaseDate&page=${page}&pageSize=12`;
+      const useProxy = false; // Temporarily disable proxy to test direct API
+      
+      const apiUrl = useProxy && isDevelopment
+        ? `/api/pokemontcg/cards?q=${encodeURIComponent(query)}&orderBy=set.releaseDate&page=${page}&pageSize=12`
+        : `https://api.pokemontcg.io/v2/cards?q=${encodeURIComponent(query)}&orderBy=set.releaseDate&page=${page}&pageSize=12`;
 
-      const response = await fetch(apiUrl, {
-        headers: isDevelopment ? {} : { 'X-Api-Key': POKEMONTCG_API_KEY || '' }
+      console.log('🎴 Fetching Pokemon TCG cards:', { 
+        pokemon: pokemonName, 
+        pokemonId, 
+        query,
+        apiUrl,
+        isDevelopment,
+        useProxy,
+        hasApiKey: !!POKEMONTCG_API_KEY 
       });
 
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => {
+        console.warn('⏰ Request timeout after 15 seconds');
+        controller.abort();
+      }, 15000); // 15 second timeout (faster feedback)
+
+      const fetchOptions: RequestInit = {
+        headers: {
+          'X-Api-Key': POKEMONTCG_API_KEY || ''
+        },
+        signal: controller.signal
+      };
+
+      console.log('📡 Making request with headers:', { hasApiKey: !!POKEMONTCG_API_KEY });
+
+      const response = await fetch(apiUrl, fetchOptions);
+
+      clearTimeout(timeoutId);
+
+      console.log('📦 Response status:', response.status);
+
       if (!response.ok) {
-        throw new Error(`API request failed: ${response.status}`);
+        const errorText = await response.text();
+        console.error('❌ API Error:', response.status, errorText);
+        throw new Error(`API request failed: ${response.status} - ${errorText}`);
       }
 
       const data = await response.json();
       const newCards = data.data || [];
 
+      console.log('✅ Loaded cards from API:', newCards.length, 'Total available:', data.totalCount);
+
       if (append) {
-        setCards(prev => [...prev, ...newCards]);
+        const updatedCards = [...cards, ...newCards];
+        setCards(updatedCards);
+        // Update cache with all cards so far
+        if (page <= 3) { // Only cache first 3 pages to save space
+          saveToCache(updatedCards, data.totalCount);
+        }
       } else {
         setCards(newCards);
+        // Save first page to cache
+        saveToCache(newCards, data.totalCount);
       }
 
       // Check if there are more pages (API returns totalCount)
       setHasMore(data.totalCount > (page * 12));
 
     } catch (err: any) {
-      setError('Failed to load Pokémon cards. Please try again later.');
+      console.error('❌ Failed to fetch Pokemon TCG cards:', err);
+      if (err.name === 'AbortError') {
+        setError('The Pokemon TCG API is not responding. This could be due to network issues, API downtime, or rate limiting.');
+      } else if (err.message.includes('Failed to fetch') || err.message.includes('NetworkError')) {
+        setError('Unable to connect to the Pokemon TCG API. Please check your internet connection or try again later.');
+      } else {
+        setError(`Failed to load trading cards: ${err.message}`);
+      }
     } finally {
       setLoading(false);
       setLoadingMore(false);
@@ -398,6 +544,27 @@ const PokemonCards: React.FC<PokemonCardsProps> = ({ pokemonName, pokemonId }) =
     };
   }, [pokemonKey, lastFetchedPokemon]);
 
+  // Debug: Log cache status on mount
+  useEffect(() => {
+    const cacheKey = getCacheKey(pokemonId);
+    const cached = localStorage.getItem(cacheKey);
+    if (cached) {
+      try {
+        const data: CachedData = JSON.parse(cached);
+        const age = Date.now() - data.timestamp;
+        console.log('🔍 Cache status:', {
+          pokemon: pokemonName,
+          cached: true,
+          cardsCount: data.cards.length,
+          ageHours: Math.round(age / (60 * 60 * 1000)),
+          expiresIn: Math.round((CACHE_DURATION - age) / (24 * 60 * 60 * 1000)) + ' days'
+        });
+      } catch (err) {
+        // Invalid cache
+      }
+    }
+  }, [pokemonName, pokemonId]);
+
   const openCardModal = (card: PokemonCard) => {
     setSelectedCard(card);
   };
@@ -418,18 +585,68 @@ const PokemonCards: React.FC<PokemonCardsProps> = ({ pokemonName, pokemonId }) =
   }
 
   if (error) {
-    return <div className="my-6 text-center text-red-500">{error}</div>;
+    return (
+      <div className="my-6">
+        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+          <div className="flex items-start">
+            <svg className="w-5 h-5 text-yellow-600 mr-3 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+            </svg>
+            <div className="flex-1">
+              <h3 className="text-sm font-medium text-yellow-800 mb-1">Trading Cards Temporarily Unavailable</h3>
+              <p className="text-sm text-yellow-700 mb-2">{error}</p>
+              <p className="text-xs text-yellow-600">
+                The Pokemon TCG API may be experiencing issues. Try again later or visit{' '}
+                <a href="https://pokemontcg.io/" target="_blank" rel="noopener noreferrer" className="underline hover:text-yellow-800">
+                  pokemontcg.io
+                </a>
+                {' '}for official trading card information.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   if (cards.length === 0) {
-    return <div className="my-6 text-center">No trading cards found for {pokemonName}.</div>;
+    return (
+      <div className="my-6 text-center">
+        <div className="bg-gray-50 border border-gray-200 rounded-lg p-6">
+          <svg className="w-12 h-12 text-gray-400 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" />
+          </svg>
+          <p className="text-gray-600">No trading cards found for {pokemonName}.</p>
+        </div>
+      </div>
+    );
   }
 
 
 
   return (
     <div className="my-8">
-      <h3 className="text-xl font-bold mb-4">Trading Cards</h3>
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="text-xl font-bold">Trading Cards</h3>
+        {loadedFromCache && (
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-green-600 bg-green-50 px-2 py-1 rounded-full">
+              ✓ Cached
+            </span>
+            <button
+              onClick={() => {
+                localStorage.removeItem(getCacheKey(pokemonId));
+                setLastFetchedPokemon(''); // Trigger refetch
+                fetchCards(1, false);
+              }}
+              className="text-xs text-gray-600 hover:text-gray-900 underline"
+              title="Refresh cards from API"
+            >
+              Refresh
+            </button>
+          </div>
+        )}
+      </div>
       
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
         {cards.map((card) => {

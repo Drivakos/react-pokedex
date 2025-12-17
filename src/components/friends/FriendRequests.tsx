@@ -15,7 +15,6 @@ export const FriendRequests: React.FC<FriendRequestsProps> = ({
   if (requests.length === 0) {
     return (
       <div className="text-center py-12">
-        <div className="text-6xl mb-4">📬</div>
         <h3 className="text-lg font-semibold text-gray-900 mb-2">No pending requests</h3>
         <p className="text-gray-600">You're all caught up!</p>
       </div>
@@ -38,7 +37,6 @@ export const FriendRequests: React.FC<FriendRequestsProps> = ({
             {/* Info */}
             <div>
               <h4 className="font-semibold text-gray-900">{request.sender_name}</h4>
-              <p className="text-sm text-gray-600">{request.sender_email}</p>
               <p className="text-xs text-gray-500 mt-1">
                 Sent {new Date(request.created_at).toLocaleDateString()}
               </p>
@@ -49,17 +47,17 @@ export const FriendRequests: React.FC<FriendRequestsProps> = ({
           <div className="flex gap-2">
             <button
               onClick={() => onAccept(request.request_id)}
-              className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors font-medium text-sm"
+              className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 transition-colors font-medium text-sm"
               title="Accept request"
             >
-              ✓ Accept
+              Accept
             </button>
             <button
               onClick={() => onReject(request.request_id)}
-              className="bg-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300 transition-colors font-medium text-sm"
+              className="bg-gray-200 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-300 transition-colors font-medium text-sm"
               title="Reject request"
             >
-              ✕ Reject
+              Decline
             </button>
           </div>
         </div>

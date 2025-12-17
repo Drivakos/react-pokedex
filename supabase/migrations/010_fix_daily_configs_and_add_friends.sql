@@ -1,12 +1,23 @@
--- Migration 007: Fix daily grid configurations and add friends system
+-- Migration 010: Fix daily grid configurations and add friends system
 
 -- =====================================================
 -- Part 1: Fix Daily Grid Configuration System
 -- =====================================================
 
--- Drop the existing table if schema needs updating
--- (Keep data if it exists)
--- The table already exists from migration 005, we just need to add RPC functions
+-- Ensure the pokegrid_daily_configs table exists (may have been dropped or missing)
+CREATE TABLE IF NOT EXISTS pokegrid_daily_configs (
+  id SERIAL PRIMARY KEY,
+  grid_date DATE NOT NULL UNIQUE,
+  row_constraints JSONB NOT NULL DEFAULT '[]'::JSONB,
+  col_constraints JSONB NOT NULL DEFAULT '[]'::JSONB,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Create index for grid configs if not exists
+CREATE INDEX IF NOT EXISTS idx_pokegrid_daily_configs_date ON pokegrid_daily_configs(grid_date);
+
+-- Drop existing function if it has a different signature
+DROP FUNCTION IF EXISTS get_pokegrid_configuration(DATE);
 
 -- Create RPC function to get grid configuration
 CREATE OR REPLACE FUNCTION get_pokegrid_configuration(p_grid_date DATE)
@@ -41,9 +52,23 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- Add missing columns to pokegrid_daily_configs if they don't exist
-ALTER TABLE pokegrid_daily_configs 
-  ADD COLUMN IF NOT EXISTS difficulty_level VARCHAR(20) DEFAULT 'medium',
-  ADD COLUMN IF NOT EXISTS generation_seed VARCHAR(100);
+-- Using DO block for compatibility
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_name = 'pokegrid_daily_configs' AND column_name = 'difficulty_level'
+  ) THEN
+    ALTER TABLE pokegrid_daily_configs ADD COLUMN difficulty_level VARCHAR(20) DEFAULT 'medium';
+  END IF;
+  
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_name = 'pokegrid_daily_configs' AND column_name = 'generation_seed'
+  ) THEN
+    ALTER TABLE pokegrid_daily_configs ADD COLUMN generation_seed VARCHAR(100);
+  END IF;
+END $$;
 
 -- Create RPC function to save grid configuration
 CREATE OR REPLACE FUNCTION save_pokegrid_configuration(
@@ -270,8 +295,8 @@ BEGIN
       au.raw_user_meta_data->>'full_name',
       au.raw_user_meta_data->>'username',
       split_part(au.email, '@', 1)
-    ) as friend_name,
-    au.email as friend_email,
+    )::TEXT as friend_name,
+    au.email::TEXT as friend_email,
     f.created_at as friendship_created_at
   FROM friendships f
   JOIN auth.users au ON (
@@ -303,8 +328,8 @@ BEGIN
       au.raw_user_meta_data->>'full_name',
       au.raw_user_meta_data->>'username',
       split_part(au.email, '@', 1)
-    ) as sender_name,
-    au.email as sender_email,
+    )::TEXT as sender_name,
+    au.email::TEXT as sender_email,
     fr.created_at
   FROM friend_requests fr
   JOIN auth.users au ON fr.sender_id = au.id
@@ -334,25 +359,22 @@ RETURNS TABLE (
   is_current_user BOOLEAN
 ) AS $$
 BEGIN
-  -- Get list of friends
-  WITH user_friends AS (
-    SELECT 
-      CASE 
-        WHEN f.user_id_1 = p_user_id THEN f.user_id_2
-        ELSE f.user_id_1
-      END as friend_id
-    FROM friendships f
-    WHERE f.user_id_1 = p_user_id OR f.user_id_2 = p_user_id
-  ),
-  friends_and_self AS (
-    SELECT friend_id as user_id FROM user_friends
-    UNION
-    SELECT p_user_id as user_id
-  )
-  
-  -- Now get leaderboard filtered by friends
   IF p_timeframe = 'daily' AND p_grid_date IS NOT NULL THEN
     RETURN QUERY
+    WITH user_friends AS (
+      SELECT 
+        CASE 
+          WHEN f.user_id_1 = p_user_id THEN f.user_id_2
+          ELSE f.user_id_1
+        END as friend_id
+      FROM friendships f
+      WHERE f.user_id_1 = p_user_id OR f.user_id_2 = p_user_id
+    ),
+    friends_and_self AS (
+      SELECT uf.friend_id as uid FROM user_friends uf
+      UNION
+      SELECT p_user_id as uid
+    )
     SELECT 
       pp.user_id,
       COALESCE(au.raw_user_meta_data->>'full_name', split_part(au.email, '@', 1)) as username,
@@ -366,43 +388,71 @@ BEGIN
     JOIN auth.users au ON pp.user_id = au.id
     WHERE pp.grid_date = p_grid_date 
       AND pp.completed = true
-      AND pp.user_id IN (SELECT user_id FROM friends_and_self)
+      AND pp.user_id IN (SELECT fas.uid FROM friends_and_self fas)
     ORDER BY pp.score DESC, pp.completed_at ASC;
     
   ELSIF p_timeframe = 'weekly' THEN
     RETURN QUERY
+    WITH user_friends AS (
+      SELECT 
+        CASE 
+          WHEN f.user_id_1 = p_user_id THEN f.user_id_2
+          ELSE f.user_id_1
+        END as friend_id
+      FROM friendships f
+      WHERE f.user_id_1 = p_user_id OR f.user_id_2 = p_user_id
+    ),
+    friends_and_self AS (
+      SELECT uf.friend_id as uid FROM user_friends uf
+      UNION
+      SELECT p_user_id as uid
+    )
     SELECT 
       pp.user_id,
       COALESCE(au.raw_user_meta_data->>'full_name', split_part(au.email, '@', 1)) as username,
-      MAX(pp.score) as score,
+      MAX(pp.score)::INTEGER as score,
       MAX(pp.completed_at) as completed_at,
       bool_or((pp.game_data->>'perfectGame')::BOOLEAN) as perfect_game,
-      MIN(pp.total_guesses) as total_guesses,
+      MIN(pp.total_guesses)::INTEGER as total_guesses,
       ROW_NUMBER() OVER (ORDER BY MAX(pp.score) DESC, MAX(pp.completed_at) ASC) as rank,
       (pp.user_id = p_user_id) as is_current_user
     FROM pokegrid_progress pp
     JOIN auth.users au ON pp.user_id = au.id
     WHERE pp.grid_date >= CURRENT_DATE - INTERVAL '7 days'
       AND pp.completed = true
-      AND pp.user_id IN (SELECT user_id FROM friends_and_self)
+      AND pp.user_id IN (SELECT fas.uid FROM friends_and_self fas)
     GROUP BY pp.user_id, au.email, au.raw_user_meta_data
     ORDER BY MAX(pp.score) DESC, MAX(pp.completed_at) ASC;
     
   ELSE -- all-time
     RETURN QUERY
+    WITH user_friends AS (
+      SELECT 
+        CASE 
+          WHEN f.user_id_1 = p_user_id THEN f.user_id_2
+          ELSE f.user_id_1
+        END as friend_id
+      FROM friendships f
+      WHERE f.user_id_1 = p_user_id OR f.user_id_2 = p_user_id
+    ),
+    friends_and_self AS (
+      SELECT uf.friend_id as uid FROM user_friends uf
+      UNION
+      SELECT p_user_id as uid
+    )
     SELECT 
       pp.user_id,
       COALESCE(au.raw_user_meta_data->>'full_name', split_part(au.email, '@', 1)) as username,
-      MAX(pp.score) as score,
+      MAX(pp.score)::INTEGER as score,
       MAX(pp.completed_at) as completed_at,
       bool_or((pp.game_data->>'perfectGame')::BOOLEAN) as perfect_game,
-      MIN(pp.total_guesses) as total_guesses,
+      MIN(pp.total_guesses)::INTEGER as total_guesses,
       ROW_NUMBER() OVER (ORDER BY MAX(pp.score) DESC, MAX(pp.completed_at) ASC) as rank,
       (pp.user_id = p_user_id) as is_current_user
     FROM pokegrid_progress pp
     JOIN auth.users au ON pp.user_id = au.id
     WHERE pp.completed = true
-      AND pp.user_id IN (SELECT user_id FROM friends_and_self)
+      AND pp.user_id IN (SELECT fas.uid FROM friends_and_self fas)
     GROUP BY pp.user_id, au.email, au.raw_user_meta_data
     ORDER BY MAX(pp.score) DESC, MAX(pp.completed_at) ASC;
   END IF;
@@ -430,8 +480,8 @@ BEGIN
       au.raw_user_meta_data->>'full_name',
       au.raw_user_meta_data->>'username',
       split_part(au.email, '@', 1)
-    ) as username,
-    au.email,
+    )::TEXT as username,
+    au.email::TEXT as email,
     EXISTS(
       SELECT 1 FROM friendships f
       WHERE (f.user_id_1 = LEAST(p_current_user_id, au.id) 
