@@ -1,27 +1,22 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
-import { TeamMember, supabase } from '../../lib/supabase';
-import { friendsService, type FriendWithDetails } from '../../services/friends.service';
+import { TeamMember } from '../../lib/supabase';
+import { friendsService, type Friend } from '../../services/friends.service';
 import { FriendsModal } from '../friends';
-import { Copy, Check } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 const Profile: React.FC = () => {
   const { user, profile, signOut, updateProfile, teams, favorites, getTeamMembers } = useAuth();
   const [status, setStatus] = useState<{ type: 'success' | 'error' | null; message: string }>({ type: null, message: '' });
   const [teamMembers, setTeamMembers] = useState<Record<number, TeamMember[]>>({});
-  const [friendsWithDetails, setFriendsWithDetails] = useState<FriendWithDetails[]>([]);
+  const [friends, setFriends] = useState<Friend[]>([]);
   const [loadingFriends, setLoadingFriends] = useState(true);
   const [showFriendsModal, setShowFriendsModal] = useState(false);
   const [friendCode, setFriendCode] = useState<string>('');
-  const [copiedCode, setCopiedCode] = useState(false);
-  const [copiedFriendCodes, setCopiedFriendCodes] = useState<Set<string>>(new Set());
-  const [friendProfiles, setFriendProfiles] = useState<Record<string, { avatar_url?: string }>>({});
   const navigate = useNavigate();
   const favoritePokemonIds = user?.id ? (favorites ?? []).map(f => f.pokemon_id) : [];
   const userTeams = user?.id ? (teams ?? []) : [];
-
 
   const [formData, setFormData] = useState({ username: profile?.username || '' });
 
@@ -42,40 +37,15 @@ const Profile: React.FC = () => {
         setTeamMembers(members);
       }
     };
-
     fetchTeamMembers();
   }, [userTeams, getTeamMembers]);
 
-  // Fetch friend profiles
-  const fetchFriendProfiles = async (friends: FriendWithDetails[]) => {
-    const profiles: Record<string, { avatar_url?: string }> = {};
-
-    for (const friend of friends) {
-      try {
-        const { data } = await supabase
-          .from('profiles')
-          .select('avatar_url')
-          .eq('id', friend.friend_id)
-          .single();
-
-        if (data) {
-          profiles[friend.friend_id] = data;
-        }
-      } catch (error) {
-        console.error(`Error fetching profile for ${friend.friend_name}:`, error);
-      }
-    }
-
-    setFriendProfiles(profiles);
-  };
-
-  // Load friends with details
+  // Load friends
   const loadFriends = async () => {
     if (user?.id) {
       setLoadingFriends(true);
-      const friends = await friendsService.getFriendsWithDetails(user.id);
-      setFriendsWithDetails(friends);
-      await fetchFriendProfiles(friends);
+      const friendsData = await friendsService.getFriends(user.id);
+      setFriends(friendsData);
       setLoadingFriends(false);
     }
   };
@@ -89,65 +59,33 @@ const Profile: React.FC = () => {
     const loadFriendCode = async () => {
       if (user?.id) {
         const code = await friendsService.getMyFriendCode();
-        if (code) {
-          setFriendCode(code);
-        } else {
-          // Fallback to generating from UUID
-          setFriendCode(friendsService.generateFriendCode(user.id));
-        }
+        setFriendCode(code || friendsService.generateFriendCode(user.id));
       }
     };
-
     loadFriendCode();
   }, [user?.id]);
 
-  // Reload friends when modal closes (in case changes were made)
   const handleFriendsModalClose = () => {
     setShowFriendsModal(false);
-    loadFriends(); // Refresh friends list
+    loadFriends();
   };
 
-  // Copy friend code to clipboard
-  const handleCopyFriendCode = async () => {
+  const copyToClipboard = async (text: string, label: string) => {
     try {
-      await navigator.clipboard.writeText(friendCode);
-      setCopiedCode(true);
-      toast.success('Friend Code copied to clipboard!');
-      setTimeout(() => setCopiedCode(false), 2000);
-    } catch (error) {
-      toast.error('Failed to copy Friend Code');
-    }
-  };
-
-  // Copy friend's code to clipboard
-  const handleCopyFriendCodeById = async (friendId: string, friendName: string) => {
-    try {
-      const friendCode = friendsService.generateFriendCode(friendId);
-      await navigator.clipboard.writeText(friendCode);
-      setCopiedFriendCodes(prev => new Set(prev).add(friendId));
-      toast.success(`${friendName}'s Friend Code copied to clipboard!`);
-      setTimeout(() => {
-        setCopiedFriendCodes(prev => {
-          const newSet = new Set(prev);
-          newSet.delete(friendId);
-          return newSet;
-        });
-      }, 2000);
-    } catch (error) {
-      toast.error('Failed to copy Friend Code');
+      await navigator.clipboard.writeText(text);
+      toast.success(`${label} copied!`);
+    } catch {
+      toast.error('Failed to copy');
     }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
     try {
       setStatus({ type: null, message: '' });
-
       const { error } = await updateProfile({ username: formData.username });
       if (error) throw error;
-
-      setStatus({ type: 'success', message: 'Profile updated successfully!' });
+      setStatus({ type: 'success', message: 'Profile updated!' });
     } catch (error: any) {
       setStatus({ type: 'error', message: error.message || 'Failed to update profile' });
     }
@@ -178,301 +116,198 @@ const Profile: React.FC = () => {
     );
   }
 
-  const StatusMessage = () => {
-    if (!status.type) return null;
-
-    const isError = status.type === 'error';
-    return (
-      <div className={`p-4 mb-6 rounded-md ${isError ? 'bg-red-50 border-red-200' : 'bg-green-50 border-green-200'}`}>
-        <p className={`text-sm ${isError ? 'text-red-700' : 'text-green-700'}`}>
-          {status.message}
-        </p>
-      </div>
-    );
-  };
-
   return (
-    <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-4xl mx-auto space-y-6">
+    <div className="min-h-screen bg-gray-50 py-8 px-4">
+      <div className="max-w-3xl mx-auto space-y-6">
 
         {/* Profile Card */}
-        <div className="bg-white rounded-lg shadow-lg p-6">
-          <div className="flex justify-between items-center mb-6">
-            <h2 className="text-2xl font-bold text-gray-900">Your Profile</h2>
-            <button onClick={handleSignOut} className="text-red-500 hover:text-red-700 font-medium">
+        <div className="bg-white rounded-lg shadow p-6">
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-xl font-bold text-gray-900">Profile</h2>
+            <button onClick={handleSignOut} className="text-red-500 hover:text-red-700 text-sm font-medium">
               Sign Out
             </button>
           </div>
 
-          <StatusMessage />
+          {status.type && (
+            <div className={`p-3 mb-4 rounded text-sm ${status.type === 'error' ? 'bg-red-50 text-red-700' : 'bg-green-50 text-green-700'}`}>
+              {status.message}
+            </div>
+          )}
 
-          <div className="grid md:grid-cols-3 gap-8">
-            {/* Avatar Section */}
-            <div className="text-center">
-              <div className="w-32 h-32 mx-auto mb-4 rounded-full overflow-hidden bg-gray-100">
+          <div className="flex flex-col sm:flex-row gap-6">
+            {/* Avatar */}
+            <div className="text-center sm:text-left">
+              <div className="w-20 h-20 mx-auto sm:mx-0 rounded-full overflow-hidden bg-gray-100">
                 {profile?.avatar_url ? (
                   <img src={profile.avatar_url} alt="Profile" className="w-full h-full object-cover" />
                 ) : (
-                  <div className="w-full h-full flex items-center justify-center bg-gray-50">
-                    <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/25.png" alt="Pokemon" className="w-20 h-20" />
+                  <div className="w-full h-full flex items-center justify-center">
+                    <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/25.png" alt="Pokemon" className="w-14 h-14" />
                   </div>
                 )}
               </div>
-              <h3 className="text-xl font-semibold">{profile?.username || 'Trainer'}</h3>
-              <p className="text-gray-500 text-sm mb-3">{user.email}</p>
+              <p className="text-gray-500 text-sm mt-2">{user.email}</p>
 
               {/* Friend Code */}
-              <div className="mt-3">
-                <p className="text-xs text-gray-500 mb-1">Friend Code</p>
-                <div className="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-md px-3 py-2">
-                  <code className="text-sm font-mono font-bold text-blue-600 tracking-wider">
-                    {friendCode || '--------'}
-                  </code>
-                  <button
-                    onClick={handleCopyFriendCode}
-                    disabled={!friendCode}
-                    className="text-gray-600 hover:text-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                    title="Copy Friend Code"
-                  >
-                    {copiedCode ? (
-                      <Check className="h-4 w-4 text-green-600" />
-                    ) : (
-                      <Copy className="h-4 w-4" />
-                    )}
-                  </button>
-                </div>
-              </div>
+              <button
+                onClick={() => copyToClipboard(friendCode, 'Friend code')}
+                className="mt-2 text-xs bg-gray-100 hover:bg-gray-200 px-3 py-1.5 rounded font-mono"
+                title="Click to copy"
+              >
+                Code: <span className="font-bold text-blue-600">{friendCode || '--------'}</span>
+              </button>
             </div>
 
-            {/* Profile Form */}
-            <div className="md:col-span-2">
+            {/* Form */}
+            <div className="flex-1">
               <form onSubmit={handleSubmit}>
-                <div className="mb-4">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Username</label>
+                <div className="mb-3">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Username</label>
                   <input
                     type="text"
                     value={formData.username}
                     onChange={(e) => setFormData({ username: e.target.value })}
-                    className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full p-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   />
                 </div>
                 <button
                   type="submit"
-                  disabled={false}
-                  className="w-full bg-blue-500 hover:bg-blue-600 text-white py-3 px-4 rounded-md font-medium disabled:opacity-50"
+                  className="w-full bg-blue-500 hover:bg-blue-600 text-white py-2 rounded font-medium"
                 >
-                  Update Profile
+                  Save
                 </button>
               </form>
             </div>
           </div>
         </div>
 
-        {/* Favorites Section */}
-        <div className="bg-white rounded-lg shadow-lg p-6">
-          <h2 className="text-2xl font-bold text-gray-900 mb-6">Your Favorite Pokémon</h2>
-
+        {/* Favorites */}
+        <div className="bg-white rounded-lg shadow p-6">
+          <h2 className="text-lg font-bold text-gray-900 mb-4">Favorites</h2>
           {favoritePokemonIds.length === 0 ? (
-            <div className="text-center py-8">
-              <p className="text-gray-600 mb-4">No favorites yet</p>
-              <button onClick={() => navigate('/')} className="bg-blue-500 hover:bg-blue-600 text-white px-6 py-3 rounded-md font-medium">
-                Browse Pokémon
-              </button>
-            </div>
+            <p className="text-gray-500 text-sm">No favorites yet. <button onClick={() => navigate('/')} className="text-blue-500 hover:underline">Browse Pokémon</button></p>
           ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-4">
-              {favoritePokemonIds.map((pokemonId) => (
-                <div
+            <div className="flex flex-wrap gap-2">
+              {favoritePokemonIds.slice(0, 12).map((pokemonId) => (
+                <button
                   key={pokemonId}
                   onClick={() => navigate(`/pokemon/${pokemonId}`)}
-                  className="bg-gray-50 rounded-lg p-4 text-center cursor-pointer hover:bg-gray-100 transition-colors border border-gray-200"
+                  className="w-12 h-12 bg-gray-50 rounded border hover:bg-gray-100"
                 >
                   <img
                     src={`https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${pokemonId}.png`}
-                    alt={`Pokemon ${pokemonId}`}
-                    className="w-16 h-16 mx-auto mb-2"
+                    alt={`#${pokemonId}`}
+                    className="w-full h-full object-contain"
                   />
-                  <p className="text-sm font-medium">#{pokemonId}</p>
-                </div>
+                </button>
               ))}
+              {favoritePokemonIds.length > 12 && (
+                <span className="text-sm text-gray-500 self-center ml-2">+{favoritePokemonIds.length - 12} more</span>
+              )}
             </div>
           )}
         </div>
 
-        {/* Friends Section */}
-        <div className="bg-white rounded-lg shadow-lg p-6">
-          <div className="flex justify-between items-center mb-6">
-            <h2 className="text-2xl font-bold text-gray-900">
-              Your Friends
-              {friendsWithDetails.length > 0 && (
-                <span className="text-sm font-normal text-gray-500 ml-2">
-                  ({friendsWithDetails.length})
-                </span>
-              )}
+        {/* Friends */}
+        <div className="bg-white rounded-lg shadow p-6">
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-lg font-bold text-gray-900">
+              Friends {friends.length > 0 && <span className="text-sm font-normal text-gray-500">({friends.length})</span>}
             </h2>
             <button
               onClick={() => setShowFriendsModal(true)}
-              className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md text-sm font-medium"
+              className="text-blue-500 hover:text-blue-600 text-sm font-medium"
             >
-              Manage Friends
+              Manage
             </button>
           </div>
 
           {loadingFriends ? (
-            <div className="text-center py-8">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-4"></div>
-              <p className="text-gray-600">Loading friends...</p>
+            <div className="flex items-center justify-center py-4">
+              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500"></div>
             </div>
-          ) : friendsWithDetails.length === 0 ? (
-            <div className="text-center py-8">
-              <p className="text-gray-600 mb-4">You haven't added any friends yet.</p>
-              <p className="text-sm text-gray-500 mb-6">
-                Add friends to compete on leaderboards and see their favorite Pokémon!
-              </p>
-              <button
-                onClick={() => setShowFriendsModal(true)}
-                className="bg-blue-500 hover:bg-blue-600 text-white px-6 py-3 rounded-md font-medium"
-              >
-                Add Your First Friend
-              </button>
-            </div>
+          ) : friends.length === 0 ? (
+            <p className="text-gray-500 text-sm">No friends yet. <button onClick={() => setShowFriendsModal(true)} className="text-blue-500 hover:underline">Add friends</button></p>
           ) : (
-            <div className="space-y-3">
-              {friendsWithDetails.map((friend) => (
-                <div
-                  key={friend.friend_id}
-                  className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-200"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full overflow-hidden bg-gray-200 flex items-center justify-center">
-                      {friendProfiles[friend.friend_id]?.avatar_url ? (
-                        <img
-                          src={friendProfiles[friend.friend_id].avatar_url}
-                          alt={`${friend.friend_name}'s avatar`}
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <span className="text-gray-600 font-bold text-sm">
-                          {friend.friend_name.charAt(0).toUpperCase()}
-                        </span>
-                      )}
-                    </div>
-                    <div>
-                      <h4 className="font-semibold text-gray-900">{friend.friend_name}</h4>
-                      <div className="flex items-center gap-2 mt-1">
-                        <p className="text-sm text-gray-600 font-mono">
-                          Code: <span className="font-bold text-blue-600">{friendsService.generateFriendCode(friend.friend_id)}</span>
-                        </p>
-                        <button
-                          onClick={() => handleCopyFriendCodeById(friend.friend_id, friend.friend_name)}
-                          className="text-gray-600 hover:text-blue-600 transition-colors"
-                          title={`Copy ${friend.friend_name}'s Friend Code`}
-                        >
-                          {copiedFriendCodes.has(friend.friend_id) ? (
-                            <Check className="h-4 w-4 text-green-600" />
-                          ) : (
-                            <Copy className="h-4 w-4" />
-                          )}
-                        </button>
+            <div className="space-y-2">
+              {friends.map((friend) => {
+                const code = friendsService.generateFriendCode(friend.friend_id);
+                return (
+                  <div key={friend.friend_id} className="flex items-center justify-between p-3 bg-gray-50 rounded">
+                    <div className="flex items-center gap-2">
+                      <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 font-bold text-sm">
+                        {friend.friend_name.charAt(0).toUpperCase()}
                       </div>
+                      <span className="font-medium text-gray-900">{friend.friend_name}</span>
                     </div>
+                    <button
+                      onClick={() => copyToClipboard(`${friend.friend_name} #${code}`, friend.friend_name)}
+                      className="text-xs text-gray-500 hover:text-gray-700 font-mono"
+                    >
+                      #{code}
+                    </button>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>
 
-        {/* Friends Modal */}
-        <FriendsModal
-          isOpen={showFriendsModal}
-          onClose={handleFriendsModalClose}
-        />
-
-        {/* Teams Section */}
-        <div className="bg-white rounded-lg shadow-lg p-6">
-          <div className="flex justify-between items-center mb-6">
-            <h2 className="text-2xl font-bold text-gray-900">Your Pokémon Teams</h2>
-            <button onClick={() => navigate('/teams')} className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md font-medium">
-              Manage Teams
+        {/* Teams */}
+        <div className="bg-white rounded-lg shadow p-6">
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-lg font-bold text-gray-900">Teams</h2>
+            <button onClick={() => navigate('/teams')} className="text-blue-500 hover:text-blue-600 text-sm font-medium">
+              Manage
             </button>
           </div>
 
           {userTeams.length === 0 ? (
-            <div className="text-center py-8">
-              <p className="text-gray-600 mb-4">You haven't created any teams yet.</p>
-              <button onClick={() => navigate('/teams')} className="bg-blue-500 hover:bg-blue-600 text-white px-6 py-3 rounded-md font-medium">
-                Create Your First Team
-              </button>
-            </div>
+            <p className="text-gray-500 text-sm">No teams yet. <button onClick={() => navigate('/teams')} className="text-blue-500 hover:underline">Create one</button></p>
           ) : (
-            <div className="space-y-4">
-              {userTeams.slice(0, 3).map((team: { id: number; name: string; description?: string; created_at: string }) => (
-                <div key={team.id} className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 transition-colors">
-                  <div className="flex justify-between items-start mb-3">
-                    <div>
-                      <h3 className="font-semibold text-gray-900">{team.name}</h3>
-                      {team.description && (
-                        <p className="text-sm text-gray-600 mt-1">{team.description}</p>
-                      )}
-                    </div>
-                    <button
-                      onClick={() => navigate(`/team-editor/${team.id}`)}
-                      className="text-blue-500 hover:text-blue-600 text-sm font-medium"
-                    >
-                      View Team →
-                    </button>
+            <div className="space-y-3">
+              {userTeams.slice(0, 3).map((team: { id: number; name: string; description?: string }) => (
+                <button
+                  key={team.id}
+                  onClick={() => navigate(`/team-editor/${team.id}`)}
+                  className="w-full text-left p-3 bg-gray-50 rounded hover:bg-gray-100 transition-colors"
+                >
+                  <div className="flex justify-between items-center mb-2">
+                    <span className="font-medium text-gray-900">{team.name}</span>
+                    <span className="text-gray-400 text-sm">→</span>
                   </div>
-
-                  {/* Team preview - show Pokemon in team */}
-                  <div className="flex gap-2">
+                  <div className="flex gap-1">
                     {[1, 2, 3, 4, 5, 6].map((position) => {
                       const member = teamMembers[team.id]?.find(m => m.position === position);
                       return (
-                        <div
-                          key={position}
-                          className="w-10 h-10 bg-gray-100 rounded border border-gray-200 flex items-center justify-center overflow-hidden"
-                          title={member ? `Position ${position}: Pokémon #${member.pokemon_id}` : `Position ${position}: Empty`}
-                        >
+                        <div key={position} className="w-8 h-8 bg-gray-100 rounded border flex items-center justify-center">
                           {member ? (
                             <img
                               src={`https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${member.pokemon_id}.png`}
-                              alt={`Pokémon ${member.pokemon_id}`}
+                              alt=""
                               className="w-full h-full object-contain"
-                              onError={(e) => {
-                                // Fallback to question mark if image fails to load
-                                const target = e.target as HTMLImageElement;
-                                target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHBhdGggZD0iTTEyIDJDMTMuMSAyIDE0IDIuOSAxNCA0QzE0IDUuMSAxMy4xIDYgMTIgNkMxMC45IDYgMTAgNS4xIDEwIDRDMTAgMi45IDEwLjkgMiAxMiAyWk0xMiAxNEM5LjggMTQgNy41IDE1LjMgNy41IDE3VjE5SDR2LTIuNUM0IDE0LjY3IDYuNjcgMTIgMTIgMTJDMTcuMzMgMTIgMjAgMTQuNjcgMjAgMTcuNVYyMEgxOS41VjE3QzE5LjUgMTUuMyAxNy4yIDE0IDEyIDE0WiIgZmlsbD0iIzk5YTNhZiIvPgo8L3N2Zz4K';
-                              }}
                             />
                           ) : (
-                            <span className="text-xs text-gray-400">{position}</span>
+                            <span className="text-xs text-gray-300">{position}</span>
                           )}
                         </div>
                       );
                     })}
                   </div>
-
-                  <div className="mt-2 flex justify-between items-center text-xs text-gray-500">
-                    <span>Team Preview</span>
-                    <span>Created {new Date(team.created_at).toLocaleDateString()}</span>
-                  </div>
-                </div>
+                </button>
               ))}
-
               {userTeams.length > 3 && (
-                <div className="text-center pt-4 border-t border-gray-200">
-                  <button
-                    onClick={() => navigate('/teams')}
-                    className="text-blue-500 hover:text-blue-600 font-medium"
-                  >
-                    View all {userTeams.length} teams →
-                  </button>
-                </div>
+                <button onClick={() => navigate('/teams')} className="text-sm text-blue-500 hover:underline">
+                  View all {userTeams.length} teams
+                </button>
               )}
             </div>
           )}
         </div>
+
+        {/* Friends Modal */}
+        <FriendsModal isOpen={showFriendsModal} onClose={handleFriendsModalClose} />
       </div>
     </div>
   );
