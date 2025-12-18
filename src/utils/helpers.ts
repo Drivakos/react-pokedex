@@ -19,15 +19,36 @@ export const formatMoveName = (move: string): string => {
 };
 
 /**
+ * Gets the thumbnail URL for a Pokemon by ID
+ */
+export const getThumbnailUrl = (pokemonId: number): string => {
+  const paddedId = String(pokemonId).padStart(3, '0');
+  return `/images/pokemon/thumbnails/${paddedId}.png`;
+};
+
+/**
+ * Gets the Pokemon image URL, prioritizing local thumbnails with API fallback
+ */
+export const getPokemonImage = (pokemonId: number, sprites?: any): string => {
+  // First try local thumbnail
+  try {
+    return getThumbnailUrl(pokemonId);
+  } catch {
+    // Fallback to API sprites
+    return getOfficialArtwork(sprites);
+  }
+};
+
+/**
  * Gets the official artwork URL for a Pokemon
  */
 export const getOfficialArtwork = (sprites: any): string => {
   try {
-    const parsedSprites = typeof sprites === 'string' 
-      ? JSON.parse(sprites) 
+    const parsedSprites = typeof sprites === 'string'
+      ? JSON.parse(sprites)
       : sprites;
-    
-    return parsedSprites?.other?.['official-artwork']?.front_default || 
+
+    return parsedSprites?.other?.['official-artwork']?.front_default ||
            parsedSprites?.front_default ||
            'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/0.png';
   } catch {

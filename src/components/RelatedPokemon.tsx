@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { TYPE_COLORS } from '../types/pokemon';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { getPokemonImage } from '../utils/helpers';
 
 interface Pokemon {
   id: number;
@@ -136,7 +137,7 @@ const RelatedPokemon: React.FC<RelatedPokemonProps> = ({
             name: pokemonData[id].name,
             types: pokemonData[id].types,
             sprites: {
-              front_default: `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${id}.png`
+              front_default: getPokemonImage(id)
             }
           });
         }

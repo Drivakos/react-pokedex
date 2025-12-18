@@ -1,7 +1,7 @@
 import React, { memo } from 'react';
 import { Pokemon } from '../types/pokemon';
 import { TYPE_COLORS } from '../types/pokemon';
-import { formatName, formatPokemonId, getOfficialArtwork } from '../utils/helpers';
+import { formatName, formatPokemonId, getPokemonImage } from '../utils/helpers';
 
 export interface MemoryCardProps {
   pokemon: Pokemon;
@@ -27,7 +27,7 @@ export const PokemonCard: React.FC<PokemonCardProps> = memo(({ pokemon, onClick 
           {formatPokemonId(pokemon.id)}
         </span>
         <img
-          src={getOfficialArtwork(pokemon.sprites)}
+          src={getPokemonImage(pokemon.id, pokemon.sprites)}
           alt={pokemon.name}
           title={`${formatName(pokemon.name)} - ${formatPokemonId(pokemon.id)}`}
           className="w-full h-40 object-contain transform transition-transform duration-300 group-hover:scale-110 drop-shadow-md"
@@ -116,7 +116,7 @@ export const MemoryCard: React.FC<MemoryCardProps> = memo(({
             {formatPokemonId(pokemon.id)}
           </span>
           <img
-            src={getOfficialArtwork(pokemon.sprites)}
+            src={getPokemonImage(pokemon.id, pokemon.sprites)}
             alt={pokemon.name}
             title={`${formatName(pokemon.name)} - ${formatPokemonId(pokemon.id)}`}
             className="w-full h-32 sm:h-40 object-contain transform transition-transform duration-300 drop-shadow-md"

@@ -4,6 +4,7 @@ import { Team, TeamMember, supabase } from '../../lib/supabase';
 import { checkSession, withSession } from '../../lib/auth-helpers';
 import { Plus, X } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { getPokemonImage } from '../../utils/helpers';
 
 interface Pokemon {
   id: number;
@@ -304,7 +305,7 @@ const TeamSelector: React.FC<TeamSelectorProps> = ({ pokemon, onClose }) => {
                     </div>
                     {/* Pokemon sprite */}
                     <img
-                      src={`https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${pokemonAtPosition.pokemon_id}.png`}
+                      src={getPokemonImage(pokemonAtPosition.pokemon_id)}
                       alt={`Pokemon ${pokemonAtPosition.pokemon_id}`}
                       className="w-8 h-8 object-contain"
                     />

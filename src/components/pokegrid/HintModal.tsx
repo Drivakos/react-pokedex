@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Pokemon } from '../../types/pokemon';
 import { GridConstraint } from './types';
 import { checkConstraint } from '../../utils/pokegrid-game.utils';
+import { getPokemonImage } from '../../utils/helpers';
 
 interface HintModalProps {
   isOpen: boolean;
@@ -201,7 +202,7 @@ export const HintModal: React.FC<HintModalProps> = ({
                       <div key={index} className="text-center">
                         <div className="w-16 h-16 bg-gray-300 rounded-lg flex items-center justify-center">
                           <img
-                            src={pokemon.sprites?.front_default || ''}
+                            src={getPokemonImage(pokemon.id, pokemon.sprites)}
                             alt="Silhouette"
                             className="w-12 h-12 filter brightness-0 opacity-50"
                           />

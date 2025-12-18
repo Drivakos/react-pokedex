@@ -5,6 +5,7 @@ import { TeamMember } from '../../lib/supabase';
 import { friendsService, type Friend } from '../../services/friends.service';
 import { FriendsModal } from '../friends';
 import toast from 'react-hot-toast';
+import { getPokemonImage } from '../../utils/helpers';
 
 const Profile: React.FC = () => {
   const { user, profile, signOut, updateProfile, teams, favorites, getTeamMembers } = useAuth();
@@ -196,7 +197,7 @@ const Profile: React.FC = () => {
                   className="w-12 h-12 bg-gray-50 rounded border hover:bg-gray-100"
                 >
                   <img
-                    src={`https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${pokemonId}.png`}
+                    src={getPokemonImage(pokemonId)}
                     alt={`#${pokemonId}`}
                     className="w-full h-full object-contain"
                   />
@@ -284,7 +285,7 @@ const Profile: React.FC = () => {
                         <div key={position} className="w-8 h-8 bg-gray-100 rounded border flex items-center justify-center">
                           {member ? (
                             <img
-                              src={`https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${member.pokemon_id}.png`}
+                              src={getPokemonImage(member.pokemon_id)}
                               alt=""
                               className="w-full h-full object-contain"
                             />

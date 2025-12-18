@@ -44,19 +44,20 @@ const PokemonCards: React.FC<PokemonCardsProps> = ({ pokemonName, pokemonId }) =
   const [hasMore, setHasMore] = useState<boolean>(true);
   const [lastFetchedPokemon, setLastFetchedPokemon] = useState<string>('');
   const [loadedFromCache, setLoadedFromCache] = useState<boolean>(false);
-  
+  const [cachedImageUrl, setCachedImageUrl] = useState<string>('');
+
 
   const animationFrameIdRef = useRef<number | null>(null);
-  const previousRotationRef = useRef<{x: number, y: number}>({ x: 0, y: 0 });
+  const previousRotationRef = useRef<{ x: number, y: number }>({ x: 0, y: 0 });
   const currentCardRef = useRef<HTMLDivElement | null>(null);
   const isRequestInProgressRef = useRef<boolean>(false);
-  
+
 
   const getRarityClass = (rarity?: string): string => {
     if (!rarity) return '';
-    
+
     const rarityLower = rarity.toLowerCase();
-    
+
 
     if (rarityLower.includes('secret rare') || rarityLower.includes('hyper rare') || rarityLower.includes('rainbow rare')) {
       return 'prismatic';
@@ -80,29 +81,29 @@ const PokemonCards: React.FC<PokemonCardsProps> = ({ pokemonName, pokemonId }) =
 
     return '';
   };
-  
+
 
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
     const cardImageContainer = e.currentTarget;
     currentCardRef.current = cardImageContainer;
-    
+
     const cardId = cardImageContainer.getAttribute('data-card-id');
     const cardRarity = cardImageContainer.getAttribute('data-card-rarity') || '';
     if (!cardId) return;
-    
+
 
     if (animationFrameIdRef.current !== null) {
       cancelAnimationFrame(animationFrameIdRef.current);
     }
-    
+
 
     const rect = cardImageContainer.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
-    
+
 
     let tiltFactor = 35;
-    
+
     if (cardRarity.includes('prismatic')) {
       tiltFactor = 55;
     } else if (cardRarity.includes('holographic')) {
@@ -110,29 +111,29 @@ const PokemonCards: React.FC<PokemonCardsProps> = ({ pokemonName, pokemonId }) =
     } else if (cardRarity.includes('ultra-rare')) {
       tiltFactor = 40;
     }
-    
+
 
     const rawXRotation = tiltFactor * ((y - rect.height / 2) / rect.height);
     const rawYRotation = -tiltFactor * ((x - rect.width / 2) / rect.width);
-    
+
 
     const animateCard = () => {
       if (!currentCardRef.current) return;
-      
+
 
       const smoothingFactor = 0.08;
-      
+
 
       const prevX = previousRotationRef.current.x;
       const prevY = previousRotationRef.current.y;
-      
+
 
       const xRotation = prevX + (rawXRotation - prevX) * smoothingFactor;
       const yRotation = prevY + (rawYRotation - prevY) * smoothingFactor;
-      
+
 
       previousRotationRef.current = { x: xRotation, y: yRotation };
-      
+
 
       currentCardRef.current.style.transform = `
         perspective(600px)
@@ -140,37 +141,37 @@ const PokemonCards: React.FC<PokemonCardsProps> = ({ pokemonName, pokemonId }) =
         rotateX(${xRotation}deg)
         rotateY(${yRotation}deg)
       `;
-      
+
 
       updateShineEffect(currentCardRef.current, cardRarity, xRotation, yRotation, tiltFactor);
-      
+
 
       animationFrameIdRef.current = requestAnimationFrame(animateCard);
     };
-    
+
 
     animateCard();
   };
-    
+
 
   const updateShineEffect = (cardElement: HTMLDivElement, cardRarity: string, xRotation: number, yRotation: number, tiltFactor: number) => {
     const rect = cardElement.getBoundingClientRect();
     const shine = cardElement.querySelector('.card-shine') as HTMLElement;
-    
-    if (!shine) return;
-    
 
-    
+    if (!shine) return;
+
+
+
 
     const reflectionX = rect.width * (0.5 - (yRotation / (tiltFactor * 2)));
     const reflectionY = rect.height * (0.5 - (xRotation / (tiltFactor * 2)));
-    
+
 
     const tiltMagnitude = Math.sqrt(xRotation * xRotation + yRotation * yRotation) / tiltFactor;
-    
+
 
     let reflectionIntensity = 0.35 + (tiltMagnitude * 0.45);
-    
+
 
     if (cardRarity.includes('prismatic')) {
       reflectionIntensity = 0.45 + (tiltMagnitude * 0.55);
@@ -181,7 +182,7 @@ const PokemonCards: React.FC<PokemonCardsProps> = ({ pokemonName, pokemonId }) =
     } else if (cardRarity.includes('rare')) {
       reflectionIntensity = 0.3 + (tiltMagnitude * 0.4);
     }
-    
+
 
     if (cardRarity.includes('prismatic')) {
 
@@ -198,11 +199,11 @@ const PokemonCards: React.FC<PokemonCardsProps> = ({ pokemonName, pokemonId }) =
           rgba(255, 255, 255, 0) 100%
         )
       `;
-    } 
+    }
     else if (cardRarity.includes('holographic')) {
 
       const tiltAngle = Math.atan2(xRotation, yRotation) * (180 / Math.PI);
-      
+
 
       shine.style.background = `
         linear-gradient(
@@ -229,7 +230,7 @@ const PokemonCards: React.FC<PokemonCardsProps> = ({ pokemonName, pokemonId }) =
           rgba(255, 255, 255, 0) 100%
         )
       `;
-    } 
+    }
     else if (cardRarity.includes('rare')) {
 
       shine.style.background = `
@@ -240,7 +241,7 @@ const PokemonCards: React.FC<PokemonCardsProps> = ({ pokemonName, pokemonId }) =
           rgba(255, 255, 255, 0) 80%
         )
       `;
-    } 
+    }
     else {
 
       shine.style.background = `
@@ -251,7 +252,7 @@ const PokemonCards: React.FC<PokemonCardsProps> = ({ pokemonName, pokemonId }) =
         )
       `;
     }
-    
+
 
     const particles = cardElement.querySelector('.card-particles') as HTMLElement;
     if (particles) {
@@ -310,7 +311,7 @@ const PokemonCards: React.FC<PokemonCardsProps> = ({ pokemonName, pokemonId }) =
     try {
       const cacheKey = getCacheKey(pokemonId);
       const cached = localStorage.getItem(cacheKey);
-      
+
       if (!cached) {
         console.log('📦 No cache found for', pokemonName);
         return null;
@@ -344,7 +345,7 @@ const PokemonCards: React.FC<PokemonCardsProps> = ({ pokemonName, pokemonId }) =
         timestamp: Date.now(),
         pokemonId: pokemonId || 0
       };
-      
+
       localStorage.setItem(cacheKey, JSON.stringify(data));
       console.log('💾 Saved to cache:', pokemonName, `(${cardsData.length} cards)`);
     } catch (err) {
@@ -438,19 +439,19 @@ const PokemonCards: React.FC<PokemonCardsProps> = ({ pokemonName, pokemonId }) =
       // Try direct API call first (bypass proxy to test)
       const isDevelopment = import.meta.env.DEV;
       const useProxy = false; // Temporarily disable proxy to test direct API
-      
+
       const apiUrl = useProxy && isDevelopment
         ? `/api/pokemontcg/cards?q=${encodeURIComponent(query)}&orderBy=set.releaseDate&page=${page}&pageSize=12`
         : `https://api.pokemontcg.io/v2/cards?q=${encodeURIComponent(query)}&orderBy=set.releaseDate&page=${page}&pageSize=12`;
 
-      console.log('🎴 Fetching Pokemon TCG cards:', { 
-        pokemon: pokemonName, 
-        pokemonId, 
+      console.log('🎴 Fetching Pokemon TCG cards:', {
+        pokemon: pokemonName,
+        pokemonId,
         query,
         apiUrl,
         isDevelopment,
         useProxy,
-        hasApiKey: !!POKEMONTCG_API_KEY 
+        hasApiKey: !!POKEMONTCG_API_KEY
       });
 
       const controller = new AbortController();
@@ -567,10 +568,12 @@ const PokemonCards: React.FC<PokemonCardsProps> = ({ pokemonName, pokemonId }) =
 
   const openCardModal = (card: PokemonCard) => {
     setSelectedCard(card);
+    setCachedImageUrl(card.images.large);
   };
 
   const closeCardModal = () => {
     setSelectedCard(null);
+    setCachedImageUrl('');
   };
 
   if (loading) {
@@ -647,13 +650,13 @@ const PokemonCards: React.FC<PokemonCardsProps> = ({ pokemonName, pokemonId }) =
           </div>
         )}
       </div>
-      
+
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
         {cards.map((card) => {
           const rarityClass = getRarityClass(card.rarity);
           return (
             <div key={card.id} className="card-container cursor-pointer">
-              <div 
+              <div
                 className={`card-image-container relative transition-all duration-300 ease-out hover:z-10 mb-2 ${rarityClass}`}
                 style={{ transition: 'transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1)' }}
                 onClick={() => openCardModal(card)}
@@ -662,29 +665,29 @@ const PokemonCards: React.FC<PokemonCardsProps> = ({ pokemonName, pokemonId }) =
                 data-card-id={card.id}
                 data-card-rarity={rarityClass}
               >
-                <img 
-                  src={card.images.small} 
-                  alt={`${card.name} card`} 
+                <img
+                  src={card.images.small}
+                  alt={`${card.name} card`}
                   title={`${card.name} - ${card.set.name} (${card.set.series})`}
                   className="rounded-lg shadow-md w-full relative z-10"
                   loading="lazy"
                 />
                 <div className="card-shine absolute inset-0 z-20 rounded-lg pointer-events-none"></div>
-                
+
                 <div className="absolute inset-0 bg-gradient-to-br from-transparent via-transparent to-black/5 rounded-lg z-0"></div>
-                
+
 
                 {rarityClass === 'rare' && (
                   <div className="absolute inset-0 bg-gradient-to-r from-yellow-200/20 to-yellow-400/20 rounded-lg z-5 pointer-events-none"></div>
                 )}
-                
+
 
                 {rarityClass === 'ultra-rare' && (
                   <>
                     <div className="absolute inset-0 bg-gradient-to-r from-purple-500/20 via-pink-500/20 to-blue-500/20 rounded-lg z-5 pointer-events-none animate-pulse"></div>
                     <div className="card-particles absolute inset-0 z-15 rounded-lg pointer-events-none opacity-0 transition-opacity duration-300">
                       {[...Array(20)].map((_, i) => (
-                        <div 
+                        <div
                           key={i}
                           className="absolute w-1 h-1 bg-white rounded-full animate-float"
                           style={{
@@ -699,14 +702,14 @@ const PokemonCards: React.FC<PokemonCardsProps> = ({ pokemonName, pokemonId }) =
                     <div className="absolute inset-0 border-2 border-yellow-400/50 rounded-lg z-25 pointer-events-none"></div>
                   </>
                 )}
-                
+
 
                 {rarityClass === 'holographic' && (
                   <>
                     <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/30 via-blue-500/30 to-purple-500/30 rounded-lg z-5 pointer-events-none animate-pulse"></div>
                     <div className="card-particles absolute inset-0 z-15 rounded-lg pointer-events-none opacity-0 transition-opacity duration-300">
                       {[...Array(25)].map((_, i) => (
-                        <div 
+                        <div
                           key={i}
                           className="absolute w-1 h-1 bg-cyan-300 rounded-full animate-float"
                           style={{
@@ -721,21 +724,21 @@ const PokemonCards: React.FC<PokemonCardsProps> = ({ pokemonName, pokemonId }) =
                     <div className="absolute inset-0 border-2 border-cyan-400/50 rounded-lg z-25 pointer-events-none"></div>
                   </>
                 )}
-                
+
 
                 {rarityClass === 'prismatic' && (
                   <>
                     <div className="absolute inset-0 bg-gradient-to-r from-pink-500/30 via-purple-500/30 to-indigo-500/30 rounded-lg z-5 pointer-events-none animate-pulse"></div>
                     <div className="card-particles absolute inset-0 z-15 rounded-lg pointer-events-none opacity-0 transition-opacity duration-300 particles-prismatic">
                       {[...Array(30)].map((_, i) => (
-                        <div 
+                        <div
                           key={i}
                           className="absolute rounded-full animate-float"
                           style={{
                             width: `${1 + Math.random() * 2}px`,
                             height: `${1 + Math.random() * 2}px`,
                             backgroundColor: [
-                              '#ff0000', '#ff7f00', '#ffff00', '#00ff00', 
+                              '#ff0000', '#ff7f00', '#ffff00', '#00ff00',
                               '#0000ff', '#4b0082', '#9400d3', '#ff00ff'
                             ][Math.floor(Math.random() * 8)],
                             left: `${Math.random() * 100}%`,
@@ -769,7 +772,7 @@ const PokemonCards: React.FC<PokemonCardsProps> = ({ pokemonName, pokemonId }) =
           );
         })}
       </div>
-      
+
 
       {hasMore && cards.length > 0 && (
         <div className="mt-6 text-center">
@@ -789,39 +792,46 @@ const PokemonCards: React.FC<PokemonCardsProps> = ({ pokemonName, pokemonId }) =
           </button>
         </div>
       )}
-      
+
 
       {selectedCard && (
         <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4" onClick={closeCardModal}>
           <div className="relative max-w-lg mx-auto" onClick={(e) => e.stopPropagation()}>
-            <button 
+            <button
               className="absolute -top-10 right-0 text-white text-2xl"
               onClick={closeCardModal}
             >
               &times;
             </button>
             <div className={`relative ${getRarityClass(selectedCard.rarity)}-modal`}>
-              <img 
-                src={selectedCard.images.large} 
-                alt={`${selectedCard.name} card large`} 
+              <img
+                src={cachedImageUrl || selectedCard.images.large}
+                alt={`${selectedCard.name} card large`}
                 title={`${selectedCard.name} - ${selectedCard.set.name} (${selectedCard.set.series}) - ${selectedCard.rarity || 'Trading Card'}`}
                 className="rounded-lg max-h-[80vh] max-w-full relative z-10"
+                onError={(e) => {
+                  // Fallback to original if cached fails
+                  const target = e.target as HTMLImageElement;
+                  if (target.src !== selectedCard.images.large) {
+                    target.src = selectedCard.images.large;
+                  }
+                }}
               />
-              
+
 
               {getRarityClass(selectedCard.rarity) === 'prismatic' && (
                 <>
                   <div className="absolute inset-0 bg-gradient-to-r from-pink-500/30 via-purple-500/30 to-indigo-500/30 rounded-lg z-5 animate-pulse"></div>
                   <div className="absolute inset-0 z-15 rounded-lg">
                     {[...Array(40)].map((_, i) => (
-                      <div 
+                      <div
                         key={i}
                         className="absolute rounded-full animate-float"
                         style={{
                           width: `${1 + Math.random() * 3}px`,
                           height: `${1 + Math.random() * 3}px`,
                           backgroundColor: [
-                            '#ff0000', '#ff7f00', '#ffff00', '#00ff00', 
+                            '#ff0000', '#ff7f00', '#ffff00', '#00ff00',
                             '#0000ff', '#4b0082', '#9400d3', '#ff00ff'
                           ][Math.floor(Math.random() * 8)],
                           left: `${Math.random() * 100}%`,
@@ -835,13 +845,13 @@ const PokemonCards: React.FC<PokemonCardsProps> = ({ pokemonName, pokemonId }) =
                   <div className="absolute inset-0 border-4 border-pink-400/70 rounded-lg z-25"></div>
                 </>
               )}
-              
+
               {getRarityClass(selectedCard.rarity) === 'holographic' && (
                 <>
                   <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/30 via-blue-500/30 to-purple-500/30 rounded-lg z-5 animate-pulse"></div>
                   <div className="absolute inset-0 z-15 rounded-lg">
                     {[...Array(35)].map((_, i) => (
-                      <div 
+                      <div
                         key={i}
                         className="absolute w-2 h-2 bg-cyan-300 rounded-full animate-float"
                         style={{
@@ -856,13 +866,13 @@ const PokemonCards: React.FC<PokemonCardsProps> = ({ pokemonName, pokemonId }) =
                   <div className="absolute inset-0 border-4 border-cyan-400/50 rounded-lg z-25"></div>
                 </>
               )}
-              
+
               {getRarityClass(selectedCard.rarity) === 'ultra-rare' && (
                 <>
                   <div className="absolute inset-0 bg-gradient-to-r from-purple-500/20 via-pink-500/20 to-blue-500/20 rounded-lg z-5 animate-pulse"></div>
                   <div className="absolute inset-0 z-15 rounded-lg">
                     {[...Array(30)].map((_, i) => (
-                      <div 
+                      <div
                         key={i}
                         className="absolute w-2 h-2 bg-white rounded-full animate-float"
                         style={{
@@ -877,7 +887,7 @@ const PokemonCards: React.FC<PokemonCardsProps> = ({ pokemonName, pokemonId }) =
                   <div className="absolute inset-0 border-4 border-yellow-400/50 rounded-lg z-25"></div>
                 </>
               )}
-              
+
               {getRarityClass(selectedCard.rarity) === 'rare' && (
                 <div className="absolute inset-0 bg-gradient-to-r from-yellow-200/30 to-yellow-400/30 rounded-lg z-5"></div>
               )}

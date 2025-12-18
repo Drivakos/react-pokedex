@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { ArrowLeft, Save, Trash2, Plus, Zap, Settings, Award, ChevronUp, ChevronDown, Copy } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { formatName, getOfficialArtwork } from '../../utils/helpers';
+import { formatName, getPokemonImage } from '../../utils/helpers';
 import MovesFilter from '../filters/MovesFilter';
 import { fetchPokemonMoves, fetchMoveDetails, fetchPokemonAbilities, fetchCompetitiveItems } from '../../services/api';
 
@@ -692,7 +692,7 @@ const MovesetEditorContent: React.FC<MovesetEditorProps> = ({ pokemon, teamId, o
           <div className="bg-white rounded-xl p-6 shadow-lg">
             <div className="flex items-center gap-6">
               <img
-                src={getOfficialArtwork(pokemon.sprites)}
+                src={getPokemonImage(pokemon.id, pokemon.sprites)}
                 alt={formatName(pokemon.name)}
                 className="w-20 h-20 object-contain"
                 onError={(e) => {
