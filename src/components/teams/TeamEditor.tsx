@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import MovesetEditor from './MovesetEditor';
+import PokemonImage from '../PokemonImage';
 
 interface Pokemon {
   id: number;
@@ -146,20 +147,20 @@ const TeamEditor: React.FC = () => {
                   } else {
                     // Fallback to basic sprite URLs if GraphQL sprites not available
                     sprites = {
-                      front_default: `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${pokemonId}.png`,
-                      back_default: `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/back/${pokemonId}.png`,
-                      front_shiny: `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/shiny/${pokemonId}.png`,
-                      back_shiny: `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/back/shiny/${pokemonId}.png`
+                      front_default: `/images/pokemon/thumbnails/${String(pokemonId).padStart(3, '0')}.png`,
+                      back_default: `/images/pokemon/thumbnails/${String(pokemonId).padStart(3, '0')}.png`,
+                      front_shiny: `/images/pokemon/thumbnails/${String(pokemonId).padStart(3, '0')}.png`,
+                      back_shiny: `/images/pokemon/thumbnails/${String(pokemonId).padStart(3, '0')}.png`
                     };
                   }
                 } catch (e) {
                   console.warn('Failed to parse sprite data:', e);
                   // Provide fallback sprites
                   sprites = {
-                    front_default: `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${pokemonId}.png`,
-                    back_default: `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/back/${pokemonId}.png`,
-                    front_shiny: `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/shiny/${pokemonId}.png`,
-                    back_shiny: `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/back/shiny/${pokemonId}.png`
+                    front_default: `/images/pokemon/thumbnails/${String(pokemonId).padStart(3, '0')}.png`,
+                    back_default: `/images/pokemon/thumbnails/${String(pokemonId).padStart(3, '0')}.png`,
+                    front_shiny: `/images/pokemon/thumbnails/${String(pokemonId).padStart(3, '0')}.png`,
+                    back_shiny: `/images/pokemon/thumbnails/${String(pokemonId).padStart(3, '0')}.png`
                   };
                 }
 
@@ -462,14 +463,10 @@ const TeamEditor: React.FC = () => {
 
                 {member && pokemon ? (
                   <div className="text-center">
-                    <img
-                      src={pokemon.sprites?.other?.['official-artwork']?.front_default || pokemon.sprites?.front_default}
+                    <PokemonImage
+                      pokemonId={pokemon.id}
                       alt={pokemon.name}
                       className="w-20 h-20 mx-auto mb-3"
-                      onError={(e) => {
-                        const target = e.target as HTMLImageElement;
-                        target.src = pokemon.sprites?.front_default || '';
-                      }}
                     />
                     <h4 className="font-semibold text-gray-800 capitalize mb-2">{pokemon.name}</h4>
 
@@ -553,8 +550,8 @@ const TeamEditor: React.FC = () => {
                         onClick={() => handleAddPokemon(pokemon)}
                         className="w-full text-left p-3 hover:bg-gray-50 rounded-md border-b border-gray-100 last:border-b-0 flex items-center gap-3"
                       >
-                        <img
-                          src={`https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${pokemon.id}.png`}
+                        <PokemonImage
+                          pokemonId={pokemon.id}
                           alt={pokemon.name}
                           className="w-8 h-8"
                         />

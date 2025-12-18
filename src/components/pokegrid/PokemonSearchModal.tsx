@@ -1,7 +1,8 @@
 import React from 'react';
 import { Pokemon } from '../../types/pokemon';
-import { formatName, getPokemonImage } from '../../utils/helpers';
+import { formatName } from '../../utils/helpers';
 import { TYPE_COLORS } from '../../types/pokemon';
+import PokemonImage from '../PokemonImage';
 
 interface PokemonSearchModalProps {
   isOpen: boolean;
@@ -148,11 +149,10 @@ export const PokemonSearchModal: React.FC<PokemonSearchModalProps> = ({
                     >
                       {/* Pokemon Image */}
                       <div className="flex-shrink-0 mr-3">
-                        <img
-                          src={getPokemonImage(pokemon.id, pokemon.sprites)}
+                        <PokemonImage
+                          pokemonId={pokemon.id}
                           alt={formatName(pokemon.name)}
                           className="w-12 h-12 sm:w-14 sm:h-14 object-contain"
-                          loading="lazy"
                         />
                       </div>
 

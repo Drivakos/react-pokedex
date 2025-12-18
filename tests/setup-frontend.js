@@ -59,6 +59,19 @@ window.location = {
   reload: jest.fn()
 };
 
+// Mock TextEncoder/TextDecoder for react-router
+global.TextEncoder = class TextEncoder {
+  encode(str) {
+    return new Uint8Array(Buffer.from(str, 'utf-8'));
+  }
+};
+
+global.TextDecoder = class TextDecoder {
+  decode(arr) {
+    return Buffer.from(arr).toString('utf-8');
+  }
+};
+
 // Reset all mocks before each test
 beforeEach(() => {
   jest.clearAllMocks();

@@ -18,9 +18,9 @@ import TeamEditor from './components/teams/TeamEditor';
 const PokemonMemoryGame = React.lazy(() => import('./components/PokemonMemoryGame'));
 const PokéGridChallenge = React.lazy(() => import('./components/PokéGridChallenge'));
 
-function App() {
+function AppContent() {
   return (
-    <Router>
+    <>
       <Navigation />
       <div>
         <Routes>
@@ -49,19 +49,28 @@ function App() {
             </ProtectedRoute>
           } />
           <Route path="/memory-game" element={
-            <Suspense>
+            <Suspense fallback={<div>Loading Memory Game...</div>}>
               <PokemonMemoryGame />
             </Suspense>
           } />
           <Route path="/pkmn-grid-challenge" element={
-            <Suspense>
+            <Suspense fallback={<div>Loading Grid Challenge...</div>}>
               <PokéGridChallenge />
             </Suspense>
           } />
         </Routes>
       </div>
+    </>
+  );
+}
+
+function App() {
+  return (
+    <Router>
+      <AppContent />
     </Router>
   );
 }
 
 export default App;
+export { AppContent };

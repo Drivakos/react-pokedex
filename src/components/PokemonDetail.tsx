@@ -6,6 +6,7 @@ import { X, ExternalLink, ChevronDown, ChevronUp, Users } from 'lucide-react';
 import FavoritePokemon from './FavoritePokemon';
 import TeamSelector from './teams/TeamSelector';
 import { useAuth } from '../hooks/useAuth';
+import PokemonImage from './PokemonImage';
 
 interface PokemonDetailProps {
   pokemon: Pokemon;
@@ -52,8 +53,8 @@ export const PokemonDetail: React.FC<PokemonDetailProps> = ({ pokemon, onClose }
         </div>
 
         <div className="flex flex-col items-center">
-          <img
-            src={`https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${pokemon.id}.png`}
+          <PokemonImage
+            pokemonId={pokemon.id}
             alt={pokemon.name}
             title={`${pokemon.name.charAt(0).toUpperCase() + pokemon.name.slice(1)} - #${String(pokemon.id).padStart(3, '0')}`}
             className="w-48 h-48 object-contain mb-4"

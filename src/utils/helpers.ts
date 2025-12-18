@@ -50,9 +50,9 @@ export const getOfficialArtwork = (sprites: any): string => {
 
     return parsedSprites?.other?.['official-artwork']?.front_default ||
            parsedSprites?.front_default ||
-           'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/0.png';
+           '/images/pokemon/thumbnails/000.png';
   } catch {
-    return 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/0.png';
+    return '/images/pokemon/thumbnails/000.png';
   }
 };
 
@@ -102,4 +102,37 @@ export const debounce = <F extends (...args: any[]) => any>(
     
     timeout = setTimeout(() => func(...args), waitFor);
   };
+};
+
+/**
+ * Get the appropriate Pokemon image source
+ * Uses local thumbnails if available, falls back to GitHub CDN
+ */
+export const getPokemonImageSource = (pokemonId: number): string => {
+  return `/images/pokemon/thumbnails/${String(pokemonId).padStart(3, '0')}.png`;
+};
+
+/**
+ * Get the fallback Pokemon image source from GitHub CDN
+ */
+export const getPokemonImageFallback = (pokemonId: number): string => {
+  return `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${pokemonId}.png`;
+};
+
+/**
+ * Check if a local Pokemon image exists by attempting to load it
+ * This is an async function that resolves to true if the image loads successfully
+ */
+export const checkPokemonImageExists = (pokemonId: number): Promise<boolean> => {
+  return new Promise((resolve) => {
+    const img = new Image();
+    const localSrc = getPokemonImageSource(pokemonId);
+
+    img.onload = () => resolve(true);
+    img.onerror = () => resolve(false);
+    img.src = localSrc;
+
+    // Timeout after 5 seconds to avoid hanging
+    setTimeout(() => resolve(false), 5000);
+  });
 };

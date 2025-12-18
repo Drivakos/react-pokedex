@@ -10,6 +10,7 @@ import Footer from './Footer';
 import PokemonSeoContent from './PokemonSeoContent';
 import RelatedPokemon from './RelatedPokemon';
 import FavoritePokemon from './FavoritePokemon';
+import PokemonImage from './PokemonImage';
 
 // No need for hardcoded mapping anymore as we get species_id from the API
 
@@ -149,13 +150,13 @@ const PokemonPage: React.FC = () => {
         <meta property="og:description" content={`Complete guide to ${pokemonDetails.name}, a ${pokemonDetails.types.join('/')} type Pokémon.`} />
         <meta property="og:url" content={`${window.location.origin}/pokemon/${pokemonDetails.id}`} />
         <meta property="og:type" content="article" />
-        <meta property="og:image" content={`https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${pokemonDetails.id}.png`} />
+        <meta property="og:image" content={`/images/pokemon/thumbnails/${String(pokemonDetails.id).padStart(3, '0')}.png`} />
         <meta property="og:site_name" content="Pokédex" />
         <meta name="twitter:card" content="summary_large_image" />
         <meta name="twitter:site" content="@pokedex" />
         <meta name="twitter:title" content={`${pokemonDetails.name.charAt(0).toUpperCase() + pokemonDetails.name.slice(1)} (#${formattedId}) | Pokédex`} />
         <meta name="twitter:description" content={`${pokemonDetails.name.charAt(0).toUpperCase() + pokemonDetails.name.slice(1)} is a ${pokemonDetails.types.join('/')} type Pokémon. Learn about its stats, abilities, evolutions, and more.`} />
-        <meta name="twitter:image" content={`https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${pokemonDetails.id}.png`} />
+        <meta name="twitter:image" content={`/images/pokemon/thumbnails/${String(pokemonDetails.id).padStart(3, '0')}.png`} />
         <script type="application/ld+json">
           {(() => {
             // Format the Pokémon name once to reuse it
@@ -166,7 +167,7 @@ const PokemonPage: React.FC = () => {
               `A ${pokemonDetails.types.join('/')} type Pokémon with a base experience of ${pokemonDetails.base_experience}.`;
             
             // Image URL
-            const imageUrl = `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${pokemonDetails.id}.png`;
+            const imageUrl = `/images/pokemon/thumbnails/${String(pokemonDetails.id).padStart(3, '0')}.png`;
             
             // Base URL for this Pokémon
             const pokemonUrl = `${window.location.origin}/pokemon/${pokemonDetails.id}`;
@@ -239,8 +240,8 @@ const PokemonPage: React.FC = () => {
             )}
             <div className="flex flex-col md:flex-row md:items-center">
               <div className="flex-shrink-0 flex justify-center mb-4 md:mb-0 md:mr-8">
-                <img
-                  src={pokemonDetails.sprites.official_artwork || `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${pokemonDetails.id}.png`}
+                <PokemonImage
+                  pokemonId={pokemonDetails.id}
                   alt={pokemonDetails.name}
                   title={`${pokemonDetails.name.charAt(0).toUpperCase() + pokemonDetails.name.slice(1)} - #${formattedId} - ${pokemonDetails.types.join('/')} Type Pokémon`}
                   className="w-48 h-48 object-contain"
@@ -617,15 +618,11 @@ const PokemonPage: React.FC = () => {
                                     className="cursor-pointer transition-transform hover:scale-110"
                                     title={`View ${baseForm.species_name} details`}
                                   >
-                                    <img
-                                      src={`https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${baseForm.species_id}.png`}
+                                    <PokemonImage
+                                      pokemonId={baseForm.species_id}
                                       alt={baseForm.species_name}
                                       title={`${baseForm.species_name.charAt(0).toUpperCase() + baseForm.species_name.slice(1)} - #${String(baseForm.species_id).padStart(3, '0')} - Base Form`}
                                       className="w-24 h-24 object-contain"
-                                      onError={(e) => {
-                                        const target = e.target as HTMLImageElement;
-                                        target.src = `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${baseForm.species_id}.png`;
-                                      }}
                                     />
                                   </Link>
                                 </div>
@@ -688,15 +685,11 @@ const PokemonPage: React.FC = () => {
                                             className="cursor-pointer transition-transform hover:scale-110"
                                             title={`View ${branch.evolution.species_name} details`}
                                           >
-                                            <img
-                                              src={`https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${branch.evolution.species_id}.png`}
+                                            <PokemonImage
+                                              pokemonId={branch.evolution.species_id}
                                               alt={branch.evolution.species_name}
                                               title={`${branch.evolution.species_name.charAt(0).toUpperCase() + branch.evolution.species_name.slice(1)} - #${String(branch.evolution.species_id).padStart(3, '0')} - Evolution`}
                                               className="w-24 h-24 object-contain"
-                                              onError={(e) => {
-                                                const target = e.target as HTMLImageElement;
-                                                target.src = `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${branch.evolution.species_id}.png`;
-                                              }}
                                             />
                                           </Link>
                                         </div>
@@ -758,14 +751,10 @@ const PokemonPage: React.FC = () => {
                                                       className="cursor-pointer transition-transform hover:scale-110"
                                                       title={`View ${furtherEvo.species_name} details`}
                                                     >
-                                                      <img
-                                                        src={`https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${furtherEvo.species_id}.png`}
+                                                      <PokemonImage
+                                                        pokemonId={furtherEvo.species_id}
                                                         alt={furtherEvo.species_name}
                                                         className="w-24 h-24 object-contain"
-                                                        onError={(e) => {
-                                                          const target = e.target as HTMLImageElement;
-                                                          target.src = `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${furtherEvo.species_id}.png`;
-                                                        }}
                                                       />
                                                     </Link>
                                                   </div>
@@ -800,8 +789,8 @@ const PokemonPage: React.FC = () => {
                           <div key={`evo-detail-${index}`} className="bg-gray-50 p-4 rounded-lg border border-gray-200">
                             <div className="flex items-center mb-3">
                               <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mr-3">
-                                <img
-                                  src={`https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${evo.species_id}.png`}
+                                <PokemonImage
+                                  pokemonId={evo.species_id}
                                   alt={evo.species_name}
                                   className="w-12 h-12 object-contain"
                                 />

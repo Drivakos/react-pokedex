@@ -1,0 +1,219 @@
+import React from 'react';
+import { render, screen, waitFor } from '@testing-library/react';
+import '@testing-library/jest-dom';
+import PokemonImage from '../../src/components/PokemonImage';
+
+// Mock the helpers
+jest.mock('../../../src/utils/helpers', () => ({
+  getPokemonImageSource: jest.fn(),
+  getPokemonImageFallback: jest.fn(),
+}));
+
+import { getPokemonImageSource, getPokemonImageFallback } from '../../../src/utils/helpers';
+
+const mockGetPokemonImageSource = getPokemonImageSource as jest.Mock;
+const mockGetPokemonImageFallback = getPokemonImageFallback as jest.Mock;
+
+describe('PokemonImage Component', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  describe('Low Pokemon IDs (≤ 905)', () => {
+    it('should start with local thumbnail for Pokemon ID 25', () => {
+      mockGetPokemonImageSource.mockReturnValue('/images/pokemon/thumbnails/025.png');
+      mockGetPokemonImageFallback.mockReturnValue('https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/25.png');
+
+      render(<PokemonImage pokemonId={25} alt="Pikachu" />);
+
+      const img = screen.getByAltText('Pikachu');
+      expect(img).toBeInTheDocument();
+      expect(img).toHaveAttribute('src', '/images/pokemon/thumbnails/025.png');
+      expect(mockGetPokemonImageSource).toHaveBeenCalledWith(25);
+    });
+
+    it('should start with local thumbnail for Pokemon ID 905', () => {
+      mockGetPokemonImageSource.mockReturnValue('/images/pokemon/thumbnails/905.png');
+      mockGetPokemonImageFallback.mockReturnValue('https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/905.png');
+
+      render(<PokemonImage pokemonId={905} alt="Enamorus" />);
+
+      const img = screen.getByAltText('Enamorus');
+      expect(img).toBeInTheDocument();
+      expect(img).toHaveAttribute('src', '/images/pokemon/thumbnails/905.png');
+      expect(mockGetPokemonImageSource).toHaveBeenCalledWith(905);
+    });
+
+    it('should fall back to CDN when local image fails to load', async () => {
+      mockGetPokemonImageSource.mockReturnValue('/images/pokemon/thumbnails/025.png');
+      mockGetPokemonImageFallback.mockReturnValue('https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/25.png');
+
+      render(<PokemonImage pokemonId={25} alt="Pikachu" />);
+
+      const img = screen.getByAltText('Pikachu');
+
+      // Simulate local image load failure
+      img.dispatchEvent(new Event('error'));
+
+      await waitFor(() => {
+        expect(img).toHaveAttribute('src', 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/25.png');
+        expect(mockGetPokemonImageFallback).toHaveBeenCalledWith(25);
+      });
+    });
+
+    it('should not fall back again if fallbackToCdn is false', async () => {
+      mockGetPokemonImageSource.mockReturnValue('/images/pokemon/thumbnails/025.png');
+      mockGetPokemonImageFallback.mockReturnValue('https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/25.png');
+
+      render(<PokemonImage pokemonId={25} alt="Pikachu" fallbackToCdn={false} />);
+
+      const img = screen.getByAltText('Pikachu');
+
+      // Simulate local image load failure
+      img.dispatchEvent(new Event('error'));
+
+      // Should not call fallback
+      expect(mockGetPokemonImageFallback).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('High Pokemon IDs (> 905)', () => {
+    it('should start with CDN URL for Pokemon ID 10177', () => {
+      mockGetPokemonImageFallback.mockReturnValue('https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/10177.png');
+
+      render(<PokemonImage pokemonId={10177} alt="Unknown Pokemon" />);
+
+      const img = screen.getByAltText('Unknown Pokemon');
+      expect(img).toBeInTheDocument();
+      expect(img).toHaveAttribute('src', 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/10177.png');
+      expect(mockGetPokemonImageFallback).toHaveBeenCalledWith(10177);
+    });
+
+    it('should not try local image first for high Pokemon IDs', () => {
+      mockGetPokemonImageFallback.mockReturnValue('https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/10177.png');
+
+      render(<PokemonImage pokemonId={10177} alt="Unknown Pokemon" />);
+
+      expect(mockGetPokemonImageSource).not.toHaveBeenCalled();
+      expect(mockGetPokemonImageFallback).toHaveBeenCalledWith(10177);
+    });
+  });
+
+  describe('Props handling', () => {
+    it('should apply custom className', () => {
+      mockGetPokemonImageSource.mockReturnValue('/images/pokemon/thumbnails/025.png');
+
+      render(<PokemonImage pokemonId={25} alt="Pikachu" className="custom-class" />);
+
+      const img = screen.getByAltText('Pikachu');
+      expect(img).toHaveClass('custom-class');
+    });
+
+    it('should pass through other img props', () => {
+      mockGetPokemonImageSource.mockReturnValue('/images/pokemon/thumbnails/025.png');
+
+      render(
+        <PokemonImage
+          pokemonId={25}
+          alt="Pikachu"
+          width={100}
+          height={100}
+          data-testid="pokemon-img"
+        />
+      );
+
+      const img = screen.getByTestId('pokemon-img');
+      expect(img).toHaveAttribute('width', '100');
+      expect(img).toHaveAttribute('height', '100');
+    });
+
+    it('should use default alt text when not provided', () => {
+      mockGetPokemonImageSource.mockReturnValue('/images/pokemon/thumbnails/025.png');
+
+      render(<PokemonImage pokemonId={25} />);
+
+      const img = screen.getByAltText('Pokemon #25');
+      expect(img).toBeInTheDocument();
+    });
+
+    it('should handle loading prop', () => {
+      mockGetPokemonImageSource.mockReturnValue('/images/pokemon/thumbnails/025.png');
+
+      render(<PokemonImage pokemonId={25} alt="Pikachu" loading="lazy" />);
+
+      const img = screen.getByAltText('Pikachu');
+      expect(img).toHaveAttribute('loading', 'lazy');
+    });
+  });
+
+  describe('Pokemon ID changes', () => {
+    it('should update image source when pokemonId changes from low to high', () => {
+      const { rerender } = render(<PokemonImage pokemonId={25} alt="Pokemon" />);
+
+      expect(mockGetPokemonImageSource).toHaveBeenCalledWith(25);
+
+      // Change to high ID
+      mockGetPokemonImageSource.mockClear();
+      mockGetPokemonImageFallback.mockReturnValue('https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/10177.png');
+
+      rerender(<PokemonImage pokemonId={10177} alt="Pokemon" />);
+
+      expect(mockGetPokemonImageFallback).toHaveBeenCalledWith(10177);
+    });
+
+    it('should update image source when pokemonId changes from high to low', () => {
+      mockGetPokemonImageFallback.mockReturnValue('https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/10177.png');
+
+      const { rerender } = render(<PokemonImage pokemonId={10177} alt="Pokemon" />);
+
+      expect(mockGetPokemonImageFallback).toHaveBeenCalledWith(10177);
+
+      // Change to low ID
+      mockGetPokemonImageFallback.mockClear();
+      mockGetPokemonImageSource.mockReturnValue('/images/pokemon/thumbnails/025.png');
+
+      rerender(<PokemonImage pokemonId={25} alt="Pokemon" />);
+
+      expect(mockGetPokemonImageSource).toHaveBeenCalledWith(25);
+    });
+  });
+
+  describe('Error handling', () => {
+    it('should handle multiple error events gracefully', async () => {
+      mockGetPokemonImageSource.mockReturnValue('/images/pokemon/thumbnails/025.png');
+      mockGetPokemonImageFallback.mockReturnValue('https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/25.png');
+
+      render(<PokemonImage pokemonId={25} alt="Pikachu" />);
+
+      const img = screen.getByAltText('Pikachu');
+
+      // Trigger error multiple times
+      img.dispatchEvent(new Event('error'));
+      img.dispatchEvent(new Event('error'));
+      img.dispatchEvent(new Event('error'));
+
+      await waitFor(() => {
+        expect(img).toHaveAttribute('src', 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/25.png');
+      });
+
+      // Should only call fallback once
+      expect(mockGetPokemonImageFallback).toHaveBeenCalledTimes(1);
+    });
+
+    it('should maintain fallback state across re-renders', () => {
+      mockGetPokemonImageSource.mockReturnValue('/images/pokemon/thumbnails/025.png');
+      mockGetPokemonImageFallback.mockReturnValue('https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/25.png');
+
+      const { rerender } = render(<PokemonImage pokemonId={25} alt="Pikachu" />);
+
+      const img = screen.getByAltText('Pikachu');
+      img.dispatchEvent(new Event('error'));
+
+      // Re-render with same props
+      rerender(<PokemonImage pokemonId={25} alt="Pikachu" />);
+
+      // Should still have fallback URL
+      expect(img).toHaveAttribute('src', 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/25.png');
+    });
+  });
+});

@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { ArrowLeft, Save, Trash2, Plus, Zap, Settings, Award, ChevronUp, ChevronDown, Copy } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { formatName, getPokemonImage } from '../../utils/helpers';
+import { formatName } from '../../utils/helpers';
 import MovesFilter from '../filters/MovesFilter';
 import { fetchPokemonMoves, fetchMoveDetails, fetchPokemonAbilities, fetchCompetitiveItems } from '../../services/api';
+import PokemonImage from '../PokemonImage';
 
 interface PokemonWithMoves {
   id: number;
@@ -691,15 +692,10 @@ const MovesetEditorContent: React.FC<MovesetEditorProps> = ({ pokemon, teamId, o
           
           <div className="bg-white rounded-xl p-6 shadow-lg">
             <div className="flex items-center gap-6">
-              <img
-                src={getPokemonImage(pokemon.id, pokemon.sprites)}
+              <PokemonImage
+                pokemonId={pokemon.id}
                 alt={formatName(pokemon.name)}
                 className="w-20 h-20 object-contain"
-                onError={(e) => {
-                  // Fallback to regular sprite if official artwork fails
-                  const target = e.target as HTMLImageElement;
-                  target.src = `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${pokemon.id}.png`;
-                }}
               />
               <div className="flex-1">
                 <h1 className="text-2xl font-bold text-gray-800 mb-2">

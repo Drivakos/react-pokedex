@@ -33,7 +33,8 @@ module.exports = {
       displayName: 'frontend',
       testEnvironment: 'jsdom',
       testMatch: [
-        '<rootDir>/tests/**/*.test.ts'
+        '<rootDir>/tests/**/*.test.{ts,tsx}',
+        '<rootDir>/src/**/*.test.{ts,tsx}'
       ],
       collectCoverageFrom: [
         'src/services/**/*.{js,ts}',
@@ -44,15 +45,16 @@ module.exports = {
       ],
       setupFilesAfterEnv: ['<rootDir>/tests/setup-frontend.js'],
       transform: {
-        '^.+\\.(ts|js|mjs)$': ['babel-jest', {
+        '^.+\\.(ts|tsx|js|mjs)$': ['babel-jest', {
           presets: [
             ['@babel/preset-env', { targets: { node: 'current' } }],
+            ['@babel/preset-react', { runtime: 'automatic' }],
             ['@babel/preset-typescript', { allowDeclareFields: true }]
           ],
           plugins: ['babel-plugin-transform-vite-meta-env']
         }]
       },
-      moduleFileExtensions: ['ts', 'js', 'mjs', 'json'],
+      moduleFileExtensions: ['ts', 'tsx', 'js', 'mjs', 'json'],
       transformIgnorePatterns: [
         'node_modules/(?!(@upstash|uncrypto)/)'
       ],
@@ -60,7 +62,8 @@ module.exports = {
         '^@/(.*)$': '<rootDir>/src/$1',
         '^@upstash/redis$': '<rootDir>/tests/__mocks__/lib/redis.js',
         '^\\.\\./lib/redis$': '<rootDir>/tests/__mocks__/lib/redis.js',
-        '^src/lib/redis$': '<rootDir>/tests/__mocks__/lib/redis.js'
+        '^src/lib/redis$': '<rootDir>/tests/__mocks__/lib/redis.js',
+        '\\.(css|less|scss|sass)$': 'identity-obj-proxy'
       }
     }
   ],

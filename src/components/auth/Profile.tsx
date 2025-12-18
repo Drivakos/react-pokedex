@@ -5,7 +5,7 @@ import { TeamMember } from '../../lib/supabase';
 import { friendsService, type Friend } from '../../services/friends.service';
 import { FriendsModal } from '../friends';
 import toast from 'react-hot-toast';
-import { getPokemonImage } from '../../utils/helpers';
+import PokemonImage from '../PokemonImage';
 
 const Profile: React.FC = () => {
   const { user, profile, signOut, updateProfile, teams, favorites, getTeamMembers } = useAuth();
@@ -144,7 +144,7 @@ const Profile: React.FC = () => {
                   <img src={profile.avatar_url} alt="Profile" className="w-full h-full object-cover" />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center">
-                    <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/25.png" alt="Pokemon" className="w-14 h-14" />
+                    <PokemonImage pokemonId={25} alt="Pokemon" className="w-14 h-14" />
                   </div>
                 )}
               </div>
@@ -196,8 +196,8 @@ const Profile: React.FC = () => {
                   onClick={() => navigate(`/pokemon/${pokemonId}`)}
                   className="w-12 h-12 bg-gray-50 rounded border hover:bg-gray-100"
                 >
-                  <img
-                    src={getPokemonImage(pokemonId)}
+                  <PokemonImage
+                    pokemonId={pokemonId}
                     alt={`#${pokemonId}`}
                     className="w-full h-full object-contain"
                   />
@@ -284,8 +284,8 @@ const Profile: React.FC = () => {
                       return (
                         <div key={position} className="w-8 h-8 bg-gray-100 rounded border flex items-center justify-center">
                           {member ? (
-                            <img
-                              src={getPokemonImage(member.pokemon_id)}
+                            <PokemonImage
+                              pokemonId={member.pokemon_id}
                               alt=""
                               className="w-full h-full object-contain"
                             />

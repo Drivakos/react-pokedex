@@ -1,6 +1,7 @@
 import React from 'react';
 import { Pokemon } from '../../types/pokemon';
-import { formatName, getPokemonImage } from '../../utils/helpers';
+import { formatName } from '../../utils/helpers';
+import PokemonImage from '../PokemonImage';
 
 export interface GridCellData {
   id: string;
@@ -57,8 +58,8 @@ export const GridCell: React.FC<GridCellProps> = ({ cell, totalGuesses, maxTotal
       >
         {cell.pokemon ? (
           <>
-            <img
-              src={getPokemonImage(cell.pokemon.id, cell.pokemon.sprites)}
+            <PokemonImage
+              pokemonId={cell.pokemon.id}
               alt={cell.pokemon.name}
               className="w-14 h-14 object-contain mb-1"
             />

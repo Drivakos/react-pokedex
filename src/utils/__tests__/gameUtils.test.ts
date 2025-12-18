@@ -1,13 +1,15 @@
-import { GAME_CONSTANTS } from '../../components/PokemonMemoryMatch';
+import { GAME_CONSTANTS } from '../../components/game-constants';
 
 // Test utility functions that might be extracted from the component
 describe('Game Utility Functions', () => {
   describe('Score Calculation', () => {
     const calculateScore = (moves: number, time: number) => {
+      const clampedMoves = Math.max(0, moves);
+      const clampedTime = Math.max(0, time);
       return Math.max(
         GAME_CONSTANTS.BASE_SCORE -
-        (moves * GAME_CONSTANTS.MOVE_PENALTY) -
-        (time * GAME_CONSTANTS.TIME_PENALTY),
+        (clampedMoves * GAME_CONSTANTS.MOVE_PENALTY) -
+        (clampedTime * GAME_CONSTANTS.TIME_PENALTY),
         GAME_CONSTANTS.MINIMUM_SCORE
       );
     };
@@ -158,11 +160,12 @@ describe('Game Utility Functions', () => {
 
   describe('Pokemon Validation', () => {
     const isValidPokemon = (pokemon: any): boolean => {
-      return pokemon &&
-             typeof pokemon.id === 'number' &&
-             pokemon.name &&
-             typeof pokemon.name === 'string' &&
-             pokemon.name.trim().length > 0;
+      if (!pokemon) return false;
+      if (typeof pokemon.id !== 'number') return false;
+      if (!pokemon.name) return false;
+      if (typeof pokemon.name !== 'string') return false;
+      if (pokemon.name.trim().length === 0) return false;
+      return true;
     };
 
     it('validates correct Pokemon data', () => {

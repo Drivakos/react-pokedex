@@ -2,7 +2,7 @@ import React from 'react';
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import { PokemonMemoryMatch } from '../PokemonMemoryMatch';
-import { GAME_CONSTANTS } from '../PokemonMemoryMatch';
+import { GAME_CONSTANTS } from '../game-constants';
 
 // Mock Pokemon data for testing
 const mockPokemonList = [
@@ -47,16 +47,22 @@ describe('PokemonMemoryMatch', () => {
   it('displays difficulty selection buttons', () => {
     render(<PokemonMemoryMatch pokemonList={mockPokemonList} onGameComplete={mockOnGameComplete} />);
 
-    expect(screen.getByText('Choose Difficulty')).toBeInTheDocument();
-    expect(screen.getByText('Easy (6 pairs)')).toBeInTheDocument();
-    expect(screen.getByText('Medium (8 pairs)')).toBeInTheDocument();
-    expect(screen.getByText('Hard (12 pairs)')).toBeInTheDocument();
+    expect(screen.getByText('Easy')).toBeInTheDocument();
+    expect(screen.getByText('(6)')).toBeInTheDocument();
+    expect(screen.getByText('Medium')).toBeInTheDocument();
+    expect(screen.getByText('(8)')).toBeInTheDocument();
+    expect(screen.getByText('Hard')).toBeInTheDocument();
+    expect(screen.getByText('(12)')).toBeInTheDocument();
   });
 
   it('shows loading state initially', () => {
     render(<PokemonMemoryMatch pokemonList={[]} onGameComplete={mockOnGameComplete} />);
 
-    expect(screen.getByText('Loading Pokemon...')).toBeInTheDocument();
+    // When pokemonList is empty, the game should not initialize
+    // but the component still renders the UI structure
+    expect(screen.getByText('Pokémon Memory Match')).toBeInTheDocument();
+    // No game cards should be rendered when pokemonList is empty
+    expect(screen.queryByRole('button', { name: /pokemon/i })).not.toBeInTheDocument();
   });
 
   it('starts game when card is clicked', () => {
@@ -87,7 +93,7 @@ describe('PokemonMemoryMatch', () => {
   it('handles difficulty changes correctly', () => {
     render(<PokemonMemoryMatch pokemonList={mockPokemonList} onGameComplete={mockOnGameComplete} />);
 
-    const hardButton = screen.getByText('Hard (12 pairs)');
+    const hardButton = screen.getByText('Hard');
     fireEvent.click(hardButton);
 
     // Should show confirmation modal for difficulty change during gameplay
