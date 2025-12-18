@@ -1,4 +1,5 @@
 import { supabase } from '../lib/supabase';
+import { logger } from '../utils/logger';
 
 export interface Notification {
   id: number;
@@ -26,13 +27,13 @@ class NotificationsService {
       });
 
       if (error) {
-        console.error('Error fetching notifications:', error);
+        logger.serviceError('NotificationsService', 'getNotifications', error);
         return [];
       }
 
       return data || [];
     } catch (error) {
-      console.error('Error in getNotifications:', error);
+      logger.serviceError('NotificationsService', 'getNotifications', error);
       return [];
     }
   }
@@ -49,13 +50,13 @@ class NotificationsService {
       });
 
       if (error) {
-        console.error('Error fetching unread count:', error);
+        logger.serviceError('NotificationsService', 'getUnreadCount', error);
         return 0;
       }
 
       return data || 0;
     } catch (error) {
-      console.error('Error in getUnreadCount:', error);
+      logger.serviceError('NotificationsService', 'getUnreadCount', error);
       return 0;
     }
   }
@@ -64,8 +65,7 @@ class NotificationsService {
    * Mark notification as read
    */
   async markAsRead(notificationId: number, userId: string): Promise<boolean> {
-    console.log('=== SERVICE: markAsRead called ===');
-    console.log('notificationId:', notificationId, 'userId:', userId);
+    logger.debug('markAsRead called', { notificationId, userId });
 
     try {
       const { data, error } = await supabase.rpc('mark_notification_read', {
@@ -73,17 +73,15 @@ class NotificationsService {
         p_user_id: userId
       });
 
-      console.log('Supabase RPC result:', { data, error });
-
       if (error) {
-        console.error('Error marking notification as read:', error);
+        logger.serviceError('NotificationsService', 'markAsRead', error);
         return false;
       }
 
-      console.log('=== SERVICE: markAsRead completed successfully ===');
+      logger.debug('markAsRead completed successfully');
       return data || false;
     } catch (error) {
-      console.error('Error in markAsRead:', error);
+      logger.serviceError('NotificationsService', 'markAsRead', error);
       return false;
     }
   }
@@ -98,13 +96,13 @@ class NotificationsService {
       });
 
       if (error) {
-        console.error('Error marking all notifications as read:', error);
+        logger.serviceError('NotificationsService', 'markAllAsRead', error);
         return 0;
       }
 
       return data || 0;
     } catch (error) {
-      console.error('Error in markAllAsRead:', error);
+      logger.serviceError('NotificationsService', 'markAllAsRead', error);
       return 0;
     }
   }
@@ -131,13 +129,13 @@ class NotificationsService {
       });
 
       if (error) {
-        console.error('Error creating notification:', error);
+        logger.serviceError('NotificationsService', 'createNotification', error);
         return null;
       }
 
       return result;
     } catch (error) {
-      console.error('Error in createNotification:', error);
+      logger.serviceError('NotificationsService', 'createNotification', error);
       return null;
     }
   }
@@ -157,7 +155,7 @@ class NotificationsService {
           filter: `user_id=eq.${userId}`
         },
         (payload) => {
-          console.log('Real-time notification received:', payload.new);
+          logger.debug('Real-time notification received', payload.new);
           callback(payload.new as Notification);
         }
       )
@@ -172,7 +170,7 @@ class NotificationsService {
    * Create a test notification (for debugging)
    */
   async createTestNotification(userId: string) {
-    console.log('Creating test notification for user:', userId);
+    logger.debug('Creating test notification for user', userId);
     return this.createNotification(
       userId,
       'friend_request',

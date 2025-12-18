@@ -86,24 +86,38 @@ const SecureLocalStorage = {
 
 /**
  * Smart storage adapter that chooses the best storage method
- * 
+ *
  * Production: Cookies (more secure, HttpOnly possible with server setup)
  * Development: localStorage (easier to debug, no HTTPS requirement)
+ *
+ * IMPORTANT: For PKCE flow to work properly, we need to handle Supabase's
+ * internal keys correctly. Some keys (like PKCE verifiers) must be in localStorage.
  */
 export const authStorage = {
   getItem: (key: string): string | null => {
+    // PKCE-related keys must be in localStorage for Supabase to work
+    if (key.includes('pkce') || key.includes('code_verifier') || key.includes('auth-flow')) {
+      return SecureLocalStorage.getItem(key);
+    }
+
     // In production, prefer cookies for better security
     if (IS_PRODUCTION) {
       const cookieValue = CookieStorage.getItem(key);
       // Fallback to localStorage if cookie not found (migration case)
       return cookieValue || SecureLocalStorage.getItem(key);
     }
-    
+
     // In development, use localStorage for easier debugging
     return SecureLocalStorage.getItem(key);
   },
 
   setItem: (key: string, value: string): void => {
+    // PKCE-related keys must be in localStorage for Supabase to work
+    if (key.includes('pkce') || key.includes('code_verifier') || key.includes('auth-flow')) {
+      SecureLocalStorage.setItem(key, value);
+      return;
+    }
+
     if (IS_PRODUCTION) {
       // Production: Use cookies
       CookieStorage.setItem(key, value);
@@ -116,6 +130,12 @@ export const authStorage = {
   },
 
   removeItem: (key: string): void => {
+    // PKCE-related keys must be removed from localStorage
+    if (key.includes('pkce') || key.includes('code_verifier') || key.includes('auth-flow')) {
+      SecureLocalStorage.removeItem(key);
+      return;
+    }
+
     // Remove from both to be safe
     CookieStorage.removeItem(key);
     SecureLocalStorage.removeItem(key);

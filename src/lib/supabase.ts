@@ -40,8 +40,9 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, supabaseOptio
 supabase.auth.onAuthStateChange((event, session) => {
   if (session) {
     // User signed in - no debug log needed
-  } else {
+  } else if (event === 'SIGNED_OUT') {
     // User signed out - clean up both storage types
+    // IMPORTANT: Don't clear PKCE-related items immediately as they might be needed
     const authItems = [
       'supabase.auth.token',
       'access_token',
@@ -52,16 +53,25 @@ supabase.auth.onAuthStateChange((event, session) => {
       'provider_refresh_token',
       'sb-' + supabaseUrl.split('//')[1].split('.')[0] + '-auth-token'
     ];
-    
-    // Clear localStorage
+
+    // Clear localStorage (but preserve PKCE items temporarily)
     authItems.forEach(item => {
       localStorage.removeItem(item);
     });
-    
+
     // Clear cookies
     authItems.forEach(item => {
       document.cookie = `${item}=; path=/; max-age=0`;
     });
+
+    // Clear PKCE items after a short delay to ensure they're not needed
+    setTimeout(() => {
+      const pkceItems = ['pkce', 'code_verifier', 'auth-flow'];
+      pkceItems.forEach(item => {
+        localStorage.removeItem(item);
+        document.cookie = `${item}=; path=/; max-age=0`;
+      });
+    }, 5000); // 5 second delay
   }
 });
 
@@ -78,7 +88,7 @@ const initializeSession = async () => {
       // Initial session exists - no debug log needed
     }
   } catch (error) {
-    console.error('Error initializing session:', error);
+    // Silently handle session initialization errors
   }
 };
 
@@ -100,7 +110,7 @@ export async function ensureProfile(userId: string, email?: string): Promise<voi
         });
     }
   } catch (error) {
-    console.error('Failed to ensure profile:', error);
+    // Silently handle profile creation errors
   }
 }
 
