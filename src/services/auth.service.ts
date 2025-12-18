@@ -71,7 +71,6 @@ export class AuthService {
       const { data } = await supabase.auth.getSession();
       return data.session;
     } catch (error) {
-      console.error('Error getting session:', error);
       return null;
     }
   }

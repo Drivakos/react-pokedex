@@ -36,14 +36,12 @@ export const useSessionRefresher = () => {
       const refreshedSession = await authService.refreshSession();
       
       if (!refreshedSession) {
-        console.error('Session refresh failed');
         toast.error('Your session has expired. Please sign in again.');
         return { success: false, session: null };
       }
       
       return { success: true, session: refreshedSession, error: null };
     } catch (err) {
-      console.error('Unexpected error during session refresh:', err);
       toast.error('An unexpected error occurred. Please try again.');
       return { success: false, session: null, error: err };
     } finally {

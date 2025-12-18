@@ -53,8 +53,7 @@ export const AuthCallback = () => {
           }
 
           if (data?.session) {
-            // Regular authentication flow
-            await refreshSession();
+            // Regular authentication flow - session is already valid after PKCE exchange
             toast.success('Successfully signed in!');
             navigate('/', { replace: true });
             return;
