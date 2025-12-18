@@ -142,39 +142,6 @@ export const NotificationDropdown: React.FC<NotificationDropdownProps> = ({
           </div>
         )}
       </div>
-
-      {/* Footer */}
-      <div className="border-t border-gray-200 p-3">
-        {/* Test button for debugging */}
-        {userId && (
-          <button
-            onClick={async () => {
-              try {
-                console.log('Creating test notification...');
-                await notificationsService.createTestNotification(userId);
-                console.log('Test notification created');
-              } catch (error) {
-                console.error('Error creating test notification:', error);
-              }
-            }}
-            className="text-xs text-red-600 hover:text-red-800 w-full text-center mb-2"
-          >
-            [TEST] Create Friend Request Notification
-          </button>
-        )}
-
-        {notifications.length > 0 && (
-          <button
-            onClick={() => {
-              navigate('/profile'); // Could be a dedicated notifications page
-              onClose();
-            }}
-            className="text-sm text-blue-600 hover:text-blue-800 w-full text-center"
-          >
-            View all notifications
-          </button>
-        )}
-      </div>
     </div>
   );
 };
