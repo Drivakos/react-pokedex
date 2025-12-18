@@ -12,7 +12,7 @@ export const FriendsList: React.FC<FriendsListProps> = ({ friends, onRemoveFrien
     const code = friendsService.generateFriendCode(id);
     try {
       await navigator.clipboard.writeText(`${name} #${code}`);
-      toast.success('Copied');
+      toast.success('Friend code copied!');
     } catch (err) {
       console.error('Failed to copy:', err);
     }

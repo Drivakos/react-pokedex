@@ -74,7 +74,7 @@ const Profile: React.FC = () => {
   const copyToClipboard = async (text: string, label: string) => {
     try {
       await navigator.clipboard.writeText(text);
-      toast.success(`${label} copied!`);
+      toast.success(`${label} code copied!`);
     } catch {
       toast.error('Failed to copy');
     }

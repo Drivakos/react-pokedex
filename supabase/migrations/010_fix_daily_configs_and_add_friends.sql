@@ -190,27 +190,46 @@ RETURNS INTEGER AS $$
 DECLARE
   request_id INTEGER;
   existing_friendship BOOLEAN;
+  sender_name TEXT;
 BEGIN
   -- Check if they're already friends
   SELECT EXISTS(
-    SELECT 1 FROM friendships 
-    WHERE (user_id_1 = LEAST(p_sender_id, p_receiver_id) 
+    SELECT 1 FROM friendships
+    WHERE (user_id_1 = LEAST(p_sender_id, p_receiver_id)
            AND user_id_2 = GREATEST(p_sender_id, p_receiver_id))
   ) INTO existing_friendship;
-  
+
   IF existing_friendship THEN
     RAISE EXCEPTION 'Already friends';
   END IF;
 
+  -- Get sender name for notification
+  SELECT COALESCE(
+    au.raw_user_meta_data->>'full_name',
+    au.raw_user_meta_data->>'username',
+    split_part(au.email, '@', 1)
+  )::TEXT INTO sender_name
+  FROM auth.users au
+  WHERE au.id = p_sender_id;
+
   -- Insert or update friend request
   INSERT INTO friend_requests (sender_id, receiver_id, status)
   VALUES (p_sender_id, p_receiver_id, 'pending')
-  ON CONFLICT (sender_id, receiver_id) 
-  DO UPDATE SET 
+  ON CONFLICT (sender_id, receiver_id)
+  DO UPDATE SET
     status = 'pending',
     updated_at = NOW()
   RETURNING id INTO request_id;
-  
+
+  -- Create notification for receiver (only if notifications table exists)
+  BEGIN
+    PERFORM create_friend_request_notification(p_sender_id, p_receiver_id, sender_name);
+  EXCEPTION
+    WHEN undefined_function THEN
+      -- Notifications system not yet available, skip
+      NULL;
+  END;
+
   RETURN request_id;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
@@ -223,25 +242,44 @@ CREATE OR REPLACE FUNCTION accept_friend_request(
 RETURNS BOOLEAN AS $$
 DECLARE
   req RECORD;
+  acceptor_name TEXT;
 BEGIN
   -- Get the request
-  SELECT * INTO req FROM friend_requests 
+  SELECT * INTO req FROM friend_requests
   WHERE id = p_request_id AND receiver_id = p_user_id AND status = 'pending';
-  
+
   IF NOT FOUND THEN
     RETURN FALSE;
   END IF;
-  
+
+  -- Get acceptor name for notification
+  SELECT COALESCE(
+    au.raw_user_meta_data->>'full_name',
+    au.raw_user_meta_data->>'username',
+    split_part(au.email, '@', 1)
+  )::TEXT INTO acceptor_name
+  FROM auth.users au
+  WHERE au.id = p_user_id;
+
   -- Update request status
-  UPDATE friend_requests 
+  UPDATE friend_requests
   SET status = 'accepted', updated_at = NOW()
   WHERE id = p_request_id;
-  
+
   -- Create friendship (ensure user_id_1 < user_id_2)
   INSERT INTO friendships (user_id_1, user_id_2)
   VALUES (LEAST(req.sender_id, req.receiver_id), GREATEST(req.sender_id, req.receiver_id))
   ON CONFLICT (user_id_1, user_id_2) DO NOTHING;
-  
+
+  -- Create notification for sender (only if notifications table exists)
+  BEGIN
+    PERFORM create_friend_accepted_notification(p_user_id, req.sender_id, acceptor_name);
+  EXCEPTION
+    WHEN undefined_function THEN
+      -- Notifications system not yet available, skip
+      NULL;
+  END;
+
   RETURN TRUE;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;

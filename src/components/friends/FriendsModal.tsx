@@ -8,13 +8,15 @@ import toast from 'react-hot-toast';
 interface FriendsModalProps {
   isOpen: boolean;
   onClose: () => void;
+  initialTab?: 'friends' | 'requests' | 'add';
 }
 
 type TabType = 'friends' | 'requests' | 'add';
 
-export const FriendsModal: React.FC<FriendsModalProps> = ({ isOpen, onClose }) => {
+export const FriendsModal: React.FC<FriendsModalProps> = ({ isOpen, onClose, initialTab = 'friends' }) => {
   const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState<TabType>('friends');
+  const [activeTab, setActiveTab] = useState<TabType>(initialTab);
+
   const [friends, setFriends] = useState<Friend[]>([]);
   const [friendRequests, setFriendRequests] = useState<FriendRequest[]>([]);
   const [loading, setLoading] = useState(true);
@@ -26,6 +28,13 @@ export const FriendsModal: React.FC<FriendsModalProps> = ({ isOpen, onClose }) =
   const [sendingRequestTo, setSendingRequestTo] = useState<string | null>(null);
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
   const lastSearchedQueryRef = useRef<string>('');
+
+  // Update active tab when initialTab prop changes or modal opens
+  React.useEffect(() => {
+    if (isOpen) {
+      setActiveTab(initialTab);
+    }
+  }, [isOpen, initialTab]);
 
   const loadData = async () => {
     if (!user) return;
@@ -188,7 +197,7 @@ export const FriendsModal: React.FC<FriendsModalProps> = ({ isOpen, onClose }) =
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-[70]">
       <div className="bg-white rounded-lg shadow-lg w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
         {/* Header */}
         <div className="flex justify-between items-center p-6 border-b border-gray-200">
@@ -325,7 +334,7 @@ export const FriendsModal: React.FC<FriendsModalProps> = ({ isOpen, onClose }) =
                             onClick={async () => {
                               try {
                                 await navigator.clipboard.writeText(`${result.username} #${result.friend_code}`);
-                                toast.success('Copied');
+                                toast.success('Friend code copied!');
                               } catch (err) {
                                 console.error('Failed to copy:', err);
                               }

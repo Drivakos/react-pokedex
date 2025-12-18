@@ -2,11 +2,16 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { User, LogOut, Gamepad2, ChevronDown } from 'lucide-react';
+import { NotificationBell } from './NotificationBell';
+import { FriendsModal } from './friends';
 
 const Navigation: React.FC = () => {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
   const [gamesMenuOpen, setGamesMenuOpen] = useState(false);
+  const [friendsModalOpen, setFriendsModalOpen] = useState(false);
+  const [friendsModalInitialTab, setFriendsModalInitialTab] = useState<'friends' | 'requests' | 'add'>('friends');
+
 
   const handleSignOut = async () => {
     try {
@@ -15,6 +20,15 @@ const Navigation: React.FC = () => {
     } catch (error) {
       console.error('Error signing out:', error);
     }
+  };
+
+  const handleOpenFriendsModal = (initialTab: 'friends' | 'requests' | 'add' = 'friends') => {
+    setFriendsModalInitialTab(initialTab);
+    setFriendsModalOpen(true);
+  };
+
+  const handleCloseFriendsModal = () => {
+    setFriendsModalOpen(false);
   };
 
   React.useEffect(() => {
@@ -104,14 +118,15 @@ const Navigation: React.FC = () => {
 
             {user ? (
               <div className="flex items-center space-x-4">
-                <Link 
-                  to="/profile" 
+                <NotificationBell onOpenFriendsModal={handleOpenFriendsModal} />
+                <Link
+                  to="/profile"
                   className="text-white hover:bg-white/20 px-3 py-2 rounded-full text-sm font-medium flex items-center transition-colors duration-200"
                 >
                   <User className="h-4 w-4 mr-1" />
                   {user.user_metadata?.full_name || user.email?.split('@')[0] || 'Profile'}
                 </Link>
-                <button 
+                <button
                   onClick={handleSignOut}
                   className="text-white hover:bg-white/20 px-3 py-2 rounded-full text-sm font-medium flex items-center transition-colors duration-200"
                 >
@@ -171,13 +186,16 @@ const Navigation: React.FC = () => {
             </div>
 
             {user ? (
-              <Link
-                to="/profile"
-                className="inline-flex items-center justify-center p-2 rounded-full text-white hover:bg-white/20 focus:outline-none transition-colors duration-200"
-                title="Profile"
-              >
-                <User className="h-6 w-6" />
-              </Link>
+              <div className="flex items-center space-x-1">
+                <NotificationBell onOpenFriendsModal={handleOpenFriendsModal} />
+                <Link
+                  to="/profile"
+                  className="inline-flex items-center justify-center p-2 rounded-full text-white hover:bg-white/20 focus:outline-none transition-colors duration-200"
+                  title="Profile"
+                >
+                  <User className="h-6 w-6" />
+                </Link>
+              </div>
             ) : (
               <Link
                 to="/login"
@@ -190,6 +208,13 @@ const Navigation: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* Friends Modal */}
+      <FriendsModal
+        isOpen={friendsModalOpen}
+        onClose={handleCloseFriendsModal}
+        initialTab={friendsModalInitialTab}
+      />
     </nav>
   );
 };
