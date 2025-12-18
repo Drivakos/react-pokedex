@@ -50,7 +50,6 @@ const fetchCachedGraphQL = async (query: string, variables?: any) => {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
       },
       body: JSON.stringify({ query, variables }),
     });
@@ -60,7 +59,7 @@ const fetchCachedGraphQL = async (query: string, variables?: any) => {
     }
 
     const result = await response.json();
-    
+
     if (result.errors) {
       throw new Error(result.errors[0].message);
     }
