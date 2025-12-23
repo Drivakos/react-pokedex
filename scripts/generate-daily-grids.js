@@ -125,14 +125,14 @@ const OTHER_CONSTRAINTS = [
 ];
 
 // Seeded random number generator
-function createSeededRandom(seed) {
+export function createSeededRandom(seed) {
   let hash = 0;
   for (let i = 0; i < seed.length; i++) {
     const char = seed.charCodeAt(i);
     hash = ((hash << 5) - hash) + char;
     hash = hash & hash;
   }
-  
+
   return function() {
     hash = ((hash * 9301) + 49297) % 233280;
     return hash / 233280;
@@ -140,7 +140,7 @@ function createSeededRandom(seed) {
 }
 
 // Shuffle array using seeded random
-function shuffleArray(array, random) {
+export function shuffleArray(array, random) {
   const arr = [...array];
   for (let i = arr.length - 1; i > 0; i--) {
     const j = Math.floor(random() * (i + 1));
@@ -150,7 +150,7 @@ function shuffleArray(array, random) {
 }
 
 // Basic constraint checking logic (simplified for validation)
-function checkBasicConstraints(pokemonTypes, constraint) {
+export function checkBasicConstraints(pokemonTypes, constraint) {
   switch (constraint.type) {
     case 'type':
       return pokemonTypes.includes(constraint.value);
@@ -180,7 +180,7 @@ function checkBasicConstraints(pokemonTypes, constraint) {
 }
 
 // Check if a constraint combination is solvable
-function isConstraintCombinationSolvable(rowConstraint, colConstraint) {
+export function isConstraintCombinationSolvable(rowConstraint, colConstraint) {
   // Handle undefined constraints
   if (!rowConstraint || !colConstraint) {
     return false;
@@ -243,7 +243,7 @@ function isConstraintCombinationSolvable(rowConstraint, colConstraint) {
 }
 
 // Generate solvable constraints for a specific date
-function generateSolvableConstraintsForDate(date) {
+export function generateSolvableConstraintsForDate(date) {
   const dateString = date.toISOString().split('T')[0];
   const seed = `pokegrid-${dateString}`;
   const random = createSeededRandom(seed);
@@ -325,7 +325,7 @@ function generateConstraintsForDate(date) {
 }
 
 // Save grid configuration to database
-async function saveGridConfiguration(date, constraints) {
+export async function saveGridConfiguration(date, constraints) {
   const dateString = typeof date === 'string' ? date : date.toISOString().split('T')[0];
   
   try {
@@ -436,11 +436,13 @@ if (isNaN(days)) {
   process.exit(1);
 }
 
-// Run the script
-generateDailyGrids(days)
-  .then(() => process.exit(0))
-  .catch((error) => {
-    console.error('❌ Fatal error:', error);
-    process.exit(1);
-  });
+// Run the script only when executed directly (not when imported)
+if (require.main === module) {
+  generateDailyGrids(days)
+    .then(() => process.exit(0))
+    .catch((error) => {
+      console.error('❌ Fatal error:', error);
+      process.exit(1);
+    });
+}
 

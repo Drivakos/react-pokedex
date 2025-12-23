@@ -1,6 +1,26 @@
 /** @type {import('jest').Config} */
 module.exports = {
   projects: [
+    // Integration tests (no mocking)
+    {
+      displayName: 'integration',
+      testEnvironment: 'node',
+      testMatch: [
+        '<rootDir>/tests/integration/**/*.test.js'
+      ],
+      collectCoverageFrom: [
+        'scripts/**/*-utils.js',
+        '!**/node_modules/**',
+        '!**/dist/**',
+        '!**/coverage/**'
+      ],
+      setupFilesAfterEnv: ['<rootDir>/tests/setup.js'],
+      transform: {
+        '^.+\\.(js|cjs|ts)$': 'babel-jest'
+      },
+      moduleFileExtensions: ['js', 'cjs', 'ts', 'json'],
+      // No module name mapper - we want real modules for integration tests
+    },
     // Backend/Node.js tests
     {
       displayName: 'backend',
@@ -8,9 +28,13 @@ module.exports = {
       testMatch: [
         '<rootDir>/tests/**/*.test.js'
       ],
+      testPathIgnorePatterns: [
+        '<rootDir>/tests/integration/' // Exclude integration tests from backend project
+      ],
       collectCoverageFrom: [
         'supabase/functions/**/*.{js,ts}',
         'src/services/**/*.{js,ts}',
+        'scripts/**/*-utils.js',
         '!supabase/functions/**/*.test.{js,ts}',
         '!src/services/**/*.test.{js,ts}',
         '!**/node_modules/**',
@@ -28,13 +52,16 @@ module.exports = {
         '^https://deno.land/(.*)': '<rootDir>/tests/__mocks__/deno-land/$1'
       }
     },
-    // Frontend/Browser tests  
+    // Frontend/Browser tests
     {
       displayName: 'frontend',
       testEnvironment: 'jsdom',
       testMatch: [
         '<rootDir>/tests/**/*.test.{ts,tsx}',
         '<rootDir>/src/**/*.test.{ts,tsx}'
+      ],
+      testPathIgnorePatterns: [
+        '<rootDir>/tests/integration/' // Exclude integration tests from frontend project
       ],
       collectCoverageFrom: [
         'src/services/**/*.{js,ts}',
