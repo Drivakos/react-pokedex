@@ -19,6 +19,7 @@ import dotenv from 'dotenv';
 // Load environment variables
 dotenv.config();
 
+// Use anon key for database operations
 const supabase = createClient(
   process.env.VITE_SUPABASE_URL || '',
   process.env.VITE_SUPABASE_ANON_KEY || ''
@@ -44,17 +45,6 @@ const TYPE_CONSTRAINTS = [
   { id: 'steel-type', type: 'type', value: 'steel', label: 'Steel', description: 'Steel-type Pokémon', svgIcon: '/icons/types/steel.svg' },
   { id: 'dark-type', type: 'type', value: 'dark', label: 'Dark', description: 'Dark-type Pokémon', svgIcon: '/icons/types/dark.svg' },
   { id: 'fairy-type', type: 'type', value: 'fairy', label: 'Fairy', description: 'Fairy-type Pokémon', svgIcon: '/icons/types/fairy.svg' },
-];
-
-const GENERATION_CONSTRAINTS = [
-  { id: 'gen-1', type: 'generation', value: 'generation-i', label: 'Generation I', description: 'Kanto region Pokémon', icon: 'I' },
-  { id: 'gen-2', type: 'generation', value: 'generation-ii', label: 'Generation II', description: 'Johto region Pokémon', icon: 'II' },
-  { id: 'gen-3', type: 'generation', value: 'generation-iii', label: 'Generation III', description: 'Hoenn region Pokémon', icon: 'III' },
-  { id: 'gen-4', type: 'generation', value: 'generation-iv', label: 'Generation IV', description: 'Sinnoh region Pokémon', icon: 'IV' },
-  { id: 'gen-5', type: 'generation', value: 'generation-v', label: 'Generation V', description: 'Unova region Pokémon', icon: 'V' },
-  { id: 'gen-6', type: 'generation', value: 'generation-vi', label: 'Generation VI', description: 'Kalos region Pokémon', icon: 'VI' },
-  { id: 'gen-7', type: 'generation', value: 'generation-vii', label: 'Generation VII', description: 'Alola region Pokémon', icon: 'VII' },
-  { id: 'gen-8', type: 'generation', value: 'generation-viii', label: 'Generation VIII', description: 'Galar region Pokémon', icon: 'VIII' },
 ];
 
 const GENERATION_CONSTRAINTS = [
@@ -191,6 +181,11 @@ function checkBasicConstraints(pokemonTypes, constraint) {
 
 // Check if a constraint combination is solvable
 function isConstraintCombinationSolvable(rowConstraint, colConstraint) {
+  // Handle undefined constraints
+  if (!rowConstraint || !colConstraint) {
+    return false;
+  }
+
   // Quick checks for obviously impossible combinations
   if (rowConstraint.type === 'type' && colConstraint.type === 'type') {
     // Can't be both fire and water type, etc.
@@ -266,11 +261,30 @@ function generateSolvableConstraintsForDate(date) {
     // Pick 3 random type constraints for rows
     const rowConstraints = shuffledTypes.slice(0, 3);
 
-    // Pick 3 mixed constraints for columns
+    // Pick 3 mixed constraints for columns - ensure all are defined
     const useMoreTypes = random() > 0.5;
-    const colConstraints = useMoreTypes
-      ? [...shuffledTypes.slice(3, 5), shuffledOther[0]]
-      : [shuffledTypes[3], ...shuffledOther.slice(1, 3)];
+    let colConstraints;
+
+    if (useMoreTypes) {
+      // 2 types + 1 other constraint
+      colConstraints = [
+        shuffledTypes[3] || shuffledTypes[0],  // fallback to first if undefined
+        shuffledTypes[4] || shuffledTypes[1],  // fallback to second if undefined
+        shuffledOther[0] || shuffledOther[Math.floor(random() * shuffledOther.length)]  // random fallback
+      ];
+    } else {
+      // 1 type + 2 other constraints
+      colConstraints = [
+        shuffledTypes[3] || shuffledTypes[0],  // fallback to first if undefined
+        shuffledOther[1] || shuffledOther[0],  // fallback to first if undefined
+        shuffledOther[2] || shuffledOther[Math.floor(random() * shuffledOther.length)]  // random fallback
+      ];
+    }
+
+    // Final safety check - replace any remaining undefined constraints
+    colConstraints = colConstraints.map(constraint =>
+      constraint || shuffledTypes[Math.floor(random() * shuffledTypes.length)]
+    );
 
     // Check if all combinations are solvable
     let allSolvable = true;
@@ -315,16 +329,19 @@ async function saveGridConfiguration(date, constraints) {
   const dateString = typeof date === 'string' ? date : date.toISOString().split('T')[0];
   
   try {
-    const { data, error } = await supabase.rpc('save_pokegrid_configuration', {
-      p_grid_date: dateString,
-      p_configuration: {
-        rows: constraints.rows,
-        cols: constraints.cols
-      },
-      p_difficulty_level: constraints.difficulty,
-      p_generation_seed: constraints.seed
-    });
-    
+    // Use the daily configs table which may have fewer RLS restrictions
+    const { data, error } = await supabase
+      .from('pokegrid_daily_configs')
+      .upsert({
+        grid_date: dateString,
+        row_constraints: constraints.rows,
+        col_constraints: constraints.cols,
+        difficulty_level: constraints.difficulty || 'medium',
+        generation_seed: constraints.seed || null
+      }, {
+        onConflict: 'grid_date'
+      });
+
     if (error) {
       console.error(`❌ Failed to save configuration for ${dateString}:`, error.message);
       return false;
@@ -342,8 +359,8 @@ async function saveGridConfiguration(date, constraints) {
 async function generateDailyGrids(days = 0) {
   console.log('🎮 Pokémon Grid Challenge - Daily Grid Generator\n');
   
-  if (!process.env.VITE_SUPABASE_URL || !process.env.VITE_SUPABASE_ANON_KEY) {
-    console.error('❌ Error: VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY must be set in .env');
+  if (!process.env.VITE_SUPABASE_URL || (!process.env.SUPABASE_SERVICE_ROLE_KEY && !process.env.VITE_SUPABASE_ANON_KEY)) {
+    console.error('❌ Error: VITE_SUPABASE_URL and either SUPABASE_SERVICE_ROLE_KEY or VITE_SUPABASE_ANON_KEY must be set in .env');
     process.exit(1);
   }
   
