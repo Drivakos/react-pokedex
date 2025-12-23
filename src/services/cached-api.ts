@@ -228,7 +228,7 @@ export const fetchCachedPokemonDetails = async (id: number): Promise<PokemonDeta
     const abilities = await Promise.all(abilitiesPromises);
 
     // Fetch evolution chain if available
-    let evolutionChain: any[] = [];
+    const evolutionChain: any[] = [];
     if (species.evolution_chain?.url) {
       try {
         const evolutionResponse = await fetch(species.evolution_chain.url);

@@ -94,7 +94,7 @@ async function fetchPokemonByIdDirect(id: number): Promise<Pokemon> {
     console.error(`Error fetching Pokemon with ID ${id}:`, error);
     throw error;
   }
-};
+}
 
 /**
  * Fetches Pokemon data from GraphQL API with caching support
@@ -200,7 +200,7 @@ async function fetchPokemonDataDirect(
     }
     throw error;
   }
-};
+}
 
 // Transform functions moved to ../utils/pokemon-transform.ts
 
