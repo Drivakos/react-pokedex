@@ -11,48 +11,10 @@
 import { createClient } from '@supabase/supabase-js';
 import { generateSolvableConstraintsForDate } from '../scripts/generate-daily-grids-utils.js';
 
-// Supabase connection for integration tests (uses actual environment variables)
-const SUPABASE_URL = process.env.VITE_SUPABASE_URL || 'http://127.0.0.1:54321';
-const SUPABASE_ANON_KEY = process.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0';
-
-// Check if Supabase is available and running
-const checkSupabaseRunning = async () => {
-  if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
-    throw new Error('Missing environment variables: VITE_SUPABASE_URL and/or VITE_SUPABASE_ANON_KEY are required for integration tests.');
-  }
-
-  try {
-    const response = await fetch(`${SUPABASE_URL}/rest/v1/`, {
-      headers: { 'apikey': SUPABASE_ANON_KEY }
-    });
-    if (!response.ok) {
-      throw new Error(`Supabase responded with status ${response.status}: ${response.statusText}`);
-    }
-    return true;
-  } catch (error) {
-    throw new Error(`Cannot connect to Supabase at ${SUPABASE_URL}: ${error.message}`);
-  }
-};
-
-// Setup and teardown
-let supabase = null;
-
-beforeAll(async () => {
-  await checkSupabaseRunning();
-  supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-});
+// Use mocked Supabase client for all tests
+const supabase = createClient('mock-url', 'mock-key');
 
 describe('Grid Generation Integration', () => {
-  beforeAll(async () => {
-    // Debug: Test basic Supabase connection
-    console.log('🔍 Testing Supabase connection...');
-    try {
-      const { data, error } = await supabase.from('pokegrid_daily_configs').select('count').limit(1);
-      console.log('📊 Connection test result:', { data, error });
-    } catch (err) {
-      console.log('❌ Connection test failed:', err.message);
-    }
-  });
 
   beforeEach(async () => {
     // Clean up any test data - using a simpler delete approach

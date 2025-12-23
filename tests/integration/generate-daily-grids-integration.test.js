@@ -64,6 +64,9 @@ beforeAll(async () => {
 
 describe('Grid Generation Integration', () => {
   beforeAll(async () => {
+    // Skip setup if Supabase is not available
+    if (!supabaseAvailable) return;
+
     // Debug: Test basic Supabase connection
     console.log('🔍 Testing Supabase connection...');
     try {
@@ -75,6 +78,9 @@ describe('Grid Generation Integration', () => {
   });
 
   beforeEach(async () => {
+    // Skip cleanup if Supabase is not available
+    if (!supabaseAvailable) return;
+
     // Clean up any test data - using a simpler delete approach
     try {
       await supabase.from('pokegrid_daily_configs').delete().neq('grid_date', '');
