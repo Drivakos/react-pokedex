@@ -24,7 +24,10 @@ const Login: React.FC = () => {
       const { error } = await signIn(formData.email, formData.password);
       if (error) throw error;
 
-      navigate('/profile');
+      // Redirect to stored destination or profile page
+      const intendedPath = localStorage.getItem('auth_redirect') || '/profile';
+      localStorage.removeItem('auth_redirect'); // Clean up
+      navigate(intendedPath);
     } catch (error: any) {
       setStatus({ type: 'error', message: error.message || 'Login failed' });
     } finally {

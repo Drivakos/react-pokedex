@@ -11,7 +11,6 @@ interface NotificationDropdownProps {
   onMarkAllAsRead: () => void;
   onClose: () => void;
   onOpenFriendsModal?: (initialTab?: 'friends' | 'requests' | 'add') => void;
-  userId?: string; // For testing
 }
 
 export const NotificationDropdown: React.FC<NotificationDropdownProps> = ({
@@ -20,8 +19,7 @@ export const NotificationDropdown: React.FC<NotificationDropdownProps> = ({
   onMarkAsRead,
   onMarkAllAsRead,
   onClose,
-  onOpenFriendsModal,
-  userId
+  onOpenFriendsModal
 }) => {
   const navigate = useNavigate();
 

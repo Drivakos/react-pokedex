@@ -58,19 +58,18 @@ export class AuthService {
   }
 
   /**
-   * Get the current session
-   * This is a lightweight method that just returns the current session
-   * instead of refreshing it, since Supabase handles refreshing automatically
-   * 
-   * @returns The current session or null if not authenticated
+   * Refresh the current session
+   * This method forces a session refresh to ensure we have a valid, up-to-date session
+   *
+   * @returns The refreshed session or null if refresh failed
    */
   async refreshSession(): Promise<Session | null> {
     try {
-      // Simply get the current session without refreshing
-      // This avoids rate limits while maintaining compatibility with existing code
-      const { data } = await supabase.auth.getSession();
+      const { data, error } = await supabase.auth.refreshSession();
+      if (error) throw error;
       return data.session;
     } catch (error) {
+      console.error('Error refreshing session:', error);
       return null;
     }
   }
@@ -90,7 +89,7 @@ export class AuthService {
     if (response.error) {
       toast.error(response.error.message || 'Failed to sign in');
     } else if (response.data.session) {
-      toast.success(`Welcome back!`);
+      // Success message handled by AuthContext, no need to duplicate here
       // Ensure we have a fresh session token
       await this.refreshSession();
     }

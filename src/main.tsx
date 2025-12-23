@@ -1,3 +1,17 @@
+// Initialize Trusted Types policy BEFORE any other imports to prevent CSP violations
+if (window.trustedTypes && window.trustedTypes.createPolicy) {
+  try {
+    window.trustedTypes.createPolicy('default', {
+      createHTML: (string: string) => string,
+      createScriptURL: (string: string) => string,
+      createScript: (string: string) => string,
+    });
+  } catch (error) {
+    // Policy might already exist, ignore the error
+    console.warn('Trusted Types policy creation failed:', error);
+  }
+}
+
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { HelmetProvider } from 'react-helmet-async';

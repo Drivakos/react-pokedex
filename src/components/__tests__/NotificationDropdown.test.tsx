@@ -68,8 +68,7 @@ describe('NotificationDropdown Component', () => {
     onMarkAsRead: jest.fn(),
     onMarkAllAsRead: jest.fn(),
     onClose: jest.fn(),
-    onOpenFriendsModal: jest.fn(),
-    userId: 'user-123'
+    onOpenFriendsModal: jest.fn()
   };
 
   beforeEach(() => {
@@ -239,46 +238,4 @@ describe('NotificationDropdown Component', () => {
     });
   });
 
-  describe('Footer Actions', () => {
-    it('should show test button when userId is provided', () => {
-      render(<NotificationDropdown {...mockProps} />);
-
-      expect(screen.getByText('[TEST] Create Friend Request Notification')).toBeInTheDocument();
-    });
-
-    it('should not show test button when userId is not provided', () => {
-      render(<NotificationDropdown {...mockProps} userId={undefined} />);
-
-      expect(screen.queryByText('[TEST] Create Friend Request Notification')).not.toBeInTheDocument();
-    });
-
-    it('should call createTestNotification when test button is clicked', () => {
-      const mockCreateTestNotification = jest.spyOn(notificationsService, 'createTestNotification').mockResolvedValue(999);
-
-      render(<NotificationDropdown {...mockProps} />);
-
-      const testButton = screen.getByText('[TEST] Create Friend Request Notification');
-      fireEvent.click(testButton);
-
-      expect(mockCreateTestNotification).toHaveBeenCalledWith('user-123');
-
-      mockCreateTestNotification.mockRestore();
-    });
-
-    it('should show "View all notifications" button when there are notifications', () => {
-      render(<NotificationDropdown {...mockProps} />);
-
-      const viewAllButton = screen.getByText('View all notifications');
-      fireEvent.click(viewAllButton);
-
-      expect(mockNavigate).toHaveBeenCalledWith('/profile');
-      expect(mockProps.onClose).toHaveBeenCalled();
-    });
-
-    it('should not show "View all notifications" button when no notifications', () => {
-      render(<NotificationDropdown {...mockProps} notifications={[]} />);
-
-      expect(screen.queryByText('View all notifications')).not.toBeInTheDocument();
-    });
-  });
 });

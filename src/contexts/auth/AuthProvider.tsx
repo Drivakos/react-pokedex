@@ -186,20 +186,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               setSession(session);
               setUser(session.user);
               setLoading(true);
-              
               await initProfile(session.user.id);
-              
-              const username = session.user.user_metadata?.full_name || 
-                              session.user.user_metadata?.name ||
-                              session.user.email?.split('@')[0] ||
-                              'User';
-                              
-              if (username) {
-                window.setTimeout(() => {
-                  toast.success(`Welcome, ${username}!`);
-                }, 500);
-              }
-              
               setLoading(false);
             }
             break;

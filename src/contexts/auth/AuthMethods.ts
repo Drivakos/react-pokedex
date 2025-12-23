@@ -31,20 +31,35 @@ export const AuthMethods = ({
   const signUp = async (email: string, password: string): Promise<AuthResponse> => {
     try {
       localStorage.removeItem('supabase.auth.token');
-      const response = await supabase.auth.signUp({ 
-        email, 
+      const response = await supabase.auth.signUp({
+        email,
         password,
         options: {
           emailRedirectTo: `${window.location.origin}/auth/callback`
         }
       });
-      
+
       if (response.error) {
         toast.error(response.error.message);
       } else if (response.data.user) {
-        toast.success('Check your email to confirm your account!');
+        if (response.data.session) {
+          toast.success('Account created successfully! Welcome!');
+          setSession(response.data.session);
+          setUser(response.data.user);
+          localStorage.setItem('supabase.auth.token', JSON.stringify(response.data.session));
+
+          // Navigate to intended destination or profile
+          setTimeout(() => {
+            const intendedPath = localStorage.getItem('auth_redirect') || '/profile';
+            localStorage.removeItem('auth_redirect');
+            window.location.href = window.location.origin + intendedPath;
+          }, 100);
+        } else {
+          // Email confirmation is enabled - user needs to check email
+          toast.success('Check your email to confirm your account!');
+        }
       }
-      
+
       return response;
     } catch (err) {
       toast.error('An unexpected error occurred');
@@ -67,11 +82,6 @@ export const AuthMethods = ({
         setSession(response.data.session);
         setUser(response.data.user);
         localStorage.setItem('supabase.auth.token', JSON.stringify(response.data.session));
-        const username = response.data.user?.user_metadata?.full_name || 
-                        response.data.user?.user_metadata?.name ||
-                        response.data.user?.email?.split('@')[0] ||
-                        'User';
-        toast.success(`Welcome back, ${username}!`);
       }
       
       return response;
@@ -83,7 +93,6 @@ export const AuthMethods = ({
 
   const signInWithGoogle = async (): Promise<OAuthResponse> => {
     try {
-      await supabase.auth.refreshSession();
       localStorage.removeItem('supabase.auth.token');
       const redirectUrl = `${window.location.origin}/auth/callback`;
       const response = await supabase.auth.signInWithOAuth({
@@ -97,15 +106,16 @@ export const AuthMethods = ({
           }
         },
       });
-      
+
       if (response.error) {
         toast.error(response.error.message || 'Failed to sign in with Google');
       } else if (response.data?.url) {
-        window.location.href = response.data.url;
+        // Use location.replace for OAuth redirects to avoid CSP issues
+        window.location.replace(response.data.url);
       } else {
         toast.error('Failed to initialize Google login');
       }
-      
+
       return response;
     } catch (err) {
       toast.error('An unexpected error occurred during Google login');

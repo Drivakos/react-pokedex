@@ -15,17 +15,10 @@ export const AuthCallback = () => {
     const handleAuthCallback = async () => {
       try {
         const queryParams = new URLSearchParams(window.location.search);
-        const code = queryParams.get('code');
         const errorParam = queryParams.get('error');
         const errorDescription = queryParams.get('error_description');
-
-        const hashParams = new URLSearchParams(window.location.hash.substring(1));
-        const accessToken = hashParams.get('access_token');
-        const refreshToken = hashParams.get('refresh_token');
-
-        // Check for type parameter first to determine the flow type
         const type = searchParams.get('type');
-        
+
         // Handle error cases first
         if (errorParam) {
           const errorMessage = `Authentication failed: ${errorDescription || errorParam}`;
@@ -41,84 +34,27 @@ export const AuthCallback = () => {
           return;
         }
 
-        // PKCE Flow - code parameter in query string
-        if (code) {
-          const { data, error: exchangeError } = await authService.exchangeCodeForSession(code);
+        // With detectSessionInUrl: true, Supabase automatically handles:
+        // - PKCE code exchange (when code parameter is present)
+        // - Implicit flow tokens (when access_token/refresh_token in hash)
+        // - Magic link/signup sessions
 
-          if (exchangeError) {
-            setError('Authentication failed - could not exchange code');
-            toast.error(exchangeError.message || 'Failed to authenticate');
-            navigate('/login', { replace: true });
-            return;
-          }
+        // The auth state change listener in AuthProvider will handle the session setup
+        // We just need to wait a moment for the automatic processing to complete
 
-          if (data?.session) {
-            // Regular authentication flow - session is already valid after PKCE exchange
-            toast.success('Successfully signed in!');
-            navigate('/', { replace: true });
-            return;
-          }
-        }
-
-        // Implicit Flow - access_token and refresh_token in hash
-        if (accessToken && refreshToken) {
-          try {
-            const { data, error } = await authService.setSession({
-              access_token: accessToken,
-              refresh_token: refreshToken
-            });
-
-            if (error) {
-              throw error;
-            }
-
-            if (data.session) {
-              // Regular authentication flow
-              await refreshSession();
-              toast.success('Successfully signed in!');
-              navigate('/', { replace: true });
-              return;
-            }
-          } catch {
-            setError('Failed to set authentication session');
-            toast.error('Authentication failed');
-            navigate('/login', { replace: true });
-            return;
-          }
-        }
-
-        // Handle specific type-based flows (magiclink, signup)
-        if (type === 'magiclink' || type === 'signup') {
+        setTimeout(async () => {
           const session = await authService.getSession();
-
           if (session) {
             await refreshSession();
-
-            const username = session.user?.user_metadata?.full_name ||
-                            session.user?.user_metadata?.name ||
-                            session.user?.email?.split('@')[0] ||
-                            'User';
-
-            toast.success(`Welcome, ${username}!`);
-            navigate('/');
+            // Redirect to stored destination or home page
+            const intendedPath = localStorage.getItem('auth_redirect') || '/';
+            localStorage.removeItem('auth_redirect'); // Clean up
+            navigate(intendedPath, { replace: true });
           } else {
             // No session found, redirect to login
-            toast.error('Authentication session not found');
             navigate('/login', { replace: true });
           }
-          return;
-        }
-
-        // If no specific handling matched, check for any valid session
-        const session = await authService.getSession();
-        if (session) {
-          await refreshSession();
-          toast.success('Successfully signed in!');
-          navigate('/', { replace: true });
-        } else {
-          // No session found, redirect to login
-          navigate('/login', { replace: true });
-        }
+        }, 1000); // Give Supabase time to process the callback
 
       } catch {
         setError('An unexpected error occurred');
@@ -134,27 +70,12 @@ export const AuthCallback = () => {
     handleAuthCallback();
   }, [navigate, searchParams, refreshSession]);
 
+  // Show minimal loading state, then redirect immediately
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50">
       <div className="text-center">
-        {loading ? (
-          <>
-            <div className="w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-            <p className="text-gray-600">Completing authentication...</p>
-          </>
-        ) : error ? (
-          <>
-            <div className="text-red-500 text-5xl mb-4">⚠️</div>
-            <p className="text-red-600 font-medium">{error}</p>
-            <p className="text-gray-600 mt-2">Redirecting to login page...</p>
-          </>
-        ) : (
-          <>
-            <div className="text-green-500 text-5xl mb-4">✓</div>
-            <p className="text-green-600 font-medium">Authentication successful!</p>
-            <p className="text-gray-600 mt-2">Redirecting to your profile...</p>
-          </>
-        )}
+        <div className="w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+        <p className="text-gray-600">Completing authentication...</p>
       </div>
     </div>
   );
