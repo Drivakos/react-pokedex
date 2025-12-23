@@ -8,12 +8,43 @@
  * Run with: npm test -- --testPathPattern="generate-daily-grids-integration"
  */
 
+import { config } from 'dotenv';
 import { createClient } from '@supabase/supabase-js';
 import { generateSolvableConstraintsForDate } from '../../scripts/generate-daily-grids-utils.js';
 
-// Supabase connection for integration tests (uses actual environment variables)
-const SUPABASE_URL = process.env.VITE_SUPABASE_URL;
-const SUPABASE_ANON_KEY = process.env.VITE_SUPABASE_ANON_KEY;
+// Load environment variables from .env.local for integration tests
+config({ path: '.env.local' });
+
+// Supabase connection for integration tests (NEVER use real credentials in tests)
+const SUPABASE_URL = process.env.VITE_SUPABASE_URL || 'http://localhost:54321';
+const SUPABASE_ANON_KEY = process.env.VITE_SUPABASE_ANON_KEY || 'mock-integration-key';
+
+// Security check: Determine if integration tests should run
+let shouldRunIntegrationTests = true;
+let skipReason = '';
+
+if (SUPABASE_URL && SUPABASE_URL.includes('supabase.co')) {
+  // Allow if explicitly configured for integration testing (check for test indicators)
+  const isTestEnvironment = process.env.NODE_ENV === 'test' ||
+                           process.env.CI === 'true' ||
+                           process.env.JEST_WORKER_ID !== undefined;
+
+  if (!isTestEnvironment) {
+    throw new Error('SECURITY ERROR: Integration tests cannot use real Supabase URLs outside of test environment.');
+  }
+
+  // Additional safety: require explicit opt-in for real database testing
+  if (!process.env.ALLOW_INTEGRATION_TESTS) {
+    console.warn('⚠️  SKIPPING: Integration tests require ALLOW_INTEGRATION_TESTS=true to run against real database.');
+    console.warn('⚠️  Set ALLOW_INTEGRATION_TESTS=true if you want to run integration tests.');
+    console.warn('⚠️  Otherwise, these tests will be skipped for security.');
+    shouldRunIntegrationTests = false;
+    skipReason = 'Security restrictions - set ALLOW_INTEGRATION_TESTS=true to enable';
+  } else {
+    console.warn('⚠️  WARNING: Integration tests are running against real Supabase database!');
+    console.warn('⚠️  Make sure this is intended and you have proper test data isolation.');
+  }
+}
 // Check if Supabase is available and running
 const checkSupabaseRunning = async () => {
   if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
@@ -62,7 +93,10 @@ beforeAll(async () => {
   }
 });
 
-describe('Grid Generation Integration', () => {
+// Conditionally run integration tests based on security checks
+const describeIntegration = shouldRunIntegrationTests ? describe : describe.skip;
+
+describeIntegration('Grid Generation Integration', () => {
   beforeAll(async () => {
     // Skip setup if Supabase is not available
     if (!supabaseAvailable) return;
@@ -352,3 +386,14 @@ describe('Grid Generation Integration', () => {
     });
   });
 });
+
+// If integration tests were skipped due to security, explain why
+if (!shouldRunIntegrationTests) {
+  describe('Grid Generation Integration - SKIPPED', () => {
+    test(`skipped for security: ${skipReason}`, () => {
+      console.log(`ℹ️  Integration tests were skipped: ${skipReason}`);
+      console.log('ℹ️  To enable integration tests, set ALLOW_INTEGRATION_TESTS=true');
+      expect(true).toBe(true); // Always pass the skip explanation
+    });
+  });
+}

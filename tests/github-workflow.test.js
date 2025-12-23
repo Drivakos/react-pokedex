@@ -189,8 +189,8 @@ describe('GitHub Actions Workflow', () => {
   });
 
   describe('Workflow Dependencies', () => {
-    test('should depend on generate-daily-grids.js script', () => {
-      const scriptPath = path.join(process.cwd(), 'scripts', 'generate-daily-grids.js');
+    test('should depend on generate-daily-grids.mjs script', () => {
+      const scriptPath = path.join(process.cwd(), 'scripts', 'generate-daily-grids.mjs');
 
       expect(() => fs.accessSync(scriptPath)).not.toThrow();
 

@@ -437,7 +437,7 @@ if (isNaN(days)) {
 }
 
 // Run the script only when executed directly (not when imported)
-if (require.main === module) {
+if (import.meta.url === `file://${process.argv[1]}`) {
   generateDailyGrids(days)
     .then(() => process.exit(0))
     .catch((error) => {
