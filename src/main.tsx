@@ -1,7 +1,7 @@
 // Initialize Trusted Types policy BEFORE any other imports to prevent CSP violations
-if (window.trustedTypes && window.trustedTypes.createPolicy) {
+if ((window as any).trustedTypes && (window as any).trustedTypes.createPolicy) {
   try {
-    window.trustedTypes.createPolicy('default', {
+    (window as any).trustedTypes.createPolicy('default', {
       createHTML: (string: string) => string,
       createScriptURL: (string: string) => string,
       createScript: (string: string) => string,

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { useAuth } from '../../hooks/useAuth';
@@ -7,8 +7,6 @@ import authService from '../../services/auth.service';
 export const AuthCallback = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const { refreshSession } = useAuth();
 
   useEffect(() => {
@@ -21,8 +19,6 @@ export const AuthCallback = () => {
 
         // Handle error cases first
         if (errorParam) {
-          const errorMessage = `Authentication failed: ${errorDescription || errorParam}`;
-          setError(errorMessage);
           toast.error(`Login failed: ${errorDescription || errorParam}`);
           navigate('/login', { replace: true });
           return;
@@ -57,13 +53,10 @@ export const AuthCallback = () => {
         }, 1000); // Give Supabase time to process the callback
 
       } catch {
-        setError('An unexpected error occurred');
         toast.error('Authentication failed. Please try again.');
 
         await authService.signOut();
         navigate('/');
-      } finally {
-        setLoading(false);
       }
     };
 

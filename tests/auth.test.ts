@@ -1,5 +1,18 @@
 import { jest } from '@jest/globals';
 
+// Extend Window interface for Trusted Types API in tests
+declare global {
+  interface Window {
+    trustedTypes?: {
+      createPolicy(policyName: string, policy: {
+        createHTML?: (input: string) => string;
+        createScript?: (input: string) => string;
+        createScriptURL?: (input: string) => string;
+      }): void;
+    };
+  }
+}
+
 // Mock localStorage
 const mockLocalStorage = {
   getItem: jest.fn(),
@@ -50,7 +63,7 @@ jest.mock('react-hot-toast', () => ({
 }));
 
 // Mock Supabase client with comprehensive auth methods
-const mockSupabaseClient = {
+const mockSupabaseClient: any = {
   auth: {
     signInWithPassword: jest.fn(),
     signUp: jest.fn(),
@@ -71,15 +84,15 @@ const mockSupabaseClient = {
   from: jest.fn(() => ({
     select: jest.fn(() => ({
       eq: jest.fn(() => ({
-        single: jest.fn().mockResolvedValue({ data: null, error: null }),
+        single: jest.fn(),
         order: jest.fn().mockReturnThis()
       })),
       gt: jest.fn().mockReturnThis(),
-      single: jest.fn().mockResolvedValue({ data: null, error: null })
+      single: jest.fn()
     })),
     upsert: jest.fn(() => ({ error: null })),
     insert: jest.fn(() => ({ error: null })),
-    update: jest.fn(() => ({ select: jest.fn(() => ({ single: jest.fn().mockResolvedValue({ data: null, error: null }) })) })),
+    update: jest.fn(() => ({ select: jest.fn(() => ({ single: jest.fn() })) })),
     delete: jest.fn(() => ({ error: null }))
   }))
 };
@@ -125,7 +138,7 @@ describe('Authentication System Tests', () => {
     // Reset all Supabase mocks
     Object.values(mockSupabaseClient.auth).forEach(mock => {
       if (typeof mock === 'function') {
-        mock.mockClear();
+        (mock as any).mockClear();
       }
     });
   });
@@ -135,7 +148,7 @@ describe('Authentication System Tests', () => {
       const { AuthMethods } = await import('../src/contexts/auth/AuthMethods');
 
       // Mock successful signup with immediate session (email verification disabled)
-      mockSupabaseClient.auth.signUp.mockResolvedValueOnce({
+      (mockSupabaseClient.auth.signUp as any).mockResolvedValueOnce({
         data: {
           user: {
             id: 'user-123',
@@ -176,11 +189,11 @@ describe('Authentication System Tests', () => {
       });
 
       // Verify session was set immediately (no email verification required)
-      expect(mockSetSession).toHaveBeenCalledWith(result.data.session);
-      expect(mockSetUser).toHaveBeenCalledWith(result.data.user);
+      expect(mockSetSession).toHaveBeenCalledWith(result.data!.session);
+      expect(mockSetUser).toHaveBeenCalledWith(result.data!.user);
 
       expect(result.error).toBeNull();
-      expect(result.data.user.email).toBe('test@example.com');
+      expect(result.data!.user!.email).toBe('test@example.com');
     });
 
     it('should handle email signup with verification required', async () => {
@@ -217,8 +230,8 @@ describe('Authentication System Tests', () => {
       expect(mockLocalStorage.setItem).not.toHaveBeenCalled();
 
       expect(result.error).toBeNull();
-      expect(result.data.user.email).toBe('test@example.com');
-      expect(result.data.session).toBeNull();
+      expect(result.data!.user!.email).toBe('test@example.com');
+      expect(result.data!.session).toBeNull();
     });
 
     it('should handle email signin', async () => {
@@ -262,11 +275,11 @@ describe('Authentication System Tests', () => {
       });
 
       // Verify session was set
-      expect(mockSetSession).toHaveBeenCalledWith(result.data.session);
-      expect(mockSetUser).toHaveBeenCalledWith(result.data.user);
+      expect(mockSetSession).toHaveBeenCalledWith(result.data!.session);
+      expect(mockSetUser).toHaveBeenCalledWith(result.data!.user);
 
       expect(result.error).toBeNull();
-      expect(result.data.user.email).toBe('test@example.com');
+      expect(result.data!.user!.email).toBe('test@example.com');
     });
 
     it('should handle signup errors', async () => {
@@ -290,7 +303,7 @@ describe('Authentication System Tests', () => {
 
       const result = await authMethods.signUp('test@example.com', 'password123');
 
-      expect(result.error.message).toBe('Email already registered');
+      expect(result.error!.message).toBe('Email already registered');
       expect(mockSetSession).not.toHaveBeenCalled();
       expect(mockSetUser).not.toHaveBeenCalled();
     });
@@ -316,7 +329,7 @@ describe('Authentication System Tests', () => {
 
       const result = await authMethods.signIn('test@example.com', 'wrongpassword');
 
-      expect(result.error.message).toBe('Invalid login credentials');
+      expect(result.error!.message).toBe('Invalid login credentials');
       expect(mockSetSession).not.toHaveBeenCalled();
       expect(mockSetUser).not.toHaveBeenCalled();
     });
@@ -389,7 +402,7 @@ describe('Authentication System Tests', () => {
 
       const result = await authMethods.signInWithGoogle();
 
-      expect(result.error.message).toBe('OAuth provider not configured');
+      expect(result.error!.message).toBe('OAuth provider not configured');
       expect(result.data.url).toBeNull();
       // Should not attempt redirect when there's an error
       expect(window.location.replace).not.toHaveBeenCalled();
@@ -523,7 +536,7 @@ describe('Authentication System Tests', () => {
       const result = await authMethods.updatePassword('123'); // Too short
 
       expect(result.error).toBeTruthy();
-      expect(result.error.message).toBe('Password must be at least 8 characters long');
+      expect(result.error!.message).toBe('Password must be at least 8 characters long');
       expect(mockSupabaseClient.auth.updateUser).not.toHaveBeenCalled();
     });
   });
@@ -579,7 +592,7 @@ describe('Authentication System Tests', () => {
 
       const result = await authMethods.signInWithMagicLink('invalid-email');
 
-      expect(result.error.message).toBe('Invalid email format');
+      expect(result.error!.message).toBe('Invalid email format');
     });
   });
 
@@ -713,11 +726,11 @@ describe('Authentication System Tests', () => {
   describe('Trusted Types Policy', () => {
     it('should mock Trusted Types API for testing', () => {
       // Verify that the Trusted Types mock is properly set up
-      expect(window.trustedTypes).toBeDefined();
-      expect(typeof window.trustedTypes.createPolicy).toBe('function');
+      expect((window as any).trustedTypes).toBeDefined();
+      expect(typeof (window as any).trustedTypes.createPolicy).toBe('function');
 
       // Test that we can call createPolicy
-      window.trustedTypes.createPolicy('test', {
+      (window as any).trustedTypes.createPolicy('test', {
         createHTML: (s: string) => s,
         createScriptURL: (s: string) => s,
         createScript: (s: string) => s,

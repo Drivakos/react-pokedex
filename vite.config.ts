@@ -71,15 +71,15 @@ export default defineConfig(({ mode }) => {
         target: 'https://pokeapi.co',
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/api\/pokeapi/, '/api/v2'),
-        configure: (proxy, options) => {
-          proxy.on('error', (err, req, res) => {
+        configure: (proxy, _options) => {
+          proxy.on('error', (err, _req, _res) => {
             console.log('proxy error', err);
           });
-          proxy.on('proxyReq', (proxyReq, req, res) => {
-            console.log('Sending Request to the Target:', req.method, req.url);
+          proxy.on('proxyReq', (_proxyReq, _req, _res) => {
+            console.log('Sending Request to the Target:', _req.method, _req.url);
           });
-          proxy.on('proxyRes', (proxyRes, req, res) => {
-            console.log('Received Response from the Target:', proxyRes.statusCode, req.url);
+          proxy.on('proxyRes', (proxyRes, _req, _res) => {
+            console.log('Received Response from the Target:', proxyRes.statusCode, _req.url);
           });
         },
       },
@@ -90,14 +90,14 @@ export default defineConfig(({ mode }) => {
         headers: {
           'X-Api-Key': env.VITE_POKEMONTCG_API_KEY || '',
         },
-        configure: (proxy, options) => {
-          proxy.on('error', (err, req, res) => {
+        configure: (proxy, _options) => {
+          proxy.on('error', (err, _req, _res) => {
             console.log('❌ Pokemon TCG API proxy error:', err.message);
           });
-          proxy.on('proxyReq', (proxyReq, req, res) => {
-            console.log('🎴 Proxying Pokemon TCG request:', req.url);
+          proxy.on('proxyReq', (_proxyReq, _req, _res) => {
+            console.log('🎴 Proxying Pokemon TCG request:', _req.url);
           });
-          proxy.on('proxyRes', (proxyRes, req, res) => {
+          proxy.on('proxyRes', (proxyRes, _req, _res) => {
             console.log('📦 Pokemon TCG response:', proxyRes.statusCode);
           });
         },

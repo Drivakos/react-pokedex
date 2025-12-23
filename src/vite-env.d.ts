@@ -18,3 +18,16 @@ interface ImportMetaEnv {
 interface ImportMeta {
   readonly env: ImportMetaEnv;
 }
+
+// Extend Window interface for Trusted Types API
+declare global {
+  interface Window {
+    trustedTypes?: {
+      createPolicy(policyName: string, policy: {
+        createHTML?: (input: string) => string;
+        createScript?: (input: string) => string;
+        createScriptURL?: (input: string) => string;
+      }): void;
+    };
+  }
+}

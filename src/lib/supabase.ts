@@ -75,22 +75,6 @@ supabase.auth.onAuthStateChange((event, session) => {
   }
 });
 
-// Initialize session
-const initializeSession = async () => {
-  try {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) {
-      // No session - no debug log needed
-      return;
-    }
-
-    if (session) {
-      // Initial session exists - no debug log needed
-    }
-  } catch (error) {
-    // Silently handle session initialization errors
-  }
-};
 
 export async function ensureProfile(userId: string, email?: string): Promise<void> {
   try {
