@@ -72,24 +72,38 @@ export function checkConstraint(pokemon: Pokemon, constraint: GridConstraint): b
     
     case 'evolution-stage':
       const pokemonName = pokemon.name.toLowerCase();
-      
+
       if (constraint.value === 'starter') {
-        return STARTER_POKEMON.includes(pokemonName) || pokemon.is_starter === true;
+        return STARTER_POKEMON.includes(pokemonName) ||
+               pokemon.is_starter === true ||
+               (pokemon.evolution_chain?.evolves_from === null && pokemon.has_evolutions);
       }
       if (constraint.value === 'first') {
         // First evolution - has evolved from something but can still evolve
-        return pokemon.evolution_chain?.evolves_from && pokemon.has_evolutions;
+        const hasEvolvedFrom = pokemon.evolution_chain?.evolves_from !== null &&
+                              pokemon.evolution_chain?.evolves_from !== undefined;
+        const canStillEvolve = pokemon.has_evolutions === true;
+        return hasEvolvedFrom && canStillEvolve;
       }
       if (constraint.value === 'final') {
-        return !pokemon.has_evolutions;
+        // Final evolution - cannot evolve further
+        return pokemon.has_evolutions === false ||
+               pokemon.has_evolutions === null ||
+               pokemon.has_evolutions === undefined;
       }
       if (constraint.value === 'none') {
-        return !pokemon.has_evolutions && !pokemon.evolution_chain?.evolves_from;
+        // No evolution - cannot evolve and has not evolved
+        const neverEvolves = pokemon.has_evolutions === false ||
+                            pokemon.has_evolutions === null ||
+                            pokemon.has_evolutions === undefined;
+        const hasNotEvolved = !pokemon.evolution_chain?.evolves_from;
+        return neverEvolves && hasNotEvolved;
       }
       if (constraint.value === 'legendary') {
-        return pokemon.is_legendary === true || 
+        return pokemon.is_legendary === true ||
                LEGENDARY_POKEMON.includes(pokemonName) ||
-               pokemon.base_experience > 300;
+               (pokemon.base_experience && pokemon.base_experience > 300) ||
+               pokemon.is_mythical === true; // Some mythicals are also treated as legendary
       }
       if (constraint.value === 'mythical') {
         return pokemon.is_mythical === true;
@@ -103,16 +117,25 @@ export function checkConstraint(pokemon: Pokemon, constraint: GridConstraint): b
     
     case 'stat-range':
       if (!pokemon.stats) return false; // No stat data available
-      
+
       const statValue = constraint.value as string;
-      if (statValue === 'hp-high') return pokemon.stats.hp >= 100;
-      if (statValue === 'hp-low') return pokemon.stats.hp <= 50;
-      if (statValue === 'attack-high') return pokemon.stats.attack >= 120;
-      if (statValue === 'attack-low') return pokemon.stats.attack <= 60;
-      if (statValue === 'defense-high') return pokemon.stats.defense >= 100;
-      if (statValue === 'defense-low') return pokemon.stats.defense <= 60;
-      if (statValue === 'speed-high') return pokemon.stats.speed >= 100;
-      if (statValue === 'speed-low') return pokemon.stats.speed <= 50;
+
+      // Handle HP stats
+      if (statValue === 'hp-high') return (pokemon.stats.hp || 0) >= 100;
+      if (statValue === 'hp-low') return (pokemon.stats.hp || 0) <= 50 && (pokemon.stats.hp || 0) > 0;
+
+      // Handle Attack stats
+      if (statValue === 'attack-high') return (pokemon.stats.attack || 0) >= 120;
+      if (statValue === 'attack-low') return (pokemon.stats.attack || 0) <= 60 && (pokemon.stats.attack || 0) > 0;
+
+      // Handle Defense stats
+      if (statValue === 'defense-high') return (pokemon.stats.defense || 0) >= 100;
+      if (statValue === 'defense-low') return (pokemon.stats.defense || 0) <= 60 && (pokemon.stats.defense || 0) > 0;
+
+      // Handle Speed stats
+      if (statValue === 'speed-high') return (pokemon.stats.speed || 0) >= 100;
+      if (statValue === 'speed-low') return (pokemon.stats.speed || 0) <= 50 && (pokemon.stats.speed || 0) > 0;
+
       return false;
     
     case 'height-weight':
@@ -136,14 +159,29 @@ export function checkConstraint(pokemon: Pokemon, constraint: GridConstraint): b
     
     case 'move-category':
       const moveValue = constraint.value as string;
-      const pokemonMoves = pokemon.moves.map(move => move.toLowerCase().replace(/[^a-z]/g, ''));
-      
-      if (moveValue === 'earthquake') return pokemonMoves.includes('earthquake');
-      if (moveValue === 'surf') return pokemonMoves.includes('surf');
-      if (moveValue === 'fly') return pokemonMoves.includes('fly');
-      if (moveValue === 'thunder-wave') return pokemonMoves.includes('thunderwave');
-      if (moveValue === 'toxic') return pokemonMoves.includes('toxic');
-      if (moveValue === 'ice-beam') return pokemonMoves.includes('icebeam');
+
+      // Create normalized move list for better matching
+      const normalizedMoves = pokemon.moves.map(move => {
+        // Remove special characters, spaces, and convert to lowercase for matching
+        return move.toLowerCase()
+          .replace(/[^a-z0-9]/g, '') // Remove special chars
+          .replace(/\s+/g, ''); // Remove spaces
+      });
+
+      // Also check original moves for exact matches
+      const exactMoves = pokemon.moves.map(move => move.toLowerCase());
+
+      const checkMove = (moveName: string) => {
+        const normalized = moveName.toLowerCase().replace(/[^a-z0-9]/g, '');
+        return normalizedMoves.includes(normalized) || exactMoves.some(move => move.includes(moveName.toLowerCase()));
+      };
+
+      if (moveValue === 'earthquake') return checkMove('earthquake');
+      if (moveValue === 'surf') return checkMove('surf') || checkMove('surface');
+      if (moveValue === 'fly') return checkMove('fly') || checkMove('flying');
+      if (moveValue === 'thunder-wave') return checkMove('thunder wave') || checkMove('thunderwave');
+      if (moveValue === 'toxic') return checkMove('toxic');
+      if (moveValue === 'ice-beam') return checkMove('ice beam') || checkMove('icebeam');
       return false;
     
     case 'type-effectiveness':
@@ -344,11 +382,11 @@ export function isPerfectGame(cells: GridCell[]): boolean {
   return isGameCompleted(cells) && cells.every(cell => cell.attempts === 1);
 }
 
-export function getEffectiveMaxGuesses(bonusRetries: number, perfectGame: boolean): number {
-  return GAME_CONSTANTS.MAX_TOTAL_GUESSES + (perfectGame ? GAME_CONSTANTS.BONUS_RETRIES : 0);
+export function getEffectiveMaxGuesses(bonusRetries: number): number {
+  return GAME_CONSTANTS.MAX_TOTAL_GUESSES + bonusRetries;
 }
 
-export function isOutOfGuesses(totalGuesses: number, bonusRetries: number, perfectGame: boolean): boolean {
-  const maxEffectiveGuesses = getEffectiveMaxGuesses(bonusRetries, perfectGame);
+export function isOutOfGuesses(totalGuesses: number, bonusRetries: number): boolean {
+  const maxEffectiveGuesses = getEffectiveMaxGuesses(bonusRetries);
   return totalGuesses >= maxEffectiveGuesses;
 }

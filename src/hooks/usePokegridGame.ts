@@ -150,7 +150,7 @@ export function usePokegridGame(displayedPokemon: Pokemon[], gameMode: 'daily') 
       setBonusRetries(GAME_CONSTANTS.BONUS_RETRIES);
     }
 
-    const isOutOfGuess = isOutOfGuesses(totalGuesses, bonusRetries, perfectGame);
+    const isOutOfGuess = isOutOfGuesses(totalGuesses, bonusRetries);
 
     const updatedGame = {
       ...currentGame,
