@@ -1,13 +1,13 @@
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useMemo } from 'react';
 import { useAuth } from '../contexts/AuthProvider';
 import { Pokemon } from '../types/pokemon';
 import { GridCellData } from '../components/pokegrid';
 import type { GridGame } from '../components/pokegrid';
 import { pokegridService } from '../services/pokegrid.service';
-import { 
-  generateDailyGrid, 
-  generateEndlessGrid, 
-  checkConstraint, 
+import {
+  generateDailyGrid,
+  generateEndlessGrid,
+  checkConstraint,
   calculateScore,
   isGameCompleted,
   isPerfectGame,
@@ -35,7 +35,7 @@ export interface PokegridGameState {
 
 export function usePokegridGame(displayedPokemon: Pokemon[], gameMode: 'daily') {
   const { user } = useAuth();
-  
+
   // Core game state
   const [currentGame, setCurrentGame] = useState<GridGame | null>(null);
   const [selectedCell, setSelectedCell] = useState<ExtendedGridCell | null>(null);
@@ -45,63 +45,67 @@ export function usePokegridGame(displayedPokemon: Pokemon[], gameMode: 'daily') 
   const [hasRecentMistake, setHasRecentMistake] = useState(false);
   const [mistakePokemon, setMistakePokemon] = useState<Pokemon | null>(null);
   const [popularityData, setPopularityData] = useState<any[]>([]);
-  
+  const [isLoading, setIsLoading] = useState(false);
+
+  // Simple cache for grid configs only (they never change)
+  const gridConfigCache = useRef<{[key: string]: any}>({});
+
   // Track initialization to prevent spam
   const initializedRef = useRef<{[key: string]: boolean}>({});
 
-  // Initialize game
+  // Simple game initialization - always fresh for daily mode
   const initializeGame = useCallback(async (date: Date, mode: 'daily' | 'endless') => {
-    const gridKey = `${mode}-${date.toISOString().split('T')[0]}`;
-    
-    if (mode === 'endless' || !initializedRef.current[gridKey]) {
-      
-      if (mode !== 'endless') {
-        initializedRef.current[gridKey] = true;
-      }
-
+    setIsLoading(true);
+    try {
       if (mode === 'daily') {
         const dateString = date.toISOString().split('T')[0];
-        
-        // Load data in parallel, including pre-generated grid configuration
+
+        // Load fresh data for user progress, cache only grid config
         const [gridConfig, popularityData, guessHistory, progress] = await Promise.all([
-          pokegridService.loadGridConfiguration(dateString),
+          gridConfigCache.current[dateString] ||
+          pokegridService.loadGridConfiguration(dateString).then(config => {
+            gridConfigCache.current[dateString] = config;
+            return config;
+          }),
           pokegridService.loadPopularityData(dateString),
           user ? pokegridService.loadGuessHistory(user.id, dateString) : Promise.resolve([]),
           user ? pokegridService.loadUserProgress(user.id, dateString) : Promise.resolve(null)
         ]);
 
-        // Generate game using pre-generated config or fallback to seeded random
         const game = generateDailyGrid(date, gridConfig?.configuration);
-
         setPopularityData(popularityData);
 
+        // Always set the game state - no caching of game state
         if (progress?.game_data) {
-          // Restore game state
           const restoredGame = restoreGameFromProgress(game, progress, guessHistory, displayedPokemon);
           setCurrentGame(restoredGame);
-          
-          // Restore UI state
+
           if (progress.game_data.guessHistory) {
             const savedHistory = progress.game_data.guessHistory;
-            if (savedHistory.sessionUndos !== undefined) {
-              setSessionUndos(savedHistory.sessionUndos);
-            }
+            setSessionUndos(savedHistory.sessionUndos || 0);
             if (savedHistory.hasRecentMistake && savedHistory.mistakePokemon) {
               setHasRecentMistake(true);
               const pokemonObject = displayedPokemon.find(p => p.id === savedHistory.mistakePokemon.id);
               if (pokemonObject) setMistakePokemon(pokemonObject);
             }
           }
-          
+
           if (restoredGame.perfectGame) {
             setBonusRetries(GAME_CONSTANTS.BONUS_RETRIES);
           }
         } else {
           setCurrentGame(game);
+          // Reset UI state for new games
+          setSessionUndos(0);
+          setBonusRetries(0);
+          setHasRecentMistake(false);
+          setMistakePokemon(null);
         }
       } else {
         setCurrentGame(generateEndlessGrid());
       }
+    } finally {
+      setIsLoading(false);
     }
   }, [user, displayedPokemon]);
 
@@ -258,6 +262,7 @@ export function usePokegridGame(displayedPokemon: Pokemon[], gameMode: 'daily') 
     hasRecentMistake,
     mistakePokemon,
     popularityData,
+    isLoading,
     
     // Actions
     initializeGame,

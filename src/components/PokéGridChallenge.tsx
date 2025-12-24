@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { usePokemon } from '../hooks/usePokemon';
 import { usePokegridGame } from '../hooks/usePokegridGame';
 import { usePokegridSearch } from '../hooks/usePokegridSearch';
@@ -18,14 +18,17 @@ const PokéGridChallenge: React.FC = () => {
   const { displayedPokemon, loading } = usePokemon();
 
   // UI state
-  const [currentGridDate, setCurrentGridDate] = useState<Date>(new Date());
+  const [currentGridDate, setCurrentGridDate] = useState<Date>(() => {
+    const today = new Date();
+    return new Date(Date.UTC(today.getFullYear(), today.getMonth(), today.getDate()));
+  });
   const [showShareModal, setShowShareModal] = useState(false);
   const [showFriendsModal, setShowFriendsModal] = useState(false);
 
   // Custom hooks for game logic
   const gameState = usePokegridGame(displayedPokemon, 'daily');
   const searchState = usePokegridSearch();
-  const { currentGame, selectedCell } = gameState;
+  const { currentGame, selectedCell, isLoading } = gameState;
 
   // Reset search when modal opens (always call this hook)
   useEffect(() => {
@@ -42,17 +45,32 @@ const PokéGridChallenge: React.FC = () => {
   }, [loading, displayedPokemon.length, currentGridDate, gameState.initializeGame]);
 
   // Handle grid date changes (only allow today and last 6 days)
-  const handleGridDateChange = (date: Date) => {
+  const handleGridDateChange = useCallback((date: Date) => {
+    console.log('=== handleGridDateChange called ===');
+    console.log('Input date:', date);
+    console.log('Input date ISO:', date.toISOString());
+
     const today = new Date();
     const sixDaysAgo = new Date(today);
     sixDaysAgo.setDate(today.getDate() - 6);
 
     // Only allow dates within the last 7 days
     if (date >= sixDaysAgo && date <= today) {
-      setCurrentGridDate(date);
-      gameState.initializeGame(date, 'daily');
+      // Normalize the date to avoid time component issues - use UTC to prevent timezone shifts
+      const normalizedDate = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+
+      console.log('Normalized date:', normalizedDate);
+      console.log('Normalized date ISO:', normalizedDate.toISOString());
+
+      // Always update - let React handle optimization
+      setCurrentGridDate(normalizedDate);
+      gameState.initializeGame(normalizedDate, 'daily');
+
+      console.log('currentGridDate set to:', normalizedDate.toISOString().split('T')[0]);
+    } else {
+      console.log('Date out of range');
     }
-  };
+  }, [gameState]);
 
   // Check if selected date is today
   const isToday = currentGridDate.toISOString().split('T')[0] === new Date().toISOString().split('T')[0];
@@ -72,7 +90,15 @@ const PokéGridChallenge: React.FC = () => {
   const game = currentGame;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-white-50 to-indigo-100 py-8">
+    <div className="min-h-screen bg-white py-8">
+      {isLoading && (
+        <div className="fixed inset-0 bg-black/20 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-4 shadow-lg">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+            <p className="mt-2 text-sm text-gray-600">Loading grid...</p>
+          </div>
+        </div>
+      )}
       <div className="max-w-7xl mx-auto px-4">
         {/* Header */}
         <div className="text-center mb-6">
