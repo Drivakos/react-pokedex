@@ -1,6 +1,4 @@
 const { execSync } = require('child_process');
-const fs = require('fs');
-const path = require('path');
 
 // Set environment variable for build timestamp
 process.env.BUILD_TIMESTAMP = new Date().toISOString();

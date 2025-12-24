@@ -16,6 +16,7 @@ module.exports = [
       globals: {
         ...globals.browser,
         ...globals.node,
+        RequestInit: 'readonly',
       },
       parser: typescriptParser,
       parserOptions: {
@@ -87,6 +88,20 @@ module.exports = [
     rules: {
       ...js.configs.recommended.rules,
       '@typescript-eslint/no-var-requires': 'off',
+    },
+  },
+  {
+    files: ['supabase/functions/**/*.{js,ts}'],
+    languageOptions: {
+      ecmaVersion: 2020,
+      globals: {
+        Deno: 'readonly',
+      },
+    },
+    rules: {
+      ...js.configs.recommended.rules,
+      '@typescript-eslint/triple-slash-reference': 'off',
+      'no-undef': 'off', // Deno provides its own globals
     },
   },
 ];

@@ -26,7 +26,7 @@ export const FriendsModal: React.FC<FriendsModalProps> = ({ isOpen, onClose, ini
   const [searchResults, setSearchResults] = useState<UserSearchResult[]>([]);
   const [searching, setSearching] = useState(false);
   const [sendingRequestTo, setSendingRequestTo] = useState<string | null>(null);
-  const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const debounceTimerRef = useRef<number | null>(null);
   const lastSearchedQueryRef = useRef<string>('');
 
   // Update active tab when initialTab prop changes or modal opens

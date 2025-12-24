@@ -12,7 +12,7 @@ type AuthMethodsProps = {
   fetchTeams?: () => Promise<void>;
 };
 
-export interface AuthMethods {
+export interface AuthMethodsInterface {
   signUp: (email: string, password: string) => Promise<AuthResponse>;
   signIn: (email: string, password: string) => Promise<AuthResponse>;
   signInWithGoogle: () => Promise<OAuthResponse>;
@@ -26,7 +26,7 @@ export const AuthMethods = ({
   setSession,
   setUser,
   resetAuthState
-}: AuthMethodsProps): AuthMethods => {
+}: AuthMethodsProps): AuthMethodsInterface => {
   
   const signUp = async (email: string, password: string): Promise<AuthResponse> => {
     try {

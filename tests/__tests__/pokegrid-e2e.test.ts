@@ -2,6 +2,9 @@ import { createClient } from '@supabase/supabase-js';
 import { checkConstraint } from '../../src/utils/pokegrid-game.utils';
 import { Pokemon } from '../../src/types/pokemon';
 
+// Import fail function for tests
+const { fail } = require('@jest/globals');
+
 // Mock Supabase client for end-to-end testing
 jest.mock('@supabase/supabase-js', () => ({
   createClient: jest.fn(() => ({

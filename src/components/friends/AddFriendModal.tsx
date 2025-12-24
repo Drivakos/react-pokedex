@@ -19,7 +19,7 @@ export const AddFriendModal: React.FC<AddFriendModalProps> = ({
   const [searchResults, setSearchResults] = useState<UserSearchResult[]>([]);
   const [searching, setSearching] = useState(false);
   const [sendingRequestTo, setSendingRequestTo] = useState<string | null>(null);
-  const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const debounceTimerRef = useRef<number | null>(null);
   const lastSearchedQueryRef = useRef<string>('');
 
   // Perform search with the given query

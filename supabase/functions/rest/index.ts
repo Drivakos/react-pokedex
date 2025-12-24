@@ -1,3 +1,5 @@
+/// <reference types="https://deno.land/x/deno@v1.36.3/lib/deno.d.ts" />
+
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
@@ -9,13 +11,6 @@ const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY')!
 // Initialize Supabase client for caching
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
 
-interface CacheEntry {
-  id?: string
-  cache_key: string
-  data: string
-  created_at?: string
-  expires_at: string
-}
 
 serve(async (req: Request) => {
   // Set CORS headers

@@ -159,9 +159,10 @@ export async function clearCacheCategory(category: 'pokemon' | 'lists' | 'search
       return deleteByPattern(`${CACHE_KEYS.POKEMON_LIST}*`);
     case 'search':
       return deleteByPattern(`${CACHE_KEYS.POKEMON_SEARCH}*`);
-    case 'all':
+    case 'all': {
       const total = await clearPokemonCache();
       return total;
+    }
     default:
       return 0;
   }

@@ -330,7 +330,7 @@ export async function saveGridConfiguration(date, constraints) {
   
   try {
     // Use the daily configs table which may have fewer RLS restrictions
-    const { data, error } = await supabase
+    const { error } = await supabase
       .from('pokegrid_daily_configs')
       .upsert({
         grid_date: dateString,

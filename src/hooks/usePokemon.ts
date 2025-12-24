@@ -19,7 +19,7 @@ export const usePokemon = () => {
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
   const [isSearching, setIsSearching] = useState(false);
   const loadingRef = useRef(false);
-  const searchTimeoutRef = useRef<NodeJS.Timeout>();
+  const searchTimeoutRef = useRef<number>();
 
   // State for selected Pokemon
   const [selectedPokemon, setSelectedPokemon] = useState<Pokemon | null>(null);

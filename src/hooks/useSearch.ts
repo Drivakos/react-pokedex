@@ -47,7 +47,7 @@ export function useSearch<T = any>(
 
   // Track the current search request ID to prevent race conditions
   const currentSearchIdRef = useRef<number>(0);
-  const timeoutRef = useRef<NodeJS.Timeout>();
+  const timeoutRef = useRef<number>();
 
   // Perform search with race condition handling
   const performSearch = useCallback(async (searchQuery: string, searchId: number) => {

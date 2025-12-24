@@ -186,7 +186,7 @@ export const PokemonMemoryMatch: React.FC<PokemonMemoryMatchProps> = ({
 
   // Timer effect
   useEffect(() => {
-    let interval: NodeJS.Timeout;
+    let interval: number;
     if (gameStarted && !gameCompleted && !isTimerPaused) {
       interval = setInterval(() => {
         setTime(prev => prev + 1);

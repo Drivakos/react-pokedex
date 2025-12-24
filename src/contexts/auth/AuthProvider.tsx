@@ -2,31 +2,22 @@ import React, { useState, useEffect, createContext, useContext, useMemo, useCall
 import { Session, User } from '@supabase/supabase-js';
 import { supabase, Profile, Favorite } from '../../lib/supabase';
 import toast from 'react-hot-toast';
-import { AuthMethods } from './AuthMethods';
-import { ProfileMethods } from './ProfileMethods';
-import { FavoritesMethods } from './FavoritesMethods';
-import { TeamsMethods } from './TeamsMethods';
+import { AuthMethods, AuthMethodsInterface } from './AuthMethods';
+import { ProfileMethods, ProfileMethodsInterface } from './ProfileMethods';
+import { FavoritesMethods, FavoritesMethodsInterface } from './FavoritesMethods';
+import { TeamsMethods, TeamsMethodsInterface } from './TeamsMethods';
 import { useSessionRefresher } from './useSessionRefresher';
 
 export interface AuthContextType extends
-  AuthMethods,
-  ProfileMethods,
-  FavoritesMethods {
+  AuthMethodsInterface,
+  ProfileMethodsInterface,
+  FavoritesMethodsInterface,
+  TeamsMethodsInterface {
   session: Session | null;
   user: User | null;
   profile: Profile | null;
   favorites: Favorite[];
   loading: boolean;
-
-  // Team methods
-  fetchTeams: () => Promise<void>;
-  createTeam: (name: string, description?: string) => Promise<any>;
-  updateTeam: (teamId: number, name: string, description?: string) => Promise<void>;
-  deleteTeam: (teamId: number) => Promise<void>;
-  addPokemonToTeam: (teamId: number, pokemonId: number, position: number) => Promise<void>;
-  removePokemonFromTeam: (teamId: number, position: number) => Promise<void>;
-  getTeamMembers: (teamId: number) => Promise<any[]>;
-  updateTeamMemberBuild: (teamId: number, position: number, buildData: Partial<any>) => Promise<void>;
 }
 
 export const AuthContext = createContext<AuthContextType | undefined>(undefined);

@@ -191,8 +191,7 @@ describe('Supabase GraphQL Edge Function', () => {
       const request = new Request('https://example.com/graphql', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ variables: {} }),
-        headers: { 'Content-Type': 'application/json' }
+        body: JSON.stringify({ variables: {} })
       });
 
       const result = await handler(request);
@@ -237,8 +236,7 @@ describe('Supabase GraphQL Edge Function', () => {
         body: JSON.stringify({
           query: validGraphQLQuery,
           variables: { id: 1 }
-        }),
-        headers: { 'Content-Type': 'application/json' }
+        })
       });
 
       const result = await handler(request);
@@ -262,7 +260,6 @@ describe('Supabase GraphQL Edge Function', () => {
           headers: {
             'Content-Type': 'application/json',
           },
-          headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
             query: validGraphQLQuery,
             variables: { id: 1 }
@@ -284,8 +281,7 @@ describe('Supabase GraphQL Edge Function', () => {
         body: JSON.stringify({
           query: validGraphQLQuery,
           variables: { id: 1 }
-        }),
-        headers: { 'Content-Type': 'application/json' }
+        })
       });
 
       const result = await handler(request);
@@ -307,8 +303,7 @@ describe('Supabase GraphQL Edge Function', () => {
         body: JSON.stringify({
           query: validGraphQLQuery,
           variables: { id: 1 }
-        }),
-        headers: { 'Content-Type': 'application/json' }
+        })
       });
 
       const result = await handler(request);
@@ -363,8 +358,7 @@ describe('Supabase GraphQL Edge Function', () => {
         body: JSON.stringify({
           query: validQuery,
           variables: { id: 25 }
-        }),
-        headers: { 'Content-Type': 'application/json' }
+        })
       });
 
       const result = await handler(request);
@@ -380,7 +374,6 @@ describe('Supabase GraphQL Edge Function', () => {
           headers: {
             'Content-Type': 'application/json',
           },
-          headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
             query: validQuery,
             variables: { id: 25 }
@@ -574,7 +567,6 @@ describe('Supabase GraphQL Edge Function', () => {
       expect(fetch).toHaveBeenCalledWith(
         expect.any(String),
         expect.objectContaining({
-          headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
             query: 'query { pokemon_v2_type { name } }',
             variables: undefined
@@ -689,7 +681,6 @@ describe('Supabase GraphQL Edge Function', () => {
       expect(fetch).toHaveBeenCalledWith(
         expect.any(String),
         expect.objectContaining({
-          headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
             query: mutationQuery,
             variables: { name: 'test-pokemon' }

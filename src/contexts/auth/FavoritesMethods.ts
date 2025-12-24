@@ -8,7 +8,7 @@ type FavoritesMethodsProps = {
   setFavorites: (favorites: Favorite[]) => void;
 };
 
-export interface FavoritesMethods {
+export interface FavoritesMethodsInterface {
   fetchFavorites: () => Promise<void>;
   addFavorite: (pokemonId: number) => Promise<void>;
   removeFavorite: (pokemonId: number) => Promise<void>;
@@ -20,7 +20,7 @@ export const FavoritesMethods = ({
   refreshSession,
   favorites,
   setFavorites
-}: FavoritesMethodsProps): FavoritesMethods => {
+}: FavoritesMethodsProps): FavoritesMethodsInterface => {
   
   const fetchFavorites = async (): Promise<void> => {
     if (!user) {

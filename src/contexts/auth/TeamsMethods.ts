@@ -8,7 +8,7 @@ type TeamsMethodsProps = {
   setTeams: (teams: Team[]) => void;
 };
 
-export interface TeamsMethods {
+export interface TeamsMethodsInterface {
   fetchTeams: () => Promise<void>;
   createTeam: (name: string, description?: string) => Promise<Team | null>;
   updateTeam: (teamId: number, name: string, description?: string) => Promise<void>;
@@ -24,7 +24,7 @@ export const TeamsMethods = ({
   refreshSession,
   teams,
   setTeams
-}: TeamsMethodsProps): TeamsMethods => {
+}: TeamsMethodsProps): TeamsMethodsInterface => {
   
   const fetchTeams = async (): Promise<void> => {
     if (!user) {

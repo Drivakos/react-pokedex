@@ -1,3 +1,5 @@
+/// <reference types="https://deno.land/x/deno@v1.36.3/lib/deno.d.ts" />
+
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
@@ -303,8 +305,6 @@ serve(async (req) => {
     const url = new URL(req.url);
     const action = url.searchParams.get('action') || 'generate_week';
     const startDate = url.searchParams.get('start_date');
-    const weeks = parseInt(url.searchParams.get('weeks') || '1');
-    const seed = url.searchParams.get('seed');
 
     if (action === 'generate_daily') {
       // Generate today's grid if not provided date, or specific date
@@ -447,15 +447,6 @@ serve(async (req) => {
   }
 });
 
-// Helper functions
-function getNextMonday(): Date {
-  const today = new Date();
-  const dayOfWeek = today.getDay();
-  const daysUntilMonday = dayOfWeek === 0 ? 1 : 8 - dayOfWeek; // 0 = Sunday
-  const nextMonday = new Date(today);
-  nextMonday.setDate(today.getDate() + daysUntilMonday);
-  return nextMonday;
-}
 
 function getWeekStartDate(date: Date): Date {
   const weekStart = new Date(date);

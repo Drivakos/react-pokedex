@@ -7,7 +7,7 @@ type ProfileMethodsProps = {
   setProfile: (profile: Profile | null) => void;
 };
 
-export interface ProfileMethods {
+export interface ProfileMethodsInterface {
   createProfile: (userId: string) => Promise<void>;
   refreshProfile: (userId: string) => Promise<void>;
   updateProfile: (profile: Partial<Profile>) => Promise<{
@@ -20,7 +20,7 @@ export const ProfileMethods = ({
   user,
   refreshSession,
   setProfile
-}: ProfileMethodsProps): ProfileMethods => {
+}: ProfileMethodsProps): ProfileMethodsInterface => {
   
   const createProfile = async (userId: string): Promise<void> => {
     try {

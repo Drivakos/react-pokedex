@@ -1,4 +1,5 @@
 /// <reference types="vite/client" />
+/// <reference lib="dom" />
 
 interface ImportMetaEnv {
   readonly VITE_SUPABASE_URL: string;
@@ -29,5 +30,11 @@ declare global {
         createScriptURL?: (input: string) => string;
       }): void;
     };
+  }
+
+  namespace NodeJS {
+    interface ProcessEnv {
+      [key: string]: string | undefined;
+    }
   }
 }

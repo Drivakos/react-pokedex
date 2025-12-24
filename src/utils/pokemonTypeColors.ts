@@ -1,3 +1,5 @@
+import React from 'react';
+
 // Pokemon type colors extracted from the official Pokemon type icons CSS
 // Source: pokemon-type-svg-icons-1.0.0/style.css
 

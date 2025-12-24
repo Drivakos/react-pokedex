@@ -10,7 +10,6 @@
  * 4. Sets up cron job (manual step)
  */
 
-const { execSync } = require('child_process');
 const fs = require('fs');
 const path = require('path');
 

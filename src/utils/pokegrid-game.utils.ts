@@ -70,7 +70,7 @@ export function checkConstraint(pokemon: Pokemon, constraint: GridConstraint): b
     case 'generation':
       return pokemon.generation === constraint.value;
     
-    case 'evolution-stage':
+    case 'evolution-stage': {
       const pokemonName = pokemon.name.toLowerCase();
 
       if (constraint.value === 'starter') {
@@ -109,13 +109,14 @@ export function checkConstraint(pokemon: Pokemon, constraint: GridConstraint): b
         return pokemon.is_mythical === true;
       }
       return false;
+    }
     
     case 'type-count':
       if (constraint.value === 'single') return pokemon.types.length === 1;
       if (constraint.value === 'dual') return pokemon.types.length === 2;
       return false;
     
-    case 'stat-range':
+    case 'stat-range': {
       if (!pokemon.stats) return false; // No stat data available
 
       const statValue = constraint.value as string;
@@ -137,8 +138,9 @@ export function checkConstraint(pokemon: Pokemon, constraint: GridConstraint): b
       if (statValue === 'speed-low') return (pokemon.stats.speed || 0) <= 50 && (pokemon.stats.speed || 0) > 0;
 
       return false;
-    
-    case 'height-weight':
+    }
+
+    case 'height-weight': {
       const sizeValue = constraint.value as string;
       if (sizeValue === 'small') {
         return pokemon.height < 10 && pokemon.weight < 300; // height in decimeters, weight in hectograms
@@ -156,8 +158,9 @@ export function checkConstraint(pokemon: Pokemon, constraint: GridConstraint): b
         return pokemon.weight > 2000; // > 200kg
       }
       return false;
-    
-    case 'move-category':
+    }
+
+    case 'move-category': {
       const moveValue = constraint.value as string;
 
       // Create normalized move list for better matching
@@ -183,8 +186,9 @@ export function checkConstraint(pokemon: Pokemon, constraint: GridConstraint): b
       if (moveValue === 'toxic') return checkMove('toxic');
       if (moveValue === 'ice-beam') return checkMove('ice beam') || checkMove('icebeam');
       return false;
-    
-    case 'type-effectiveness':
+    }
+
+    case 'type-effectiveness': {
       const effectValue = constraint.value as string;
       
       if (effectValue.startsWith('weak-')) {
@@ -202,7 +206,8 @@ export function checkConstraint(pokemon: Pokemon, constraint: GridConstraint): b
       }
       
       return false;
-    
+    }
+
     default:
       return false;
   }

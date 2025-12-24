@@ -15,7 +15,7 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({ onOpenFriend
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(false);
   const bellRef = useRef<HTMLButtonElement>(null);
-  const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const debounceTimerRef = useRef<number | null>(null);
 
   // Debounced handler for real-time notifications
   const handleNewNotification = useCallback((notification: Notification) => {
