@@ -1,0 +1,78 @@
+name: Daily PokéGrid Generation
+
+on:
+  schedule:
+    # Run at 2 AM UTC daily (adjust timezone as needed)
+    - cron: '0 2 * * *'
+  workflow_dispatch: # Allow manual triggering
+
+jobs:
+  generate-daily-grid:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+
+    - name: Install dependencies
+      run: npm ci
+
+    - name: Generate today's PokéGrid
+      env:
+        VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+        VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+      run: |
+        echo "Generating daily PokéGrid for $(date +%Y-%m-%d)"
+
+        # Generate today's grid using the local script
+        node scripts/generate-daily-grids.mjs
+
+        # Alternative: Use the Supabase Edge Function
+        # curl -X POST "${{ secrets.SUPABASE_URL }}/functions/v1/pokegrid-scheduler?action=generate_daily" \
+        #   -H "Authorization: Bearer ${{ secrets.SUPABASE_ANON_KEY }}" \
+        #   -H "Content-Type: application/json"
+
+    - name: Verify grid was generated
+      env:
+        VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+        VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+      run: |
+        node -e "
+        const { createClient } = require('@supabase/supabase-js');
+        const supabase = createClient(process.env.VITE_SUPABASE_URL, process.env.VITE_SUPABASE_ANON_KEY);
+
+        async function verify() {
+          const today = new Date().toISOString().split('T')[0];
+          const { data, error } = await supabase
+            .from('pokegrid_daily_configs')
+            .select('*')
+            .eq('grid_date', today)
+            .single();
+
+          if (error) {
+            console.error('❌ Grid verification failed:', error.message);
+            process.exit(1);
+          } else {
+            console.log('✅ Grid verified for', today);
+            console.log('   Rows:', data.row_constraints.map(c => c.label));
+            console.log('   Cols:', data.col_constraints.map(c => c.label));
+          }
+        }
+
+        verify().catch(e => {
+          console.error('Verification error:', e);
+          process.exit(1);
+        });
+        "
+
+    - name: Send notification on failure
+      if: failure()
+      run: |
+        echo "Daily PokéGrid generation failed"
+        # Add notification logic here (Slack, Discord, etc.)

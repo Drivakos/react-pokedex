@@ -296,10 +296,16 @@ serve(async (req) => {
   }
 
   try {
-    // Create Supabase client
+    // Create Supabase client with service role key for backend operations
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
+      {
+        auth: {
+          autoRefreshToken: false,
+          persistSession: false
+        }
+      }
     )
 
     const url = new URL(req.url);
@@ -310,20 +316,48 @@ serve(async (req) => {
       // Generate today's grid if not provided date, or specific date
       const targetDate = startDate ? new Date(startDate) : new Date();
       const dateString = targetDate.toISOString().split('T')[0];
-      
+
+      console.log('Generating grid for date:', dateString);
+
       const gridConfig = generateDailyGridConfiguration(targetDate);
-      
-      // Save to database
-      const { data, error } = await supabaseClient.rpc('save_pokegrid_configuration', {
-        p_grid_date: gridConfig.date,
-        p_configuration: gridConfig,
-        p_difficulty_level: gridConfig.difficulty,
-        p_generation_seed: gridConfig.seed
-      });
+      console.log('Generated grid config with', gridConfig.constraints.rows.length, 'rows and', gridConfig.constraints.cols.length, 'cols');
+
+      // First test: just try to select from the table
+      console.log('Testing table access...');
+      const { data: testData, error: testError } = await supabaseClient
+        .from('pokegrid_daily_configs')
+        .select('grid_date')
+        .limit(1);
+
+      if (testError) {
+        console.error('Table access test failed:', testError);
+        throw new Error(`Table access failed: ${testError.message}`);
+      }
+
+      console.log('Table access successful, found', testData?.length || 0, 'records');
+
+      // Save to database using direct table insert
+      console.log('Attempting to save grid...');
+
+      const { data, error } = await supabaseClient
+        .from('pokegrid_daily_configs')
+        .upsert({
+          grid_date: gridConfig.date,
+          row_constraints: gridConfig.constraints.rows,
+          col_constraints: gridConfig.constraints.cols,
+          created_at: new Date().toISOString()
+        }, {
+          onConflict: 'grid_date'
+        });
 
       if (error) {
+        console.error('Database insert error:', error);
+        console.error('Error code:', error.code);
+        console.error('Error message:', error.message);
         throw error;
       }
+
+      console.log('Grid saved successfully!');
 
       return new Response(
         JSON.stringify({
@@ -354,32 +388,63 @@ serve(async (req) => {
       for (let dayOffset = 6; dayOffset >= 0; dayOffset--) {
         const currentDate = new Date(today);
         currentDate.setDate(today.getDate() - dayOffset);
-        
-        const { data, error } = await supabaseClient.rpc('get_pokegrid_configuration', {
-          p_grid_date: currentDate.toISOString().split('T')[0]
-        });
+        const dateString = currentDate.toISOString().split('T')[0];
 
-        if (error) {
-          throw error;
-        }
-
-        if (data && data.length > 0) {
-          const config = data[0];
-          status.push({
-            date: config.grid_date,
-            difficulty: config.difficulty_level,
-            available: true,
-            constraints: {
-              rows: config.configuration.constraints.rows.map((c: GridConstraint) => c.label),
-              cols: config.configuration.constraints.cols.map((c: GridConstraint) => c.label)
-            }
+        try {
+          const { data, error } = await supabaseClient.rpc('get_pokegrid_configuration', {
+            p_grid_date: dateString
           });
-        } else {
+
+          if (error) {
+            console.error(`Error fetching config for ${dateString}:`, error);
+            status.push({
+              date: dateString,
+              difficulty: 'error',
+              available: false,
+              constraints: null,
+              error: error.message
+            });
+            continue;
+          }
+
+          if (data && data.length > 0) {
+            const config = data[0];
+            // Check if configuration has the expected structure
+            const constraints = config.configuration?.constraints;
+            if (constraints && constraints.rows && constraints.cols) {
+              status.push({
+                date: config.grid_date,
+                difficulty: config.difficulty_level,
+                available: true,
+                constraints: {
+                  rows: constraints.rows.map((c: GridConstraint) => c.label),
+                  cols: constraints.cols.map((c: GridConstraint) => c.label)
+                }
+              });
+            } else {
+              status.push({
+                date: config.grid_date,
+                difficulty: 'invalid_format',
+                available: false,
+                constraints: null
+              });
+            }
+          } else {
+            status.push({
+              date: dateString,
+              difficulty: 'not_generated',
+              available: false,
+              constraints: null
+            });
+          }
+        } catch (err) {
+          console.error(`Exception for ${dateString}:`, err);
           status.push({
-            date: currentDate.toISOString().split('T')[0],
-            difficulty: 'not_generated',
+            date: dateString,
+            difficulty: 'exception',
             available: false,
-            constraints: null
+            constraints: null,
+            error: err.message
           });
         }
       }

@@ -5,6 +5,12 @@
   # Ignore command disabled - build on all commits
   # ignore = "git diff --quiet $CACHED_COMMIT_REF $COMMIT_REF ./src/"
 
+# Scheduled function for daily PokéGrid generation
+# Runs at 2 AM UTC every day
+[[schedule]]
+  cron = "0 2 * * *"
+  function = "daily-pokegrid"
+
 [dev]
   command = "npm run dev"
   port = 5173
