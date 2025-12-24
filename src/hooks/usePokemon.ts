@@ -120,20 +120,21 @@ export const usePokemon = () => {
   // Load more Pokemon when scrolling
   const loadMorePokemon = useCallback(async () => {
     if (loadingRef.current || !hasMore) return;
-    
+
     loadingRef.current = true;
-    
+    setLoading(true); // Set loading state for UI feedback
+
     try {
       const nextPage = page + 1;
       const offset = nextPage * POKEMON_PER_PAGE;
-      
+
       const newPokemon = await fetchPokemonData(
         POKEMON_PER_PAGE,
         offset,
         debouncedSearchTerm,
         filters
       );
-      
+
       setDisplayedPokemon(prev => [...prev, ...newPokemon]);
       setHasMore(newPokemon.length === POKEMON_PER_PAGE);
       setPage(nextPage);
@@ -141,6 +142,7 @@ export const usePokemon = () => {
       console.error('Error loading more Pokemon:', error);
     } finally {
       loadingRef.current = false;
+      setLoading(false); // Clear loading state
     }
   }, [page, hasMore, debouncedSearchTerm, filters]);
 
