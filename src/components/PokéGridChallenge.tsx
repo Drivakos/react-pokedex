@@ -7,7 +7,8 @@ import {
   GameStats,
   PokemonSearchModal,
   ShareResultsModal,
-  LeaderboardSidebar,
+  GameSidebar,
+  MobileMenu,
   WeeklyStats
 } from './pokegrid';
 import { FriendsModal } from './friends';
@@ -24,6 +25,8 @@ const PokéGridChallenge: React.FC = () => {
   });
   const [showShareModal, setShowShareModal] = useState(false);
   const [showFriendsModal, setShowFriendsModal] = useState(false);
+  const [showMobileMenu, setShowMobileMenu] = useState(false);
+  const [sidebarView, setSidebarView] = useState<'leaderboard' | 'grid-selection'>('leaderboard');
 
   // Custom hooks for game logic
   const gameState = usePokegridGame(displayedPokemon, 'daily');
@@ -101,19 +104,33 @@ const PokéGridChallenge: React.FC = () => {
       )}
       <div className="max-w-7xl mx-auto px-4">
         {/* Header */}
-        <div className="text-center mb-6">
-          <h1 className="text-3xl font-bold text-gray-900 mb-1">
-            Pokemon Grid Challenge
-          </h1>
-          <p className="text-gray-600">
-            {isToday
-              ? `Today's Grid`
-              : `${currentGridDate.getDate().toString().padStart(2, '0')}/${(currentGridDate.getMonth() + 1).toString().padStart(2, '0')}`}
-          </p>
+        <div className="relative mb-4 md:mb-6">
+          {/* Mobile Menu Button */}
+          <div className="lg:hidden absolute left-0 top-0">
+            <button
+              onClick={() => setShowMobileMenu(true)}
+              className="p-2 bg-red-500 hover:bg-red-600 text-white rounded-lg shadow-md hover:shadow-lg transition-all duration-200 border border-red-400"
+            >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+              </svg>
+            </button>
+          </div>
+
+          <div className="text-center">
+            <h1 className="text-3xl font-bold text-gray-900 mb-1">
+              Pokemon Grid Challenge
+            </h1>
+            <p className="text-gray-600">
+              {isToday
+                ? `Today's Grid`
+                : `${currentGridDate.getDate().toString().padStart(2, '0')}/${(currentGridDate.getMonth() + 1).toString().padStart(2, '0')}`}
+            </p>
+          </div>
         </div>
 
         {/* Weekly Stats */}
-        <div className="mb-6">
+        <div className="hidden lg:block mb-6">
           <WeeklyStats
             currentGridDate={currentGridDate}
             onDateSelect={handleGridDateChange}
@@ -146,30 +163,20 @@ const PokéGridChallenge: React.FC = () => {
             />
           </div>
 
-          {/* Right: Leaderboard Sidebar */}
-          <div className="lg:col-span-1">
-            <div className="sticky top-4 space-y-4">
-              <LeaderboardSidebar
-                gridDate={currentGridDate.toISOString().split('T')[0]}
+          {/* Right: Game Sidebar */}
+          <div className="hidden lg:block lg:col-span-1">
+            <div className="sticky top-4">
+              <GameSidebar
+                gridDate={currentGridDate}
+                onDateSelect={handleGridDateChange}
                 onFriendsClick={() => setShowFriendsModal(true)}
+                activeView={sidebarView}
+                onViewChange={setSidebarView}
               />
-
-              {/* Quick tip about friends */}
-              <div className="bg-gray-50 border border-gray-200 rounded-lg p-3">
-                <p className="text-xs text-gray-600">
-                  <span className="font-medium">Tip:</span> Visit your{' '}
-                  <button
-                    onClick={() => window.location.href = '/profile'}
-                    className="underline hover:text-gray-900"
-                  >
-                    Profile
-                  </button>
-                  {' '}to manage friends.
-                </p>
-              </div>
             </div>
           </div>
         </div>
+
 
         {/* Pokemon Search Modal */}
         {selectedCell && (
@@ -220,6 +227,16 @@ const PokéGridChallenge: React.FC = () => {
           isOpen={showFriendsModal}
           onClose={() => setShowFriendsModal(false)}
         />
+
+        {/* Mobile Menu */}
+        <MobileMenu
+          isOpen={showMobileMenu}
+          onClose={() => setShowMobileMenu(false)}
+          gridDate={currentGridDate}
+          onDateSelect={handleGridDateChange}
+          onFriendsClick={() => setShowFriendsModal(true)}
+        />
+
       </div>
     </div>
   );

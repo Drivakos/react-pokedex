@@ -47,7 +47,7 @@ export const ConstraintHeader: React.FC<ConstraintHeaderProps> = ({ constraint, 
               alt={constraint.label}
               title={constraint.description}
             />
-            <div className="absolute bottom-1 left-0 right-0 text-xs font-semibold text-white text-center">
+            <div className="absolute bottom-0.5 md:bottom-1 left-0 right-0 text-xs font-semibold text-black text-center leading-tight hidden md:block">
               {constraint.label}
             </div>
           </>
@@ -58,15 +58,15 @@ export const ConstraintHeader: React.FC<ConstraintHeaderProps> = ({ constraint, 
       const typeColor = TYPE_COLORS[constraint.value as string] || 'bg-gray-400';
       return (
         <>
-          <div className={`w-10 h-10 rounded-full ${typeColor} flex items-center justify-center mx-auto mb-1 shadow-md`}>
+          <div className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full ${typeColor} flex items-center justify-center mx-auto mb-1 shadow-md`}>
             <img
               src={constraint.svgIcon}
               alt={constraint.label}
               title={constraint.description}
-              className="w-6 h-6 filter brightness-0 invert"
+              className="w-5 h-5 sm:w-6 sm:h-6 filter brightness-0 invert"
             />
           </div>
-          <div className="text-xs font-semibold text-center leading-tight text-white">
+          <div className="text-xs font-semibold text-center leading-tight text-white px-1">
             {constraint.label}
           </div>
         </>
@@ -82,15 +82,15 @@ export const ConstraintHeader: React.FC<ConstraintHeaderProps> = ({ constraint, 
       return (
         <>
           <div className="flex items-center justify-center mb-1">
-            <span className="text-xs font-bold mr-1 text-white bg-black/50 px-1.5 py-0.5 rounded">
+            <span className="text-xs font-bold mr-0.5 sm:mr-1 text-white bg-black/50 px-1 sm:px-1.5 py-0.5 rounded">
               {constraint.icon}
             </span>
-            <div className={`w-6 h-6 rounded-full ${typeColor} flex items-center justify-center shadow-sm`}>
+            <div className={`w-5 h-5 sm:w-6 sm:h-6 rounded-full ${typeColor} flex items-center justify-center shadow-sm`}>
               <img
                 src={constraint.svgIcon}
                 alt={constraint.label}
                 title={constraint.description}
-                className="w-4 h-4 filter brightness-0 invert"
+                className="w-3.5 h-3.5 sm:w-4 sm:h-4 filter brightness-0 invert"
               />
             </div>
           </div>
@@ -115,7 +115,7 @@ export const ConstraintHeader: React.FC<ConstraintHeaderProps> = ({ constraint, 
   };
 
   return (
-    <div className={`aspect-square ${getBorderStyle()} relative`}>
+    <div className={`${getBorderStyle()} relative`}>
       <div className={getHeaderClasses()}>
         {renderContent()}
       </div>

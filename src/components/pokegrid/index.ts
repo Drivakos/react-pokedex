@@ -12,6 +12,8 @@ export { LeaderboardModal } from './LeaderboardModal';
 export { AchievementsModal } from './AchievementsModal';
 export { LeaderboardSidebar } from './LeaderboardSidebar';
 export { WeeklyStats } from './WeeklyStats';
+export { MobileMenu } from './MobileMenu';
+export { GameSidebar } from './GameSidebar';
 
 // Export types
 export * from './types';

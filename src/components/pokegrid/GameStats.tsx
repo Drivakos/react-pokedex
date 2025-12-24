@@ -19,13 +19,13 @@ export const GameStats: React.FC<GameStatsProps> = ({
   const guessesRemaining = effectiveMaxGuesses - totalGuesses;
   
   return (
-    <div className="flex items-center gap-6">
+    <div className="flex items-center justify-center gap-4 md:gap-6">
       <div className="text-center">
-        <div className="text-2xl font-bold text-green-600">{score}</div>
+        <div className="text-xl md:text-2xl font-bold text-green-600">{score}</div>
         <div className="text-xs text-gray-600">Score</div>
       </div>
       <div className="text-center">
-        <div className="text-2xl font-bold text-orange-600">{guessesRemaining}</div>
+        <div className="text-xl md:text-2xl font-bold text-orange-600">{guessesRemaining}</div>
         <div className="text-xs text-gray-600">Guesses Left</div>
       </div>
     </div>

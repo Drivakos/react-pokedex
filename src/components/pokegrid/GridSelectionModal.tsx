@@ -1,18 +1,18 @@
 import React from 'react';
-import { LeaderboardSidebar } from './LeaderboardSidebar';
+import { WeeklyStats } from './WeeklyStats';
 
-interface LeaderboardModalProps {
+interface GridSelectionModalProps {
   isOpen: boolean;
   onClose: () => void;
-  gridDate: string;
-  onFriendsClick?: () => void;
+  currentGridDate: Date;
+  onDateSelect: (date: Date) => void;
 }
 
-export const LeaderboardModal: React.FC<LeaderboardModalProps> = ({
+export const GridSelectionModal: React.FC<GridSelectionModalProps> = ({
   isOpen,
   onClose,
-  gridDate,
-  onFriendsClick,
+  currentGridDate,
+  onDateSelect,
 }) => {
   if (!isOpen) return null;
 
@@ -30,7 +30,7 @@ export const LeaderboardModal: React.FC<LeaderboardModalProps> = ({
           {/* Header */}
           <div className="p-4 border-b border-gray-200">
             <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-gray-900">Leaderboard</h2>
+              <h2 className="text-lg font-semibold text-gray-900">Select Grid</h2>
               <button
                 onClick={onClose}
                 className="p-2 hover:bg-gray-100 rounded-full"
@@ -40,13 +40,19 @@ export const LeaderboardModal: React.FC<LeaderboardModalProps> = ({
                 </svg>
               </button>
             </div>
+            <p className="text-sm text-gray-600 mt-1">
+              Choose a grid to play from the last 7 days
+            </p>
           </div>
 
           {/* Content */}
           <div className="p-4">
-            <LeaderboardSidebar
-              gridDate={gridDate}
-              onFriendsClick={onFriendsClick}
+            <WeeklyStats
+              currentGridDate={currentGridDate}
+              onDateSelect={(date) => {
+                onDateSelect(date);
+                onClose();
+              }}
             />
           </div>
         </div>

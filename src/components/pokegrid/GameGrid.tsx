@@ -21,7 +21,7 @@ export const GameGrid: React.FC<GameGridProps> = ({
 }) => {
   return (
     <div className="">
-      <div className="grid grid-cols-4 gap-1 max-w-2xl mx-auto">
+      <div className="grid grid-cols-4 gap-0.5 sm:gap-1 w-4/5 lg:max-w-lg xl:max-w-2xl mx-auto">
         {/* Top-left corner with PokéGrid branding */}
         <div className="aspect-square flex items-center justify-center">
           <div className="text-center">
