@@ -11,6 +11,7 @@ import { useSearch } from './useSearch';
 export function usePokegridSearch() {
   // Search function that fetches and sorts Pokemon
   const searchFn = useCallback(async (query: string) => {
+    // Query is already trimmed by our wrapper
     if (query.length === 0) {
       return [];
     }
@@ -34,7 +35,7 @@ export function usePokegridSearch() {
 
       // Sort results by relevance using centralized utility
       const sorted = sortPokemonByRelevance(results, query);
-      
+
       // Limit results to 50 for performance
       return sorted.slice(0, 50);
     } catch (error) {
@@ -52,13 +53,26 @@ export function usePokegridSearch() {
     reset: resetSearch
   } = useSearch<Pokemon>({
     searchFn,
-    debounceMs: 150, // Short debounce for responsive feel
-    minQueryLength: 0
+    debounceMs: 200, // Balanced debounce to reduce API calls while maintaining responsiveness
+    minQueryLength: 2 // Require at least 2 characters to reduce very broad searches
   });
+
+  // Enhanced setQuery that trims input and prevents unnecessary searches
+  const setTrimmedSearchQuery = useCallback((query: string) => {
+    const trimmed = query.trim();
+
+    // Prevent setting if trimmed version is the same as current query
+    // This avoids unnecessary re-renders and search triggers
+    if (trimmed === searchQuery) {
+      return;
+    }
+
+    setSearchQuery(trimmed);
+  }, [searchQuery, setSearchQuery]);
 
   return {
     searchQuery,
-    setSearchQuery,
+    setSearchQuery: setTrimmedSearchQuery,
     searchResults,
     isSearching,
     resetSearch

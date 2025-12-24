@@ -82,7 +82,7 @@ const PokéGridChallenge: React.FC = () => {
           <p className="text-gray-600">
             {isToday
               ? `Today's Grid`
-              : currentGridDate.toLocaleDateString()}
+              : `${currentGridDate.getDate().toString().padStart(2, '0')}/${(currentGridDate.getMonth() + 1).toString().padStart(2, '0')}`}
           </p>
         </div>
 

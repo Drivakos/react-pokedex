@@ -50,7 +50,10 @@ export const WeeklyStats: React.FC<WeeklyStatsProps> = ({
     if (diffDays === 0) return 'Today';
     if (diffDays === 1) return 'Yesterday';
 
-    return date.toLocaleDateString('en-US', { weekday: 'short' });
+    // Return date in DD/MM format instead of weekday names
+    const day = date.getDate().toString().padStart(2, '0');
+    const month = (date.getMonth() + 1).toString().padStart(2, '0');
+    return `${day}/${month}`;
   };
 
   const isSelectedDate = (dateString: string): boolean => {
