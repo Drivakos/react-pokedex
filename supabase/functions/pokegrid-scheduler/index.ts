@@ -410,7 +410,8 @@ serve(async (req) => {
           if (data && data.length > 0) {
             const config = data[0];
             // Check if configuration has the expected structure
-            const constraints = config.configuration?.constraints;
+            // The actual structure is: configuration: { rows: [...], cols: [...] }
+            const constraints = config.configuration;
             if (constraints && constraints.rows && constraints.cols) {
               status.push({
                 date: config.grid_date,
