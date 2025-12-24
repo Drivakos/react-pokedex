@@ -83,6 +83,12 @@ export default defineConfig(({ mode }) => {
           });
         },
       },
+      // Proxy GraphQL requests to avoid CORS issues in development
+      '/api/graphql': {
+        target: 'https://beta.pokeapi.co',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api\/graphql/, '/graphql/v1beta'),
+      },
       '/api/pokemontcg': {
         target: 'https://api.pokemontcg.io',
         changeOrigin: true,
@@ -131,6 +137,10 @@ export default defineConfig(({ mode }) => {
   define: {
     'import.meta.env.VITE_SUPABASE_URL': JSON.stringify(env.VITE_SUPABASE_URL),
     'import.meta.env.VITE_SUPABASE_ANON_KEY': JSON.stringify(env.VITE_SUPABASE_ANON_KEY),
+    // Use proxy endpoint in development to avoid CORS issues
+    'import.meta.env.VITE_API_GRAPHQL_URL': JSON.stringify(
+      mode === 'development' ? 'http://localhost:64444/api/graphql' : env.VITE_API_GRAPHQL_URL
+    ),
     'import.meta.env.VITE_APP_VERSION': JSON.stringify(process.env.npm_package_version),
     'import.meta.env.VITE_BUILD_TIME': JSON.stringify(new Date().toISOString()),
     // Define process.env for browser compatibility with Upstash Redis
