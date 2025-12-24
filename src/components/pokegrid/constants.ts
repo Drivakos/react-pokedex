@@ -41,12 +41,12 @@ export const GENERATION_CONSTRAINTS = [
 ];
 
 export const EVOLUTION_CONSTRAINTS = [
-  { id: 'starter', type: 'evolution-stage' as const, value: 'starter', label: 'Starter', description: 'Starter Pokémon', icon: 'S' },
-  { id: 'first-evo', type: 'evolution-stage' as const, value: 'first', label: 'First Evolution', description: 'First evolution stage', icon: '1E' },
-  { id: 'final-evo', type: 'evolution-stage' as const, value: 'final', label: 'Final Evolution', description: 'Final evolution Pokémon', icon: 'FE' },
-  { id: 'no-evolution', type: 'evolution-stage' as const, value: 'none', label: 'No Evolution', description: 'Does not evolve', icon: 'NE' },
-  { id: 'legendary', type: 'evolution-stage' as const, value: 'legendary', label: 'Legendary', description: 'Legendary Pokémon', icon: 'L' },
-  { id: 'mythical', type: 'evolution-stage' as const, value: 'mythical', label: 'Mythical', description: 'Mythical Pokémon', icon: 'M' },
+  { id: 'starter', type: 'evolution-stage' as const, value: 'starter', label: 'Starter', description: 'Starter Pokémon', icon: 'Is' },
+  { id: 'first-evo', type: 'evolution-stage' as const, value: 'first', label: 'Evolution', description: 'First evolution stage', icon: 'Is' },
+  { id: 'final-evo', type: 'evolution-stage' as const, value: 'final', label: 'Final Form', description: 'Final evolution Pokémon', icon: 'Is' },
+  { id: 'no-evolution', type: 'evolution-stage' as const, value: 'none', label: 'No Evolution', description: 'Does not evolve', icon: 'Is' },
+  { id: 'legendary', type: 'evolution-stage' as const, value: 'legendary', label: 'Legendary', description: 'Legendary Pokémon', icon: 'Is' },
+  { id: 'mythical', type: 'evolution-stage' as const, value: 'mythical', label: 'Mythical', description: 'Mythical Pokémon', icon: 'Is' },
 ];
 
 export const STAT_CONSTRAINTS = [
@@ -61,11 +61,11 @@ export const STAT_CONSTRAINTS = [
 ];
 
 export const SIZE_CONSTRAINTS = [
-  { id: 'small-size', type: 'height-weight' as const, value: 'small', label: 'Small (< 1m & < 30kg)', description: 'Height < 1.0m AND Weight < 30kg', icon: 'SM' },
-  { id: 'medium-size', type: 'height-weight' as const, value: 'medium', label: 'Medium (1-2m)', description: 'Height 1.0m - 2.0m', icon: 'MD' },
-  { id: 'large-size', type: 'height-weight' as const, value: 'large', label: 'Large (> 2m or > 100kg)', description: 'Height > 2.0m OR Weight > 100kg', icon: 'LG' },
-  { id: 'light-weight', type: 'height-weight' as const, value: 'light', label: 'Light (< 10kg)', description: 'Weight < 10kg', icon: 'LT' },
-  { id: 'heavy-weight', type: 'height-weight' as const, value: 'heavy', label: 'Heavy (> 200kg)', description: 'Weight > 200kg', icon: 'HV' },
+  { id: 'small-size', type: 'height-weight' as const, value: 'small', label: 'Small (< 1m & < 30kg)', description: 'Height < 1.0m AND Weight < 30kg', icon: 'Size is' },
+  { id: 'medium-size', type: 'height-weight' as const, value: 'medium', label: 'Medium (1-2m)', description: 'Height 1.0m - 2.0m', icon: 'Size is' },
+  { id: 'large-size', type: 'height-weight' as const, value: 'large', label: 'Tall (> 2m) or Heavy (> 100kg)', description: 'Height > 2.0m OR Weight > 100kg', icon: 'Size is' },
+  { id: 'light-weight', type: 'height-weight' as const, value: 'light', label: 'Light (< 10kg)', description: 'Weight < 10kg', icon: 'Weight is' },
+  { id: 'heavy-weight', type: 'height-weight' as const, value: 'heavy', label: 'Heavy (> 200kg)', description: 'Weight > 200kg', icon: 'Weight is' },
 ];
 
 export const TYPE_COUNT_CONSTRAINTS = [
@@ -74,12 +74,12 @@ export const TYPE_COUNT_CONSTRAINTS = [
 ];
 
 export const MOVE_CONSTRAINTS = [
-  { id: 'learns-earthquake', type: 'move-category' as const, value: 'earthquake', label: 'Learns Earthquake', description: 'Can learn Earthquake', icon: 'EQ' },
-  { id: 'learns-surf', type: 'move-category' as const, value: 'surf', label: 'Learns Surf', description: 'Can learn Surf', icon: 'SF' },
-  { id: 'learns-fly', type: 'move-category' as const, value: 'fly', label: 'Learns Fly', description: 'Can learn Fly', icon: 'FLY' },
-  { id: 'learns-thunder-wave', type: 'move-category' as const, value: 'thunder-wave', label: 'Learns Thunder Wave', description: 'Can learn Thunder Wave', icon: 'TW' },
-  { id: 'learns-toxic', type: 'move-category' as const, value: 'toxic', label: 'Learns Toxic', description: 'Can learn Toxic', icon: 'TOX' },
-  { id: 'learns-ice-beam', type: 'move-category' as const, value: 'ice-beam', label: 'Learns Ice Beam', description: 'Can learn Ice Beam', icon: 'IB' },
+  { id: 'learns-earthquake', type: 'move-category' as const, value: 'earthquake', label: 'Earthquake', description: 'Can learn Earthquake', icon: 'Can Learn' },
+  { id: 'learns-surf', type: 'move-category' as const, value: 'surf', label: 'Surf', description: 'Can learn Surf', icon: 'Can Learn' },
+  { id: 'learns-fly', type: 'move-category' as const, value: 'fly', label: 'Fly', description: 'Can learn Fly', icon: 'Can Learn' },
+  { id: 'learns-thunder-wave', type: 'move-category' as const, value: 'thunder-wave', label: 'Thunder Wave', description: 'Can learn Thunder Wave', icon: 'Can Learn' },
+  { id: 'learns-toxic', type: 'move-category' as const, value: 'toxic', label: 'Toxic', description: 'Can learn Toxic', icon: 'Can Learn' },
+  { id: 'learns-ice-beam', type: 'move-category' as const, value: 'ice-beam', label: 'Ice Beam', description: 'Can learn Ice Beam', icon: 'Can Learn' },
 ];
 
 export const TYPE_EFFECTIVENESS_CONSTRAINTS = [

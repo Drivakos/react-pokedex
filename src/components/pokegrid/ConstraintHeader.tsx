@@ -78,7 +78,7 @@ export const ConstraintHeader: React.FC<ConstraintHeaderProps> = ({ constraint, 
       // Extract the type from the constraint value (e.g., 'weak-fire' -> 'fire')
       const typeValue = (constraint.value as string).split('-').pop() || '';
       const typeColor = TYPE_COLORS[typeValue] || 'bg-gray-400';
-      
+
       return (
         <>
           <div className="flex items-center justify-center mb-1">
@@ -100,7 +100,7 @@ export const ConstraintHeader: React.FC<ConstraintHeaderProps> = ({ constraint, 
         </>
       );
     }
-    
+
     // For all other constraints
     return (
       <>
