@@ -202,9 +202,9 @@ export function usePokegridGame(displayedPokemon: Pokemon[], gameMode: 'daily') 
       setMistakePokemon(pokemon);
     }
 
-    // Clear selection unless it's a mistake and we're not out of guesses
-    if (isValid || isOutOfGuess) {
-      setSelectedCell(null);
+    // Always clear selection after making a guess so user can see the result
+    setSelectedCell(null);
+    if (isValid) {
       setHasRecentMistake(false);
       setMistakePokemon(null);
     }
@@ -317,13 +317,18 @@ function restoreGameFromProgress(
     streak: progress.game_data.streak || 0
   };
 
-  // Enhance with guess history if available
+  // Enhance with guess history if available (only use as fallback for missing progress data)
   if (guessHistory.length > 0) {
     const wrongAttemptsFromHistory = guessHistory.filter((h: any) => !h.is_correct).length;
     const correctGuessesFromHistory = guessHistory.filter((h: any) => h.is_correct).length;
-    
-    restoredGame.totalGuesses = wrongAttemptsFromHistory;
-    restoredGame.correctGuesses = correctGuessesFromHistory;
+
+    // Only use guess history if progress data doesn't have the values
+    if (!progress.total_guesses) {
+      restoredGame.totalGuesses = wrongAttemptsFromHistory;
+    }
+    if (!progress.correct_guesses) {
+      restoredGame.correctGuesses = correctGuessesFromHistory;
+    }
 
     restoredGame.cells = restoredGame.cells.map((cell: any) => {
       const cellHistory = guessHistory.filter((h: any) => h.cell_id === cell.id);
@@ -332,7 +337,7 @@ function restoreGameFromProgress(
         const mistakeCount = cellHistory.filter((h: any) => !h.is_correct).length;
 
         let pokemonObject = null;
-        if (lastAttempt.is_correct && lastAttempt.pokemon_id) {
+        if (lastAttempt.pokemon_id) {
           pokemonObject = displayedPokemon.find(p => p.id === lastAttempt.pokemon_id) ||
                          displayedPokemon.find(p => p.name.toLowerCase() === lastAttempt.pokemon_name.toLowerCase()) ||
                          createFallbackPokemon({ id: lastAttempt.pokemon_id, name: lastAttempt.pokemon_name });
