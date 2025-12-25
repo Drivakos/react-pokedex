@@ -15,6 +15,9 @@
 
 import { createClient } from '@supabase/supabase-js';
 import dotenv from 'dotenv';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
 // Load environment variables
 dotenv.config();
@@ -24,6 +27,84 @@ const supabase = createClient(
   process.env.VITE_SUPABASE_URL || '',
   process.env.VITE_SUPABASE_ANON_KEY || ''
 );
+
+// --- POKEMON DATA LOADING ---
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const POKEMON_DB_PATH = path.join(__dirname, 'data', 'pokemon-db.json');
+
+let POKEMON_DB = [];
+try {
+  if (fs.existsSync(POKEMON_DB_PATH)) {
+    console.log(`Loading Pokemon data from ${POKEMON_DB_PATH}...`);
+    POKEMON_DB = JSON.parse(fs.readFileSync(POKEMON_DB_PATH, 'utf8'));
+    console.log(`Loaded ${POKEMON_DB.length} Pokemon for validation.`);
+  } else {
+    console.warn(`⚠️ Warning: Pokemon database not found at ${POKEMON_DB_PATH}. Solvability checks will be limited to heuristics.`);
+  }
+} catch (error) {
+  console.error('Error loading Pokemon database:', error);
+}
+
+// Type effectiveness chart for checking weaknesses and resistances
+const TYPE_EFFECTIVENESS = {
+  fire: { weak_to: ['water', 'ground', 'rock'], resists: ['fire', 'grass', 'ice', 'bug', 'steel', 'fairy'] },
+  water: { weak_to: ['electric', 'grass'], resists: ['fire', 'water', 'ice', 'steel'] },
+  grass: { weak_to: ['fire', 'ice', 'poison', 'flying', 'bug'], resists: ['water', 'electric', 'grass', 'ground'] },
+  electric: { weak_to: ['ground'], resists: ['electric', 'flying', 'steel'] },
+  psychic: { weak_to: ['bug', 'ghost', 'dark'], resists: ['fighting', 'psychic'] },
+  ice: { weak_to: ['fire', 'fighting', 'rock', 'steel'], resists: ['ice'] },
+  dragon: { weak_to: ['ice', 'dragon', 'fairy'], resists: ['fire', 'water', 'electric', 'grass'] },
+  flying: { weak_to: ['electric', 'ice', 'rock'], resists: ['grass', 'fighting', 'bug'] },
+  normal: { weak_to: ['fighting'], resists: [] },
+  fighting: { weak_to: ['flying', 'psychic', 'fairy'], resists: ['rock', 'bug', 'dark'] },
+  poison: { weak_to: ['ground', 'psychic'], resists: ['grass', 'fighting', 'poison', 'bug', 'fairy'] },
+  ground: { weak_to: ['water', 'grass', 'ice'], resists: ['poison', 'rock'] },
+  rock: { weak_to: ['water', 'grass', 'fighting', 'ground', 'steel'], resists: ['normal', 'fire', 'poison', 'flying'] },
+  bug: { weak_to: ['fire', 'flying', 'rock'], resists: ['grass', 'fighting', 'ground'] },
+  ghost: { weak_to: ['ghost', 'dark'], resists: ['poison', 'bug'] },
+  steel: { weak_to: ['fire', 'fighting', 'ground'], resists: ['normal', 'grass', 'ice', 'flying', 'psychic', 'bug', 'rock', 'dragon', 'steel', 'fairy'] },
+  dark: { weak_to: ['fighting', 'bug', 'fairy'], resists: ['ghost', 'dark'] },
+  fairy: { weak_to: ['poison', 'steel'], resists: ['fighting', 'bug', 'dark'] },
+};
+
+const STARTER_POKEMON = [
+  // Gen 1
+  'bulbasaur', 'ivysaur', 'venusaur',
+  'charmander', 'charmeleon', 'charizard',
+  'squirtle', 'wartortle', 'blastoise',
+  // Gen 2
+  'chikorita', 'bayleef', 'meganium',
+  'cyndaquil', 'quilava', 'typhlosion',
+  'totodile', 'croconaw', 'feraligatr',
+  // Gen 3
+  'treecko', 'grovyle', 'sceptile',
+  'torchic', 'combusken', 'blaziken',
+  'mudkip', 'marshtomp', 'swampert',
+  // Gen 4
+  'turtwig', 'grotle', 'torterra',
+  'chimchar', 'monferno', 'infernape',
+  'piplup', 'prinplup', 'empoleon',
+  // Gen 5
+  'snivy', 'servine', 'serperior',
+  'tepig', 'pignite', 'emboar',
+  'oshawott', 'dewott', 'samurott',
+  // Gen 6
+  'chespin', 'quilladin', 'chesnaught',
+  'fennekin', 'braixen', 'delphox',
+  'froakie', 'frogadier', 'greninja',
+  // Gen 7
+  'rowlet', 'decidueye',
+  'litten', 'torracat', 'incineroar',
+  'popplio', 'brionne', 'primarina',
+  // Gen 8
+  'grookey', 'thwackey', 'rillaboom',
+  'scorbunny', 'raboot', 'cinderace',
+  'sobble', 'drizzile', 'inteleon',
+  // Gen 9
+  'sprigatito', 'floragato', 'meowscarada',
+  'fuecoco', 'crocalor', 'skeledirge',
+  'quaxly', 'quaxwell', 'quaquaval'
+];
 
 // Import constraint definitions
 const TYPE_CONSTRAINTS = [
@@ -149,31 +230,89 @@ export function shuffleArray(array, random) {
   return arr;
 }
 
-// Basic constraint checking logic (simplified for validation)
-export function checkBasicConstraints(pokemonTypes, constraint) {
+// Check if a pokemon satisfies a constraint
+function checkConstraint(pokemon, constraint) {
   switch (constraint.type) {
     case 'type':
-      return pokemonTypes.includes(constraint.value);
+      return pokemon.types.includes(constraint.value);
+    
     case 'generation':
-      // Assume we can check generation - simplified for now
-      return true;
-    case 'evolution-stage':
-      // Simplified - assume most combinations work
-      return constraint.value !== 'mythical' || constraint.value !== 'legendary';
+      return pokemon.generation === constraint.value;
+    
+    case 'evolution-stage': {
+      if (constraint.value === 'starter') {
+        return STARTER_POKEMON.includes(pokemon.name.toLowerCase());
+      }
+      if (constraint.value === 'first') {
+        // First evolution - has evolved from something but can still evolve
+        return pokemon.evolution.evolves_from && pokemon.evolution.can_evolve;
+      }
+      if (constraint.value === 'final') {
+        // Final evolution - cannot evolve further
+        return !pokemon.evolution.can_evolve;
+      }
+      if (constraint.value === 'none') {
+        // No evolution - cannot evolve and has not evolved
+        return !pokemon.evolution.evolves_from && !pokemon.evolution.can_evolve;
+      }
+      if (constraint.value === 'legendary') {
+        return pokemon.is_legendary;
+      }
+      if (constraint.value === 'mythical') {
+        return pokemon.is_mythical;
+      }
+      return false;
+    }
+    
     case 'type-count':
-      return constraint.value === 'single' ? pokemonTypes.length === 1 : pokemonTypes.length === 2;
-    case 'stat-range':
-      // Simplified stat checking
-      return true;
-    case 'height-weight':
-      // Simplified size checking
-      return true;
-    case 'move-category':
-      // Simplified move checking
-      return true;
-    case 'type-effectiveness':
-      // Simplified effectiveness checking
-      return true;
+      if (constraint.value === 'single') return pokemon.types.length === 1;
+      if (constraint.value === 'dual') return pokemon.types.length === 2;
+      return false;
+    
+    case 'stat-range': {
+      const statValue = constraint.value;
+      const stats = pokemon.stats;
+      
+      if (statValue === 'hp-high') return stats.hp >= 100;
+      if (statValue === 'hp-low') return stats.hp <= 50;
+      if (statValue === 'attack-high') return stats.attack >= 120;
+      if (statValue === 'attack-low') return stats.attack <= 60;
+      if (statValue === 'defense-high') return stats.defense >= 100;
+      if (statValue === 'defense-low') return stats.defense <= 60;
+      if (statValue === 'speed-high') return stats.speed >= 100;
+      if (statValue === 'speed-low') return stats.speed <= 50;
+      return false;
+    }
+
+    case 'height-weight': {
+      const sizeValue = constraint.value;
+      // Height in dm, weight in hg
+      if (sizeValue === 'small') return pokemon.height < 10 && pokemon.weight < 300;
+      if (sizeValue === 'medium') return pokemon.height >= 10 && pokemon.height <= 20;
+      if (sizeValue === 'large') return pokemon.height > 20 || pokemon.weight > 1000;
+      if (sizeValue === 'light') return pokemon.weight < 100;
+      if (sizeValue === 'heavy') return pokemon.weight > 2000;
+      return false;
+    }
+
+    case 'move-category': {
+      // Moves are already filtered strings in our DB
+      return pokemon.moves.includes(constraint.value);
+    }
+
+    case 'type-effectiveness': {
+      const effectValue = constraint.value;
+      if (effectValue.startsWith('weak-')) {
+        const attackingType = effectValue.replace('weak-', '');
+        return pokemon.types.some(type => TYPE_EFFECTIVENESS[type]?.weak_to.includes(attackingType));
+      }
+      if (effectValue.startsWith('resist-')) {
+        const attackingType = effectValue.replace('resist-', '');
+        return pokemon.types.some(type => TYPE_EFFECTIVENESS[type]?.resists.includes(attackingType));
+      }
+      return false;
+    }
+
     default:
       return true;
   }
@@ -186,9 +325,8 @@ export function isConstraintCombinationSolvable(rowConstraint, colConstraint) {
     return false;
   }
 
-  // Quick checks for obviously impossible combinations
+  // 1. Basic Heuristics (Fast fail)
   if (rowConstraint.type === 'type' && colConstraint.type === 'type') {
-    // Can't be both fire and water type, etc.
     const conflictingTypes = [
       ['fire', 'water'], ['fire', 'rock'], ['water', 'grass'], ['water', 'electric'],
       ['grass', 'fire'], ['grass', 'flying'], ['electric', 'ground'], ['ice', 'fire'],
@@ -205,40 +343,17 @@ export function isConstraintCombinationSolvable(rowConstraint, colConstraint) {
     if (isConflicting) return false;
   }
 
-  // Check for contradictory type effectiveness
-  if (rowConstraint.type === 'type-effectiveness' && colConstraint.type === 'type-effectiveness') {
-    const rowEffect = rowConstraint.value;
-    const colEffect = colConstraint.value;
-
-    // Can't be weak to fire and resist fire at the same time
-    if (rowEffect.startsWith('weak-') && colEffect.startsWith('resist-')) {
-      const rowType = rowEffect.replace('weak-', '');
-      const colType = colEffect.replace('resist-', '');
-      if (rowType === colType) return false;
-    }
-    if (rowEffect.startsWith('resist-') && colEffect.startsWith('weak-')) {
-      const rowType = rowEffect.replace('resist-', '');
-      const colType = colEffect.replace('weak-', '');
-      if (rowType === colType) return false;
-    }
+  // 2. Data-driven Validation (if DB is loaded)
+  if (POKEMON_DB.length > 0) {
+    // Find at least ONE pokemon that satisfies both
+    const hasMatch = POKEMON_DB.some(pokemon => 
+      checkConstraint(pokemon, rowConstraint) && 
+      checkConstraint(pokemon, colConstraint)
+    );
+    return hasMatch;
   }
 
-  // Check for contradictory stat ranges
-  if (rowConstraint.type === 'stat-range' && colConstraint.type === 'stat-range') {
-    const rowStat = rowConstraint.value;
-    const colStat = colConstraint.value;
-
-    // Can't have both high and low HP, etc.
-    const statTypes = ['hp', 'attack', 'defense', 'speed'];
-    for (const stat of statTypes) {
-      if ((rowStat === `${stat}-high` && colStat === `${stat}-low`) ||
-          (rowStat === `${stat}-low` && colStat === `${stat}-high`)) {
-        return false;
-      }
-    }
-  }
-
-  // Most other combinations should be solvable
+  // Fallback if no DB (shouldn't happen if setup correctly)
   return true;
 }
 
@@ -249,7 +364,7 @@ export function generateSolvableConstraintsForDate(date) {
   const random = createSeededRandom(seed);
 
   let attempts = 0;
-  const maxAttempts = 100;
+  const maxAttempts = 500; // Increased attempts because strict validation might reject more
 
   while (attempts < maxAttempts) {
     attempts++;
@@ -399,7 +514,8 @@ async function generateDailyGrids(days = 0) {
     const dateString = currentDate.toISOString().split('T')[0];
     const constraints = generateConstraintsForDate(currentDate);
     
-    console.log(`\n🔧 Generating grid for ${dateString}:`);
+    console.log(`\n🔧 Generating grid for ${dateString}:
+`);
     console.log(`   Rows: ${constraints.rows.map(c => c.label).join(', ')}`);
     console.log(`   Cols: ${constraints.cols.map(c => c.label).join(', ')}`);
     
@@ -436,13 +552,10 @@ if (isNaN(days)) {
   process.exit(1);
 }
 
-// Run the script only when executed directly (not when imported)
-if (import.meta.url === `file://${process.argv[1]}`) {
-  generateDailyGrids(days)
-    .then(() => process.exit(0))
-    .catch((error) => {
-      console.error('❌ Fatal error:', error);
-      process.exit(1);
-    });
-}
-
+// Run the script
+generateDailyGrids(days)
+  .then(() => process.exit(0))
+  .catch((error) => {
+    console.error('❌ Fatal error:', error);
+    process.exit(1);
+  });
