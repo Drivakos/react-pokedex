@@ -26,7 +26,6 @@ const PokéGridChallenge: React.FC = () => {
   const [showShareModal, setShowShareModal] = useState(false);
   const [showFriendsModal, setShowFriendsModal] = useState(false);
   const [showMobileMenu, setShowMobileMenu] = useState(false);
-  const [sidebarView, setSidebarView] = useState<'leaderboard' | 'grid-selection'>('leaderboard');
 
   // Custom hooks for game logic
   const gameState = usePokegridGame(displayedPokemon, 'daily');
@@ -49,29 +48,23 @@ const PokéGridChallenge: React.FC = () => {
 
   // Handle grid date changes (only allow today and last 6 days)
   const handleGridDateChange = useCallback((date: Date) => {
-    console.log('=== handleGridDateChange called ===');
-    console.log('Input date:', date);
-    console.log('Input date ISO:', date.toISOString());
+    // Create normalized "today" in UTC to match input format from WeeklyStats
+    // Get current local date components
+    const now = new Date();
+    const todayNormalized = new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()));
+    
+    // Calculate 6 days ago from the normalized today
+    const sixDaysAgoNormalized = new Date(todayNormalized);
+    sixDaysAgoNormalized.setUTCDate(todayNormalized.getUTCDate() - 6);
 
-    const today = new Date();
-    const sixDaysAgo = new Date(today);
-    sixDaysAgo.setDate(today.getDate() - 6);
-
-    // Only allow dates within the last 7 days
-    if (date >= sixDaysAgo && date <= today) {
+    // Simple timestamp comparison since both are normalized to UTC midnight
+    if (date.getTime() >= sixDaysAgoNormalized.getTime() && date.getTime() <= todayNormalized.getTime()) {
       // Normalize the date to avoid time component issues - use UTC to prevent timezone shifts
       const normalizedDate = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
-
-      console.log('Normalized date:', normalizedDate);
-      console.log('Normalized date ISO:', normalizedDate.toISOString());
 
       // Always update - let React handle optimization
       setCurrentGridDate(normalizedDate);
       gameState.initializeGame(normalizedDate, 'daily');
-
-      console.log('currentGridDate set to:', normalizedDate.toISOString().split('T')[0]);
-    } else {
-      console.log('Date out of range');
     }
   }, [gameState]);
 
@@ -129,14 +122,6 @@ const PokéGridChallenge: React.FC = () => {
           </div>
         </div>
 
-        {/* Weekly Stats */}
-        <div className="hidden lg:block mb-6">
-          <WeeklyStats
-            currentGridDate={currentGridDate}
-            onDateSelect={handleGridDateChange}
-          />
-        </div>
-
         {/* Main Layout: Grid + Sidebar */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Left/Center: Game Area */}
@@ -170,8 +155,6 @@ const PokéGridChallenge: React.FC = () => {
                 gridDate={currentGridDate}
                 onDateSelect={handleGridDateChange}
                 onFriendsClick={() => setShowFriendsModal(true)}
-                activeView={sidebarView}
-                onViewChange={setSidebarView}
               />
             </div>
           </div>

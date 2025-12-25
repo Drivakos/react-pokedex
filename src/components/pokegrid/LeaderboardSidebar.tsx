@@ -2,9 +2,11 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../../contexts/AuthProvider';
 import { pokegridService, type LeaderboardEntry } from '../../services/pokegrid.service';
 import { friendsService } from '../../services/friends.service';
+import { WeeklyStats } from './WeeklyStats';
 
 interface LeaderboardSidebarProps {
   gridDate: string;
+  onDateSelect?: (date: Date) => void;
   onFriendsClick?: () => void;
   testMode?: boolean;
   testData?: LeaderboardEntry[];
@@ -16,6 +18,7 @@ type TimeframeType = 'daily' | 'weekly' | 'all-time';
 
 export const LeaderboardSidebar: React.FC<LeaderboardSidebarProps> = ({
   gridDate,
+  onDateSelect,
   onFriendsClick,
   testMode = false,
   testData,
@@ -141,7 +144,7 @@ export const LeaderboardSidebar: React.FC<LeaderboardSidebarProps> = ({
         </div>
 
         {/* Timeframe Selector */}
-        <div className="flex gap-1 text-xs">
+        <div className="flex gap-1 text-xs mb-3">
           {(['daily', 'weekly', 'all-time'] as TimeframeType[]).map((tf) => (
             <button
               key={tf}
@@ -155,6 +158,17 @@ export const LeaderboardSidebar: React.FC<LeaderboardSidebarProps> = ({
             </button>
           ))}
         </div>
+
+        {/* Date Selector (inside Leaderboard for Daily view) */}
+        {timeframe === 'daily' && onDateSelect && (
+          <div className="pt-2 border-t border-gray-100">
+            <p className="text-[10px] uppercase tracking-wider text-gray-500 font-bold mb-2">Select Grid</p>
+            <WeeklyStats
+              currentGridDate={new Date(gridDate)}
+              onDateSelect={onDateSelect}
+            />
+          </div>
+        )}
       </div>
 
       {/* Leaderboard Content */}

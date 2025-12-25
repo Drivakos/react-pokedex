@@ -27,13 +27,6 @@ export const WeeklyStats: React.FC<WeeklyStatsProps> = ({
     });
   }
 
-  console.log('=== WeeklyStats Render ===');
-  console.log('currentGridDate:', currentGridDate);
-  console.log('selectedDateStr:', selectedDateStr);
-  dates.forEach(d => {
-    console.log(`Generated: index=${d.index}, label=${d.label}, dateString=${d.dateString}, isSelected=${d.dateString === selectedDateStr}`);
-  });
-
   return (
     <div className="grid grid-cols-3 sm:grid-cols-5 md:grid-cols-7 gap-1">
       {dates.map((dateInfo) => {
@@ -43,9 +36,6 @@ export const WeeklyStats: React.FC<WeeklyStatsProps> = ({
           <button
             key={dateInfo.dateString}
             onClick={() => {
-              console.log(`=== CLICKED Button ${dateInfo.index} (label: ${dateInfo.label}) ===`);
-              console.log('Date string:', dateInfo.dateString);
-              console.log('Date:', dateInfo.date);
               onDateSelect(dateInfo.date);
             }}
             className={`flex flex-col items-center p-2 sm:p-1 rounded text-xs transition-colors border-2 ${
