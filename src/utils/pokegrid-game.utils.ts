@@ -272,10 +272,17 @@ export function generateDailyGrid(date: Date, preGeneratedConfig?: any): GridGam
     colConstraints = shuffledOthers.slice(0, 3);
   }
   
+  // Extract cell stats if available (embedded in first row constraint)
+  const cellStats = (rowConstraints[0] as any).meta?.cellStats || [];
+
   // Generate cells
   const cells: GridCell[] = [];
   for (let row = 0; row < 3; row++) {
     for (let col = 0; col < 3; col++) {
+      // Find valid solution count for this cell
+      const stat = cellStats.find((s: any) => s.row === row && s.col === col);
+      const possibleSolutions = stat ? stat.count : undefined;
+
       cells.push({
         id: `cell-${row}-${col}`,
         row,
@@ -288,7 +295,8 @@ export function generateDailyGrid(date: Date, preGeneratedConfig?: any): GridGam
         rowConstraint: rowConstraints[row],
         colConstraint: colConstraints[col],
         hasMistake: false,
-        mistakeCount: 0
+        mistakeCount: 0,
+        possibleSolutions // Store this for scoring
       });
     }
   }
@@ -371,36 +379,50 @@ export function calculateScore(
 ): number {
   return cells.reduce((total, cell) => {
     if (cell.isCorrect && cell.pokemon) {
-      const baseScore = 100;
-      const rarityBonus = cell.rarity * 20;
-      const attemptPenalty = Math.max(0, cell.attempts - 1) * 10;
+      // Base score increased to 200
+      const baseScore = 200;
+      
+      // 1. GENEROUS POOL SIZE BONUS (Smaller pool = Harder = Significantly more points)
+      let poolBonus = 0;
+      if (cell.possibleSolutions !== undefined) {
+        if (cell.possibleSolutions < 10) poolBonus = 300;      // Extreme (<10 solutions)
+        else if (cell.possibleSolutions < 30) poolBonus = 200; // Very Hard
+        else if (cell.possibleSolutions < 100) poolBonus = 100; // Hard
+        else if (cell.possibleSolutions < 250) poolBonus = 50;  // Medium
+        else if (cell.possibleSolutions < 500) poolBonus = 20;  // Fairly Common
+      }
 
-      // Find popularity data for this cell and pokemon
+      // 2. ATTEMPT PENALTY
+      const attemptPenalty = Math.max(0, cell.attempts - 1) * 20;
+
+      // 3. RARITY MULTIPLIER (Based on User Selection % from DB)
       const cellPopularity = popularityData.find(
         (p: any) => p.cell_id === cell.id && p.pokemon_id === cell.pokemon?.id
       );
 
-      let popularityMultiplier = 1.0;
+      let rarityMultiplier = 1.0;
       if (popularityData.length > 0 && cellPopularity && cellPopularity.popularity_percentage !== null) {
-        // Inverse relationship: more popular = lower score, less popular = higher score
-        if (cellPopularity.popularity_percentage < 0.1) {
-          popularityMultiplier = 2.0; // High bonus for very rare guesses
-        } else if (cellPopularity.popularity_percentage < 0.25) {
-          popularityMultiplier = 1.5; // Good bonus for uncommon guesses
-        } else if (cellPopularity.popularity_percentage < 0.5) {
-          popularityMultiplier = 1.2; // Moderate bonus
-        } else if (cellPopularity.popularity_percentage < 0.75) {
-          popularityMultiplier = 0.9; // Small penalty for somewhat popular
-        } else {
-          popularityMultiplier = 0.7; // Larger penalty for very popular guesses
-        }
+        const percentage = cellPopularity.popularity_percentage;
+        
+        // Max multiplier of 2.0 for the rarest finds
+        if (percentage < 0.01) rarityMultiplier = 2.0;       // < 1% users
+        else if (percentage < 0.05) rarityMultiplier = 1.75; // < 5% users
+        else if (percentage < 0.15) rarityMultiplier = 1.5;  // < 15% users
+        else if (percentage < 0.40) rarityMultiplier = 1.2;  // < 40% users
+        else rarityMultiplier = 1.0;                         // Common pick
       } else if (cell.attempts > 1) {
-        // Fallback scoring with attempt penalty
-        popularityMultiplier = Math.max(0.5, 1 - (cell.attempts - 1) * 0.1);
+        rarityMultiplier = Math.max(0.5, 1 - (cell.attempts - 1) * 0.1);
+      } else {
+        // Default rarity for first try when no data is available
+        rarityMultiplier = 1.25;
       }
 
-      const cellScore = Math.round((baseScore + rarityBonus) * popularityMultiplier - attemptPenalty);
-      return total + Math.max(0, cellScore);
+      // Calculate final cell score
+      // Max possible: (200 + 300) * 2.0 = 1000
+      const rawScore = (baseScore + poolBonus) * rarityMultiplier - attemptPenalty;
+      const cellScore = Math.round(Math.max(10, Math.min(1000, rawScore)));
+
+      return total + cellScore;
     }
     return total;
   }, 0);

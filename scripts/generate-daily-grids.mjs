@@ -403,17 +403,33 @@ export function generateSolvableConstraintsForDate(date) {
 
     // Check if all combinations are solvable
     let allSolvable = true;
+    const cellStats = [];
+
     for (let row = 0; row < 3; row++) {
       for (let col = 0; col < 3; col++) {
         if (!isConstraintCombinationSolvable(rowConstraints[row], colConstraints[col])) {
           allSolvable = false;
           break;
         }
+
+        // Calculate solution count if DB is available
+        if (POKEMON_DB.length > 0) {
+          const count = POKEMON_DB.filter(pokemon => 
+            checkConstraint(pokemon, rowConstraints[row]) && 
+            checkConstraint(pokemon, colConstraints[col])
+          ).length;
+          cellStats.push({ row, col, count });
+        }
       }
       if (!allSolvable) break;
     }
 
     if (allSolvable) {
+      // Store cell stats in the first row constraint as metadata since we can't add columns easily
+      if (cellStats.length === 9) {
+        rowConstraints[0].meta = { cellStats };
+      }
+
       return {
         rows: rowConstraints,
         cols: colConstraints,
@@ -426,9 +442,29 @@ export function generateSolvableConstraintsForDate(date) {
   // Fallback - use simple type-only constraints if we can't find solvable mixed constraints
   console.warn(`Could not find solvable constraints after ${maxAttempts} attempts, using fallback`);
   const shuffledTypes = shuffleArray(TYPE_CONSTRAINTS, random);
+  
+  const fallbackRows = shuffledTypes.slice(0, 3);
+  const fallbackCols = shuffledTypes.slice(3, 6);
+  
+  if (POKEMON_DB.length > 0) {
+    const fallbackStats = [];
+    for (let r = 0; r < 3; r++) {
+      for (let c = 0; c < 3; c++) {
+        const count = POKEMON_DB.filter(p => 
+          checkConstraint(p, fallbackRows[r]) && 
+          checkConstraint(p, fallbackCols[c])
+        ).length;
+        fallbackStats.push({ row: r, col: c, count });
+      }
+    }
+    if (fallbackStats.length === 9) {
+      fallbackRows[0].meta = { cellStats: fallbackStats };
+    }
+  }
+
   return {
-    rows: shuffledTypes.slice(0, 3),
-    cols: shuffledTypes.slice(3, 6),
+    rows: fallbackRows,
+    cols: fallbackCols,
     seed: `fallback-${seed}`,
     difficulty: 'easy'
   };

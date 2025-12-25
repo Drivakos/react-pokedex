@@ -38,6 +38,7 @@ export interface GridCell extends GridCellData {
   colConstraint: GridConstraint;
   hasMistake?: boolean; // Track if this cell had a wrong guess
   mistakeCount?: number; // Number of wrong guesses on this cell
+  possibleSolutions?: number; // Number of valid solutions for this cell
 }
 
 export interface GridGame {
