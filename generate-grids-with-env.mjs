@@ -210,13 +210,13 @@ async function generateDailyGrids(days = 1) {
 
     // Save to database
     const { data, error } = await supabase
-      .from('pokegrid_configurations')
+      .from('pokegrid_daily_configs')
       .upsert({
         grid_date: gridConfig.date,
-        configuration: gridConfig,
+        row_constraints: gridConfig.constraints.rows,
+        col_constraints: gridConfig.constraints.cols,
         difficulty_level: gridConfig.difficulty,
-        generation_seed: gridConfig.seed,
-        created_at: gridConfig.metadata.generatedAt
+        generation_seed: gridConfig.seed
       }, {
         onConflict: 'grid_date'
       });

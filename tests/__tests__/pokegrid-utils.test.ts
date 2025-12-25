@@ -68,6 +68,24 @@ describe('Pokegrid Game Utils', () => {
       })).toBe(true);
     });
 
+    test('should handle starter evolution pokemon correctly', () => {
+      const torterra = {
+        ...mockPokemon,
+        name: 'torterra',
+        types: ['grass', 'ground'],
+        evolution_chain: { evolves_from: 'grotle' },
+        has_evolutions: false,
+        is_starter: true
+      };
+
+      expect(checkConstraint(torterra, {
+        type: 'evolution-stage',
+        value: 'starter',
+        id: 'starter',
+        label: 'Starter'
+      })).toBe(true);
+    });
+
     test('should handle first evolution pokemon', () => {
       expect(checkConstraint(mockPokemon, {
         type: 'evolution-stage',

@@ -42,17 +42,44 @@ const TYPE_EFFECTIVENESS: Record<string, { weak_to: string[], resists: string[] 
   fairy: { weak_to: ['poison', 'steel'], resists: ['fighting', 'bug', 'dark'] },
 };
 
-// Common starter Pokemon names for better detection
+// Common starter Pokemon names for better detection (including all evolutions)
 const STARTER_POKEMON = [
-  'bulbasaur', 'charmander', 'squirtle', // Gen 1
-  'chikorita', 'cyndaquil', 'totodile', // Gen 2
-  'treecko', 'torchic', 'mudkip', // Gen 3
-  'turtwig', 'chimchar', 'piplup', // Gen 4
-  'snivy', 'tepig', 'oshawott', // Gen 5
-  'chespin', 'fennekin', 'froakie', // Gen 6
-  'rowlet', 'litten', 'popplio', // Gen 7
-  'grookey', 'scorbunny', 'sobble', // Gen 8
-  'sprigatito', 'fuecoco', 'quaxly', // Gen 9
+  // Gen 1
+  'bulbasaur', 'ivysaur', 'venusaur',
+  'charmander', 'charmeleon', 'charizard',
+  'squirtle', 'wartortle', 'blastoise',
+  // Gen 2
+  'chikorita', 'bayleef', 'meganium',
+  'cyndaquil', 'quilava', 'typhlosion',
+  'totodile', 'croconaw', 'feraligatr',
+  // Gen 3
+  'treecko', 'grovyle', 'sceptile',
+  'torchic', 'combusken', 'blaziken',
+  'mudkip', 'marshtomp', 'swampert',
+  // Gen 4
+  'turtwig', 'grotle', 'torterra',
+  'chimchar', 'monferno', 'infernape',
+  'piplup', 'prinplup', 'empoleon',
+  // Gen 5
+  'snivy', 'servine', 'serperior',
+  'tepig', 'pignite', 'emboar',
+  'oshawott', 'dewott', 'samurott',
+  // Gen 6
+  'chespin', 'quilladin', 'chesnaught',
+  'fennekin', 'braixen', 'delphox',
+  'froakie', 'frogadier', 'greninja',
+  // Gen 7
+  'rowlet', 'decidueye',
+  'litten', 'torracat', 'incineroar',
+  'popplio', 'brionne', 'primarina',
+  // Gen 8
+  'grookey', 'thwackey', 'rillaboom',
+  'scorbunny', 'raboot', 'cinderace',
+  'sobble', 'drizzile', 'inteleon',
+  // Gen 9
+  'sprigatito', 'floragato', 'meowscarada',
+  'fuecoco', 'crocalor', 'skeledirge',
+  'quaxly', 'quaxwell', 'quaquaval'
 ];
 
 // Legendary and Mythical Pokemon (partial list - would need complete data)
