@@ -1,8 +1,8 @@
 import { Pokemon } from '../types/pokemon';
 import { supabase } from '../lib/supabase';
 
-// Enhanced Pokemon data service to fetch complete Pokemon information
-class EnhancedPokemonService {
+// Pokemon data service to fetch complete Pokemon information
+class PokemonService {
   private pokemonCache = new Map<number, Pokemon>();
 
   async getEnhancedPokemon(pokemonId: number): Promise<Pokemon | null> {
@@ -216,4 +216,4 @@ class EnhancedPokemonService {
   }
 }
 
-export const enhancedPokemonService = new EnhancedPokemonService();
+export const pokemonService = new PokemonService();

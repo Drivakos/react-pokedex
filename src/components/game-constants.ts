@@ -27,3 +27,4 @@ export const GAME_CONSTANTS = {
   // Game mechanics
   MAX_FLIPPED_CARDS: 2,
 } as const;
+
