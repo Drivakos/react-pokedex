@@ -112,6 +112,47 @@ const filterLocalPokemon = (
 };
 
 /**
+ * Transform local DB Pokemon to application PokemonDetails type
+ */
+const transformLocalToDetails = (localPokemon: any): PokemonDetails => {
+  return {
+    id: localPokemon.id,
+    name: localPokemon.name,
+    height: localPokemon.height,
+    weight: localPokemon.weight,
+    types: localPokemon.types,
+    abilities: [], // Local DB doesn't have abilities details
+    stats: {
+      hp: localPokemon.stats.hp,
+      attack: localPokemon.stats.attack,
+      defense: localPokemon.stats.defense,
+      // Local DB is missing special stats, default to 0
+      special_attack: localPokemon.stats.special_attack || localPokemon.stats['special-attack'] || 0,
+      special_defense: localPokemon.stats.special_defense || localPokemon.stats['special-defense'] || 0,
+      speed: localPokemon.stats.speed
+    },
+    sprites: {
+      front_default: '', // PokemonImage handles this
+      back_default: '',
+      front_shiny: '',
+      back_shiny: '',
+      official_artwork: ''
+    },
+    moves: (localPokemon.moves || []).map((name: string) => ({
+      name,
+      learned_at_level: 0,
+      learn_method: 'unknown'
+    })),
+    flavor_text: 'Data loaded from local database.',
+    genera: 'Pokémon',
+    generation: localPokemon.generation,
+    evolution_chain: [], // Local DB doesn't have detailed evolution chain
+    base_experience: 0,
+    has_evolutions: localPokemon.evolution?.can_evolve || false
+  };
+};
+
+/**
  * Fetches a single Pokemon by ID with caching support
  */
 export const fetchPokemonById = async (id: number): Promise<Pokemon> => {
@@ -316,6 +357,19 @@ async function fetchPokemonDataDirect(
  * Fetches detailed Pokemon data from GraphQL API (simplified, single call)
  */
 export const fetchPokemonDetails = async (id: number): Promise<PokemonDetails> => {
+  // 1. Try local data first
+  try {
+    // Force type casting to access array methods on the JSON import
+    const localDb = localPokemonDb as any[];
+    const localPokemon = localDb.find((p: any) => p.id === id);
+    if (localPokemon) {
+      // console.log(`Found Pokemon ${id} in local DB`);
+      return transformLocalToDetails(localPokemon);
+    }
+  } catch (error) {
+    console.warn(`Error checking local DB for Pokemon ${id}:`, error);
+  }
+
   // Try cached version first if enabled
   if (USE_CACHED_API) {
     try {
