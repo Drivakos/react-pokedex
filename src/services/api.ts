@@ -1,4 +1,4 @@
-import { Pokemon, RawPokemonData, Filters, PokemonDetails } from '../types/pokemon';
+import { Pokemon, RawPokemonData, Filters, PokemonDetails, TYPE_COLORS } from '../types/pokemon';
 import { 
   fetchCachedPokemonById, 
   fetchCachedPokemonData, 
@@ -8,6 +8,9 @@ import {
 import { buildCompleteWhereClause, POKEMON_FIELDS } from '../utils/query-builder';
 import { transformSinglePokemon, transformRawData } from '../utils/pokemon-transform';
 import { cacheAside, CACHE_KEYS, CACHE_TTL, generateSearchCacheKey, isCacheEnabled } from '../lib/redis';
+// Import local database
+import localPokemonDb from '../data/pokemon-db.json';
+import localFilterOptions from '../data/filter-options.json';
 
 // Use environment variables for API endpoints (fallback for direct calls)
 const GRAPHQL_ENDPOINT = import.meta.env.VITE_API_GRAPHQL_URL;
@@ -22,6 +25,91 @@ if (!GRAPHQL_ENDPOINT || !REST_ENDPOINT) {
 }
 
 // Query building functions moved to ../utils/query-builder.ts
+
+/**
+ * Transform local DB Pokemon to application Pokemon type
+ */
+const transformLocalPokemon = (localPokemon: any): Pokemon => {
+  return {
+    id: localPokemon.id,
+    name: localPokemon.name,
+    height: localPokemon.height,
+    weight: localPokemon.weight,
+    types: localPokemon.types,
+    moves: localPokemon.moves || [],
+    sprites: {
+      front_default: '', // Handled by PokemonImage component
+      back_default: '',
+      front_shiny: '',
+      back_shiny: '',
+      official_artwork: ''
+    },
+    generation: localPokemon.generation || 'unknown',
+    has_evolutions: localPokemon.evolution?.can_evolve || false,
+    is_starter: localPokemon.evolution?.is_starter || false,
+    evolution_chain: localPokemon.evolution ? {
+      evolves_from: localPokemon.evolution.evolves_from ? String(localPokemon.evolution.evolves_from) : undefined
+    } : undefined,
+    is_default: true,
+    base_experience: 0,
+    stats: localPokemon.stats,
+    is_legendary: localPokemon.is_legendary,
+    is_mythical: localPokemon.is_mythical
+  };
+};
+
+/**
+ * Filter local Pokemon data based on criteria
+ */
+const filterLocalPokemon = (
+  allPokemon: any[],
+  searchTerm: string,
+  filters: Filters
+): any[] => {
+  return allPokemon.filter(p => {
+    // Search term filter (name or ID)
+    if (searchTerm) {
+      const term = searchTerm.toLowerCase();
+      const matchesName = p.name.includes(term);
+      const matchesId = p.id.toString() === term;
+      if (!matchesName && !matchesId) return false;
+    }
+
+    // Type filter (match all selected types)
+    if (filters.types.length > 0) {
+      const hasAllTypes = filters.types.every(type => p.types.includes(type));
+      if (!hasAllTypes) return false;
+    }
+
+    // Move filter (match all selected moves)
+    if (filters.moves.length > 0) {
+      if (!p.moves) return false;
+      const hasAllMoves = filters.moves.every(move => p.moves.includes(move));
+      if (!hasAllMoves) return false;
+    }
+
+    // Generation filter
+    if (filters.generation && p.generation !== filters.generation) {
+      return false;
+    }
+
+    // Weight filter
+    if (filters.weight.min > 0 && p.weight < filters.weight.min) return false;
+    if (filters.weight.max > 0 && filters.weight.max < 1000 && p.weight > filters.weight.max) return false;
+
+    // Height filter
+    if (filters.height.min > 0 && p.height < filters.height.min) return false;
+    if (filters.height.max > 0 && filters.height.max < 100 && p.height > filters.height.max) return false;
+
+    // Has Evolutions filter
+    if (filters.hasEvolutions !== null) {
+      const hasEvo = p.evolution?.can_evolve || false;
+      if (filters.hasEvolutions !== hasEvo) return false;
+    }
+
+    return true;
+  });
+};
 
 /**
  * Fetches a single Pokemon by ID with caching support
@@ -105,7 +193,27 @@ export const fetchPokemonData = async (
   searchTerm: string, 
   filters: Filters
 ): Promise<Pokemon[]> => {
-  // Try Redis cache first if enabled
+  // 1. Try local data first
+  try {
+    const localResults = filterLocalPokemon(localPokemonDb, searchTerm, filters);
+    
+    if (localResults.length > 0) {
+      // Apply pagination to local results
+      const paginatedResults = localResults.slice(offset, offset + limit);
+      return paginatedResults.map(transformLocalPokemon);
+    }
+    
+    // If local results are empty but we have filters, it's possible the local DB just doesn't have it
+    // or the criteria really matches nothing.
+    // The requirement is "unless we dont find any then call the api".
+    // So if localResults.length === 0, we proceed to API.
+    console.log('No local results found, falling back to API');
+  } catch (error) {
+    console.error('Error querying local pokemon data:', error);
+    // Fallback to API on error
+  }
+
+  // 2. Try Redis cache if enabled
   if (isCacheEnabled()) {
     const cacheKey = generateSearchCacheKey(limit, offset, searchTerm, filters);
     return cacheAside(cacheKey, async () => {
@@ -123,7 +231,7 @@ export const fetchPokemonData = async (
     }, CACHE_TTL.POKEMON_LIST);
   }
 
-  // Try cached version first if enabled (no Redis)
+  // 3. Try cached version first if enabled (no Redis)
   if (USE_CACHED_API) {
     try {
       return await fetchCachedPokemonData(limit, offset, searchTerm, filters);
@@ -132,7 +240,7 @@ export const fetchPokemonData = async (
     }
   }
 
-  // Fallback to direct API call
+  // 4. Fallback to direct API call
   return fetchPokemonDataDirect(limit, offset, searchTerm, filters);
 };
 
@@ -668,7 +776,20 @@ export const fetchCompetitiveItems = async () => {
  * Fetches available filter options (types, moves, generations)
  */
 export const fetchFilterOptions = async () => {
-  // Try cached version first if enabled
+  // Use local filter options data
+  try {
+    const { types, moves, generations } = localFilterOptions.data;
+    return {
+      types: types.map((t: { name: string }) => t.name),
+      moves: moves.map((m: { name: string }) => m.name),
+      generations: generations.map((g: { name: string }) => g.name),
+    };
+  } catch (error) {
+    console.error('Error processing local filter options:', error);
+    // Fallback if local processing fails (though unlikely)
+  }
+
+  // Fallback to cached version if enabled
   if (USE_CACHED_API) {
     try {
       return await fetchCachedFilterOptions();

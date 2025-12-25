@@ -247,7 +247,7 @@ describe('Pokegrid Game Utils', () => {
       ];
 
       const score = calculateScore(cells);
-      expect(score).toBe(120); // 100 base + 20 rarity bonus = 120
+      expect(score).toBe(250); // 200 base * 1.25 default rarity = 250
     });
 
     test('should apply attempt penalties', () => {
@@ -266,7 +266,7 @@ describe('Pokegrid Game Utils', () => {
       ];
 
       const score = calculateScore(cells);
-      expect(score).toBe(76); // (100 base + 20 rarity) * 0.8 fallback multiplier - 20 penalty = 96 - 20 = 76
+      expect(score).toBe(120); // (200 base) * 0.8 multiplier - 40 penalty = 160 - 40 = 120
     });
 
     test('should handle empty cells', () => {
