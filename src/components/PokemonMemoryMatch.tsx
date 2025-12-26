@@ -436,10 +436,9 @@ export const PokemonMemoryMatch: React.FC<PokemonMemoryMatchProps> = ({
       {/* Game Header */}
       <div className="text-center mb-6 sm:mb-8">
         <div className="mb-3 sm:mb-4">
-          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-800 mb-2">
+          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-800 mb-2 hidden">
             Pokémon Memory Match
           </h1>
-          <div className="w-24 sm:w-32 h-1 bg-gradient-to-r from-red-500 to-blue-500 rounded-full mx-auto"></div>
         </div>
         <p className="text-gray-700 text-base sm:text-lg font-medium mb-2">
           Find matching pairs of Pokémon cards!

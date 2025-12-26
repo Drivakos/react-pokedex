@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { getTcgCardImage } from '../utils/helpers';
 
 interface PokemonCard {
   id: string;
@@ -20,8 +21,6 @@ interface PokemonCardsProps {
   pokemonName: string;
   pokemonId?: number;
 }
-
-const POKEMONTCG_API_KEY = import.meta.env.VITE_POKEMONTCG_API_KEY;
 
 // Cache configuration
 const CACHE_KEY_PREFIX = 'pokemon_tcg_cards_';
@@ -313,7 +312,6 @@ const PokemonCards: React.FC<PokemonCardsProps> = ({ pokemonName, pokemonId }) =
       const cached = localStorage.getItem(cacheKey);
 
       if (!cached) {
-        console.log('📦 No cache found for', pokemonName);
         return null;
       }
 
@@ -322,12 +320,10 @@ const PokemonCards: React.FC<PokemonCardsProps> = ({ pokemonName, pokemonId }) =
       const age = now - data.timestamp;
 
       if (age > CACHE_DURATION) {
-        console.log('⏰ Cache expired for', pokemonName, `(${Math.round(age / (24 * 60 * 60 * 1000))} days old)`);
         localStorage.removeItem(cacheKey);
         return null;
       }
 
-      console.log('✅ Loaded from cache:', pokemonName, `(${data.cards.length} cards, ${Math.round(age / (60 * 60 * 1000))} hours old)`);
       return data;
     } catch (err) {
       console.error('❌ Error reading cache:', err);
@@ -347,7 +343,6 @@ const PokemonCards: React.FC<PokemonCardsProps> = ({ pokemonName, pokemonId }) =
       };
 
       localStorage.setItem(cacheKey, JSON.stringify(data));
-      console.log('💾 Saved to cache:', pokemonName, `(${cardsData.length} cards)`);
     } catch (err) {
       console.error('❌ Error saving to cache:', err);
       // If localStorage is full, try to clear old entries
@@ -368,155 +363,67 @@ const PokemonCards: React.FC<PokemonCardsProps> = ({ pokemonName, pokemonId }) =
         }
       }
       keysToRemove.forEach(key => localStorage.removeItem(key));
-      console.log('🧹 Cleared', keysToRemove.length, 'old cache entries');
     } catch (err) {
       console.error('❌ Error clearing cache:', err);
     }
   };
 
-  // Simplified fetch function
+  // Modified fetch function to use local JSON mapping
   const fetchCards = async (page: number = 1, append: boolean = false) => {
-    // Check cache first (only for first page, not for "load more")
-    if (!append && page === 1) {
+    // Check internal cache first
+      getCacheKey(pokemonId);
       const cached = loadFromCache();
-      if (cached) {
-        setCards(cached.cards);
-        setHasMore(cached.totalCount > cached.cards.length);
-        setLoading(false);
-        setLoadedFromCache(true);
-        return;
-      }
-    }
-
-    // Prevent duplicate requests
-    if (isRequestInProgressRef.current && !append) {
-      console.log('🚫 Request already in progress, skipping...');
+    
+    if (!append && page === 1 && cached) {
+      setCards(cached.cards);
+      setHasMore(cached.totalCount > cached.cards.length);
+      setLoading(false);
+      setLoadedFromCache(true);
       return;
     }
 
     if (!append) {
-      isRequestInProgressRef.current = true;
+      setLoading(true);
+    } else {
+      setLoadingMore(true);
     }
 
     try {
-      if (!append) {
-        setLoading(true);
-      } else {
-        setLoadingMore(true);
-      }
       setError(null);
-      setLoadedFromCache(false);
-
-      // Format Pokemon name for search
-      const formattedName = pokemonName.toLowerCase().replace(/[^a-z0-9]/g, '');
-
-      // Handle special cases
-      const specialCases: Record<string, string> = {
-        'nidoranf': 'nidoran female',
-        'nidoranm': 'nidoran male',
-        'mrmime': 'mr mime',
-        'mimejr': 'mime jr',
-        'farfetchd': 'farfetch d',
-        'hooh': 'ho oh',
-        'jangmoo': 'jangmo o',
-        'hakamoo': 'hakamo o',
-        'kommoo': 'kommo o',
-        'porygonz': 'porygon z',
-        'typenull': 'type null',
-        'flabebe': 'flabébé',
-        'sirfetchd': 'sirfetch d',
-        'mrrime': 'mr rime'
-      };
-
-      const searchName = specialCases[formattedName] || formattedName;
-
-      // Build search query - prefer exact match, fallback to partial
-      let query = `name:"${searchName}"`;
-      if (pokemonId) {
-        query = `nationalPokedexNumbers:${pokemonId}`;
-      }
-
-      // Try direct API call first (bypass proxy to test)
-      const isDevelopment = import.meta.env.DEV;
-      const useProxy = false; // Temporarily disable proxy to test direct API
-
-      const apiUrl = useProxy && isDevelopment
-        ? `/api/pokemontcg/cards?q=${encodeURIComponent(query)}&orderBy=set.releaseDate&page=${page}&pageSize=12`
-        : `https://api.pokemontcg.io/v2/cards?q=${encodeURIComponent(query)}&orderBy=set.releaseDate&page=${page}&pageSize=12`;
-
-      console.log('🎴 Fetching Pokemon TCG cards:', {
-        pokemon: pokemonName,
-        pokemonId,
-        query,
-        apiUrl,
-        isDevelopment,
-        useProxy,
-        hasApiKey: !!POKEMONTCG_API_KEY
-      });
-
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => {
-        console.warn('⏰ Request timeout after 15 seconds');
-        controller.abort();
-      }, 15000); // 15 second timeout (faster feedback)
-
-      const fetchOptions: RequestInit = {
-        headers: {
-          'X-Api-Key': POKEMONTCG_API_KEY || ''
-        },
-        signal: controller.signal
-      };
-
-      console.log('📡 Making request with headers:', { hasApiKey: !!POKEMONTCG_API_KEY });
-
-      const response = await fetch(apiUrl, fetchOptions);
-
-      clearTimeout(timeoutId);
-
-      console.log('📦 Response status:', response.status);
-
+      
+      // Fetch the mapping file
+      const response = await fetch('/data/pokemon-to-tcg-cards.json');
       if (!response.ok) {
-        const errorText = await response.text();
-        console.error('❌ API Error:', response.status, errorText);
-        throw new Error(`API request failed: ${response.status} - ${errorText}`);
+        throw new Error('Failed to load local card data');
       }
-
-      const data = await response.json();
-      const newCards = data.data || [];
-
-      console.log('✅ Loaded cards from API:', newCards.length, 'Total available:', data.totalCount);
-
+      
+      const mapping = await response.json();
+      const allPokemonCards = mapping[pokemonId?.toString() || ''] || [];
+      
+      // Implement local pagination
+      const pageSize = 12;
+      const startIndex = (page - 1) * pageSize;
+      const endIndex = startIndex + pageSize;
+      const paginatedCards = allPokemonCards.slice(startIndex, endIndex);
+      
       if (append) {
-        const updatedCards = [...cards, ...newCards];
+        const updatedCards = [...cards, ...paginatedCards];
         setCards(updatedCards);
-        // Update cache with all cards so far
-        if (page <= 3) { // Only cache first 3 pages to save space
-          saveToCache(updatedCards, data.totalCount);
-        }
+        saveToCache(updatedCards, allPokemonCards.length);
       } else {
-        setCards(newCards);
-        // Save first page to cache
-        saveToCache(newCards, data.totalCount);
+        setCards(paginatedCards);
+        saveToCache(paginatedCards, allPokemonCards.length);
       }
 
-      // Check if there are more pages (API returns totalCount)
-      setHasMore(data.totalCount > (page * 12));
+      setHasMore(allPokemonCards.length > (page * pageSize));
+      setLoadedFromCache(true);
 
     } catch (err: any) {
-      console.error('❌ Failed to fetch Pokemon TCG cards:', err);
-      if (err.name === 'AbortError') {
-        setError('The Pokemon TCG API is not responding. This could be due to network issues, API downtime, or rate limiting.');
-      } else if (err.message.includes('Failed to fetch') || err.message.includes('NetworkError')) {
-        setError('Unable to connect to the Pokemon TCG API. Please check your internet connection or try again later.');
-      } else {
-        setError(`Failed to load trading cards: ${err.message}`);
-      }
+      console.error('❌ Failed to load local TCG cards:', err);
+      setError(`Failed to load trading cards: ${err.message}`);
     } finally {
       setLoading(false);
       setLoadingMore(false);
-      if (!append) {
-        isRequestInProgressRef.current = false;
-      }
     }
   };
 
@@ -549,26 +456,11 @@ const PokemonCards: React.FC<PokemonCardsProps> = ({ pokemonName, pokemonId }) =
   useEffect(() => {
     const cacheKey = getCacheKey(pokemonId);
     const cached = localStorage.getItem(cacheKey);
-    if (cached) {
-      try {
-        const data: CachedData = JSON.parse(cached);
-        const age = Date.now() - data.timestamp;
-        console.log('🔍 Cache status:', {
-          pokemon: pokemonName,
-          cached: true,
-          cardsCount: data.cards.length,
-          ageHours: Math.round(age / (60 * 60 * 1000)),
-          expiresIn: Math.round((CACHE_DURATION - age) / (24 * 60 * 60 * 1000)) + ' days'
-        });
-      } catch (err) {
-        // Invalid cache
-      }
-    }
   }, [pokemonName, pokemonId]);
 
   const openCardModal = (card: PokemonCard) => {
     setSelectedCard(card);
-    setCachedImageUrl(card.images.large);
+    setCachedImageUrl(getTcgCardImage(card.id));
   };
 
   const closeCardModal = () => {
@@ -631,24 +523,6 @@ const PokemonCards: React.FC<PokemonCardsProps> = ({ pokemonName, pokemonId }) =
     <div className="my-8">
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-xl font-bold">Trading Cards</h3>
-        {loadedFromCache && (
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-green-600 bg-green-50 px-2 py-1 rounded-full">
-              ✓ Cached
-            </span>
-            <button
-              onClick={() => {
-                localStorage.removeItem(getCacheKey(pokemonId));
-                setLastFetchedPokemon(''); // Trigger refetch
-                fetchCards(1, false);
-              }}
-              className="text-xs text-gray-600 hover:text-gray-900 underline"
-              title="Refresh cards from API"
-            >
-              Refresh
-            </button>
-          </div>
-        )}
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
@@ -666,11 +540,17 @@ const PokemonCards: React.FC<PokemonCardsProps> = ({ pokemonName, pokemonId }) =
                 data-card-rarity={rarityClass}
               >
                 <img
-                  src={card.images.small}
+                  src={getTcgCardImage(card.id)}
                   alt={`${card.name} card`}
                   title={`${card.name} - ${card.set.name} (${card.set.series})`}
                   className="rounded-lg shadow-md w-full relative z-10"
                   loading="lazy"
+                  onError={(e) => {
+                    const target = e.target as HTMLImageElement;
+                    if (target.src !== card.images.small) {
+                      target.src = card.images.small;
+                    }
+                  }}
                 />
                 <div className="card-shine absolute inset-0 z-20 rounded-lg pointer-events-none"></div>
 

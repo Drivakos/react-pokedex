@@ -4,10 +4,18 @@ import {
   getPokemonImage,
   checkPokemonImageExists,
   getThumbnailUrl,
-  getOfficialArtwork
+  getOfficialArtwork,
+  getTcgCardImage
 } from '../../src/utils/helpers';
 
 describe('Pokemon Image Helper Functions', () => {
+  describe('getTcgCardImage', () => {
+    it('should return correctly formatted Google Storage URL for TCG card', () => {
+      expect(getTcgCardImage('base1-1')).toBe('https://storage.googleapis.com/pokehelper/tcg-cards-webp/base1-1.webp');
+      expect(getTcgCardImage('sv3-150')).toBe('https://storage.googleapis.com/pokehelper/tcg-cards-webp/sv3-150.webp');
+    });
+  });
+
   describe('getThumbnailUrl', () => {
     it('should return correctly formatted thumbnail URL for Pokemon ID', () => {
       expect(getThumbnailUrl(1)).toBe('/images/pokemon/thumbnails/001.png');

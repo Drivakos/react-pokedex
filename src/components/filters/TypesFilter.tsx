@@ -35,7 +35,7 @@ export const TypesFilter: React.FC<TypesFilterProps> = memo(({
 }) => {
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-3 gap-2 overflow-x-hidden">
+      <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2 overflow-x-hidden">
         {availableTypes.map(type => (
           <button
             key={type}

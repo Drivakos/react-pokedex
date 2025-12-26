@@ -76,4 +76,21 @@ supabase/.env
 schema_dump.sql
 
 # remove temp filesystem files
+
 *~
+
+public/*
+
+!public/data/
+
+!public/data/pokemon-to-tcg-cards.json
+
+
+
+
+
+# TCG Raw Data
+
+src/data/pokemon-tcg-data/
+
+src/data/tcg-cards-metadata.json

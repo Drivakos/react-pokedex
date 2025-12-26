@@ -120,6 +120,13 @@ export const getPokemonImageFallback = (pokemonId: number): string => {
 };
 
 /**
+ * Get the TCG card image URL from Google Storage
+ */
+export const getTcgCardImage = (cardId: string): string => {
+  return `https://storage.googleapis.com/pokehelper/tcg-cards-webp/${cardId}.webp`;
+};
+
+/**
  * Check if a local Pokemon image exists by attempting to load it
  * This is an async function that resolves to true if the image loads successfully
  */

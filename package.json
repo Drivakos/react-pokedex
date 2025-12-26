@@ -18,7 +18,8 @@
     "test:components": "jest --testPathPattern=components/__tests__",
     "test:utils": "jest --testPathPattern=utils/__tests__",
     "postbuild": "echo \"Build completed successfully\"",
-    "deploy": "node scripts/deploy.js"
+    "deploy": "node scripts/deploy.js",
+    "download:tcg": "node scripts/download-tcg-cards.js"
   },
   "dependencies": {
     "@netlify/cache": "^3.0.4",

@@ -143,7 +143,7 @@ const transformLocalToDetails = (localPokemon: any): PokemonDetails => {
       learned_at_level: 0,
       learn_method: 'unknown'
     })),
-    flavor_text: 'Data loaded from local database.',
+    flavor_text: '',
     genera: 'Pokémon',
     generation: localPokemon.generation,
     evolution_chain: [], // Local DB doesn't have detailed evolution chain
