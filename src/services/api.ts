@@ -51,7 +51,7 @@ const transformLocalPokemon = (localPokemon: any): Pokemon => {
       evolves_from: localPokemon.evolution.evolves_from ? String(localPokemon.evolution.evolves_from) : undefined
     } : undefined,
     is_default: true,
-    base_experience: 0,
+    base_experience: localPokemon.base_experience || 0,
     stats: localPokemon.stats,
     is_legendary: localPokemon.is_legendary,
     is_mythical: localPokemon.is_mythical
@@ -147,7 +147,7 @@ const transformLocalToDetails = (localPokemon: any): PokemonDetails => {
     genera: 'Pokémon',
     generation: localPokemon.generation,
     evolution_chain: [], // Local DB doesn't have detailed evolution chain
-    base_experience: 0,
+    base_experience: localPokemon.base_experience || 0,
     has_evolutions: localPokemon.evolution?.can_evolve || false
   };
 };

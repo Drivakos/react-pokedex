@@ -3,7 +3,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const OUTPUT_FILE = path.join(__dirname, 'data', 'pokemon-db.json');
+const OUTPUT_FILE = path.join(__dirname, '..', 'src', 'data', 'pokemon-db.json');
 
 const POKEAPI_GRAPHQL_URL = 'https://beta.pokeapi.co/graphql/v1beta';
 
@@ -55,6 +55,7 @@ query MyQuery {
         }
       }
     }
+    base_experience
   }
 }
 `;
@@ -98,10 +99,13 @@ async function fetchPokemonData() {
           hp: p.pokemon_v2_pokemonstats.find(s => s.pokemon_v2_stat.name === 'hp')?.base_stat || 0,
           attack: p.pokemon_v2_pokemonstats.find(s => s.pokemon_v2_stat.name === 'attack')?.base_stat || 0,
           defense: p.pokemon_v2_pokemonstats.find(s => s.pokemon_v2_stat.name === 'defense')?.base_stat || 0,
+          'special-attack': p.pokemon_v2_pokemonstats.find(s => s.pokemon_v2_stat.name === 'special-attack')?.base_stat || 0,
+          'special-defense': p.pokemon_v2_pokemonstats.find(s => s.pokemon_v2_stat.name === 'special-defense')?.base_stat || 0,
           speed: p.pokemon_v2_pokemonstats.find(s => s.pokemon_v2_stat.name === 'speed')?.base_stat || 0,
         },
         height: p.height,
         weight: p.weight,
+        base_experience: p.base_experience,
         generation: `generation-${intToRoman(species.generation_id)}`,
         is_legendary: species.is_legendary,
         is_mythical: species.is_mythical,
