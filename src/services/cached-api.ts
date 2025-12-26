@@ -241,9 +241,11 @@ export const fetchCachedPokemonDetails = async (id: number): Promise<PokemonDeta
           // Fetch species data for the base form
           const baseSpeciesResponse = await fetchCachedREST(`pokemon-species/${evoData.species.name}`);
           
+          const baseId = baseSpeciesResponse.id;
           const evoDetails = {
             species_name: evoData.species.name,
-            species_id: baseSpeciesResponse.id,
+            species_id: baseId,
+            evolves_from_id: null,
             min_level: 1,
             trigger_name: null,
             item: null
@@ -254,10 +256,12 @@ export const fetchCachedPokemonDetails = async (id: number): Promise<PokemonDeta
           if (evoData.evolves_to.length > 0) {
             for (const evo1 of evoData.evolves_to) {
               const speciesData = await fetchCachedREST(`pokemon-species/${evo1.species.name}`);
+              const evo1Id = speciesData.id;
               
               const evoDetails = {
                 species_name: evo1.species.name,
-                species_id: speciesData.id,
+                species_id: evo1Id,
+                evolves_from_id: baseId,
                 min_level: evo1.evolution_details[0]?.min_level || null,
                 trigger_name: evo1.evolution_details[0]?.trigger?.name || null,
                 item: evo1.evolution_details[0]?.item?.name || null
@@ -267,11 +271,12 @@ export const fetchCachedPokemonDetails = async (id: number): Promise<PokemonDeta
               // Process second evolution
               if (evo1.evolves_to.length > 0) {
                 for (const evo2 of evo1.evolves_to) {
-                  const speciesData = await fetchCachedREST(`pokemon-species/${evo2.species.name}`);
+                  const speciesData2 = await fetchCachedREST(`pokemon-species/${evo2.species.name}`);
                   
                   const evoDetails = {
                     species_name: evo2.species.name,
-                    species_id: speciesData.id,
+                    species_id: speciesData2.id,
+                    evolves_from_id: evo1Id,
                     min_level: evo2.evolution_details[0]?.min_level || null,
                     trigger_name: evo2.evolution_details[0]?.trigger?.name || null,
                     item: evo2.evolution_details[0]?.item?.name || null
@@ -302,11 +307,29 @@ export const fetchCachedPokemonDetails = async (id: number): Promise<PokemonDeta
         back_shiny: pokemon.sprites.back_shiny,
         official_artwork: pokemon.sprites.other?.['official-artwork']?.front_default
       },
-      moves: pokemon.moves.map((m: any) => ({
-        name: m.move.name,
-        learned_at_level: m.version_group_details[0]?.level_learned_at || 0,
-        learn_method: m.version_group_details[0]?.move_learn_method.name || 'unknown'
-      })),
+      moves: pokemon.moves.map((m: any) => {
+        // Pick the latest version group details
+        // PokeAPI version group URLs have IDs: https://pokeapi.co/api/v2/version-group/25/
+        const latestDetail = m.version_group_details.reduce((latest: any, current: any) => {
+          const latestId = parseInt(latest.version_group.url.split('/').filter(Boolean).pop() || '0');
+          const currentId = parseInt(current.version_group.url.split('/').filter(Boolean).pop() || '0');
+          return currentId > latestId ? current : latest;
+        }, m.version_group_details[0]);
+
+        return {
+          name: m.move.name,
+          learned_at_level: latestDetail?.level_learned_at || 0,
+          learn_method: latestDetail?.move_learn_method.name || 'unknown'
+        };
+      }).filter((m: any) => ['level-up', 'machine', 'egg', 'tutor'].includes(m.learn_method))
+      .sort((a: any, b: any) => {
+        if (a.learn_method === 'level-up' && b.learn_method === 'level-up') {
+          return a.learned_at_level - b.learned_at_level;
+        }
+        if (a.learn_method === 'level-up') return -1;
+        if (b.learn_method === 'level-up') return 1;
+        return a.name.localeCompare(b.name);
+      }),
       flavor_text: englishFlavorText,
       genera: species.genera?.find((g: any) => g.language.name === 'en')?.genus || '',
       generation: species.generation?.name || 'unknown',

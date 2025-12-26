@@ -1,4 +1,4 @@
-import { Pokemon, RawPokemonData, Filters, PokemonDetails, TYPE_COLORS } from '../types/pokemon';
+import { Pokemon, RawPokemonData, Filters, PokemonDetails } from '../types/pokemon';
 import { 
   fetchCachedPokemonById, 
   fetchCachedPokemonData, 
@@ -146,7 +146,16 @@ const transformLocalToDetails = (localPokemon: any): PokemonDetails => {
     flavor_text: '',
     genera: 'Pokémon',
     generation: localPokemon.generation,
-    evolution_chain: [], // Local DB doesn't have detailed evolution chain
+    evolution_chain: [
+      {
+        species_name: localPokemon.name,
+        species_id: localPokemon.id,
+        evolves_from_id: localPokemon.evolution?.evolves_from || null,
+        min_level: null,
+        trigger_name: null,
+        item: null
+      }
+    ],
     base_experience: localPokemon.base_experience || 0,
     has_evolutions: localPokemon.evolution?.can_evolve || false
   };
@@ -353,23 +362,7 @@ async function fetchPokemonDataDirect(
 
 // Transform functions moved to ../utils/pokemon-transform.ts
 
-/**
- * Fetches detailed Pokemon data from GraphQL API (simplified, single call)
- */
 export const fetchPokemonDetails = async (id: number): Promise<PokemonDetails> => {
-  // 1. Try local data first
-  try {
-    // Force type casting to access array methods on the JSON import
-    const localDb = localPokemonDb as any[];
-    const localPokemon = localDb.find((p: any) => p.id === id);
-    if (localPokemon) {
-      // console.log(`Found Pokemon ${id} in local DB`);
-      return transformLocalToDetails(localPokemon);
-    }
-  } catch (error) {
-    console.warn(`Error checking local DB for Pokemon ${id}:`, error);
-  }
-
   // Try cached version first if enabled
   if (USE_CACHED_API) {
     try {
@@ -403,12 +396,16 @@ export const fetchPokemonDetails = async (id: number): Promise<PokemonDetails> =
             }
             is_hidden
           }
-          moves: pokemon_v2_pokemonmoves(where: { pokemon_v2_versiongroup: { name: { _eq: "red-blue" } } }) {
+          moves: pokemon_v2_pokemonmoves {
             move: pokemon_v2_move {
               name
             }
             level
             pokemon_v2_movelearnmethod {
+              name
+            }
+            pokemon_v2_versiongroup {
+              id
               name
             }
           }
@@ -435,6 +432,7 @@ export const fetchPokemonDetails = async (id: number): Promise<PokemonDetails> =
               pokemon_v2_pokemonspecies {
                 id
                 name
+                evolves_from_species_id
                 pokemon_v2_pokemonspeciesnames(where: { pokemon_v2_language: { name: { _eq: "en" } } }) {
                   name
                 }
@@ -489,16 +487,49 @@ export const fetchPokemonDetails = async (id: number): Promise<PokemonDetails> =
       description: ability.ability.pokemon_v2_abilityflavortexts?.[0]?.flavor_text || 'No description available.'
     }));
 
-    const moves = pokemon.moves.map((move: any) => ({
-      name: move.move.name,
-      learned_at_level: move.level || 0,
-      learn_method: move.pokemon_v2_movelearnmethod?.name || 'unknown'
-    }));
+    // Process moves - group by name and keep the latest version group
+    const movesMap = new Map();
+    const validMethods = ['level-up', 'machine', 'egg', 'tutor'];
+    
+    pokemon.moves.forEach((m: any) => {
+      const moveName = m.move.name;
+      const learnMethod = m.pokemon_v2_movelearnmethod?.name || 'unknown';
+      const versionGroupId = m.pokemon_v2_versiongroup?.id || 0;
+      
+      // We only care about standard learning methods
+      if (!validMethods.includes(learnMethod)) return;
+      
+      const existing = movesMap.get(moveName);
+      // If we don't have this move, or this version is more recent
+      if (!existing || versionGroupId > existing.versionGroupId) {
+        movesMap.set(moveName, {
+          name: moveName,
+          learned_at_level: m.level || 0,
+          learn_method: learnMethod,
+          versionGroupId
+        });
+      }
+    });
+    
+    const moves = Array.from(movesMap.values()).map(m => ({
+      name: m.name,
+      learned_at_level: m.learned_at_level,
+      learn_method: m.learn_method
+    })).sort((a, b) => {
+      // Sort level-up moves by level, others by name
+      if (a.learn_method === 'level-up' && b.learn_method === 'level-up') {
+        return a.learned_at_level - b.learned_at_level;
+      }
+      if (a.learn_method === 'level-up') return -1;
+      if (b.learn_method === 'level-up') return 1;
+      return a.name.localeCompare(b.name);
+    });
 
     // Process evolution chain
     const evolutions: Array<{
       species_name: string;
       species_id: number;
+      evolves_from_id: number | null;
       min_level: number | null;
       trigger_name: string | null;
       item: string | null;
@@ -510,6 +541,7 @@ export const fetchPokemonDetails = async (id: number): Promise<PokemonDetails> =
         evolutions.push({
           species_name: evo.name,
           species_id: evo.id,
+          evolves_from_id: evo.evolves_from_species_id || null,
           min_level: evolutionDetails?.min_level || null,
           trigger_name: evolutionDetails?.pokemon_v2_evolutiontrigger?.name || null,
           item: evolutionDetails?.pokemon_v2_item?.name || null
@@ -561,6 +593,19 @@ export const fetchPokemonDetails = async (id: number): Promise<PokemonDetails> =
     };
   } catch (error) {
     console.error(`Error fetching detailed Pokemon data for ID ${id}:`, error);
+    
+    // 1. Fallback to local data as a last resort
+    try {
+      const localDb = localPokemonDb as any[];
+      const localPokemon = localDb.find((p: any) => p.id === id);
+      if (localPokemon) {
+        console.log(`Using local DB fallback for Pokemon ${id}`);
+        return transformLocalToDetails(localPokemon);
+      }
+    } catch (localError) {
+      console.warn(`Error checking local DB fallback for Pokemon ${id}:`, localError);
+    }
+    
     throw error;
   }
 };

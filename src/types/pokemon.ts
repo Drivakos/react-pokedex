@@ -56,6 +56,7 @@ export interface PokemonStats {
 export interface PokemonEvolution {
   species_name: string;
   species_id: number;
+  evolves_from_id: number | null;
   min_level: number | null;
   trigger_name: string | null;
   item: string | null;

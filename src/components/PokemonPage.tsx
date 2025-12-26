@@ -20,7 +20,7 @@ const PokemonPage: React.FC = () => {
   const [pokemonDetails, setPokemonDetails] = useState<PokemonDetails | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'stats' | 'moves' | 'evolution'>('stats');
-  const [selectedMoveCategory, setSelectedMoveCategory] = useState<'all' | 'level-up' | 'machine' | 'egg'>('all');
+  const [selectedMoveCategory, setSelectedMoveCategory] = useState<'all' | 'level-up' | 'machine' | 'egg' | 'tutor'>('all');
   const [error, setError] = useState<string | null>(null);
   
 
@@ -124,6 +124,8 @@ const PokemonPage: React.FC = () => {
           return move.learn_method === 'machine';
         case 'egg':
           return move.learn_method === 'egg';
+        case 'tutor':
+          return move.learn_method === 'tutor';
         default:
           return true;
       }
@@ -500,7 +502,17 @@ const PokemonPage: React.FC = () => {
                           : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                       }`}
                     >
-                      Egg Moves
+                      Egg
+                    </button>
+                    <button
+                      onClick={() => setSelectedMoveCategory('tutor')}
+                      className={`px-4 py-2 rounded-lg ${
+                        selectedMoveCategory === 'tutor'
+                          ? 'bg-blue-500 text-white'
+                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                      }`}
+                    >
+                      Tutor
                     </button>
                   </div>
                 </div>
@@ -546,64 +558,26 @@ const PokemonPage: React.FC = () => {
                       <div className="min-w-max">
                         {/* Process evolution data */}
                         {(() => {
-                          // Organize evolutions into stages
-                          const baseForm = pokemonDetails.evolution_chain.find((_, i) => i === 0);
+                          // Organize evolutions into a tree structure using evolves_from_id
+                          // Find the base form (the one that doesn't evolve from anything in this chain)
+                          const baseForm = pokemonDetails.evolution_chain.find(evo => !evo.evolves_from_id) || pokemonDetails.evolution_chain[0];
                           if (!baseForm) return null;
                           
-                          // Define types for our evolution tree structure
-                          type EvolutionBranch = {
-                            evolution: typeof baseForm;
-                            furtherEvolutions: typeof baseForm[];
-                          };
-                          
-                          // Get all direct evolutions from base form
-                          const directEvolutions = pokemonDetails.evolution_chain.filter(evo => 
-                            evo !== baseForm && (evo.min_level || evo.trigger_name));
+                          // Helper to get all species that evolve from a given species
+                          const getChildren = (speciesId: number) => 
+                            pokemonDetails.evolution_chain.filter(evo => evo.evolves_from_id === speciesId);
                             
-                          // Group evolutions by their parent
+                          // Get all direct evolutions from base form
+                          const directEvolutions = getChildren(baseForm.species_id);
+                          
+                          // Build the tree (supporting up to 3 stages which is the Pokémon limit)
                           const evolutionTree = {
                             base: baseForm,
-                            branches: [] as EvolutionBranch[]
-                          };
-                          
-                          // Simplified evolution chain handling focused on visual clarity
-                          // For 3-stage evolution chains like Poliwag -> Poliwhirl -> Poliwrath/Politoed
-                          if (pokemonDetails.evolution_chain.length >= 3) {
-                            // For clarity in branching evolutions, we'll handle the most common case:
-                            // A base form that evolves into a middle form, which then branches into multiple final forms
-                            
-                            // Get the middle evolution (usually the first evolution from base)
-                            const middleEvolution = directEvolutions.length > 0 ? directEvolutions[0] : null;
-                            
-                            if (middleEvolution) {
-                              // All other evolutions that aren't the base or middle are considered final evolutions
-                              const finalEvolutions = pokemonDetails.evolution_chain.filter(evo => 
-                                evo !== baseForm && evo !== middleEvolution
-                              );
-                              
-                              // We'll limit to max 2 final evolutions for better visual layout
-                              // This covers most Pokémon evolution patterns (like Eevee being a special case)
-                              const limitedFinalEvolutions = finalEvolutions.slice(0, Math.min(finalEvolutions.length, 2));
-                              
-                              // Create a single branch for the middle evolution with its final evolutions
-                              evolutionTree.branches = [{
-                                evolution: middleEvolution,
-                                furtherEvolutions: limitedFinalEvolutions
-                              }];
-                            } else {
-                              // Fallback for unusual evolution chains
-                              evolutionTree.branches = directEvolutions.map(directEvo => ({
-                                evolution: directEvo,
-                                furtherEvolutions: [] as typeof baseForm[]
-                              }));
-                            }
-                          } else {
-                            // For simple evolution chains (1 or 2 stages)
-                            evolutionTree.branches = directEvolutions.map(directEvo => ({
+                            branches: directEvolutions.map(directEvo => ({
                               evolution: directEvo,
-                              furtherEvolutions: [] as typeof baseForm[]
-                            }));
-                          }
+                              furtherEvolutions: getChildren(directEvo.species_id)
+                            }))
+                          };
                           
                           // Check if this is a branching evolution (multiple stage 1 evolutions)
                           const hasBranchingEvolution = evolutionTree.branches.length > 1;
@@ -612,7 +586,7 @@ const PokemonPage: React.FC = () => {
                             <div className="flex flex-col items-center">
                               {/* Base Form */}
                               <div className="flex flex-col items-center">
-                                <div className={`w-32 h-32 bg-gray-100 rounded-full flex items-center justify-center mb-2 ${baseForm.species_name === pokemonDetails.name ? 'ring-2 ring-blue-500' : ''}`}>
+                                <div className={`w-32 h-32 bg-gray-100 rounded-full flex items-center justify-center mb-2 ${baseForm.species_id === pokemonDetails.id ? 'ring-2 ring-blue-500' : ''}`}>
                                   <Link 
                                     to={`/pokemon/${baseForm.species_id}`}
                                     className="cursor-pointer transition-transform hover:scale-110"
@@ -639,28 +613,28 @@ const PokemonPage: React.FC = () => {
                               
                               {/* Evolution Tree */}
                               {evolutionTree.branches.length > 0 && (
-                                <div className="mt-6 relative">
+                                <div className="mt-6 relative w-full">
                                   {/* Vertical line from base to branches */}
                                   <div className="absolute top-0 left-1/2 transform -translate-x-1/2 w-0.5 h-12 bg-gray-300 z-10"></div>
                                   
                                   {/* Horizontal line for branches */}
                                   {hasBranchingEvolution && (
-                                    <div className="absolute top-12 left-0 right-0 h-0.5 bg-gray-300 z-10">
+                                    <div className="absolute top-12 left-0 right-0 h-0.5 bg-gray-300 z-10 mx-auto" 
+                                         style={{ width: `${Math.min(100, (evolutionTree.branches.length - 1) * 33)}%` }}>
                                     </div>
                                   )}
                                   
                                   {/* Branches */}
-                                  <div className="flex justify-between mt-12 relative w-full px-8"
-                                       style={{ maxWidth: '600px', margin: '0 auto' }}>
+                                  <div className="flex justify-center mt-12 relative w-full gap-4">
                                     {evolutionTree.branches.map((branch, branchIndex) => (
-                                      <div key={`branch-${branchIndex}`} className="flex flex-col items-center relative mx-4">
+                                      <div key={`branch-${branchIndex}`} className="flex flex-col items-center relative min-w-[150px]">
                                         {/* Vertical line from horizontal branch to evolution */}
                                         {hasBranchingEvolution && (
                                           <div className="absolute top-0 left-1/2 transform -translate-x-1/2 w-0.5 h-12 bg-gray-300 z-10"></div>
                                         )}
                                         
                                         {/* Evolution Method */}
-                                        <div className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm mb-4 mt-12">
+                                        <div className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-xs mb-4 mt-12 whitespace-nowrap">
                                           {branch.evolution.trigger_name === 'level-up' && branch.evolution.min_level && (
                                             <span>Level {branch.evolution.min_level}</span>
                                           )}
@@ -679,7 +653,7 @@ const PokemonPage: React.FC = () => {
                                         </div>
                                         
                                         {/* Evolution Pokemon */}
-                                        <div className={`w-32 h-32 bg-gray-100 rounded-full flex items-center justify-center mb-2 ${branch.evolution.species_name === pokemonDetails.name ? 'ring-2 ring-blue-500' : ''}`}>
+                                        <div className={`w-32 h-32 bg-gray-100 rounded-full flex items-center justify-center mb-2 ${branch.evolution.species_id === pokemonDetails.id ? 'ring-2 ring-blue-500' : ''}`}>
                                           <Link 
                                             to={`/pokemon/${branch.evolution.species_id}`}
                                             className="cursor-pointer transition-transform hover:scale-110"
@@ -705,28 +679,28 @@ const PokemonPage: React.FC = () => {
                                         
                                         {/* Further Evolutions */}
                                         {branch.furtherEvolutions.length > 0 && (
-                                          <div className="mt-6 relative">
+                                          <div className="mt-6 relative w-full">
                                             {/* Vertical line to further evolutions */}
                                             <div className="absolute top-0 left-1/2 transform -translate-x-1/2 w-0.5 h-12 bg-gray-300 z-10"></div>
                                             
                                             {/* Horizontal line connecting all further evolutions */}
                                             {branch.furtherEvolutions.length > 1 && (
-                                              <div className="absolute top-12 left-0 right-0 h-0.5 bg-gray-300 z-10">
+                                              <div className="absolute top-12 left-0 right-0 h-0.5 bg-gray-300 z-10 mx-auto"
+                                                   style={{ width: `${Math.min(100, (branch.furtherEvolutions.length - 1) * 50)}%` }}>
                                               </div>
                                             )}
                                             
                                             {/* Further evolution branches */}
-                                            <div className="flex justify-between mt-12 relative w-full px-8"
-                                                 style={{ maxWidth: '600px', margin: '0 auto' }}>
+                                            <div className="flex justify-center mt-12 relative w-full gap-4">
                                               {branch.furtherEvolutions.map((furtherEvo, furtherIndex) => (
-                                                <div key={`further-${branchIndex}-${furtherIndex}`} className="flex flex-col items-center relative mx-4">
+                                                <div key={`further-${branchIndex}-${furtherIndex}`} className="flex flex-col items-center relative min-w-[120px]">
                                                   {/* Vertical line from horizontal branch to further evolution */}
                                                   {branch.furtherEvolutions.length > 1 && (
                                                     <div className="absolute top-0 left-1/2 transform -translate-x-1/2 w-0.5 h-12 bg-gray-300 z-10"></div>
                                                   )}
                                                   
                                                   {/* Evolution Method */}
-                                                  <div className="bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-sm mb-4 mt-12">
+                                                  <div className="bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-xs mb-4 mt-12 whitespace-nowrap">
                                                     {furtherEvo.trigger_name === 'level-up' && furtherEvo.min_level && (
                                                       <span>Level {furtherEvo.min_level}</span>
                                                     )}
@@ -745,7 +719,7 @@ const PokemonPage: React.FC = () => {
                                                   </div>
                                                   
                                                   {/* Further Evolution Pokemon */}
-                                                  <div className={`w-32 h-32 bg-gray-100 rounded-full flex items-center justify-center mb-2 ${furtherEvo.species_name === pokemonDetails.name ? 'ring-2 ring-blue-500' : ''}`}>
+                                                  <div className={`w-32 h-32 bg-gray-100 rounded-full flex items-center justify-center mb-2 ${furtherEvo.species_id === pokemonDetails.id ? 'ring-2 ring-blue-500' : ''}`}>
                                                     <Link 
                                                       to={`/pokemon/${furtherEvo.species_id}`}
                                                       className="cursor-pointer transition-transform hover:scale-110"
