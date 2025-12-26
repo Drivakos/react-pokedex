@@ -14,6 +14,8 @@ interface PokedexLayoutProps {
   availableTypes?: string[];
   availableMoves?: string[];
   availableGenerations?: string[];
+  typeSearch?: string;
+  setTypeSearch?: (value: string) => void;
 }
 
 export const PokedexLayout: React.FC<PokedexLayoutProps> = ({
@@ -27,7 +29,9 @@ export const PokedexLayout: React.FC<PokedexLayoutProps> = ({
   onFilterChange = () => {},
   availableTypes = [],
   availableMoves = [],
-  availableGenerations = []
+  availableGenerations = [],
+  typeSearch = '',
+  setTypeSearch = () => {}
 }) => {
   return (
     <div className="min-h-screen flex flex-col bg-gray-100">
@@ -97,6 +101,8 @@ export const PokedexLayout: React.FC<PokedexLayoutProps> = ({
             availableTypes={availableTypes}
             availableMoves={availableMoves}
             availableGenerations={availableGenerations}
+            typeSearch={typeSearch}
+            setTypeSearch={setTypeSearch}
             isDesktop={true}
             isMobileOpen={true}
             setIsMobileOpen={() => {}}

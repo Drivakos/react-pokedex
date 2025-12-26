@@ -37,6 +37,7 @@ const PokedexHome: React.FC = () => {
   const [showDesktopFilters, setShowDesktopFilters] = useState(false);
   const [activeFilterTab, setActiveFilterTab] = useState('types');
   const [moveSearch, setMoveSearch] = useState('');
+  const [typeSearch, setTypeSearch] = useState('');
   
   // Setup the intersection observer for infinite scrolling
   const setupObserver = (node: HTMLDivElement | null) => {
@@ -140,16 +141,6 @@ const PokedexHome: React.FC = () => {
                 </span>
               )}
             </button>
-            
-            {totalFiltersCount > 0 && (
-              <button
-                onClick={resetFilters}
-                className="hidden md:flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors duration-200"
-              >
-                <RefreshCw size={16} />
-                <span>Reset</span>
-              </button>
-            )}
           </div>
         </div>
       </header>
@@ -185,6 +176,8 @@ const PokedexHome: React.FC = () => {
                   <TypesFilter
                     availableTypes={availableTypes}
                     selectedTypes={filters.types}
+                    searchTerm={typeSearch}
+                    onSearchChange={setTypeSearch}
                     onTypeToggle={(type: string) => {
                       const newTypes = filters.types.includes(type)
                         ? filters.types.filter(t => t !== type)

@@ -2,15 +2,13 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { TYPE_COLORS } from '../types/pokemon';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { getPokemonImage } from '../utils/helpers';
+import PokemonImage from './PokemonImage';
+import pokemonDb from '../data/pokemon-db.json';
 
 interface Pokemon {
   id: number;
   name: string;
   types: string[];
-  sprites: {
-    front_default: string;
-  };
 }
 
 interface RelatedPokemonProps {
@@ -23,7 +21,7 @@ interface RelatedPokemonProps {
 const RelatedPokemon: React.FC<RelatedPokemonProps> = ({ 
   pokemonId, 
   pokemonType, 
-  limit = 6, 
+  limit = 10, 
   title = "Related Pokémon" 
 }) => {
   const [pokemon, setPokemon] = useState<Pokemon[]>([]);
@@ -38,112 +36,34 @@ const RelatedPokemon: React.FC<RelatedPokemonProps> = ({
     setError(null);
     
     try {
-      // Pokemon data mapping - ID to name and types
-      const pokemonData: Record<number, {name: string, types: string[]}> = {
-        1: { name: 'bulbasaur', types: ['grass', 'poison'] },
-        2: { name: 'ivysaur', types: ['grass', 'poison'] },
-        3: { name: 'venusaur', types: ['grass', 'poison'] },
-        4: { name: 'charmander', types: ['fire'] },
-        5: { name: 'charmeleon', types: ['fire'] },
-        6: { name: 'charizard', types: ['fire', 'flying'] },
-        7: { name: 'squirtle', types: ['water'] },
-        8: { name: 'wartortle', types: ['water'] },
-        9: { name: 'blastoise', types: ['water'] },
-        25: { name: 'pikachu', types: ['electric'] },
-        26: { name: 'raichu', types: ['electric'] },
-        37: { name: 'vulpix', types: ['fire'] },
-        38: { name: 'ninetales', types: ['fire'] },
-        39: { name: 'jigglypuff', types: ['normal', 'fairy'] },
-        52: { name: 'meowth', types: ['normal'] },
-        54: { name: 'psyduck', types: ['water'] },
-        55: { name: 'golduck', types: ['water'] },
-        58: { name: 'growlithe', types: ['fire'] },
-        59: { name: 'arcanine', types: ['fire'] },
-        63: { name: 'abra', types: ['psychic'] },
-        64: { name: 'kadabra', types: ['psychic'] },
-        65: { name: 'alakazam', types: ['psychic'] },
-        94: { name: 'gengar', types: ['ghost', 'poison'] },
-        129: { name: 'magikarp', types: ['water'] },
-        130: { name: 'gyarados', types: ['water', 'flying'] },
-        131: { name: 'lapras', types: ['water', 'ice'] },
-        133: { name: 'eevee', types: ['normal'] },
-        143: { name: 'snorlax', types: ['normal'] },
-        149: { name: 'dragonite', types: ['dragon', 'flying'] },
-        150: { name: 'mewtwo', types: ['psychic'] },
-        151: { name: 'mew', types: ['psychic'] }
-      };
-      
-      // No delay needed - using local data
-      
-      const mockPokemon: Pokemon[] = [];
-      
-      // Get Pokemon of the same type if specified
-      let relatedIds: number[] = [];
+      // 1. Get all potential candidates
+      let candidates: any[] = [];
       
       if (pokemonType) {
-        // Find Pokemon with the same type
-        relatedIds = Object.entries(pokemonData)
-          .filter(([id, data]) => {
-            return data.types.includes(pokemonType) && Number(id) !== pokemonId;
-          })
-          .map(([id]) => Number(id))
-          .slice(0, limit);
+        candidates = (pokemonDb as any[]).filter(p => 
+          p.types.includes(pokemonType) && p.id !== pokemonId && p.id < 10000
+        );
+      } else if (pokemonId) {
+        candidates = (pokemonDb as any[]).filter(p => p.id !== pokemonId && p.id < 10000);
       } else {
-        // Get Pokemon with IDs close to the current one
-        const allIds = Object.keys(pokemonData).map(Number);
-        allIds.sort((a, b) => a - b);
-        
-        if (pokemonId) {
-          // Find the index of the current Pokemon
-          const currentIndex = allIds.indexOf(pokemonId);
-          
-          if (currentIndex !== -1) {
-            // Get Pokemon before and after the current one
-            const startIdx = Math.max(0, currentIndex - Math.floor(limit / 2));
-            const endIdx = Math.min(allIds.length, startIdx + limit);
-            
-            relatedIds = allIds.slice(startIdx, endIdx);
-            // Remove the current Pokemon from the list
-            relatedIds = relatedIds.filter(id => id !== pokemonId);
-            
-            // If we don't have enough Pokemon, add more from the beginning or end
-            if (relatedIds.length < limit) {
-              if (startIdx === 0) {
-                // Add more from the end
-                const additionalIds = allIds.slice(endIdx, endIdx + (limit - relatedIds.length));
-                relatedIds = [...relatedIds, ...additionalIds];
-              } else {
-                // Add more from the beginning
-                const additionalIds = allIds.slice(Math.max(0, startIdx - (limit - relatedIds.length)), startIdx);
-                relatedIds = [...additionalIds, ...relatedIds];
-              }
-            }
-          } else {
-            // Fallback: just get the first few Pokemon
-            relatedIds = allIds.slice(0, limit);
-          }
-        } else {
-          // No pokemonId provided, just get random Pokemon
-          const shuffled = [...allIds].sort(() => 0.5 - Math.random());
-          relatedIds = shuffled.slice(0, limit);
-        }
+        candidates = (pokemonDb as any[]).filter(p => p.id < 10000);
+      }
+
+      // 2. Fisher-Yates Shuffle for unbiased randomness
+      const shuffled = [...candidates];
+      for (let i = shuffled.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
       }
       
-      // Create Pokemon objects
-      for (const id of relatedIds) {
-        if (pokemonData[id]) {
-          mockPokemon.push({
-            id,
-            name: pokemonData[id].name,
-            types: pokemonData[id].types,
-            sprites: {
-              front_default: getPokemonImage(id)
-            }
-          });
-        }
-      }
+      // 3. Take the first 'limit' items from the shuffled list
+      const results: Pokemon[] = shuffled.slice(0, limit).map(p => ({
+        id: p.id,
+        name: p.name,
+        types: p.types
+      }));
       
-      setPokemon(mockPokemon);
+      setPokemon(results);
     } catch (error) {
       console.error('Error fetching related Pokemon:', error);
       setError('Failed to load related Pokémon');
@@ -248,9 +168,9 @@ const RelatedPokemon: React.FC<RelatedPokemonProps> = ({
                   style={{ width: 'calc(50% - 16px)', maxWidth: '180px' }}
                 >
                   <div className="w-24 h-24 flex items-center justify-center">
-                    <img 
-                      src={poke.sprites.front_default} 
-                      alt={poke.name} 
+                    <PokemonImage 
+                      pokemonId={poke.id} 
+                      pokemonName={poke.name} 
                       className="w-full h-full object-contain"
                     />
                   </div>

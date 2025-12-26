@@ -870,7 +870,7 @@ const PokemonPage: React.FC = () => {
           <RelatedPokemon 
             pokemonId={pokemonDetails.id}
             pokemonType={pokemonDetails.types[0]}
-            limit={6}
+            limit={12}
             title={`Other ${pokemonDetails.types[0].charAt(0).toUpperCase() + pokemonDetails.types[0].slice(1)}-type Pokémon`}
           />
         )}

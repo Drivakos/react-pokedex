@@ -30,6 +30,8 @@ interface FilterPanelProps {
   availableTypes: string[];
   availableMoves: string[];
   availableGenerations: string[];
+  typeSearch: string;
+  setTypeSearch: (value: string) => void;
   isDesktop?: boolean;
   isMobileOpen?: boolean;
   setIsMobileOpen?: (open: boolean) => void;
@@ -68,6 +70,8 @@ interface FilterContentProps {
   filters: Filters;
   moveSearch: string;
   setMoveSearch: (value: string) => void;
+  typeSearch: string;
+  setTypeSearch: (value: string) => void;
   availableTypes: string[];
   availableMoves: string[];
   availableGenerations: string[];
@@ -317,12 +321,14 @@ const FilterContent = memo(({
   );
 });
 
-export const FilterPanel: React.FC<FilterPanelProps> = ({ 
-  filters, 
-  onFilterChange, 
-  availableTypes, 
-  availableMoves, 
+export const FilterPanel: React.FC<FilterPanelProps> = ({
+  filters,
+  onFilterChange,
+  availableTypes,
+  availableMoves,
   availableGenerations,
+  typeSearch,
+  setTypeSearch,
   isDesktop = false,
   isMobileOpen = false,
   setIsMobileOpen = () => {},
@@ -424,6 +430,10 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
     setMoveSearch(value);
   }, []);
 
+  const handleTypeSearchCallback = useCallback((value: string) => {
+    setTypeSearch(value);
+  }, []);
+
   // Don't render anything if we're on mobile and the panel is closed
   if (!isDesktop && !isMobileOpen) {
     return null;
@@ -435,13 +445,15 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
       <div
         className={`${isDesktop ? '' : 'fixed'} md:relative inset-y-0 right-0 w-80 md:w-auto bg-white p-4 shadow-lg z-50 h-full md:h-auto ${isDesktop ? '' : 'transform transition-transform duration-300 ease-in-out'} ${!isDesktop && !isMobileOpen ? 'translate-x-full' : ''}`}
       >
-        <FilterContent 
+        <FilterContent
           isDesktop={isDesktop}
           activeTab={activeTab}
           setActiveTab={setActiveTab}
           filters={filters}
           moveSearch={moveSearch}
           setMoveSearch={handleMoveSearchCallback}
+          typeSearch={typeSearch}
+          setTypeSearch={handleTypeSearchCallback}
           availableTypes={availableTypes}
           availableMoves={availableMoves}
           availableGenerations={availableGenerations}
