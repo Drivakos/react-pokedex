@@ -21,25 +21,25 @@ export function createSeededRandom(seed: string) {
 }
 
 // Type effectiveness chart for checking weaknesses and resistances
-const TYPE_EFFECTIVENESS: Record<string, { weak_to: string[], resists: string[] }> = {
-  fire: { weak_to: ['water', 'ground', 'rock'], resists: ['fire', 'grass', 'ice', 'bug', 'steel', 'fairy'] },
-  water: { weak_to: ['electric', 'grass'], resists: ['fire', 'water', 'ice', 'steel'] },
-  grass: { weak_to: ['fire', 'ice', 'poison', 'flying', 'bug'], resists: ['water', 'electric', 'grass', 'ground'] },
-  electric: { weak_to: ['ground'], resists: ['electric', 'flying', 'steel'] },
-  psychic: { weak_to: ['bug', 'ghost', 'dark'], resists: ['fighting', 'psychic'] },
-  ice: { weak_to: ['fire', 'fighting', 'rock', 'steel'], resists: ['ice'] },
-  dragon: { weak_to: ['ice', 'dragon', 'fairy'], resists: ['fire', 'water', 'electric', 'grass'] },
-  flying: { weak_to: ['electric', 'ice', 'rock'], resists: ['grass', 'fighting', 'bug'] },
-  normal: { weak_to: ['fighting'], resists: [] },
-  fighting: { weak_to: ['flying', 'psychic', 'fairy'], resists: ['rock', 'bug', 'dark'] },
-  poison: { weak_to: ['ground', 'psychic'], resists: ['grass', 'fighting', 'poison', 'bug', 'fairy'] },
-  ground: { weak_to: ['water', 'grass', 'ice'], resists: ['poison', 'rock'] },
-  rock: { weak_to: ['water', 'grass', 'fighting', 'ground', 'steel'], resists: ['normal', 'fire', 'poison', 'flying'] },
-  bug: { weak_to: ['fire', 'flying', 'rock'], resists: ['grass', 'fighting', 'ground'] },
-  ghost: { weak_to: ['ghost', 'dark'], resists: ['poison', 'bug'] },
-  steel: { weak_to: ['fire', 'fighting', 'ground'], resists: ['normal', 'grass', 'ice', 'flying', 'psychic', 'bug', 'rock', 'dragon', 'steel', 'fairy'] },
-  dark: { weak_to: ['fighting', 'bug', 'fairy'], resists: ['ghost', 'dark'] },
-  fairy: { weak_to: ['poison', 'steel'], resists: ['fighting', 'bug', 'dark'] },
+const TYPE_EFFECTIVENESS: Record<string, { weak_to: string[], resists: string[], immune_to: string[] }> = {
+  fire: { weak_to: ['water', 'ground', 'rock'], resists: ['fire', 'grass', 'ice', 'bug', 'steel', 'fairy'], immune_to: [] },
+  water: { weak_to: ['electric', 'grass'], resists: ['fire', 'water', 'ice', 'steel'], immune_to: [] },
+  grass: { weak_to: ['fire', 'ice', 'poison', 'flying', 'bug'], resists: ['water', 'electric', 'grass', 'ground'], immune_to: [] },
+  electric: { weak_to: ['ground'], resists: ['electric', 'flying', 'steel'], immune_to: [] },
+  psychic: { weak_to: ['bug', 'ghost', 'dark'], resists: ['fighting', 'psychic'], immune_to: [] },
+  ice: { weak_to: ['fire', 'fighting', 'rock', 'steel'], resists: ['ice'], immune_to: [] },
+  dragon: { weak_to: ['ice', 'dragon', 'fairy'], resists: ['fire', 'water', 'electric', 'grass'], immune_to: [] },
+  flying: { weak_to: ['electric', 'ice', 'rock'], resists: ['grass', 'fighting', 'bug'], immune_to: ['ground'] },
+  normal: { weak_to: ['fighting'], resists: [], immune_to: ['ghost'] },
+  fighting: { weak_to: ['flying', 'psychic', 'fairy'], resists: ['rock', 'bug', 'dark'], immune_to: [] },
+  poison: { weak_to: ['ground', 'psychic'], resists: ['grass', 'fighting', 'poison', 'bug', 'fairy'], immune_to: [] },
+  ground: { weak_to: ['water', 'grass', 'ice'], resists: ['poison', 'rock'], immune_to: ['electric'] },
+  rock: { weak_to: ['water', 'grass', 'fighting', 'ground', 'steel'], resists: ['normal', 'fire', 'poison', 'flying'], immune_to: [] },
+  bug: { weak_to: ['fire', 'flying', 'rock'], resists: ['grass', 'fighting', 'ground'], immune_to: [] },
+  ghost: { weak_to: ['ghost', 'dark'], resists: ['poison', 'bug'], immune_to: ['normal', 'fighting'] },
+  steel: { weak_to: ['fire', 'fighting', 'ground'], resists: ['normal', 'grass', 'ice', 'flying', 'psychic', 'bug', 'rock', 'dragon', 'steel', 'fairy'], immune_to: ['poison'] },
+  dark: { weak_to: ['fighting', 'bug', 'fairy'], resists: ['ghost', 'dark'], immune_to: ['psychic'] },
+  fairy: { weak_to: ['poison', 'steel'], resists: ['fighting', 'bug', 'dark'], immune_to: ['dragon'] },
 };
 
 // Common starter Pokemon names for better detection (including all evolutions)
@@ -220,15 +220,25 @@ export function checkConstraint(pokemon: Pokemon, constraint: GridConstraint): b
       
       if (effectValue.startsWith('weak-')) {
         const attackingType = effectValue.replace('weak-', '');
+        // A Pokemon is weak to a type if at least one of its types is weak to it
+        // AND none of its types resist or are immune to it (which would neutralize the weakness)
         return pokemon.types.some(type => 
           TYPE_EFFECTIVENESS[type]?.weak_to.includes(attackingType)
+        ) && !pokemon.types.some(type => 
+          TYPE_EFFECTIVENESS[type]?.resists.includes(attackingType) ||
+          TYPE_EFFECTIVENESS[type]?.immune_to.includes(attackingType)
         );
       }
       
       if (effectValue.startsWith('resist-')) {
         const attackingType = effectValue.replace('resist-', '');
+        // A Pokemon resists a type if at least one of its types resists it or is immune to it
+        // AND none of its types are weak to it (which would neutralize the resistance)
         return pokemon.types.some(type => 
-          TYPE_EFFECTIVENESS[type]?.resists.includes(attackingType)
+          TYPE_EFFECTIVENESS[type]?.resists.includes(attackingType) ||
+          TYPE_EFFECTIVENESS[type]?.immune_to.includes(attackingType)
+        ) && !pokemon.types.some(type => 
+          TYPE_EFFECTIVENESS[type]?.weak_to.includes(attackingType)
         );
       }
       
@@ -238,6 +248,77 @@ export function checkConstraint(pokemon: Pokemon, constraint: GridConstraint): b
     default:
       return false;
   }
+}
+
+export function isConstraintCombinationSolvable(rowConstraint: GridConstraint, colConstraint: GridConstraint): boolean {
+  if (!rowConstraint || !colConstraint) return false;
+
+  // 1. Common Sense Effectiveness Checks
+  if ((rowConstraint.type === 'type' && colConstraint.type === 'type-effectiveness') ||
+      (rowConstraint.type === 'type-effectiveness' && colConstraint.type === 'type')) {
+    
+    const typeConstraint = rowConstraint.type === 'type' ? rowConstraint : colConstraint;
+    const effectConstraint = rowConstraint.type === 'type-effectiveness' ? rowConstraint : colConstraint;
+    
+    const type = typeConstraint.value as string;
+    const effect = effectConstraint.value as string;
+    const effectivenessData = TYPE_EFFECTIVENESS[type];
+
+    if (effectivenessData) {
+      const attackingType = effect.replace('weak-', '').replace('resist-', '');
+      
+      if (effect.startsWith('weak-')) {
+        // A type shouldn't be paired with a weakness it resists or is immune to.
+        if (effectivenessData.resists.includes(attackingType) || 
+            effectivenessData.immune_to.includes(attackingType)) {
+          return false;
+        }
+      }
+      
+      if (effect.startsWith('resist-')) {
+        // A type shouldn't be paired with a resistance it is weak to.
+        if (effectivenessData.weak_to.includes(attackingType)) {
+          return false;
+        }
+      }
+    }
+  }
+
+  // 2. Conflicting Types
+  if (rowConstraint.type === 'type' && colConstraint.type === 'type') {
+    const conflictingTypes = [
+      ['normal', 'ghost'],
+      ['fire', 'water'],
+      ['water', 'grass'],
+      ['grass', 'fire'],
+      ['electric', 'ground'],
+      ['psychic', 'dark'],
+      ['dragon', 'fairy'],
+      ['poison', 'steel'],
+    ];
+
+    const isConflicting = conflictingTypes.some(([type1, type2]) =>
+      (rowConstraint.value === type1 && colConstraint.value === type2) ||
+      (rowConstraint.value === type2 && colConstraint.value === type1)
+    );
+
+    if (isConflicting) return false;
+  }
+
+  // 3. Contradictory Stat Ranges
+  if (rowConstraint.type === 'stat-range' && colConstraint.type === 'stat-range') {
+    const rowStat = rowConstraint.value as string;
+    const colStat = colConstraint.value as string;
+    const stats = ['hp', 'attack', 'defense', 'speed'];
+    for (const stat of stats) {
+      if ((rowStat === `${stat}-high` && colStat === `${stat}-low`) ||
+          (rowStat === `${stat}-low` && colStat === `${stat}-high`)) {
+        return false;
+      }
+    }
+  }
+
+  return true;
 }
 
 export function shuffleArray<T>(array: T[], random: () => number): T[] {
@@ -260,16 +341,48 @@ export function generateDailyGrid(date: Date, preGeneratedConfig?: any): GridGam
     rowConstraints = preGeneratedConfig.constraints.rows;
     colConstraints = preGeneratedConfig.constraints.cols;
   } else {
-    // Fallback to seeded random generation
+    // Fallback to seeded random generation with solvability check
     const random = createSeededRandom(dateString);
-    
-    // Select 3 random type constraints for rows
-    const shuffledTypes = shuffleArray(TYPE_CONSTRAINTS, random);
-    rowConstraints = shuffledTypes.slice(0, 3);
-    
-    // Select 3 random other constraints for columns
-    const shuffledOthers = shuffleArray(OTHER_CONSTRAINTS, random);
-    colConstraints = shuffledOthers.slice(0, 3);
+    let attempts = 0;
+    const maxAttempts = 100;
+    let found = false;
+
+    rowConstraints = [];
+    colConstraints = [];
+
+    while (attempts < maxAttempts && !found) {
+      attempts++;
+      const shuffledTypes = shuffleArray(TYPE_CONSTRAINTS, random);
+      const shuffledOthers = shuffleArray(OTHER_CONSTRAINTS, random);
+      
+      const tempRows = shuffledTypes.slice(0, 3);
+      const tempCols = shuffledOthers.slice(0, 3);
+      
+      let allSolvable = true;
+      for (let r = 0; r < 3; r++) {
+        for (let c = 0; c < 3; c++) {
+          if (!isConstraintCombinationSolvable(tempRows[r], tempCols[c])) {
+            allSolvable = false;
+            break;
+          }
+        }
+        if (!allSolvable) break;
+      }
+      
+      if (allSolvable) {
+        rowConstraints = tempRows;
+        colConstraints = tempCols;
+        found = true;
+      }
+    }
+
+    // Ultimate fallback if no solvable mixed grid found
+    if (!found) {
+      const randomFallback = createSeededRandom(dateString + '-fallback');
+      const shuffledTypes = shuffleArray(TYPE_CONSTRAINTS, randomFallback);
+      rowConstraints = shuffledTypes.slice(0, 3);
+      colConstraints = shuffledTypes.slice(3, 6);
+    }
   }
   
   // Extract cell stats if available (embedded in first row constraint)
@@ -322,14 +435,45 @@ export function generateDailyGrid(date: Date, preGeneratedConfig?: any): GridGam
 
 export function generateEndlessGrid(): GridGame {
   const random = Math.random;
-  
-  // Select 3 random type constraints for rows
-  const shuffledTypes = shuffleArray(TYPE_CONSTRAINTS, random);
-  const rowConstraints = shuffledTypes.slice(0, 3);
-  
-  // Select 3 random other constraints for columns
-  const shuffledOthers = shuffleArray(OTHER_CONSTRAINTS, random);
-  const colConstraints = shuffledOthers.slice(0, 3);
+  let rowConstraints: GridConstraint[] = [];
+  let colConstraints: GridConstraint[] = [];
+  let found = false;
+  let attempts = 0;
+
+  while (!found && attempts < 100) {
+    attempts++;
+    // Select 3 random type constraints for rows
+    const shuffledTypes = shuffleArray(TYPE_CONSTRAINTS, random);
+    const tempRows = shuffledTypes.slice(0, 3);
+    
+    // Select 3 random other constraints for columns
+    const shuffledOthers = shuffleArray(OTHER_CONSTRAINTS, random);
+    const tempCols = shuffledOthers.slice(0, 3);
+
+    let allSolvable = true;
+    for (let r = 0; r < 3; r++) {
+      for (let c = 0; c < 3; c++) {
+        if (!isConstraintCombinationSolvable(tempRows[r], tempCols[c])) {
+          allSolvable = false;
+          break;
+        }
+      }
+      if (!allSolvable) break;
+    }
+
+    if (allSolvable) {
+      rowConstraints = tempRows;
+      colConstraints = tempCols;
+      found = true;
+    }
+  }
+
+  // Fallback
+  if (!found) {
+    const shuffledTypes = shuffleArray(TYPE_CONSTRAINTS, random);
+    rowConstraints = shuffledTypes.slice(0, 3);
+    colConstraints = shuffledTypes.slice(3, 6);
+  }
   
   // Generate cells
   const cells: GridCell[] = [];

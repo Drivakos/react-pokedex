@@ -81,6 +81,28 @@ export function checkBasicConstraints(pokemonTypes, constraint) {
   }
 }
 
+// Type effectiveness chart for checking weaknesses and resistances
+const TYPE_EFFECTIVENESS = {
+  fire: { weak_to: ['water', 'ground', 'rock'], resists: ['fire', 'grass', 'ice', 'bug', 'steel', 'fairy'], immune_to: [] },
+  water: { weak_to: ['electric', 'grass'], resists: ['fire', 'water', 'ice', 'steel'], immune_to: [] },
+  grass: { weak_to: ['fire', 'ice', 'poison', 'flying', 'bug'], resists: ['water', 'electric', 'grass', 'ground'], immune_to: [] },
+  electric: { weak_to: ['ground'], resists: ['electric', 'flying', 'steel'], immune_to: [] },
+  psychic: { weak_to: ['bug', 'ghost', 'dark'], resists: ['fighting', 'psychic'], immune_to: [] },
+  ice: { weak_to: ['fire', 'fighting', 'rock', 'steel'], resists: ['ice'], immune_to: [] },
+  dragon: { weak_to: ['ice', 'dragon', 'fairy'], resists: ['fire', 'water', 'electric', 'grass'], immune_to: [] },
+  flying: { weak_to: ['electric', 'ice', 'rock'], resists: ['grass', 'fighting', 'bug'], immune_to: ['ground'] },
+  normal: { weak_to: ['fighting'], resists: [], immune_to: ['ghost'] },
+  fighting: { weak_to: ['flying', 'psychic', 'fairy'], resists: ['rock', 'bug', 'dark'], immune_to: [] },
+  poison: { weak_to: ['ground', 'psychic'], resists: ['grass', 'fighting', 'poison', 'bug', 'fairy'], immune_to: [] },
+  ground: { weak_to: ['water', 'grass', 'ice'], resists: ['poison', 'rock'], immune_to: ['electric'] },
+  rock: { weak_to: ['water', 'grass', 'fighting', 'ground', 'steel'], resists: ['normal', 'fire', 'poison', 'flying'], immune_to: [] },
+  bug: { weak_to: ['fire', 'flying', 'rock'], resists: ['grass', 'fighting', 'ground'], immune_to: [] },
+  ghost: { weak_to: ['ghost', 'dark'], resists: ['poison', 'bug'], immune_to: ['normal', 'fighting'] },
+  steel: { weak_to: ['fire', 'fighting', 'ground'], resists: ['normal', 'grass', 'ice', 'flying', 'psychic', 'bug', 'rock', 'dragon', 'steel', 'fairy'], immune_to: ['poison'] },
+  dark: { weak_to: ['fighting', 'bug', 'fairy'], resists: ['ghost', 'dark'], immune_to: ['psychic'] },
+  fairy: { weak_to: ['poison', 'steel'], resists: ['fighting', 'bug', 'dark'], immune_to: ['dragon'] },
+};
+
 // Check if a constraint combination is solvable
 export function isConstraintCombinationSolvable(rowConstraint, colConstraint) {
   // Handle undefined constraints
@@ -88,15 +110,51 @@ export function isConstraintCombinationSolvable(rowConstraint, colConstraint) {
     return false;
   }
 
+  // 1. Basic Heuristics (Common Sense Checks)
+  
+  // Type vs Type-Effectiveness (The "Psychic and Weak to Fighting" case)
+  if ((rowConstraint.type === 'type' && colConstraint.type === 'type-effectiveness') ||
+      (rowConstraint.type === 'type-effectiveness' && colConstraint.type === 'type')) {
+    
+    const typeConstraint = rowConstraint.type === 'type' ? rowConstraint : colConstraint;
+    const effectConstraint = rowConstraint.type === 'type-effectiveness' ? rowConstraint : colConstraint;
+    
+    const type = typeConstraint.value;
+    const effect = effectConstraint.value;
+    const effectivenessData = TYPE_EFFECTIVENESS[type];
+
+    if (effectivenessData) {
+      const attackingType = effect.replace('weak-', '').replace('resist-', '');
+      
+      if (effect.startsWith('weak-')) {
+        // A type shouldn't be paired with a weakness it resists or is immune to.
+        if (effectivenessData.resists.includes(attackingType) || 
+            effectivenessData.immune_to.includes(attackingType)) {
+          return false;
+        }
+      }
+      
+      if (effect.startsWith('resist-')) {
+        // A type shouldn't be paired with a resistance it is weak to.
+        if (effectivenessData.weak_to.includes(attackingType)) {
+          return false;
+        }
+      }
+    }
+  }
+
   // Quick checks for obviously impossible combinations
   if (rowConstraint.type === 'type' && colConstraint.type === 'type') {
     // Can't be both fire and water type, etc.
     const conflictingTypes = [
-      ['fire', 'water'], ['fire', 'rock'], ['water', 'grass'], ['water', 'electric'],
-      ['grass', 'fire'], ['grass', 'flying'], ['electric', 'ground'], ['ice', 'fire'],
-      ['ice', 'steel'], ['fighting', 'ghost'], ['poison', 'ground'], ['ground', 'flying'],
-      ['psychic', 'bug'], ['psychic', 'dark'], ['bug', 'flying'], ['ghost', 'normal'],
-      ['dragon', 'fairy'], ['dark', 'fighting'], ['steel', 'fire'], ['fairy', 'steel']
+      ['normal', 'ghost'],
+      ['fire', 'water'],
+      ['water', 'grass'],
+      ['grass', 'fire'],
+      ['electric', 'ground'],
+      ['psychic', 'dark'],
+      ['dragon', 'fairy'],
+      ['poison', 'steel'],
     ];
 
     const isConflicting = conflictingTypes.some(([type1, type2]) =>

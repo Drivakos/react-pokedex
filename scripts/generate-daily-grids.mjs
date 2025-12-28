@@ -30,7 +30,8 @@ const supabase = createClient(
 
 // --- POKEMON DATA LOADING ---
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const POKEMON_DB_PATH = path.join(__dirname, 'data', 'pokemon-db.json');
+// Correct path to the database in src/data
+const POKEMON_DB_PATH = path.join(__dirname, '..', 'src', 'data', 'pokemon-db.json');
 
 let POKEMON_DB = [];
 try {
@@ -39,32 +40,42 @@ try {
     POKEMON_DB = JSON.parse(fs.readFileSync(POKEMON_DB_PATH, 'utf8'));
     console.log(`Loaded ${POKEMON_DB.length} Pokemon for validation.`);
   } else {
-    console.warn(`⚠️ Warning: Pokemon database not found at ${POKEMON_DB_PATH}. Solvability checks will be limited to heuristics.`);
+    // Try alternative path just in case
+    const altPath = path.join(process.cwd(), 'src', 'data', 'pokemon-db.json');
+    if (fs.existsSync(altPath)) {
+      console.log(`Loading Pokemon data from ${altPath}...`);
+      POKEMON_DB = JSON.parse(fs.readFileSync(altPath, 'utf8'));
+      console.log(`Loaded ${POKEMON_DB.length} Pokemon for validation.`);
+    } else {
+      console.warn(`⚠️ Warning: Pokemon database not found. Solvability checks will be limited to heuristics.`);
+      console.warn(`Checked paths: \n  - ${POKEMON_DB_PATH}\n  - ${altPath}`);
+    }
   }
 } catch (error) {
   console.error('Error loading Pokemon database:', error);
 }
 
 // Type effectiveness chart for checking weaknesses and resistances
+// Added immunities for better validation
 const TYPE_EFFECTIVENESS = {
-  fire: { weak_to: ['water', 'ground', 'rock'], resists: ['fire', 'grass', 'ice', 'bug', 'steel', 'fairy'] },
-  water: { weak_to: ['electric', 'grass'], resists: ['fire', 'water', 'ice', 'steel'] },
-  grass: { weak_to: ['fire', 'ice', 'poison', 'flying', 'bug'], resists: ['water', 'electric', 'grass', 'ground'] },
-  electric: { weak_to: ['ground'], resists: ['electric', 'flying', 'steel'] },
-  psychic: { weak_to: ['bug', 'ghost', 'dark'], resists: ['fighting', 'psychic'] },
-  ice: { weak_to: ['fire', 'fighting', 'rock', 'steel'], resists: ['ice'] },
-  dragon: { weak_to: ['ice', 'dragon', 'fairy'], resists: ['fire', 'water', 'electric', 'grass'] },
-  flying: { weak_to: ['electric', 'ice', 'rock'], resists: ['grass', 'fighting', 'bug'] },
-  normal: { weak_to: ['fighting'], resists: [] },
-  fighting: { weak_to: ['flying', 'psychic', 'fairy'], resists: ['rock', 'bug', 'dark'] },
-  poison: { weak_to: ['ground', 'psychic'], resists: ['grass', 'fighting', 'poison', 'bug', 'fairy'] },
-  ground: { weak_to: ['water', 'grass', 'ice'], resists: ['poison', 'rock'] },
-  rock: { weak_to: ['water', 'grass', 'fighting', 'ground', 'steel'], resists: ['normal', 'fire', 'poison', 'flying'] },
-  bug: { weak_to: ['fire', 'flying', 'rock'], resists: ['grass', 'fighting', 'ground'] },
-  ghost: { weak_to: ['ghost', 'dark'], resists: ['poison', 'bug'] },
-  steel: { weak_to: ['fire', 'fighting', 'ground'], resists: ['normal', 'grass', 'ice', 'flying', 'psychic', 'bug', 'rock', 'dragon', 'steel', 'fairy'] },
-  dark: { weak_to: ['fighting', 'bug', 'fairy'], resists: ['ghost', 'dark'] },
-  fairy: { weak_to: ['poison', 'steel'], resists: ['fighting', 'bug', 'dark'] },
+  fire: { weak_to: ['water', 'ground', 'rock'], resists: ['fire', 'grass', 'ice', 'bug', 'steel', 'fairy'], immune_to: [] },
+  water: { weak_to: ['electric', 'grass'], resists: ['fire', 'water', 'ice', 'steel'], immune_to: [] },
+  grass: { weak_to: ['fire', 'ice', 'poison', 'flying', 'bug'], resists: ['water', 'electric', 'grass', 'ground'], immune_to: [] },
+  electric: { weak_to: ['ground'], resists: ['electric', 'flying', 'steel'], immune_to: [] },
+  psychic: { weak_to: ['bug', 'ghost', 'dark'], resists: ['fighting', 'psychic'], immune_to: [] },
+  ice: { weak_to: ['fire', 'fighting', 'rock', 'steel'], resists: ['ice'], immune_to: [] },
+  dragon: { weak_to: ['ice', 'dragon', 'fairy'], resists: ['fire', 'water', 'electric', 'grass'], immune_to: [] },
+  flying: { weak_to: ['electric', 'ice', 'rock'], resists: ['grass', 'fighting', 'bug'], immune_to: ['ground'] },
+  normal: { weak_to: ['fighting'], resists: [], immune_to: ['ghost'] },
+  fighting: { weak_to: ['flying', 'psychic', 'fairy'], resists: ['rock', 'bug', 'dark'], immune_to: [] },
+  poison: { weak_to: ['ground', 'psychic'], resists: ['grass', 'fighting', 'poison', 'bug', 'fairy'], immune_to: [] },
+  ground: { weak_to: ['water', 'grass', 'ice'], resists: ['poison', 'rock'], immune_to: ['electric'] },
+  rock: { weak_to: ['water', 'grass', 'fighting', 'ground', 'steel'], resists: ['normal', 'fire', 'poison', 'flying'], immune_to: [] },
+  bug: { weak_to: ['fire', 'flying', 'rock'], resists: ['grass', 'fighting', 'ground'], immune_to: [] },
+  ghost: { weak_to: ['ghost', 'dark'], resists: ['poison', 'bug'], immune_to: ['normal', 'fighting'] },
+  steel: { weak_to: ['fire', 'fighting', 'ground'], resists: ['normal', 'grass', 'ice', 'flying', 'psychic', 'bug', 'rock', 'dragon', 'steel', 'fairy'], immune_to: ['poison'] },
+  dark: { weak_to: ['fighting', 'bug', 'fairy'], resists: ['ghost', 'dark'], immune_to: ['psychic'] },
+  fairy: { weak_to: ['poison', 'steel'], resists: ['fighting', 'bug', 'dark'], immune_to: ['dragon'] },
 };
 
 const STARTER_POKEMON = [
@@ -304,11 +315,30 @@ function checkConstraint(pokemon, constraint) {
       const effectValue = constraint.value;
       if (effectValue.startsWith('weak-')) {
         const attackingType = effectValue.replace('weak-', '');
-        return pokemon.types.some(type => TYPE_EFFECTIVENESS[type]?.weak_to.includes(attackingType));
+        return pokemon.types.some(type => {
+          const eff = TYPE_EFFECTIVENESS[type];
+          if (!eff) return false;
+          // Must be weak to the attacking type
+          return eff.weak_to.includes(attackingType);
+        }) && !pokemon.types.some(type => {
+          const eff = TYPE_EFFECTIVENESS[type];
+          if (!eff) return false;
+          // But not if the other type resists or is immune to it (neutralizing the weakness)
+          return eff.resists.includes(attackingType) || eff.immune_to.includes(attackingType);
+        });
       }
       if (effectValue.startsWith('resist-')) {
         const attackingType = effectValue.replace('resist-', '');
-        return pokemon.types.some(type => TYPE_EFFECTIVENESS[type]?.resists.includes(attackingType));
+        return pokemon.types.some(type => {
+          const eff = TYPE_EFFECTIVENESS[type];
+          if (!eff) return false;
+          return eff.resists.includes(attackingType) || eff.immune_to.includes(attackingType);
+        }) && !pokemon.types.some(type => {
+          const eff = TYPE_EFFECTIVENESS[type];
+          if (!eff) return false;
+          // But not if the other type is weak to it (neutralizing the resistance)
+          return eff.weak_to.includes(attackingType);
+        });
       }
       return false;
     }
@@ -325,14 +355,56 @@ export function isConstraintCombinationSolvable(rowConstraint, colConstraint) {
     return false;
   }
 
-  // 1. Basic Heuristics (Fast fail)
+  // 1. Basic Heuristics (Fast fail & Common Sense)
+  
+  // Type vs Type-Effectiveness (The "Psychic and Weak to Fighting" case)
+  // We want constraints to "make sense" even if technically solvable by a dual type.
+  if ((rowConstraint.type === 'type' && colConstraint.type === 'type-effectiveness') ||
+      (rowConstraint.type === 'type-effectiveness' && colConstraint.type === 'type')) {
+    
+    const typeConstraint = rowConstraint.type === 'type' ? rowConstraint : colConstraint;
+    const effectConstraint = rowConstraint.type === 'type-effectiveness' ? rowConstraint : colConstraint;
+    
+    const type = typeConstraint.value;
+    const effect = effectConstraint.value;
+    const effectivenessData = TYPE_EFFECTIVENESS[type];
+
+    if (effectivenessData) {
+      const attackingType = effect.replace('weak-', '').replace('resist-', '');
+      
+      if (effect.startsWith('weak-')) {
+        // A type shouldn't be paired with a weakness it resists or is immune to.
+        // E.g., Psychic and Weak to Fighting.
+        if (effectivenessData.resists.includes(attackingType) || 
+            effectivenessData.immune_to.includes(attackingType)) {
+          return false;
+        }
+      }
+      
+      if (effect.startsWith('resist-')) {
+        // A type shouldn't be paired with a resistance it is weak to.
+        // E.g., Fire and Resists Water.
+        if (effectivenessData.weak_to.includes(attackingType)) {
+          return false;
+        }
+      }
+    }
+  }
+
+  // Type vs Type
   if (rowConstraint.type === 'type' && colConstraint.type === 'type') {
+    // We'll keep the conflicting types check but keep it focused on 
+    // combinations that are confusing or extremely rare.
     const conflictingTypes = [
-      ['fire', 'water'], ['fire', 'rock'], ['water', 'grass'], ['water', 'electric'],
-      ['grass', 'fire'], ['grass', 'flying'], ['electric', 'ground'], ['ice', 'fire'],
-      ['ice', 'steel'], ['fighting', 'ghost'], ['poison', 'ground'], ['ground', 'flying'],
-      ['psychic', 'bug'], ['psychic', 'dark'], ['bug', 'flying'], ['ghost', 'normal'],
-      ['dragon', 'fairy'], ['dark', 'fighting'], ['steel', 'fire'], ['fairy', 'steel']
+      ['normal', 'ghost'],   // Immune to each other
+      ['fire', 'water'],     // Opposite
+      ['water', 'grass'],    // Opposite
+      ['grass', 'fire'],     // Opposite
+      ['electric', 'ground'],// Opposite (Ground immune)
+      ['psychic', 'dark'],   // Opposite (Dark immune)
+      ['dragon', 'fairy'],   // Opposite (Fairy immune)
+      ['ghost', 'normal'],   // Duplicate of above
+      ['poison', 'steel'],   // Steel immune to poison
     ];
 
     const isConflicting = conflictingTypes.some(([type1, type2]) =>
@@ -350,10 +422,13 @@ export function isConstraintCombinationSolvable(rowConstraint, colConstraint) {
       checkConstraint(pokemon, rowConstraint) && 
       checkConstraint(pokemon, colConstraint)
     );
+    
+    // For a better user experience, we might want at least 2-3 solutions 
+    // to avoid "guess the only one" situations, but 1 is strictly solvable.
     return hasMatch;
   }
 
-  // Fallback if no DB (shouldn't happen if setup correctly)
+  // Fallback if no DB
   return true;
 }
 

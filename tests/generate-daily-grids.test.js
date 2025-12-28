@@ -128,11 +128,46 @@ describe('Generate Daily Grids Script', () => {
       expect(isConstraintCombinationSolvable(resistFire, weakFire)).toBe(false);
     });
 
-    test('should allow compatible mixed constraints', () => {
-      const fireType = { type: 'type', value: 'fire' };
-      const highHp = { type: 'stat-range', value: 'hp-high' };
+    test('should detect "common sense" conflicts between type and effectiveness', () => {
+      // Psychic is naturally resistant to Fighting, so "Psychic and Weak to Fighting" should be avoided
+      // even if technically solvable by a dual type (though in this case it isn't even solvable).
+      const psychicType = { type: 'type', value: 'psychic' };
+      const weakFighting = { type: 'type-effectiveness', value: 'weak-fighting' };
+      
+      expect(isConstraintCombinationSolvable(psychicType, weakFighting)).toBe(false);
+      expect(isConstraintCombinationSolvable(weakFighting, psychicType)).toBe(false);
 
-      expect(isConstraintCombinationSolvable(fireType, highHp)).toBe(true);
+      // Fire is weak to Water, so "Fire and Resists Water" should be avoided
+      const fireType = { type: 'type', value: 'fire' };
+      const resistWater = { type: 'type-effectiveness', value: 'resist-water' };
+      
+      expect(isConstraintCombinationSolvable(fireType, resistWater)).toBe(false);
+
+      // Ghost is immune to Normal
+      const ghostType = { type: 'type', value: 'ghost' };
+      const weakNormal = { type: 'type-effectiveness', value: 'weak-normal' };
+      // Note: weak-normal isn't in our current constraints list but the logic should handle it
+      // if it were there. Let's test with one that IS there if possible.
+      // Actually weak-to-fire is there. Water resists Fire.
+      const waterType = { type: 'type', value: 'water' };
+      const weakFire = { type: 'type-effectiveness', value: 'weak-fire' };
+      expect(isConstraintCombinationSolvable(waterType, weakFire)).toBe(false);
+    });
+
+    test('should allow "common sense" compatible type and effectiveness', () => {
+      // Fire is weak to Ground, so "Fire and Weak to Ground" makes sense
+      const fireType = { type: 'type', value: 'fire' };
+      const weakWater = { type: 'type-effectiveness', value: 'weak-water' };
+      
+      // isConstraintCombinationSolvable doesn't currently check for "natural" weaknesses
+      // it only checks for CONTRADICTORY ones (resists vs weak).
+      // So this should be true.
+      expect(isConstraintCombinationSolvable(fireType, weakWater)).toBe(true);
+
+      // Water resists Fire
+      const waterType = { type: 'type', value: 'water' };
+      const resistFire = { type: 'type-effectiveness', value: 'resist-fire' };
+      expect(isConstraintCombinationSolvable(waterType, resistFire)).toBe(true);
     });
 
     test('should handle undefined constraints', () => {
