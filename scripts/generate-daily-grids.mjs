@@ -554,6 +554,9 @@ function generateConstraintsForDate(date) {
 export async function saveGridConfiguration(date, constraints) {
   const dateString = typeof date === 'string' ? date : date.toISOString().split('T')[0];
   
+  // Extract cell stats from metadata
+  const cellStats = constraints.rows[0]?.meta?.cellStats || null;
+  
   try {
     // Use the daily configs table which may have fewer RLS restrictions
     const { error } = await supabase
@@ -563,7 +566,8 @@ export async function saveGridConfiguration(date, constraints) {
         row_constraints: constraints.rows,
         col_constraints: constraints.cols,
         difficulty_level: constraints.difficulty || 'medium',
-        generation_seed: constraints.seed || null
+        generation_seed: constraints.seed || null,
+        cell_stats: cellStats
       }, {
         onConflict: 'grid_date'
       });

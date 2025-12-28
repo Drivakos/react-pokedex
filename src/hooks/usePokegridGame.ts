@@ -1,4 +1,5 @@
 import { useState, useCallback, useRef, useMemo } from 'react';
+import toast from 'react-hot-toast';
 import { useAuth } from '../contexts/AuthProvider';
 import { Pokemon } from '../types/pokemon';
 import { GridCellData } from '../components/pokegrid';
@@ -112,6 +113,19 @@ export function usePokegridGame(displayedPokemon: Pokemon[], gameMode: 'daily') 
   // Handle Pokemon selection
   const handlePokemonSelect = useCallback(async (pokemon: Pokemon) => {
     if (!currentGame || !selectedCell) return;
+
+    // Check if this Pokemon has already been used in the grid (only for correct guesses)
+    const isAlreadyUsed = currentGame.cells.some(
+      cell => cell.isCorrect && cell.pokemon && cell.pokemon.id === pokemon.id
+    );
+
+    if (isAlreadyUsed) {
+      toast.error(`${pokemon.name} has already been used in this grid!`, {
+        icon: '🚫',
+        duration: 3000
+      });
+      return;
+    }
 
     const rowValid = checkConstraint(pokemon, selectedCell.rowConstraint);
     const colValid = checkConstraint(pokemon, selectedCell.colConstraint);

@@ -168,16 +168,7 @@ export const PokemonSearchModal: React.FC<PokemonSearchModalProps> = ({
                         </div>
                         <div className="flex items-center mt-1">
                           <span className="text-xs text-gray-500 mr-2">#{pokemon.id.toString().padStart(3, '0')}</span>
-                          <div className="flex gap-1">
-                            {pokemon.types.slice(0, 2).map((type) => (
-                              <span
-                                key={type}
-                                className={`px-1.5 py-0.5 rounded text-xs font-medium text-white ${TYPE_COLORS[type] || 'bg-gray-400'}`}
-                              >
-                                {type}
-                              </span>
-                            ))}
-                          </div>
+                          {/* Types hidden for challenge */}
                         </div>
                       </div>
 
