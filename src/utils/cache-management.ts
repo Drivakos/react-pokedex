@@ -11,7 +11,7 @@ import {
   isCacheEnabled,
   CACHE_KEYS
 } from '../lib/redis';
-import { PokemonService } from '../services/cached-pokemon.service';
+import { PokemonService } from '../services/pokemon.service';
 
 /**
  * Cache health check
@@ -220,10 +220,10 @@ export async function scheduleInitialCacheWarmup(): Promise<void> {
   try {
     // Warm starters first (most common)
     await warmStarterPokemon();
-    
+
     // Then popular Pokemon
     await warmPopularPokemon();
-    
+
     console.log('✅ Initial cache warmup complete');
   } catch (error) {
     console.error('❌ Cache warmup failed:', error);

@@ -5,7 +5,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Pokemon, Filters, PokemonDetails } from '../types/pokemon';
-import { PokemonService } from '../services/cached-pokemon.service';
+import { PokemonService } from '../services/pokemon.service';
 import { fetchFilterOptions } from '../services/api';
 
 export const POKEMON_PER_PAGE = 20;
@@ -101,7 +101,7 @@ export const useCachedPokemon = () => {
         }
 
         setLoadingProgress(50);
-        
+
         // Use cached service
         const results = await PokemonService.getList(
           POKEMON_PER_PAGE,
@@ -131,13 +131,13 @@ export const useCachedPokemon = () => {
   // Load more Pokemon when scrolling (with caching)
   const loadMorePokemon = useCallback(async () => {
     if (loadingRef.current || !hasMore) return;
-    
+
     loadingRef.current = true;
-    
+
     try {
       const nextPage = page + 1;
       const offset = nextPage * POKEMON_PER_PAGE;
-      
+
       // Use cached service
       const newPokemon = await PokemonService.getList(
         POKEMON_PER_PAGE,
@@ -145,7 +145,7 @@ export const useCachedPokemon = () => {
         debouncedSearchTerm,
         filters
       );
-      
+
       setDisplayedPokemon(prev => [...prev, ...newPokemon]);
       setHasMore(newPokemon.length === POKEMON_PER_PAGE);
       setPage(nextPage);
@@ -165,7 +165,7 @@ export const useCachedPokemon = () => {
   const getPokemonById = useCallback(async (id: number): Promise<Pokemon> => {
     return PokemonService.getById(id);
   }, []);
-  
+
   // Get detailed Pokemon data (with caching)
   const getPokemonDetails = useCallback(async (id: number): Promise<PokemonDetails> => {
     return PokemonService.getDetails(id);
@@ -178,18 +178,18 @@ export const useCachedPokemon = () => {
     loading,
     loadingProgress,
     selectedPokemon,
-    
+
     // Actions
     setSelectedPokemon,
     loadMorePokemon,
     getPokemonById,
     getPokemonDetails,
-    
+
     // Search
     searchTerm,
     setSearchTerm,
     isSearching,
-    
+
     // Filters
     filters,
     handleFilterChange,

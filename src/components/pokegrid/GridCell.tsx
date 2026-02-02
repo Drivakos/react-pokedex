@@ -61,11 +61,8 @@ export const GridCell: React.FC<GridCellProps> = ({ cell, totalGuesses, maxTotal
             <PokemonImage
               pokemonId={cell.pokemon.id}
               alt={cell.pokemon.name}
-              className="w-14 h-14 object-contain mb-1"
+              className="w-50 h-50 object-contain mb-1"
             />
-            <div className="text-xs font-medium text-center truncate w-full text-gray-800">
-              {formatName(cell.pokemon.name)}
-            </div>
             {cell.isCorrect && (
               <div className="absolute top-1 right-1 text-green-600 text-sm">✓</div>
             )}

@@ -1,246 +1,178 @@
-import { Pokemon } from '../types/pokemon';
-import { supabase } from '../lib/supabase';
+/**
+ * Pokemon service with Redis caching layer
+ * Wraps API calls with cache-aside pattern
+ */
 
-// Pokemon data service to fetch complete Pokemon information
-class PokemonService {
-  private pokemonCache = new Map<number, Pokemon>();
+import { Pokemon, Filters, PokemonDetails } from '../types/pokemon';
+import { fetchPokemonById, fetchPokemonData, fetchPokemonDetails, fetchFilterOptions } from './api';
+import {
+  cacheAside,
+  getFromCache,
+  setInCache,
+  CACHE_KEYS,
+  CACHE_TTL,
+  generateSearchCacheKey,
+  isCacheEnabled
+} from '../lib/redis';
 
-  async getEnhancedPokemon(pokemonId: number): Promise<Pokemon | null> {
-    // Check cache first
-    if (this.pokemonCache.has(pokemonId)) {
-      return this.pokemonCache.get(pokemonId)!;
-    }
-
-    try {
-      // Use your existing cached API service
-      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/rest`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`
-        },
-        body: JSON.stringify({
-          url: `pokemon/${pokemonId}`,
-          cache_duration: 86400 // 24 hours
-        })
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const pokemonData = await response.json();
-      
-      // Transform the data to include enhanced information
-      const enhancedPokemon: Pokemon = {
-        id: pokemonData.id,
-        name: pokemonData.name,
-        height: pokemonData.height,
-        weight: pokemonData.weight,
-        types: pokemonData.types.map((t: any) => t.type.name),
-        moves: pokemonData.moves.map((m: any) => m.move.name),
-        sprites: pokemonData.sprites,
-        generation: this.getGenerationFromId(pokemonData.id),
-        has_evolutions: await this.checkHasEvolutions(pokemonData.id),
-        is_default: pokemonData.is_default,
-        base_experience: pokemonData.base_experience,
-        
-        // Enhanced data
-        stats: {
-          hp: pokemonData.stats.find((s: any) => s.stat.name === 'hp')?.base_stat || 0,
-          attack: pokemonData.stats.find((s: any) => s.stat.name === 'attack')?.base_stat || 0,
-          defense: pokemonData.stats.find((s: any) => s.stat.name === 'defense')?.base_stat || 0,
-          'special-attack': pokemonData.stats.find((s: any) => s.stat.name === 'special-attack')?.base_stat || 0,
-          'special-defense': pokemonData.stats.find((s: any) => s.stat.name === 'special-defense')?.base_stat || 0,
-          speed: pokemonData.stats.find((s: any) => s.stat.name === 'speed')?.base_stat || 0,
-        },
-        abilities: pokemonData.abilities.map((a: any) => a.ability.name),
-        evolution_chain: await this.getEvolutionChain(pokemonData.species.url),
-        habitat: await this.getHabitat(pokemonData.species.url),
-        is_legendary: await this.checkIsLegendary(pokemonData.species.url),
-        is_mythical: await this.checkIsMythical(pokemonData.species.url),
-        is_starter: this.checkIsStarter(pokemonData.name),
-      };
-
-      // Cache the enhanced Pokemon
-      this.pokemonCache.set(pokemonId, enhancedPokemon);
-      
-      return enhancedPokemon;
-    } catch (error) {
-      console.error(`Failed to fetch enhanced Pokemon ${pokemonId}:`, error);
-      return null;
-    }
-  }
-
-  private getGenerationFromId(id: number): string {
-    if (id <= 151) return 'generation-i';
-    if (id <= 251) return 'generation-ii';
-    if (id <= 386) return 'generation-iii';
-    if (id <= 493) return 'generation-iv';
-    if (id <= 649) return 'generation-v';
-    if (id <= 721) return 'generation-vi';
-    if (id <= 809) return 'generation-vii';
-    if (id <= 905) return 'generation-viii';
-    return 'generation-ix';
-  }
-
-  private async checkHasEvolutions(pokemonId: number): Promise<boolean> {
-    try {
-      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/rest`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`
-        },
-        body: JSON.stringify({
-          url: `pokemon-species/${pokemonId}`,
-          cache_duration: 86400
-        })
-      });
-
-      const speciesData = await response.json();
-      const evolutionChainResponse = await fetch(speciesData.evolution_chain.url);
-      const evolutionData = await evolutionChainResponse.json();
-      
-      // Check if this Pokemon has any evolutions
-      return this.hasEvolutionsInChain(evolutionData.chain, pokemonId);
-    } catch (error) {
-      return false;
-    }
-  }
-
-  private hasEvolutionsInChain(chain: any, pokemonId: number): boolean {
-    // Recursive function to check evolution chain
-    if (chain.species.url.includes(`/${pokemonId}/`)) {
-      return chain.evolves_to.length > 0;
-    }
-    
-    for (const evolution of chain.evolves_to) {
-      if (this.hasEvolutionsInChain(evolution, pokemonId)) {
-        return true;
-      }
-    }
-    
-    return false;
-  }
-
-  private async getEvolutionChain(speciesUrl: string): Promise<any> {
-    try {
-      const speciesResponse = await fetch(speciesUrl);
-      const speciesData = await speciesResponse.json();
-      const evolutionResponse = await fetch(speciesData.evolution_chain.url);
-      const evolutionData = await evolutionResponse.json();
-      
-      return this.parseEvolutionChain(evolutionData.chain);
-    } catch (error) {
-      return undefined;
-    }
-  }
-
-  private parseEvolutionChain(chain: any): any {
-    // Parse evolution chain data
-    const evolutions = [];
-    let current = chain;
-    
-    while (current) {
-      evolutions.push({
-        species_name: current.species.name,
-        evolution_details: current.evolution_details
-      });
-      
-      current = current.evolves_to[0]; // Take first evolution path
-    }
-    
-    return {
-      evolves_from: evolutions.length > 1 ? evolutions[evolutions.length - 2].species_name : undefined,
-      evolves_to: evolutions.length > 1 ? evolutions.slice(1).map(e => e.species_name) : [],
-      evolution_method: evolutions[1]?.evolution_details[0]?.trigger?.name
-    };
-  }
-
-  private async getHabitat(speciesUrl: string): Promise<string | undefined> {
-    try {
-      const response = await fetch(speciesUrl);
-      const data = await response.json();
-      return data.habitat?.name;
-    } catch (error) {
-      return undefined;
-    }
-  }
-
-  private async checkIsLegendary(speciesUrl: string): Promise<boolean> {
-    try {
-      const response = await fetch(speciesUrl);
-      const data = await response.json();
-      return data.is_legendary || false;
-    } catch (error) {
-      return false;
-    }
-  }
-
-  private async checkIsMythical(speciesUrl: string): Promise<boolean> {
-    try {
-      const response = await fetch(speciesUrl);
-      const data = await response.json();
-      return data.is_mythical || false;
-    } catch (error) {
-      return false;
-    }
-  }
-
-  private checkIsStarter(name: string): boolean {
-    const starters = [
-      // Gen 1
-      'bulbasaur', 'ivysaur', 'venusaur',
-      'charmander', 'charmeleon', 'charizard',
-      'squirtle', 'wartortle', 'blastoise',
-      // Gen 2
-      'chikorita', 'bayleef', 'meganium',
-      'cyndaquil', 'quilava', 'typhlosion',
-      'totodile', 'croconaw', 'feraligatr',
-      // Gen 3
-      'treecko', 'grovyle', 'sceptile',
-      'torchic', 'combusken', 'blaziken',
-      'mudkip', 'marshtomp', 'swampert',
-      // Gen 4
-      'turtwig', 'grotle', 'torterra',
-      'chimchar', 'monferno', 'infernape',
-      'piplup', 'prinplup', 'empoleon',
-      // Gen 5
-      'snivy', 'servine', 'serperior',
-      'tepig', 'pignite', 'emboar',
-      'oshawott', 'dewott', 'samurott',
-      // Gen 6
-      'chespin', 'quilladin', 'chesnaught',
-      'fennekin', 'braixen', 'delphox',
-      'froakie', 'frogadier', 'greninja',
-      // Gen 7
-      'rowlet', 'decidueye',
-      'litten', 'torracat', 'incineroar',
-      'popplio', 'brionne', 'primarina',
-      // Gen 8
-      'grookey', 'thwackey', 'rillaboom',
-      'scorbunny', 'raboot', 'cinderace',
-      'sobble', 'drizzile', 'inteleon',
-      // Gen 9
-      'sprigatito', 'floragato', 'meowscarada',
-      'fuecoco', 'crocalor', 'skeledirge',
-      'quaxly', 'quaxwell', 'quaquaval'
-    ];
-
-    return starters.includes(name.toLowerCase());
-  }
-
-  async batchEnhancePokemon(pokemonList: Pokemon[]): Promise<Pokemon[]> {
-    const enhanced = await Promise.all(
-      pokemonList.map(async (pokemon) => {
-        const enhancedPokemon = await this.getEnhancedPokemon(pokemon.id);
-        return enhancedPokemon || pokemon; // Fallback to original if enhancement fails
-      })
-    );
-    
-    return enhanced;
-  }
+/**
+ * Fetch a single Pokemon by ID with caching
+ */
+export async function getCachedPokemonById(id: number): Promise<Pokemon> {
+  const cacheKey = `${CACHE_KEYS.POKEMON_BY_ID}${id}`;
+  
+  return cacheAside(
+    cacheKey,
+    () => fetchPokemonById(id),
+    CACHE_TTL.POKEMON
+  );
 }
 
-export const pokemonService = new PokemonService();
+/**
+ * Fetch Pokemon data with filters and caching
+ */
+export async function getCachedPokemonData(
+  limit: number,
+  offset: number,
+  searchTerm: string,
+  filters: Filters
+): Promise<Pokemon[]> {
+  const cacheKey = generateSearchCacheKey(limit, offset, searchTerm, filters);
+  
+  return cacheAside(
+    cacheKey,
+    () => fetchPokemonData(limit, offset, searchTerm, filters),
+    CACHE_TTL.POKEMON_LIST
+  );
+}
+
+/**
+ * Fetch detailed Pokemon data with caching
+ */
+export async function getCachedPokemonDetails(id: number): Promise<PokemonDetails> {
+  const cacheKey = `${CACHE_KEYS.POKEMON_DETAILS}${id}`;
+  
+  return cacheAside(
+    cacheKey,
+    () => fetchPokemonDetails(id),
+    CACHE_TTL.POKEMON_DETAILS
+  );
+}
+
+/**
+ * Fetch filter options with caching
+ */
+export async function getCachedFilterOptions(): Promise<{
+  types: string[];
+  moves: string[];
+  generations: string[];
+}> {
+  const cacheKey = CACHE_KEYS.FILTER_OPTIONS;
+  
+  return cacheAside(
+    cacheKey,
+    () => fetchFilterOptions(),
+    CACHE_TTL.FILTER_OPTIONS
+  );
+}
+
+/**
+ * Prefetch and cache popular Pokemon (cache warming)
+ * Call this on app initialization or during low-traffic periods
+ */
+export async function warmPokemonCache(pokemonIds: number[] = []): Promise<void> {
+  if (!isCacheEnabled()) {
+    console.log('Cache not enabled, skipping warm-up');
+    return;
+  }
+
+  // Default popular Pokemon IDs if none provided
+  const idsToWarm = pokemonIds.length > 0 ? pokemonIds : [
+    1, 4, 7, 25, 150, 151, // Gen 1 starters + Pikachu, Mewtwo, Mew
+    152, 155, 158, // Gen 2 starters
+    252, 255, 258, // Gen 3 starters
+    387, 390, 393, // Gen 4 starters
+    495, 498, 501, // Gen 5 starters
+  ];
+
+  console.log(`🔥 Warming cache for ${idsToWarm.length} popular Pokemon...`);
+
+  const promises = idsToWarm.map(async (id) => {
+    try {
+      await getCachedPokemonById(id);
+      await getCachedPokemonDetails(id);
+    } catch (error) {
+      console.error(`Failed to warm cache for Pokemon ${id}:`, error);
+    }
+  });
+
+  await Promise.allSettled(promises);
+  
+  console.log('✅ Cache warming complete');
+}
+
+/**
+ * Batch fetch Pokemon with caching
+ * Useful for fetching multiple Pokemon efficiently
+ */
+export async function getBatchPokemon(ids: number[]): Promise<Pokemon[]> {
+  if (!isCacheEnabled()) {
+    // If cache disabled, fetch directly
+    return Promise.all(ids.map(id => fetchPokemonById(id)));
+  }
+
+  // Try to get all from cache first
+  const cacheKeys = ids.map(id => `${CACHE_KEYS.POKEMON_BY_ID}${id}`);
+  const cachePromises = cacheKeys.map(key => getFromCache<Pokemon>(key));
+  const cachedResults = await Promise.all(cachePromises);
+
+  // Identify which Pokemon need to be fetched
+  const toFetch: number[] = [];
+  const results: (Pokemon | null)[] = cachedResults;
+
+  cachedResults.forEach((cached, index) => {
+    if (cached === null) {
+      toFetch.push(ids[index]);
+    }
+  });
+
+  // Fetch missing Pokemon
+  if (toFetch.length > 0) {
+    console.log(`Fetching ${toFetch.length} Pokemon not in cache`);
+    
+    const fetchPromises = toFetch.map(async (id) => {
+      const pokemon = await fetchPokemonById(id);
+      // Cache the result
+      const cacheKey = `${CACHE_KEYS.POKEMON_BY_ID}${id}`;
+      setInCache(cacheKey, pokemon, CACHE_TTL.POKEMON);
+      return { id, pokemon };
+    });
+
+    const fetched = await Promise.all(fetchPromises);
+
+    // Merge fetched data into results
+    fetched.forEach(({ id, pokemon }) => {
+      const index = ids.indexOf(id);
+      if (index !== -1) {
+        results[index] = pokemon;
+      }
+    });
+  }
+
+  // Filter out any nulls (shouldn't happen, but TypeScript safety)
+  return results.filter((p): p is Pokemon => p !== null);
+}
+
+/**
+ * Smart cache strategy selector
+ * Returns cached service if cache is enabled, otherwise returns direct API
+ */
+export const PokemonService = {
+  getById: getCachedPokemonById,
+  getList: getCachedPokemonData,
+  getDetails: getCachedPokemonDetails,
+  getFilterOptions: getCachedFilterOptions,
+  getBatch: getBatchPokemon,
+  warmCache: warmPokemonCache,
+};
+

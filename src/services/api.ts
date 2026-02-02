@@ -1,9 +1,9 @@
 import { Pokemon, RawPokemonData, Filters, PokemonDetails } from '../types/pokemon';
-import { 
-  fetchCachedPokemonById, 
-  fetchCachedPokemonData, 
-  fetchCachedPokemonDetails, 
-  fetchCachedFilterOptions 
+import {
+  fetchCachedPokemonById,
+  fetchCachedPokemonData,
+  fetchCachedPokemonDetails,
+  fetchCachedFilterOptions
 } from './cached-api';
 import { buildCompleteWhereClause, POKEMON_FIELDS } from '../utils/query-builder';
 import { transformSinglePokemon, transformRawData } from '../utils/pokemon-transform';
@@ -15,9 +15,6 @@ import localFilterOptions from '../data/filter-options.json';
 // Use environment variables for API endpoints (fallback for direct calls)
 const GRAPHQL_ENDPOINT = import.meta.env.VITE_API_GRAPHQL_URL;
 const REST_ENDPOINT = import.meta.env.VITE_API_REST_URL || import.meta.env.VITE_API_URL;
-
-// Feature flag to enable/disable caching (disabled in development by default)
-const USE_CACHED_API = import.meta.env.VITE_USE_CACHED_API === 'true' && !import.meta.env.DEV;
 
 // Validate API endpoints
 if (!GRAPHQL_ENDPOINT || !REST_ENDPOINT) {
@@ -163,33 +160,30 @@ const transformLocalToDetails = (localPokemon: any): PokemonDetails => {
 
 /**
  * Fetches a single Pokemon by ID with caching support
+ * Priority: Redis Cache → Supabase Cache → API
  */
 export const fetchPokemonById = async (id: number): Promise<Pokemon> => {
-  // Try Redis cache first if enabled
+  // 1. Try Redis cache first if enabled
   if (isCacheEnabled()) {
     const cacheKey = `${CACHE_KEYS.POKEMON_BY_ID}${id}`;
     return cacheAside(cacheKey, async () => {
-      // Try Supabase cached version if enabled
-      if (USE_CACHED_API) {
-        try {
-          return await fetchCachedPokemonById(id);
-        } catch (error) {
-          console.warn(`⚠️ Supabase cached API failed for Pokemon ${id}:`, error);
-        }
+      // 2. Try Supabase cache
+      try {
+        return await fetchCachedPokemonById(id);
+      } catch (error) {
+        // Supabase cache failed, continue to API
       }
-      
-      // Fetch from direct GraphQL API
+
+      // 3. Fetch from direct GraphQL API
       return fetchPokemonByIdDirect(id);
     }, CACHE_TTL.POKEMON);
   }
 
-  // Try cached version first if enabled (no Redis)
-  if (USE_CACHED_API) {
-    try {
-      return await fetchCachedPokemonById(id);
-    } catch (error) {
-      console.warn(`⚠️ Cached API failed for Pokemon ${id}, falling back to direct API:`, error);
-    }
+  // No Redis - try Supabase cache then API
+  try {
+    return await fetchCachedPokemonById(id);
+  } catch (error) {
+    // Supabase cache failed, continue to API
   }
 
   // Fallback to direct API call
@@ -216,17 +210,17 @@ async function fetchPokemonByIdDirect(id: number): Promise<Pokemon> {
     });
 
     const result = await response.json();
-    
+
     if (result.errors) {
       throw new Error(result.errors[0].message);
     }
 
     const rawPokemon = result.data.pokemon_v2_pokemon_by_pk as RawPokemonData;
-    
+
     if (!rawPokemon) {
       throw new Error(`Pokemon with ID ${id} not found`);
     }
-    
+
     return transformSinglePokemon(rawPokemon);
   } catch (error) {
     console.error(`Error fetching Pokemon with ID ${id}:`, error);
@@ -236,61 +230,63 @@ async function fetchPokemonByIdDirect(id: number): Promise<Pokemon> {
 
 /**
  * Fetches Pokemon data from GraphQL API with caching support
+ * Priority: Redis Cache → Local Database → Supabase Cache → API
  */
 export const fetchPokemonData = async (
-  limit: number, 
-  offset: number, 
-  searchTerm: string, 
+  limit: number,
+  offset: number,
+  searchTerm: string,
   filters: Filters
 ): Promise<Pokemon[]> => {
-  // 1. Try local data first
-  try {
-    const localResults = filterLocalPokemon(localPokemonDb, searchTerm, filters);
-    
-    if (localResults.length > 0) {
-      // Apply pagination to local results
-      const paginatedResults = localResults.slice(offset, offset + limit);
-      return paginatedResults.map(transformLocalPokemon);
-    }
-    
-    // If local results are empty but we have filters, it's possible the local DB just doesn't have it
-    // or the criteria really matches nothing.
-    // The requirement is "unless we dont find any then call the api".
-    // So if localResults.length === 0, we proceed to API.
-    console.log('No local results found, falling back to API');
-  } catch (error) {
-    console.error('Error querying local pokemon data:', error);
-    // Fallback to API on error
-  }
-
-  // 2. Try Redis cache if enabled
+  // 1. Try Redis cache first if enabled
   if (isCacheEnabled()) {
     const cacheKey = generateSearchCacheKey(limit, offset, searchTerm, filters);
     return cacheAside(cacheKey, async () => {
-      // Try Supabase cached version if enabled
-      if (USE_CACHED_API) {
-        try {
-          return await fetchCachedPokemonData(limit, offset, searchTerm, filters);
-        } catch (error) {
-          console.warn(`⚠️ Supabase cached API failed for Pokemon data:`, error);
+      // 2. Try local database as fallback
+      try {
+        const localResults = filterLocalPokemon(localPokemonDb, searchTerm, filters);
+
+        if (localResults.length > 0) {
+          const paginatedResults = localResults.slice(offset, offset + limit);
+          return paginatedResults.map(transformLocalPokemon);
         }
+      } catch (error) {
+        // Local DB failed, continue to next source
       }
-      
-      // Fetch from direct GraphQL API
+
+      // 3. Try Supabase cache
+      try {
+        return await fetchCachedPokemonData(limit, offset, searchTerm, filters);
+      } catch (error) {
+        // Supabase cache failed, continue to API
+      }
+
+      // 4. Fetch from direct GraphQL API
       return fetchPokemonDataDirect(limit, offset, searchTerm, filters);
     }, CACHE_TTL.POKEMON_LIST);
   }
 
-  // 3. Try cached version first if enabled (no Redis)
-  if (USE_CACHED_API) {
-    try {
-      return await fetchCachedPokemonData(limit, offset, searchTerm, filters);
-    } catch (error) {
-      console.warn(`⚠️ Cached API failed for Pokemon data, falling back to direct API:`, error);
+  // No Redis - fall back to original priority
+  // 1. Try local data first
+  try {
+    const localResults = filterLocalPokemon(localPokemonDb, searchTerm, filters);
+
+    if (localResults.length > 0) {
+      const paginatedResults = localResults.slice(offset, offset + limit);
+      return paginatedResults.map(transformLocalPokemon);
     }
+  } catch (error) {
+    // Local DB failed, continue
   }
 
-  // 4. Fallback to direct API call
+  // 2. Try Supabase cache
+  try {
+    return await fetchCachedPokemonData(limit, offset, searchTerm, filters);
+  } catch (error) {
+    // Supabase cache failed, continue to API
+  }
+
+  // 3. Fallback to direct API call
   return fetchPokemonDataDirect(limit, offset, searchTerm, filters);
 };
 
@@ -332,19 +328,19 @@ async function fetchPokemonDataDirect(
     }
 
     const result = await response.json();
-    
+
     if (result.errors) {
       console.error('GraphQL errors:', JSON.stringify(result.errors));
       throw new Error(`GraphQL error: ${result.errors[0]?.message || 'Unknown GraphQL error'}`);
     }
-    
+
     if (!result.data) {
       console.error('No data returned from GraphQL:', result);
       throw new Error('No data returned from GraphQL query');
     }
 
     const rawPokemon = result.data.pokemon_v2_pokemon as RawPokemonData[];
-    
+
     return transformRawData(rawPokemon);
   } catch (error) {
     console.error('Error fetching Pokemon data:', error);
@@ -360,19 +356,41 @@ async function fetchPokemonDataDirect(
   }
 }
 
-// Transform functions moved to ../utils/pokemon-transform.ts
-
+/**
+ * Fetches Pokemon details with caching support
+ * Priority: Redis Cache → Supabase Cache → API → Local DB
+ */
 export const fetchPokemonDetails = async (id: number): Promise<PokemonDetails> => {
-  // Try cached version first if enabled
-  if (USE_CACHED_API) {
-    try {
-      return await fetchCachedPokemonDetails(id);
-    } catch (error) {
-      console.warn(`⚠️ Cached API failed for Pokemon details ${id}, falling back to direct API:`, error);
-    }
+  // 1. Try Redis cache first if enabled
+  if (isCacheEnabled()) {
+    const cacheKey = `${CACHE_KEYS.POKEMON_DETAILS}${id}`;
+    return cacheAside(cacheKey, async () => {
+      // 2. Try Supabase cache
+      try {
+        return await fetchCachedPokemonDetails(id);
+      } catch (error) {
+        // Supabase cache failed, continue to API
+      }
+
+      // 3. Fetch from API
+      return fetchPokemonDetailsDirect(id);
+    }, CACHE_TTL.POKEMON_DETAILS);
   }
 
-  // Use GraphQL for single API call instead of multiple REST calls
+  // No Redis - try Supabase cache then API
+  try {
+    return await fetchCachedPokemonDetails(id);
+  } catch (error) {
+    // Supabase cache failed, continue to API
+  }
+
+  return fetchPokemonDetailsDirect(id);
+};
+
+/**
+ * Direct fetch Pokemon details from GraphQL (internal helper)
+ */
+async function fetchPokemonDetailsDirect(id: number): Promise<PokemonDetails> {
   try {
     const query = `
       query GetPokemonDetails($id: Int!) {
@@ -490,15 +508,15 @@ export const fetchPokemonDetails = async (id: number): Promise<PokemonDetails> =
     // Process moves - group by name and keep the latest version group
     const movesMap = new Map();
     const validMethods = ['level-up', 'machine', 'egg', 'tutor'];
-    
+
     pokemon.moves.forEach((m: any) => {
       const moveName = m.move.name;
       const learnMethod = m.pokemon_v2_movelearnmethod?.name || 'unknown';
       const versionGroupId = m.pokemon_v2_versiongroup?.id || 0;
-      
+
       // We only care about standard learning methods
       if (!validMethods.includes(learnMethod)) return;
-      
+
       const existing = movesMap.get(moveName);
       // If we don't have this move, or this version is more recent
       if (!existing || versionGroupId > existing.versionGroupId) {
@@ -510,7 +528,7 @@ export const fetchPokemonDetails = async (id: number): Promise<PokemonDetails> =
         });
       }
     });
-    
+
     const moves = Array.from(movesMap.values()).map(m => ({
       name: m.name,
       learned_at_level: m.learned_at_level,
@@ -592,23 +610,20 @@ export const fetchPokemonDetails = async (id: number): Promise<PokemonDetails> =
       has_evolutions: evolutions.length > 1
     };
   } catch (error) {
-    console.error(`Error fetching detailed Pokemon data for ID ${id}:`, error);
-    
-    // 1. Fallback to local data as a last resort
+    // Fallback to local data as a last resort
     try {
       const localDb = localPokemonDb as any[];
       const localPokemon = localDb.find((p: any) => p.id === id);
       if (localPokemon) {
-        console.log(`Using local DB fallback for Pokemon ${id}`);
         return transformLocalToDetails(localPokemon);
       }
     } catch (localError) {
-      console.warn(`Error checking local DB fallback for Pokemon ${id}:`, localError);
+      // Local DB also failed
     }
-    
+
     throw error;
   }
-};
+}
 
 /**
  * Fetches Pokemon moves for moveset editor
@@ -888,13 +903,11 @@ export const fetchFilterOptions = async () => {
     // Fallback if local processing fails (though unlikely)
   }
 
-  // Fallback to cached version if enabled
-  if (USE_CACHED_API) {
-    try {
-      return await fetchCachedFilterOptions();
-    } catch (error) {
-      console.warn(`⚠️ Cached API failed for filter options, falling back to direct API:`, error);
-    }
+  // Fallback to cached version
+  try {
+    return await fetchCachedFilterOptions();
+  } catch (error) {
+    // Cached API failed, falling back to direct API
   }
 
   // Fallback to direct API call
@@ -924,7 +937,7 @@ export const fetchFilterOptions = async () => {
     }
 
     const result = await response.json();
-    
+
     if (result.errors) {
       console.error('GraphQL errors:', JSON.stringify(result.errors));
       throw new Error(`GraphQL error: ${result.errors[0]?.message || 'Unknown GraphQL error'}`);

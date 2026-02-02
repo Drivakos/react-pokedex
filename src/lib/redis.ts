@@ -30,12 +30,10 @@ function getRedisClient(): Redis | null {
 
   if (!redisClient) {
     try {
-      // Ensure we're in a browser environment
       if (typeof window === 'undefined') {
         return null;
       }
 
-      // Validate credentials format
       if (!UPSTASH_REDIS_REST_URL?.startsWith('https://')) {
         return null;
       }
@@ -47,11 +45,9 @@ function getRedisClient(): Redis | null {
       redisClient = new Redis({
         url: UPSTASH_REDIS_REST_URL!,
         token: UPSTASH_REDIS_REST_TOKEN!,
-        // Force REST mode for browser compatibility
         automaticDeserialization: true,
       });
     } catch (error) {
-      // Silent fail - cache is optional
       return null;
     }
   }
@@ -120,7 +116,7 @@ export function generateSearchCacheKey(
     height: filters.height || { min: 0, max: 0 },
     hasEvolutions: filters.hasEvolutions,
   });
-  
+
   return `${CACHE_KEYS.POKEMON_LIST}${limit}:${offset}:${searchTerm}:${toBase64(filterKey)}`;
 }
 
@@ -141,7 +137,6 @@ export async function getFromCache<T>(key: string): Promise<T | null> {
     const cached = await client.get<T>(key);
     return cached || null;
   } catch (error) {
-    // Silent fail - cache is optional
     return null;
   }
 }
@@ -167,7 +162,6 @@ export async function setInCache<T>(
     await client.set(key, value, { ex: ttl });
     return true;
   } catch (error) {
-    // Silent fail - cache is optional
     return false;
   }
 }
@@ -210,18 +204,18 @@ export async function deleteByPattern(pattern: string): Promise<number> {
     // Scan for keys matching pattern
     let cursor: string | number = 0;
     let deletedCount = 0;
-    
+
     do {
       const result: [string | number, string[]] = await client.scan(cursor, { match: pattern, count: 100 });
       cursor = result[0];
       const keys = result[1];
-      
+
       if (keys.length > 0) {
         await client.del(...keys);
         deletedCount += keys.length;
       }
     } while (cursor !== 0 && cursor !== '0');
-    
+
     return deletedCount;
   } catch (error) {
     return 0;
@@ -280,7 +274,7 @@ export async function getCacheStats(): Promise<{
 
   try {
     const info = await client.dbsize();
-    
+
     return {
       enabled: true,
       keyCount: info,
@@ -317,7 +311,7 @@ export async function cacheAside<T>(
   const data = await fetcher();
 
   // Cache the result (don't await - fire and forget)
-  setInCache(key, data, ttl).catch(err => 
+  setInCache(key, data, ttl).catch(err =>
     console.error('Background cache set failed:', err)
   );
 
