@@ -25,7 +25,7 @@ export const TeamsMethods = ({
   teams,
   setTeams
 }: TeamsMethodsProps): TeamsMethodsInterface => {
-  
+
   const fetchTeams = async (): Promise<void> => {
     if (!user) {
       return;
@@ -33,7 +33,7 @@ export const TeamsMethods = ({
 
     try {
       const { success, session } = await refreshSession();
-      
+
       if (!success || !session) {
         return;
       }
@@ -47,7 +47,7 @@ export const TeamsMethods = ({
         console.error('Error fetching teams:', error);
         return;
       }
-      
+
       if (data) setTeams(data as Team[]);
     } catch (err) {
       console.error('Teams fetch error:', err);
@@ -62,7 +62,7 @@ export const TeamsMethods = ({
 
     try {
       const { success, session } = await refreshSession();
-      
+
       if (!success || !session) {
         return null;
       }
@@ -107,7 +107,7 @@ export const TeamsMethods = ({
 
     try {
       const { success, session } = await refreshSession();
-      
+
       if (!success || !session) {
         return;
       }
@@ -148,7 +148,7 @@ export const TeamsMethods = ({
 
     try {
       const { success, session } = await refreshSession();
-      
+
       if (!success || !session) {
         return;
       }
@@ -183,7 +183,7 @@ export const TeamsMethods = ({
 
     try {
       const { success, session } = await refreshSession();
-      
+
       if (!success || !session) {
         return;
       }
@@ -258,7 +258,7 @@ export const TeamsMethods = ({
 
     try {
       const { success, session } = await refreshSession();
-      
+
       if (!success || !session) {
         return;
       }
@@ -383,6 +383,8 @@ export const TeamsMethods = ({
       if (buildData.level !== undefined) updateData.level = buildData.level;
       if (buildData.gender !== undefined) updateData.gender = buildData.gender;
       if (buildData.tera_type !== undefined) updateData.tera_type = buildData.tera_type;
+      if (buildData.nickname !== undefined) updateData.nickname = buildData.nickname;
+      if (buildData.is_shiny !== undefined) updateData.is_shiny = buildData.is_shiny;
 
       const { error } = await supabase
         .from('team_members')

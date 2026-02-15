@@ -14,7 +14,7 @@ import { OtherFilters } from './filters/OtherFilters';
 
 const PokedexHome: React.FC = () => {
   // Use our custom hooks
-  const { 
+  const {
     displayedPokemon,
     hasMore,
     loading,
@@ -30,7 +30,7 @@ const PokedexHome: React.FC = () => {
     availableMoves,
     availableGenerations,
   } = usePokemon();
-  
+
   // Filters are hidden by default on both desktop and mobile
   const { lastPokemonElementRef } = useUI();
   const [showMobileFilters, setShowMobileFilters] = useState(false);
@@ -38,7 +38,7 @@ const PokedexHome: React.FC = () => {
   const [activeFilterTab, setActiveFilterTab] = useState('types');
   const [moveSearch, setMoveSearch] = useState('');
   const [typeSearch, setTypeSearch] = useState('');
-  
+
   // Setup the intersection observer for infinite scrolling
   const setupObserver = (node: HTMLDivElement | null) => {
     if (!node) return;
@@ -63,7 +63,7 @@ const PokedexHome: React.FC = () => {
     if (filters.hasEvolutions !== null) count++;
     return count;
   }, [filters]);
-  
+
   const resetFilters = () => {
     handleFilterChange({
       types: [],
@@ -78,15 +78,15 @@ const PokedexHome: React.FC = () => {
   // Pokemon Detail Modal
   const detailModal = selectedPokemon && (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50">
-      <PokemonDetail 
-        pokemon={selectedPokemon} 
-        onClose={() => setSelectedPokemon(null)} 
+      <PokemonDetail
+        pokemon={selectedPokemon}
+        onClose={() => setSelectedPokemon(null)}
       />
     </div>
   );
 
   return (
-    <div className="min-h-screen bg-gray-100 p-4 md:p-8">
+    <div className="min-h-screen bg-gray-200 md:p-8">
       <Helmet>
         <title>Pokédex</title>
         <meta name="description" content="A modern Pokédex web application" />
@@ -112,13 +112,13 @@ const PokedexHome: React.FC = () => {
           })}
         </script>
       </Helmet>
-      
-      <header className="mb-6">
-        <div className="flex flex-col md:flex-row md:items-center md:justify-center gap-4 md:gap-6 mb-6" data-component-name="PokedexHome">
+
+      <header>
+        <div className="flex flex-col md:flex-row md:items-center md:justify-center gap-4 md:gap-6 md:mb-6 mb-2 px-4 pt-4" data-component-name="PokedexHome">
           {/* Heading removed - already in navigation */}
-          
+
           <div className="flex-1 max-w-2xl md:w-4/5 md:flex md:items-center" data-component-name="PokedexHome">
-            <SearchBar 
+            <SearchBar
               value={searchTerm}
               onChange={setSearchTerm}
               isSearching={isSearching}
@@ -127,7 +127,7 @@ const PokedexHome: React.FC = () => {
               showFilterButton={false}
             />
           </div>
-          
+
           <div className="flex items-center justify-end md:w-1/5 md:h-12">
             <button
               onClick={() => setShowDesktopFilters(!showDesktopFilters)}
@@ -144,7 +144,7 @@ const PokedexHome: React.FC = () => {
           </div>
         </div>
       </header>
-      
+
       <main className="flex flex-col gap-6">
         {/* Desktop Filters */}
         {showDesktopFilters && (
@@ -162,7 +162,7 @@ const PokedexHome: React.FC = () => {
                   </button>
                 )}
               </div>
-              
+
               <FilterTabs
                 activeTab={activeFilterTab}
                 setActiveTab={setActiveFilterTab}
@@ -170,7 +170,7 @@ const PokedexHome: React.FC = () => {
                 moveCount={filters.moves.length}
                 otherCount={totalFiltersCount - filters.types.length - filters.moves.length}
               />
-              
+
               <div className="mt-4">
                 {activeFilterTab === 'types' && (
                   <TypesFilter
@@ -186,7 +186,7 @@ const PokedexHome: React.FC = () => {
                     }}
                   />
                 )}
-                
+
                 {activeFilterTab === 'moves' && (
                   <MovesFilter
                     availableMoves={availableMoves}
@@ -201,24 +201,24 @@ const PokedexHome: React.FC = () => {
                     }}
                   />
                 )}
-                
+
                 {activeFilterTab === 'other' && (
                   <OtherFilters
                     filters={filters}
                     availableGenerations={availableGenerations}
-                    onGenerationChange={(generation: string) => handleFilterChange({...filters, generation})}
+                    onGenerationChange={(generation: string) => handleFilterChange({ ...filters, generation })}
                     onWeightChange={(min: number | null, max: number | null) => handleFilterChange({
                       ...filters,
-                      weight: { 
-                        min: min ? min * 10 : 0, 
-                        max: max ? max * 10 : 1000 
+                      weight: {
+                        min: min ? min * 10 : 0,
+                        max: max ? max * 10 : 1000
                       }
                     })}
                     onHeightChange={(min: number | null, max: number | null) => handleFilterChange({
                       ...filters,
-                      height: { 
-                        min: min ? min * 10 : 0, 
-                        max: max ? max * 10 : 100 
+                      height: {
+                        min: min ? min * 10 : 0,
+                        max: max ? max * 10 : 100
                       }
                     })}
                   />
@@ -227,10 +227,10 @@ const PokedexHome: React.FC = () => {
             </div>
           </div>
         )}
-        
+
         {/* Pokemon List */}
         <div className="flex-1">
-          <PokemonList 
+          <PokemonList
             pokemon={displayedPokemon}
             isLoading={loading}
             onSelectPokemon={setSelectedPokemon}
@@ -238,10 +238,10 @@ const PokedexHome: React.FC = () => {
           />
         </div>
       </main>
-      
+
       {/* Mobile Filter Panel */}
       <div className={`fixed inset-0 bg-black bg-opacity-50 z-40 md:hidden transition-opacity duration-300 ${showMobileFilters ? 'opacity-100' : 'opacity-0 pointer-events-none'}`} onClick={() => setShowMobileFilters(false)}></div>
-      
+
       <div className={`fixed inset-y-0 right-0 w-80 bg-white shadow-lg z-50 md:hidden transform transition-transform duration-300 ease-in-out ${showMobileFilters ? 'translate-x-0' : 'translate-x-full'}`}>
         <div className="h-full flex flex-col">
           <div className="p-4 border-b">
@@ -252,7 +252,7 @@ const PokedexHome: React.FC = () => {
               </button>
             </div>
           </div>
-          
+
           <div className="flex-1 overflow-y-auto p-4">
             <FilterTabs
               activeTab={activeFilterTab}
@@ -261,7 +261,7 @@ const PokedexHome: React.FC = () => {
               moveCount={filters.moves.length}
               otherCount={totalFiltersCount - filters.types.length - filters.moves.length}
             />
-            
+
             <div className="mt-4">
               {activeFilterTab === 'types' && (
                 <TypesFilter
@@ -275,7 +275,7 @@ const PokedexHome: React.FC = () => {
                   }}
                 />
               )}
-              
+
               {activeFilterTab === 'moves' && (
                 <MovesFilter
                   availableMoves={availableMoves}
@@ -290,31 +290,31 @@ const PokedexHome: React.FC = () => {
                   }}
                 />
               )}
-              
+
               {activeFilterTab === 'other' && (
                 <OtherFilters
                   filters={filters}
                   availableGenerations={availableGenerations}
-                  onGenerationChange={(generation) => handleFilterChange({...filters, generation})}
+                  onGenerationChange={(generation) => handleFilterChange({ ...filters, generation })}
                   onWeightChange={(min, max) => handleFilterChange({
                     ...filters,
-                    weight: { 
-                      min: min ? min * 10 : 0, 
-                      max: max ? max * 10 : 1000 
+                    weight: {
+                      min: min ? min * 10 : 0,
+                      max: max ? max * 10 : 1000
                     }
                   })}
                   onHeightChange={(min, max) => handleFilterChange({
                     ...filters,
-                    height: { 
-                      min: min ? min * 10 : 0, 
-                      max: max ? max * 10 : 100 
+                    height: {
+                      min: min ? min * 10 : 0,
+                      max: max ? max * 10 : 100
                     }
                   })}
                 />
               )}
             </div>
           </div>
-          
+
           <div className="p-4 border-t">
             <button
               onClick={() => {
@@ -329,7 +329,7 @@ const PokedexHome: React.FC = () => {
           </div>
         </div>
       </div>
-      
+
       {/* Fixed filter button for mobile */}
       <button
         onClick={() => setShowMobileFilters(true)}
@@ -341,7 +341,7 @@ const PokedexHome: React.FC = () => {
           </span>
         )}
       </button>
-      
+
       {detailModal}
       <div className="container mx-auto px-4 py-4 mt-8">
         <div className="text-sm text-gray-500 flex justify-between">

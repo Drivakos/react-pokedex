@@ -1,0 +1,895 @@
+/* ===== Showdown-Style Team Editor ===== */
+
+/* --- Layout --- */
+.sd-container {
+  width: 100%;
+  max-width: 100%;
+  margin: 0 auto;
+  font-family: Verdana, Geneva, sans-serif;
+  font-size: 12px;
+  color: #333;
+  background: linear-gradient(135deg, #e8eaf6 0%, #c5cae9 50%, #e8eaf6 100%);
+  min-height: 100vh;
+  padding: 12px;
+  box-sizing: border-box;
+}
+
+.sd-panel {
+  background: rgba(255, 255, 255, 0.85);
+  border: 1px solid #b0b8c8;
+  border-radius: 4px;
+  margin-bottom: 8px;
+}
+
+/* --- Header Bar --- */
+.sd-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  background: linear-gradient(to bottom, #f0f2f8, #dfe3ec);
+  border-bottom: 1px solid #b0b8c8;
+  border-radius: 4px 4px 0 0;
+  flex-wrap: wrap;
+}
+
+.sd-header-btn {
+  background: linear-gradient(to bottom, #fff, #e8e8e8);
+  border: 1px solid #aaa;
+  border-radius: 3px;
+  padding: 4px 10px;
+  font-size: 11px;
+  cursor: pointer;
+  color: #333;
+  white-space: nowrap;
+}
+
+.sd-header-btn:hover {
+  background: linear-gradient(to bottom, #f8f8ff, #d8d8e8);
+  border-color: #888;
+}
+
+.sd-header-btn--primary {
+  background: linear-gradient(to bottom, #6688cc, #4466aa);
+  color: #fff;
+  border-color: #335599;
+}
+
+.sd-header-btn--primary:hover {
+  background: linear-gradient(to bottom, #7799dd, #5577bb);
+}
+
+.sd-team-name-input {
+  flex: 1;
+  min-width: 120px;
+  padding: 3px 8px;
+  border: 1px solid #aaa;
+  border-radius: 3px;
+  font-size: 12px;
+  font-family: inherit;
+  background: #fff;
+}
+
+/* --- Team Member Tabs --- */
+.sd-team-tabs {
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  padding: 4px 8px 0;
+  background: linear-gradient(to bottom, #dfe3ec, #c8ccda);
+  border-bottom: 1px solid #b0b8c8;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.sd-team-tab {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 4px 12px 6px;
+  background: linear-gradient(to bottom, #e8eaf0, #d0d4e0);
+  border: 1px solid #b0b8c8;
+  border-bottom: none;
+  border-radius: 4px 4px 0 0;
+  cursor: pointer;
+  min-width: 60px;
+  font-size: 10px;
+  color: #555;
+  transition: background 0.15s;
+  flex-shrink: 0;
+}
+
+.sd-team-tab:hover {
+  background: linear-gradient(to bottom, #f0f2f8, #e0e4f0);
+}
+
+.sd-team-tab--active {
+  background: rgba(255, 255, 255, 0.85);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.85);
+  margin-bottom: -1px;
+  color: #333;
+  font-weight: bold;
+}
+
+.sd-team-tab img {
+  width: 40px;
+  height: 40px;
+  image-rendering: pixelated;
+}
+
+.sd-team-tab-add {
+  font-size: 20px;
+  color: #888;
+  padding: 8px 16px;
+  cursor: pointer;
+  border: 1px dashed #aaa;
+  border-bottom: none;
+  border-radius: 4px 4px 0 0;
+  background: transparent;
+  flex-shrink: 0;
+}
+
+.sd-team-tab-add:hover {
+  color: #555;
+  background: rgba(255, 255, 255, 0.4);
+}
+
+/* --- Build Card (compact horizontal layout) --- */
+.sd-build-card {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0;
+  padding: 8px;
+}
+
+.sd-build-sprite {
+  grid-row: span 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding-right: 8px;
+}
+
+.sd-build-sprite img {
+  width: 80px;
+  height: 80px;
+}
+
+.sd-build-top {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 8px;
+  align-items: start;
+}
+
+.sd-build-bottom {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 8px;
+  align-items: start;
+  margin-top: 6px;
+}
+
+/* --- Action buttons row --- */
+.sd-actions {
+  display: flex;
+  gap: 12px;
+  padding: 4px 8px;
+  justify-content: flex-end;
+  border-top: 1px solid #ddd;
+  font-size: 11px;
+}
+
+.sd-action-btn {
+  background: none;
+  border: none;
+  color: #4466aa;
+  cursor: pointer;
+  font-size: 11px;
+  font-family: inherit;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 4px;
+}
+
+.sd-action-btn:hover {
+  color: #2244aa;
+  text-decoration: underline;
+}
+
+.sd-action-btn--danger {
+  color: #cc4444;
+}
+
+.sd-action-btn--danger:hover {
+  color: #aa2222;
+}
+
+/* --- Form fields --- */
+.sd-field-group {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.sd-field-label {
+  font-size: 10px;
+  font-weight: bold;
+  color: #555;
+  text-transform: capitalize;
+}
+
+.sd-field-input {
+  padding: 2px 6px;
+  border: 1px solid #bbb;
+  border-radius: 2px;
+  font-size: 11px;
+  font-family: inherit;
+  background: #fff;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.sd-field-input:focus {
+  border-color: #6688cc;
+  outline: none;
+  box-shadow: 0 0 0 1px rgba(102, 136, 204, 0.3);
+}
+
+.sd-field-select {
+  padding: 2px 4px;
+  border: 1px solid #bbb;
+  border-radius: 2px;
+  font-size: 11px;
+  font-family: inherit;
+  background: #fff;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* --- Details row (Level, Gender, Shiny, Tera) --- */
+.sd-details-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  font-size: 11px;
+  flex-wrap: wrap;
+}
+
+.sd-details-row label {
+  font-size: 10px;
+  font-weight: bold;
+  color: #555;
+}
+
+.sd-details-row input[type="number"] {
+  width: 42px;
+  padding: 1px 4px;
+  border: 1px solid #bbb;
+  border-radius: 2px;
+  font-size: 11px;
+  text-align: center;
+}
+
+.sd-details-row input[type="checkbox"] {
+  width: 14px;
+  height: 14px;
+  cursor: pointer;
+}
+
+/* --- Type badges --- */
+.sd-type-badge {
+  display: inline-block;
+  padding: 1px 6px;
+  border-radius: 3px;
+  font-size: 9px;
+  font-weight: bold;
+  text-transform: uppercase;
+  color: #fff;
+  letter-spacing: 0.3px;
+  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(0, 0, 0, 0.15);
+  white-space: nowrap;
+}
+
+/* --- Stat bars --- */
+.sd-stats-grid {
+  display: grid;
+  grid-template-columns: auto auto auto;
+  gap: 1px 4px;
+  align-items: center;
+  font-size: 10px;
+}
+
+.sd-stats-grid.sd-stats-grid--with-ivs {
+  grid-template-columns: auto auto auto auto;
+}
+
+.sd-stats-grid .sd-ev-header,
+.sd-stats-grid .sd-iv-header {
+  font-size: 9px;
+  font-weight: bold;
+  color: #888;
+  text-align: center;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+
+.sd-stats-grid .sd-stat-label {
+  font-weight: bold;
+  text-align: right;
+  color: #555;
+}
+
+.sd-stats-grid .sd-stat-bar-container {
+  width: 50px;
+  height: 8px;
+  background: #ddd;
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.sd-stats-grid .sd-stat-bar {
+  height: 100%;
+  border-radius: 2px;
+  transition: width 0.3s ease;
+}
+
+.sd-stats-grid .sd-stat-value {
+  text-align: right;
+  font-weight: bold;
+  color: #333;
+  min-width: 24px;
+}
+
+.sd-stats-grid .sd-iv-value {
+  text-align: center;
+  font-weight: bold;
+  min-width: 20px;
+  font-size: 10px;
+}
+
+.sd-stat-bar--hp {
+  background: #6cc070;
+}
+
+.sd-stat-bar--atk {
+  background: #ee8130;
+}
+
+.sd-stat-bar--def {
+  background: #f7d02c;
+}
+
+.sd-stat-bar--spa {
+  background: #6390f0;
+}
+
+.sd-stat-bar--spd {
+  background: #78c850;
+}
+
+.sd-stat-bar--spe {
+  background: #f85888;
+}
+
+.sd-ev-header {
+  grid-column: 1 / -1;
+  text-align: center;
+  font-size: 9px;
+  font-weight: bold;
+  color: #888;
+  margin-bottom: 1px;
+}
+
+/* --- Moves inputs in build card --- */
+.sd-moves-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.sd-move-slot {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.sd-move-slot-input {
+  flex: 1;
+  padding: 2px 6px;
+  border: 1px solid #bbb;
+  border-radius: 2px;
+  font-size: 11px;
+  font-family: inherit;
+  background: #fff;
+}
+
+.sd-move-slot-remove {
+  background: none;
+  border: none;
+  color: #cc4444;
+  cursor: pointer;
+  font-size: 14px;
+  padding: 0 2px;
+  line-height: 1;
+}
+
+/* --- Moves table (editing view) --- */
+.sd-moves-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 11px;
+}
+
+.sd-moves-table th {
+  background: linear-gradient(to bottom, #e8eaf0, #d0d4e0);
+  padding: 4px 8px;
+  text-align: left;
+  font-weight: bold;
+  color: #555;
+  border-bottom: 2px solid #b0b8c8;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  white-space: nowrap;
+}
+
+.sd-moves-table td {
+  padding: 5px 8px;
+  border-bottom: 1px solid #e8e8e8;
+}
+
+.sd-moves-table tr {
+  cursor: pointer;
+  transition: background 0.1s;
+}
+
+.sd-moves-table tbody tr:hover {
+  background: #f0f4ff;
+}
+
+.sd-moves-table tr.sd-move-selected {
+  background: #dde8ff;
+  font-weight: bold;
+}
+
+.sd-moves-table .sd-move-name {
+  font-weight: bold;
+  color: #333;
+  white-space: nowrap;
+}
+
+.sd-moves-table .sd-move-effect {
+  color: #666;
+  font-size: 10px;
+  max-width: 400px;
+  line-height: 1.3;
+}
+
+/* Category icons */
+.sd-cat-icon {
+  display: inline-block;
+  padding: 1px 5px;
+  border-radius: 3px;
+  text-align: center;
+  font-size: 8px;
+  font-weight: bold;
+  color: #fff;
+  white-space: nowrap;
+}
+
+.sd-cat-icon--physical {
+  background: #c03028;
+}
+
+.sd-cat-icon--special {
+  background: #6890f0;
+}
+
+.sd-cat-icon--status {
+  background: #9c9c9c;
+}
+
+/* --- Moves section header --- */
+.sd-section-header {
+  padding: 6px 10px;
+  background: linear-gradient(to bottom, #f0f2f8, #dfe3ec);
+  border-bottom: 1px solid #b0b8c8;
+  font-weight: bold;
+  color: #444;
+  font-size: 12px;
+}
+
+/* --- Scrollable moves container --- */
+.sd-moves-scroll {
+  max-height: 500px;
+  overflow-y: auto;
+  overflow-x: auto;
+}
+
+/* --- Search bar --- */
+.sd-search-bar {
+  padding: 6px 8px;
+  border-bottom: 1px solid #ddd;
+}
+
+.sd-search-input {
+  width: 100%;
+  padding: 4px 8px;
+  border: 1px solid #bbb;
+  border-radius: 3px;
+  font-size: 11px;
+  font-family: inherit;
+  background: #fff;
+  box-sizing: border-box;
+}
+
+.sd-search-input:focus {
+  border-color: #6688cc;
+  outline: none;
+}
+
+/* --- EV/IV Editing Panel --- */
+.sd-ev-panel {
+  padding: 8px;
+}
+
+.sd-ev-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 3px;
+}
+
+.sd-ev-row label {
+  width: 30px;
+  font-size: 10px;
+  font-weight: bold;
+  color: #555;
+  text-align: right;
+}
+
+.sd-ev-row input[type="number"] {
+  width: 48px;
+  padding: 2px 4px;
+  border: 1px solid #bbb;
+  border-radius: 2px;
+  font-size: 11px;
+  text-align: center;
+}
+
+.sd-ev-row .sd-ev-bar-bg {
+  flex: 1;
+  height: 10px;
+  background: #e8e8e8;
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.sd-ev-total {
+  text-align: center;
+  font-size: 10px;
+  color: #666;
+  padding: 4px;
+  border-top: 1px solid #ddd;
+}
+
+/* --- Preset buttons --- */
+.sd-preset-row {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+  padding: 4px 8px;
+  border-top: 1px solid #ddd;
+}
+
+.sd-preset-btn {
+  background: linear-gradient(to bottom, #fff, #e8e8e8);
+  border: 1px solid #aaa;
+  border-radius: 3px;
+  padding: 2px 8px;
+  font-size: 10px;
+  cursor: pointer;
+  color: #333;
+}
+
+.sd-preset-btn:hover {
+  background: linear-gradient(to bottom, #f8f8ff, #d8d8e8);
+}
+
+/* --- Add Pokemon card --- */
+.sd-add-card {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  cursor: pointer;
+  color: #888;
+  gap: 8px;
+  font-size: 13px;
+  border-top: 1px dashed #ccc;
+}
+
+.sd-add-card:hover {
+  background: rgba(102, 136, 204, 0.08);
+  color: #4466aa;
+}
+
+/* --- Pokemon Search Results Table --- */
+.sd-search-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 11px;
+}
+
+.sd-search-table th {
+  background: linear-gradient(to bottom, #e8eaf0, #d0d4e0);
+  padding: 4px 6px;
+  text-align: left;
+  font-weight: bold;
+  color: #555;
+  border-bottom: 2px solid #b0b8c8;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+.sd-search-table td {
+  padding: 4px 6px;
+  border-bottom: 1px solid #e8e8e8;
+}
+
+.sd-search-table tbody tr {
+  cursor: pointer;
+  transition: background 0.1s;
+}
+
+.sd-search-table tbody tr:hover {
+  background: #f0f4ff;
+}
+
+.sd-search-table .sd-pokemon-name {
+  font-weight: bold;
+  color: #333;
+  text-transform: capitalize;
+}
+
+.sd-search-table .sd-stat-cell {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  min-width: 28px;
+}
+
+/* ============================================================
+   RESPONSIVE DESIGN
+   ============================================================ */
+
+/* --- Desktop: wide layout with larger moves table --- */
+@media (min-width: 1024px) {
+  .sd-container {
+    padding: 16px 24px;
+  }
+
+  .sd-build-top {
+    grid-template-columns: 1.2fr 1fr 1fr;
+    gap: 12px;
+  }
+
+  .sd-build-bottom {
+    grid-template-columns: 1.2fr 1fr 1fr;
+    gap: 12px;
+  }
+
+  .sd-build-sprite img {
+    width: 96px;
+    height: 96px;
+  }
+
+  .sd-moves-scroll {
+    max-height: 600px;
+  }
+
+  .sd-moves-table .sd-move-effect {
+    max-width: 500px;
+  }
+
+  .sd-stats-grid .sd-stat-bar-container {
+    width: 70px;
+  }
+}
+
+/* --- Tablet: moderate adjustments --- */
+@media (max-width: 768px) {
+  .sd-container {
+    padding: 8px;
+  }
+
+  .sd-build-top {
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+  }
+
+  .sd-build-bottom {
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+  }
+
+  .sd-build-sprite img {
+    width: 64px;
+    height: 64px;
+  }
+
+  .sd-header {
+    padding: 4px 8px;
+    gap: 6px;
+  }
+
+  .sd-team-tab {
+    min-width: 50px;
+    padding: 3px 8px 4px;
+  }
+
+  .sd-team-tab img {
+    width: 32px;
+    height: 32px;
+  }
+
+  /* Hide effect column on tablets */
+  .sd-moves-table .sd-move-effect {
+    max-width: 180px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+/* --- Mobile: single column, stacked layout --- */
+@media (max-width: 480px) {
+  .sd-container {
+    padding: 4px;
+    font-size: 11px;
+  }
+
+  .sd-build-card {
+    grid-template-columns: 1fr;
+    padding: 6px;
+  }
+
+  .sd-build-sprite {
+    grid-row: span 1;
+    padding-right: 0;
+    padding-bottom: 6px;
+    justify-content: center;
+  }
+
+  .sd-build-sprite img {
+    width: 56px;
+    height: 56px;
+  }
+
+  .sd-build-top {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .sd-build-bottom {
+    grid-template-columns: 1fr;
+    gap: 6px;
+  }
+
+  .sd-actions {
+    flex-wrap: wrap;
+    gap: 6px;
+    justify-content: center;
+  }
+
+  .sd-header {
+    flex-wrap: wrap;
+    gap: 4px;
+    padding: 4px 6px;
+  }
+
+  .sd-header-btn {
+    font-size: 10px;
+    padding: 3px 6px;
+  }
+
+  .sd-team-name-input {
+    min-width: 80px;
+    font-size: 11px;
+  }
+
+  .sd-team-tabs {
+    gap: 1px;
+    padding: 2px 4px 0;
+  }
+
+  .sd-team-tab {
+    min-width: 42px;
+    padding: 2px 6px 4px;
+    font-size: 9px;
+  }
+
+  .sd-team-tab img {
+    width: 28px;
+    height: 28px;
+  }
+
+  .sd-team-tab-add {
+    font-size: 16px;
+    padding: 4px 10px;
+  }
+
+  /* Moves table: hide effect column, smaller text */
+  .sd-moves-table {
+    font-size: 10px;
+  }
+
+  .sd-moves-table th,
+  .sd-moves-table td {
+    padding: 3px 4px;
+  }
+
+  .sd-moves-table .sd-move-effect {
+    display: none;
+  }
+
+  .sd-moves-table .sd-move-name {
+    font-size: 10px;
+  }
+
+  .sd-type-badge {
+    font-size: 8px;
+    padding: 0 4px;
+  }
+
+  .sd-cat-icon {
+    font-size: 7px;
+    padding: 0 3px;
+  }
+
+  /* EV panel compact */
+  .sd-ev-row {
+    gap: 4px;
+  }
+
+  .sd-ev-row label {
+    width: 24px;
+    font-size: 9px;
+  }
+
+  .sd-ev-row input[type="number"] {
+    width: 40px;
+    font-size: 10px;
+  }
+
+  .sd-stats-grid .sd-stat-bar-container {
+    width: 36px;
+  }
+
+  .sd-stats-grid {
+    font-size: 9px;
+  }
+
+  .sd-preset-btn {
+    font-size: 9px;
+    padding: 2px 5px;
+  }
+
+  .sd-moves-scroll {
+    max-height: 350px;
+  }
+
+  .sd-field-input,
+  .sd-field-select {
+    font-size: 10px;
+  }
+
+  .sd-details-row {
+    font-size: 10px;
+    gap: 6px;
+  }
+}

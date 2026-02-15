@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, Save, Trash2, Plus, Zap, Settings, Award, ChevronUp, ChevronDown, Copy } from 'lucide-react';
+import { Save, Copy } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { formatName } from '../../utils/helpers';
-import MovesFilter from '../filters/MovesFilter';
-import { fetchPokemonMoves, fetchMoveDetails, fetchPokemonAbilities, fetchCompetitiveItems } from '../../services/api';
+import { fetchMoveDetails, fetchPokemonAbilities, fetchCompetitiveItems } from '../../services/api';
 import PokemonImage from '../PokemonImage';
+import localPokemonDb from '../../data/pokemon-db.json';
+import localMovesDb from '../../data/moves-db.json';
+import './ShowdownStyles.css';
 
 interface PokemonWithMoves {
   id: number;
@@ -30,13 +32,6 @@ interface MovesetEditorProps {
   onBack: () => void;
   initialBuild?: PokemonBuild;
   onSave?: (buildData: PokemonBuild) => void;
-}
-
-interface PokemonMove {
-  move: {
-    name: string;
-    url: string;
-  };
 }
 
 interface MoveDetails {
@@ -82,6 +77,7 @@ interface PokemonBuild {
   gender: string | null;
   heldItem: string;
   nickname: string;
+  isShiny: boolean;
   teraType: string;
   ivs: {
     hp: number;
@@ -169,7 +165,7 @@ const POKEMON_TYPES = [
 const HELD_ITEMS = [
   // Choice Items
   'Choice Band',
-  'Choice Specs', 
+  'Choice Specs',
   'Choice Scarf',
   // Defensive Items
   'Leftovers',
@@ -271,14 +267,17 @@ const HELD_ITEMS = [
   'Fairy Feather'
 ];
 
-const MovesetEditorContent: React.FC<MovesetEditorProps> = ({ pokemon, teamId, onBack, initialBuild, onSave }) => {
+// Module-level in-memory cache for move details (persists across re-mounts)
+const moveDetailsCache: Record<string, MoveDetails> = {};
+
+const MovesetEditorContent: React.FC<MovesetEditorProps> = ({ pokemon, teamId, onBack: _onBack, initialBuild, onSave }) => {
   const [selectedMoves, setSelectedMoves] = useState<string[]>([]);
   const [availableMoves, setAvailableMoves] = useState<string[]>([]);
-  const [moveDetails, setMoveDetails] = useState<Record<string, MoveDetails>>({});
+  const [moveDetails, setMoveDetails] = useState<Record<string, MoveDetails>>(moveDetailsCache);
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
-  const [showMoveSelector, setShowMoveSelector] = useState(false);
-  
+
+
   // New build customization states
   const [pokemonBuild, setPokemonBuild] = useState<PokemonBuild>(
     initialBuild || {
@@ -288,6 +287,7 @@ const MovesetEditorContent: React.FC<MovesetEditorProps> = ({ pokemon, teamId, o
       gender: null,
       heldItem: '',
       nickname: '',
+      isShiny: false,
       teraType: '',
       ivs: {
         hp: 31,
@@ -307,34 +307,29 @@ const MovesetEditorContent: React.FC<MovesetEditorProps> = ({ pokemon, teamId, o
       }
     }
   );
-  
+
   const [availableNatures, setAvailableNatures] = useState<Nature[]>([]);
   const [availableAbilities, setAvailableAbilities] = useState<string[]>([]);
   const [hasGenderDifference, setHasGenderDifference] = useState(false);
-  const [activeTab, setActiveTab] = useState<'moves' | 'stats' | 'details'>('moves');
-  
+
+
   // Description states
   const [pokemonDescription, setPokemonDescription] = useState<string>('');
   const [abilityDescriptions, setAbilityDescriptions] = useState<Record<string, string>>({});
   const [itemDescriptions, setItemDescriptions] = useState<Record<string, string>>({});
-  
-  const [expandedMove, setExpandedMove] = useState('');
+
+
 
   useEffect(() => {
     const loadPokemonData = async () => {
       setLoading(true);
       try {
-        // Fetch detailed Pokemon data using GraphQL
+        // Fetch detailed Pokemon data
         try {
-          // Fetch moves
-          const movesData = await fetchPokemonMoves(pokemon.id);
-          const moves = movesData
-            .filter((moveData: any) => moveData?.move?.name)
-            .map((moveData: any) => moveData.move.name);
-
-          // Remove duplicates since Pokemon can learn moves through multiple methods
-          const uniqueMoves = [...new Set(moves)];
-          setAvailableMoves(uniqueMoves);
+          // Load moves from local JSON DB (instant, no API call needed)
+          const localPokemon = (localPokemonDb as any[]).find((p: any) => p.id === pokemon.id);
+          const localMoves: string[] = localPokemon?.moves || [];
+          setAvailableMoves(localMoves);
 
           // Fetch abilities
           const abilitiesData = await fetchPokemonAbilities(pokemon.id);
@@ -372,7 +367,7 @@ const MovesetEditorContent: React.FC<MovesetEditorProps> = ({ pokemon, teamId, o
           console.error('Failed to fetch Pokemon data:', error);
           toast.error('Failed to load Pokemon data');
         }
-        
+
         // Set available natures
         setAvailableNatures([
           { name: 'hardy', description: 'Neutral nature (no stat changes)' },
@@ -435,7 +430,7 @@ const MovesetEditorContent: React.FC<MovesetEditorProps> = ({ pokemon, teamId, o
           };
           setItemDescriptions(fallbackDescriptions);
         }
-        
+
         // Load saved build - use initialBuild if provided, otherwise try localStorage
         if (initialBuild) {
           setPokemonBuild(initialBuild);
@@ -459,11 +454,51 @@ const MovesetEditorContent: React.FC<MovesetEditorProps> = ({ pokemon, teamId, o
     loadPokemonData();
   }, [pokemon.id, teamId]);
 
+  // Load move details from local JSON DB (instant, no API calls)
+  useEffect(() => {
+    if (availableMoves.length === 0) return;
+
+    const localDb = localMovesDb as Record<string, any>;
+    const newDetails: Record<string, MoveDetails> = {};
+
+    for (const moveName of availableMoves) {
+      if (moveDetailsCache[moveName]) continue;
+
+      const localMove = localDb[moveName];
+      if (localMove) {
+        const details: MoveDetails = {
+          name: localMove.name,
+          type: { name: localMove.type },
+          power: localMove.power,
+          accuracy: localMove.accuracy,
+          pp: localMove.pp,
+          damage_class: { name: localMove.damage_class },
+          effect_entries: localMove.short_effect ? [{
+            short_effect: localMove.short_effect,
+            language: { name: 'en' }
+          }] : [],
+          flavor_text_entries: localMove.flavor_text ? [{
+            flavor_text: localMove.flavor_text,
+            language: { name: 'en' }
+          }] : [],
+          target: { name: localMove.target },
+          priority: localMove.priority
+        };
+        moveDetailsCache[moveName] = details;
+        newDetails[moveName] = details;
+      }
+    }
+
+    if (Object.keys(newDetails).length > 0) {
+      setMoveDetails(prev => ({ ...prev, ...newDetails }));
+    }
+  }, [availableMoves]);
+
   // Load move details when selectedMoves changes (including from saved builds)
   useEffect(() => {
     const loadDetailsForSelectedMoves = async () => {
       for (const moveName of selectedMoves) {
-        if (!moveDetails[moveName]) {
+        if (!moveDetails[moveName] && !moveDetailsCache[moveName]) {
           await loadMoveDetails(moveName);
         }
       }
@@ -500,16 +535,16 @@ const MovesetEditorContent: React.FC<MovesetEditorProps> = ({ pokemon, teamId, o
     const evs = { ...pokemonBuild.evs };
     const currentTotal = Object.values(evs).reduce((sum, ev) => sum + ev, 0);
     const remainingEVs = 510 - (currentTotal - evs[stat]);
-    
+
     // Don't allow if it would exceed 510 total
     const finalValue = Math.min(newValue, remainingEVs);
-    
+
     if (newValue > remainingEVs) {
       toast.error(`Only ${remainingEVs} EVs remaining (510 total limit)`);
     } else if (finalValue !== parseInt(value, 10) && value !== '') {
       toast.error('EVs must be between 0 and 252');
     }
-    
+
     setPokemonBuild(prev => ({
       ...prev,
       evs: {
@@ -518,10 +553,17 @@ const MovesetEditorContent: React.FC<MovesetEditorProps> = ({ pokemon, teamId, o
       }
     }));
   };
-
-  const formatStatName = (stat: string) => {
-    return stat.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+  const handleIVChange = (stat: keyof PokemonBuild['ivs'], value: string) => {
+    const newValue = validateAndFormatInput(value, 0, 31);
+    setPokemonBuild(prev => ({
+      ...prev,
+      ivs: {
+        ...prev.ivs,
+        [stat]: newValue
+      }
+    }));
   };
+
 
   const totalEVs = Object.values(pokemonBuild.evs).reduce((sum, ev) => sum + ev, 0);
   const remainingEVs = 510 - totalEVs;
@@ -547,7 +589,7 @@ const MovesetEditorContent: React.FC<MovesetEditorProps> = ({ pokemon, teamId, o
 
       // Build the Pokemon export string
       let pokemonExport = '';
-      
+
       // Pokemon name and item (with nickname if present)
       if (pokemonBuild.nickname) {
         if (heldItem) {
@@ -592,7 +634,7 @@ const MovesetEditorContent: React.FC<MovesetEditorProps> = ({ pokemon, teamId, o
       // Copy to clipboard
       await navigator.clipboard.writeText(pokemonExport.trim());
       toast.success(`${pokemonName} build exported to clipboard!`);
-      
+
     } catch (error) {
       console.error('Error exporting Pokemon build:', error);
       toast.error('Failed to export Pokemon build');
@@ -600,10 +642,42 @@ const MovesetEditorContent: React.FC<MovesetEditorProps> = ({ pokemon, teamId, o
   };
 
   const loadMoveDetails = async (moveName: string): Promise<MoveDetails | null> => {
-    if (moveDetails[moveName]) {
-      return moveDetails[moveName];
+    // Check module-level cache first
+    if (moveDetailsCache[moveName]) {
+      if (!moveDetails[moveName]) {
+        setMoveDetails(prev => ({ ...prev, [moveName]: moveDetailsCache[moveName] }));
+      }
+      return moveDetailsCache[moveName];
     }
 
+    // Check local JSON DB (instant, no API call)
+    const localDb = localMovesDb as Record<string, any>;
+    const localMove = localDb[moveName];
+    if (localMove) {
+      const details: MoveDetails = {
+        name: localMove.name,
+        type: { name: localMove.type },
+        power: localMove.power,
+        accuracy: localMove.accuracy,
+        pp: localMove.pp,
+        damage_class: { name: localMove.damage_class },
+        effect_entries: localMove.short_effect ? [{
+          short_effect: localMove.short_effect,
+          language: { name: 'en' }
+        }] : [],
+        flavor_text_entries: localMove.flavor_text ? [{
+          flavor_text: localMove.flavor_text,
+          language: { name: 'en' }
+        }] : [],
+        target: { name: localMove.target },
+        priority: localMove.priority
+      };
+      moveDetailsCache[moveName] = details;
+      setMoveDetails(prev => ({ ...prev, [moveName]: details }));
+      return details;
+    }
+
+    // Fallback to GraphQL API for moves not in local DB
     try {
       const moveData = await fetchMoveDetails(moveName);
       if (moveData) {
@@ -620,6 +694,7 @@ const MovesetEditorContent: React.FC<MovesetEditorProps> = ({ pokemon, teamId, o
           priority: moveData.priority
         };
 
+        moveDetailsCache[moveName] = details;
         setMoveDetails(prev => ({ ...prev, [moveName]: details }));
         return details;
       }
@@ -638,7 +713,7 @@ const MovesetEditorContent: React.FC<MovesetEditorProps> = ({ pokemon, teamId, o
         toast.error('A Pokémon can only learn 4 moves at a time');
         return;
       }
-      
+
       setSelectedMoves(prev => [...prev, moveName]);
       await loadMoveDetails(moveName);
     }
@@ -664,475 +739,386 @@ const MovesetEditorContent: React.FC<MovesetEditorProps> = ({ pokemon, teamId, o
     return move.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
   };
 
+  const filteredMoves = availableMoves.filter(move =>
+    move.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const getCategoryLabel = (cat: string) => {
+    if (cat === 'physical') return 'Phys';
+    if (cat === 'special') return 'Spec';
+    return 'Stat';
+  };
+
+  const getCategoryClass = (cat: string) => {
+    if (cat === 'physical') return 'sd-cat-icon--physical';
+    if (cat === 'special') return 'sd-cat-icon--special';
+    return 'sd-cat-icon--status';
+  };
+
+  const statBarClass = (stat: string) => {
+    const map: Record<string, string> = {
+      hp: 'sd-stat-bar--hp', attack: 'sd-stat-bar--atk', defense: 'sd-stat-bar--def',
+      'special-attack': 'sd-stat-bar--spa', 'special-defense': 'sd-stat-bar--spd', speed: 'sd-stat-bar--spe',
+    };
+    return map[stat] || '';
+  };
+
+  const statLabelShort = (stat: string) => {
+    const map: Record<string, string> = {
+      hp: 'HP', attack: 'Atk', defense: 'Def',
+      'special-attack': 'SpA', 'special-defense': 'SpD', speed: 'Spe',
+    };
+    return map[stat] || stat;
+  };
+
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-6">
-        <div className="max-w-4xl mx-auto">
-          <div className="text-center py-12">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-            <p className="mt-4 text-gray-600">Loading moves...</p>
-          </div>
-        </div>
+      <div className="sd-panel" style={{ padding: 40, textAlign: 'center' }}>
+        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600 mx-auto"></div>
+        <p style={{ marginTop: 12, color: '#666' }}>Loading moves...</p>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-6">
-      <div className="max-w-4xl mx-auto">
-        {/* Header */}
-        <div className="mb-8">
-          <button
-            onClick={onBack}
-            className="text-blue-600 hover:text-blue-800 mb-4 flex items-center transition-colors"
-          >
-            <ArrowLeft size={20} className="mr-2" />
-            Back to Team
+    <>
+      {/* Compact Build Summary Card */}
+      <div className="sd-panel">
+        {/* Action bar */}
+        <div className="sd-actions" style={{ borderTop: 'none', borderBottom: '1px solid #ddd' }}>
+          <button className="sd-action-btn" onClick={exportCurrentPokemon}>
+            <Copy size={12} /> Copy
           </button>
-          
-          <div className="bg-white rounded-xl p-6 shadow-lg">
-            <div className="flex items-center gap-6">
-              <PokemonImage
-                pokemonId={pokemon.id}
-                alt={formatName(pokemon.name)}
-                className="w-20 h-20 object-contain"
-              />
-              <div className="flex-1">
-                <h1 className="text-2xl font-bold text-gray-800 mb-2">
-                  {formatName(pokemon.name)} Moveset
-                </h1>
-                <div className="flex gap-2 mb-3">
-                  {pokemon.types.map((type) => (
-                    <span
-                      key={type.type.name}
-                      className="px-3 py-1 rounded-full text-sm font-medium text-white"
-                      style={{ backgroundColor: getTypeColor(type.type.name) }}
-                    >
-                      {formatName(type.type.name)}
-                    </span>
-                  ))}
-                </div>
-                {pokemonDescription && (
-                  <p className="text-gray-600 text-sm italic">
-                    "{pokemonDescription}"
-                  </p>
-                )}
-              </div>
-            </div>
-          </div>
+          <button className="sd-action-btn" onClick={exportCurrentPokemon}>
+            ⬆ Import/Export
+          </button>
+          <button className="sd-action-btn" onClick={handleSaveBuild} style={{ color: '#2a8c2a', fontWeight: 'bold' }}>
+            <Save size={12} /> Save
+          </button>
         </div>
 
-        {/* Current Moveset */}
-        <div className="mb-8">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-bold text-gray-800">Current Moveset ({selectedMoves.length}/4)</h2>
-            <div className="flex gap-2">
-              <button
-                onClick={() => setShowMoveSelector(!showMoveSelector)}
-                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors"
-              >
-                <Plus size={16} />
-                {showMoveSelector ? 'Hide' : 'Add'} Moves
-              </button>
-              <button
-                onClick={handleSaveBuild}
-                className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors"
-              >
-                <Save size={16} />
-                Save Build
-              </button>
-              <button
-                onClick={exportCurrentPokemon}
-                className="bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors"
-              >
-                <Copy size={16} />
-                Export Build
-              </button>
-            </div>
+        <div className="sd-build-card">
+          {/* Sprite */}
+          <div className="sd-build-sprite">
+            <PokemonImage pokemonId={pokemon.id} alt={formatName(pokemon.name)} className="w-20 h-20" />
           </div>
 
-          {selectedMoves.length === 0 ? (
-            <div className="bg-white rounded-xl p-8 text-center shadow-lg">
-              <Zap className="mx-auto h-16 w-16 text-gray-400 mb-4" />
-              <h3 className="text-lg font-semibold text-gray-800 mb-2">No moves selected</h3>
-              <p className="text-gray-600">Add up to 4 moves to create this Pokémon's moveset.</p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {selectedMoves.map((moveName) => {
-                const move = moveDetails[moveName];
-                return (
-                  <div key={moveName} className="bg-white rounded-xl p-4 shadow-lg border-l-4 border-blue-500">
-                    <div className="flex items-start justify-between mb-2">
-                      <div className="flex-1">
-                        <h3 className="font-semibold text-gray-800">{formatMoveName(moveName)}</h3>
-                      </div>
-                      <div className="flex gap-2">
-                        <button
-                          onClick={() => setExpandedMove(expandedMove === moveName ? '' : moveName)}
-                          className="text-blue-600 hover:text-blue-800 p-1 rounded transition-colors"
-                          title={expandedMove === moveName ? 'Collapse details' : 'Expand details'}
-                        >
-                          {expandedMove === moveName ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-                        </button>
-                        <button
-                          onClick={() => handleRemoveMove(moveName)}
-                          className="text-red-500 hover:text-red-700 p-1 rounded transition-colors"
-                          title="Remove move"
-                        >
-                          <Trash2 size={16} />
-                        </button>
-                      </div>
-                    </div>
-                    
-                    {move && (
-                      <div className="space-y-2 text-sm">
-                        <div className="flex items-center gap-2">
-                          <span
-                            className="px-2 py-1 rounded text-xs font-medium text-white"
-                            style={{ backgroundColor: getTypeColor(move.type.name) }}
-                          >
-                            {formatName(move.type.name)}
-                          </span>
-                          <span
-                            className="px-2 py-1 rounded text-xs font-medium bg-gray-200 text-gray-700"
-                          >
-                            {formatName(move.damage_class.name)}
-                          </span>
-                        </div>
-                        
-                        <div className="flex gap-4 text-gray-600">
-                          {move.power && <span>Power: <strong>{move.power}</strong></span>}
-                          {move.accuracy && <span>Accuracy: <strong>{move.accuracy}%</strong></span>}
-                          <span>PP: <strong>{move.pp}</strong></span>
-                        </div>
-                        
-                        {/* Always show short effect/description */}
-                        {move.effect_entries && move.effect_entries.length > 0 && (
-                          <p className="text-gray-600 text-sm leading-relaxed mt-2 italic">
-                            {move.effect_entries.find(entry => entry.language.name === 'en')?.short_effect ||
-                             move.effect_entries[0]?.short_effect ||
-                             'No description available'}
-                          </p>
-                        )}
-                        
-                        {expandedMove === moveName && (
-                          <div className="mt-3 pt-3 border-t border-gray-200 space-y-2">
-                            {move.flavor_text_entries && move.flavor_text_entries.length > 0 && (
-                              <div>
-                                <h4 className="font-medium text-gray-800 mb-1">Game Description:</h4>
-                                <p className="text-gray-600 text-xs italic leading-relaxed">
-                                  "{move.flavor_text_entries.find((entry: any) => entry.language.name === 'en')?.flavor_text ||
-                                    move.flavor_text_entries[0]?.flavor_text ||
-                                    'No game description available'}"
-                                </p>
-                              </div>
-                            )}
-                            <div className="grid grid-cols-2 gap-2 text-xs text-gray-500">
-                              <div><strong>Target:</strong> {formatName(move.target?.name || 'unknown')}</div>
-                              <div><strong>Priority:</strong> {move.priority || 0}</div>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
-
-        {/* Move Selector */}
-        {showMoveSelector && (
-          <div className="bg-white rounded-xl p-6 shadow-lg mb-8">
-            <h2 className="text-xl font-bold text-gray-800 mb-4">Available Moves</h2>
-            <MovesFilter
-              availableMoves={availableMoves}
-              selectedMoves={selectedMoves}
-              searchTerm={searchTerm}
-              onSearchChange={setSearchTerm}
-              onMoveToggle={handleMoveToggle}
-            />
-          </div>
-        )}
-
-        {/* Build Customization */}
-        <div className="mb-8">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-bold text-gray-800">Build Customization</h2>
-            <div className="flex gap-2">
-              <button
-                onClick={() => setActiveTab('stats')}
-                className={`bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors ${activeTab === 'stats' ? 'bg-blue-700' : ''}`}
-              >
-                <Award size={16} />
-                Stats
-              </button>
-              <button
-                onClick={() => setActiveTab('details')}
-                className={`bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors ${activeTab === 'details' ? 'bg-blue-700' : ''}`}
-              >
-                <Settings size={16} />
-                Details
-              </button>
-            </div>
-          </div>
-
-          {activeTab === 'stats' ? (
-            <div className="bg-white rounded-xl p-6 shadow-lg">
-              <div className="mb-6">
-                <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center gap-2">
-                    <h3 className="text-lg font-semibold text-gray-800">Individual Values (IVs)</h3>
-                    <span className="text-xs bg-purple-100 text-purple-800 px-2 py-1 rounded-full">
-                      Max 31 each
-                    </span>
-                  </div>
-                  <button
-                    onClick={() => setPokemonBuild(prev => ({ 
-                      ...prev, 
-                      ivs: {
-                        hp: 31,
-                        attack: 31,
-                        defense: 31,
-                        'special-attack': 31,
-                        'special-defense': 31,
-                        speed: 31
-                      }
-                    }))}
-                    className="bg-purple-600 hover:bg-purple-700 text-white px-3 py-1 rounded text-xs transition-colors"
-                  >
-                    Max All IVs
-                  </button>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  {Object.entries(pokemonBuild.ivs).map(([stat, value]) => (
-                    <div key={stat} className="flex items-center justify-between">
-                      <label className="text-sm font-medium text-gray-700 capitalize">
-                        {stat.replace('-', ' ')}
-                      </label>
-                      <input
-                        type="number"
-                        min="0"
-                        max="31"
-                        value={value}
-                        onChange={(e) => {
-                          const newValue = Math.min(31, Math.max(0, parseInt(e.target.value) || 0));
-                          setPokemonBuild(prev => ({
-                            ...prev,
-                            ivs: { ...prev.ivs, [stat]: newValue }
-                          }));
-                        }}
-                        className="w-16 p-1 border border-gray-300 rounded text-center text-gray-800"
-                      />
-                    </div>
-                  ))}
-                </div>
-                <p className="text-xs text-gray-500 mt-1">Higher IVs mean stronger stats (0-31 range)</p>
+          {/* Top row: Nickname/Details | Moves | Stats */}
+          <div className="sd-build-top">
+            <div>
+              <div className="sd-field-group">
+                <span className="sd-field-label">Nickname</span>
+                <input
+                  className="sd-field-input"
+                  value={pokemonBuild.nickname}
+                  onChange={(e) => setPokemonBuild(prev => ({ ...prev, nickname: e.target.value }))}
+                  placeholder={formatName(pokemon.name)}
+                />
               </div>
-              
-              <div className="mb-4">
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-lg font-semibold text-gray-800">Effort Values (EVs)</h3>
-                  <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full">
-                    {totalEVs}/510 total
-                  </span>
-                </div>
-                <div className="grid grid-cols-2 gap-4 mb-3">
-                  {Object.keys(pokemonBuild.evs).map((stat) => (
-                    <div key={stat} className="flex items-center gap-2">
-                      <span className="text-gray-800 w-20">{formatStatName(stat)}:</span>
-                      <input
-                        type="number"
-                        min="0"
-                        max="252"
-                        value={pokemonBuild.evs[stat as keyof PokemonBuild['evs']]}
-                        onChange={(e) => handleEVChange(stat as keyof PokemonBuild['evs'], e.target.value)}
-                        onBlur={(e) => handleEVChange(stat as keyof PokemonBuild['evs'], e.target.value)}
-                        className="w-16 p-1 border border-gray-300 rounded text-center"
-                        title="Effort Values from training (0-252 per stat, 510 total)"
-                      />
-                      <span className="text-xs text-gray-500">/252</span>
-                    </div>
-                  ))}
-                </div>
-                <div className="bg-gray-50 p-3 rounded-lg">
-                  <p className="text-sm text-gray-600">
-                    <strong>Total EVs:</strong> {totalEVs}/510 ({remainingEVs} remaining)
-                    {remainingEVs === 0 && <span className="text-green-600 ml-2">Fully trained!</span>}
-                  </p>
-                  <p className="text-xs text-gray-500 mt-1">Distribute 510 points to boost stats (max 252 per stat)</p>
-                </div>
-                <div className="mt-4">
-                  <div className="flex items-center justify-between mb-3">
-                    <h3 className="text-lg font-semibold text-gray-800">EV Presets</h3>
-                    <span className="text-xs text-gray-500">Quick competitive spreads</span>
-                  </div>
-                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
-                    {Object.entries(EV_PRESETS).map(([preset, evs]) => (
-                      <button
-                        key={preset}
-                        onClick={() => setPokemonBuild(prev => ({ ...prev, evs }))}
-                        className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-2 rounded-md text-xs font-medium transition-colors"
-                        title={`Set EVs for ${preset}`}
-                      >
-                        {preset}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </div>
-          ) : (
-            <div className="bg-white rounded-xl p-6 shadow-lg">
-              <div className="space-y-6">
+              <div className="sd-details-row" style={{ marginTop: 4 }}>
+                <div><label>Level</label> <strong>100</strong></div>
+                <div><label>Gender</label> <strong>{pokemonBuild.gender === 'male' ? '♂' : pokemonBuild.gender === 'female' ? '♀' : '—'}</strong></div>
                 <div>
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center gap-2">
-                      <h3 className="text-lg font-semibold text-gray-800">Nature</h3>
-                      <span className="text-xs bg-purple-100 text-purple-800 px-2 py-1 rounded-full">
-                        +10% / -10%
-                      </span>
-                    </div>
-                    <span className="text-xs text-gray-500">Affects stat growth</span>
-                  </div>
-                  <select
-                    value={pokemonBuild.nature}
-                    onChange={(e) => setPokemonBuild(prev => ({ ...prev, nature: e.target.value }))}
-                    className="w-full p-2 border border-gray-300 rounded text-gray-800"
-                    title="Nature boosts one stat by 10% and reduces another by 10%"
-                  >
-                    {availableNatures.map((nature) => (
-                      <option key={nature.name} value={nature.name}>{formatName(nature.name)} - {nature.description}</option>
-                    ))}
-                  </select>
-                </div>
-                
-                <div>
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center gap-2">
-                      <h3 className="text-lg font-semibold text-gray-800">Ability</h3>
-                      <span className="text-xs bg-orange-100 text-orange-800 px-2 py-1 rounded-full">
-                        Battle effects
-                      </span>
-                    </div>
-                    <span className="text-xs text-gray-500">Passive abilities</span>
-                  </div>
-                  <select
-                    value={pokemonBuild.ability}
-                    onChange={(e) => setPokemonBuild(prev => ({ ...prev, ability: e.target.value }))}
-                    className="w-full p-2 border border-gray-300 rounded text-gray-800"
-                    title="Abilities provide passive effects during battle"
-                  >
-                    {availableAbilities.map((ability) => (
-                      <option key={ability} value={ability}>
-                        {formatName(ability)}
-                        {abilityDescriptions[ability] && ` - ${abilityDescriptions[ability]}`}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                
-                <div>
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center gap-2">
-                      <h3 className="text-lg font-semibold text-gray-800">Gender</h3>
-                      <span className="text-xs bg-pink-100 text-pink-800 px-2 py-1 rounded-full">
-                        Cosmetic
-                      </span>
-                    </div>
-                    <span className="text-xs text-gray-500">Visual only</span>
-                  </div>
-                  {hasGenderDifference ? (
-                    <select
-                      value={pokemonBuild.gender || ''}
-                      onChange={(e) => setPokemonBuild(prev => ({ ...prev, gender: e.target.value || null }))}
-                      className="w-full p-2 border border-gray-300 rounded text-gray-800"
-                      title="Some Pokémon have visual differences between genders"
-                    >
-                      <option value="">Select Gender</option>
-                      <option value="male">Male</option>
-                      <option value="female">Female</option>
-                    </select>
-                  ) : (
-                    <p className="text-gray-500 italic text-sm">This Pokémon has no gender differences</p>
-                  )}
-                </div>
-                
-                <div>
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center gap-2">
-                      <h3 className="text-lg font-semibold text-gray-800">Nickname</h3>
-                      <span className="text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full">
-                        Custom name
-                      </span>
-                    </div>
-                    <span className="text-xs text-gray-500">Give your Pokémon a nickname</span>
-                  </div>
+                  <label>Shiny</label>
                   <input
-                    type="text"
-                    value={pokemonBuild.nickname}
-                    onChange={(e) => setPokemonBuild(prev => ({ ...prev, nickname: e.target.value }))}
-                    className="w-full p-2 border border-gray-300 rounded text-gray-800"
-                    title="Give your Pokémon a custom nickname"
+                    type="checkbox"
+                    checked={pokemonBuild.isShiny}
+                    onChange={(e) => setPokemonBuild(prev => ({ ...prev, isShiny: e.target.checked }))}
+                    style={{ marginLeft: 2 }}
                   />
                 </div>
-                
                 <div>
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center gap-2">
-                      <h3 className="text-lg font-semibold text-gray-800">Tera Type</h3>
-                      <span className="text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full">
-                        Tera Raid
-                      </span>
-                    </div>
-                    <span className="text-xs text-gray-500">Tera Raid type</span>
-                  </div>
+                  <label>Tera Type</label>
                   <select
+                    className="sd-field-select"
+                    style={{ width: 'auto', marginLeft: 2 }}
                     value={pokemonBuild.teraType}
                     onChange={(e) => setPokemonBuild(prev => ({ ...prev, teraType: e.target.value }))}
-                    className="w-full p-2 border border-gray-300 rounded text-gray-800"
-                    title="Select a Tera Raid type"
                   >
-                    <option value="">Select Tera Type</option>
-                    {POKEMON_TYPES.map((type) => (
-                      <option key={type} value={type}>{formatName(type)}</option>
-                    ))}
-                  </select>
-                </div>
-                
-                <div>
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center gap-2">
-                      <h3 className="text-lg font-semibold text-gray-800">Held Item</h3>
-                      <span className="text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full">
-                        Strategic
-                      </span>
-                    </div>
-                    <span className="text-xs text-gray-500">Battle items</span>
-                  </div>
-                  <select
-                    value={pokemonBuild.heldItem}
-                    onChange={(e) => setPokemonBuild(prev => ({ ...prev, heldItem: e.target.value }))}
-                    className="w-full p-2 border border-gray-300 rounded text-gray-800"
-                    title="Held items provide various battle effects and advantages"
-                  >
-                    <option value="">No Item</option>
-                    {HELD_ITEMS.map((item) => (
-                      <option key={item} value={item}>
-                        {formatName(item)}
-                        {itemDescriptions[item] && ` - ${itemDescriptions[item]}`}
-                      </option>
-                    ))}
+                    <option value="">—</option>
+                    {POKEMON_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
                   </select>
                 </div>
               </div>
+              {/* Type badges */}
+              <div style={{ marginTop: 4, display: 'flex', gap: 3 }}>
+                {pokemon.types.map((type) => (
+                  <span key={type.type.name} className="sd-type-badge" style={{ backgroundColor: getTypeColor(type.type.name) }}>
+                    {type.type.name}
+                  </span>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <div className="sd-field-group">
+                <span className="sd-field-label">Moves</span>
+                <div className="sd-moves-list">
+                  {[0, 1, 2, 3].map((i) => (
+                    <div key={i} className="sd-move-slot">
+                      <span className="sd-move-slot-input" style={{ background: selectedMoves[i] ? '#fff' : '#f8f8f8' }}>
+                        {selectedMoves[i] ? formatMoveName(selectedMoves[i]) : ''}
+                      </span>
+                      {selectedMoves[i] && (
+                        <button
+                          className="sd-move-slot-remove"
+                          onClick={() => handleRemoveMove(selectedMoves[i])}
+                          title="Remove move"
+                        >
+                          ×
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <div className="sd-stats-grid sd-stats-grid--with-ivs">
+                <span></span>
+                <span></span>
+                <span className="sd-ev-header">EV</span>
+                <span className="sd-iv-header">IV</span>
+                {Object.entries(pokemonBuild.evs).map(([stat, value]) => (
+                  <React.Fragment key={stat}>
+                    <span className="sd-stat-label">{statLabelShort(stat)}</span>
+                    <div className="sd-stat-bar-container">
+                      <div
+                        className={`sd-stat-bar ${statBarClass(stat)}`}
+                        style={{ width: `${Math.min(100, (value / 252) * 100)}%` }}
+                      />
+                    </div>
+                    <span className="sd-stat-value">{value || ''}</span>
+                    <span className="sd-iv-value" style={{ color: pokemonBuild.ivs[stat as keyof PokemonBuild['ivs']] < 31 ? '#e53e3e' : '#888' }}>
+                      {pokemonBuild.ivs[stat as keyof PokemonBuild['ivs']]}
+                    </span>
+                  </React.Fragment>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Bottom row: Pokemon, Item, Ability */}
+          <div className="sd-build-bottom">
+            <div className="sd-field-group">
+              <span className="sd-field-label">Pokémon</span>
+              <span className="sd-field-input" style={{ background: '#f8f8f8', fontWeight: 'bold' }}>
+                {formatName(pokemon.name)}
+              </span>
+            </div>
+            <div className="sd-field-group">
+              <span className="sd-field-label">Item</span>
+              <select
+                className="sd-field-select"
+                value={pokemonBuild.heldItem}
+                onChange={(e) => setPokemonBuild(prev => ({ ...prev, heldItem: e.target.value }))}
+              >
+                <option value="">None</option>
+                {HELD_ITEMS.map((item) => (
+                  <option key={item} value={item}>
+                    {formatName(item)}
+                    {itemDescriptions[item] && ` - ${itemDescriptions[item]}`}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="sd-field-group">
+              <span className="sd-field-label">Ability</span>
+              <select
+                className="sd-field-select"
+                value={pokemonBuild.ability}
+                onChange={(e) => setPokemonBuild(prev => ({ ...prev, ability: e.target.value }))}
+              >
+                <option value="">Select</option>
+                {availableAbilities.map((ability) => (
+                  <option key={ability} value={ability}>
+                    {formatName(ability)}
+                    {abilityDescriptions[ability] && ` - ${abilityDescriptions[ability]}`}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+        </div>
+
+        {/* Nature + Gender row */}
+        <div style={{ padding: '4px 8px', borderTop: '1px solid #ddd', display: 'flex', gap: 12, alignItems: 'center', fontSize: 11 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+            <span className="sd-field-label">Nature</span>
+            <select
+              className="sd-field-select"
+              style={{ width: 'auto' }}
+              value={pokemonBuild.nature}
+              onChange={(e) => setPokemonBuild(prev => ({ ...prev, nature: e.target.value }))}
+            >
+              {availableNatures.map((nature) => (
+                <option key={nature.name} value={nature.name}>
+                  {formatName(nature.name)} - {nature.description}
+                </option>
+              ))}
+            </select>
+          </div>
+          {hasGenderDifference && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+              <span className="sd-field-label">Gender</span>
+              <select
+                className="sd-field-select"
+                style={{ width: 'auto' }}
+                value={pokemonBuild.gender || ''}
+                onChange={(e) => setPokemonBuild(prev => ({ ...prev, gender: e.target.value || null }))}
+              >
+                <option value="">—</option>
+                <option value="male">Male</option>
+                <option value="female">Female</option>
+              </select>
             </div>
           )}
         </div>
+
+        {/* EVs / IVs Panel */}
+        <div style={{ borderTop: '1px solid #ddd' }}>
+          <div className="sd-ev-panel">
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+              <span style={{ fontSize: 11, fontWeight: 'bold', color: '#555' }}>EVs ({totalEVs}/510)</span>
+              <div style={{ display: 'flex', gap: 4 }}>
+                {Object.entries(EV_PRESETS).slice(0, 4).map(([name, evs]) => (
+                  <button
+                    key={name}
+                    className="sd-preset-btn"
+                    onClick={() => setPokemonBuild(prev => ({ ...prev, evs }))}
+                    title={name}
+                  >
+                    {name.replace(' Attacker', '').replace(' Wall', '')}
+                  </button>
+                ))}
+              </div>
+            </div>
+            {Object.entries(pokemonBuild.evs).map(([stat, value]) => (
+              <div key={stat} className="sd-ev-row">
+                <label>{statLabelShort(stat)}</label>
+                <input
+                  type="number"
+                  min="0"
+                  max="252"
+                  value={value}
+                  onChange={(e) => handleEVChange(stat as keyof PokemonBuild['evs'], e.target.value)}
+                />
+                <div className="sd-ev-bar-bg">
+                  <div
+                    className={`sd-stat-bar ${statBarClass(stat)}`}
+                    style={{ width: `${Math.min(100, (value / 252) * 100)}%`, height: '100%', borderRadius: 2 }}
+                  />
+                </div>
+              </div>
+            ))}
+            <div className="sd-ev-total">
+              {remainingEVs} remaining
+              {remainingEVs === 0 && <span style={{ color: '#2a8c2a', marginLeft: 6 }}>✓ Fully trained</span>}
+            </div>
+          </div>
+
+          {/* IVs Panel */}
+          <div className="sd-ev-panel" style={{ borderTop: '1px solid #ddd', paddingTop: 6 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+              <span style={{ fontSize: 11, fontWeight: 'bold', color: '#555' }}>IVs</span>
+              <button
+                className="sd-preset-btn"
+                onClick={() => setPokemonBuild(prev => ({
+                  ...prev,
+                  ivs: { hp: 31, attack: 31, defense: 31, 'special-attack': 31, 'special-defense': 31, speed: 31 }
+                }))}
+              >
+                Max All
+              </button>
+            </div>
+            {Object.entries(pokemonBuild.ivs).map(([stat, value]) => (
+              <div key={stat} className="sd-ev-row">
+                <label>{statLabelShort(stat)}</label>
+                <input
+                  type="number"
+                  min="0"
+                  max="31"
+                  value={value}
+                  onChange={(e) => handleIVChange(stat as keyof PokemonBuild['ivs'], e.target.value)}
+                />
+                <div className="sd-ev-bar-bg">
+                  <div
+                    className={`sd-stat-bar ${statBarClass(stat)}`}
+                    style={{ width: `${Math.min(100, (value / 31) * 100)}%`, height: '100%', borderRadius: 2 }}
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
-    </div>
+
+      {/* Moves Table */}
+      <div className="sd-panel">
+        <div className="sd-search-bar">
+          <input
+            className="sd-search-input"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            placeholder="Search moves..."
+          />
+        </div>
+        <div className="sd-section-header">
+          Moves
+        </div>
+        <div className="sd-moves-scroll">
+          <table className="sd-moves-table">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Type</th>
+                <th>Cat</th>
+                <th>Pow</th>
+                <th>Acc</th>
+                <th>PP</th>
+                <th>Effect</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredMoves.map((moveName) => {
+                const move = moveDetails[moveName];
+                const isSelected = selectedMoves.includes(moveName);
+                return (
+                  <tr
+                    key={moveName}
+                    className={isSelected ? 'sd-move-selected' : ''}
+                    onClick={() => handleMoveToggle(moveName)}
+                  >
+                    <td className="sd-move-name">{formatMoveName(moveName)}</td>
+                    <td>
+                      {move && (
+                        <span className="sd-type-badge" style={{ backgroundColor: getTypeColor(move.type.name) }}>
+                          {move.type.name}
+                        </span>
+                      )}
+                    </td>
+                    <td>
+                      {move && (
+                        <span className={`sd-cat-icon ${getCategoryClass(move.damage_class.name)}`}>
+                          {getCategoryLabel(move.damage_class.name)}
+                        </span>
+                      )}
+                    </td>
+                    <td style={{ textAlign: 'right' }}>{move?.power || '—'}</td>
+                    <td style={{ textAlign: 'right' }}>{move?.accuracy ? `${move.accuracy}%` : '—'}</td>
+                    <td style={{ textAlign: 'right' }}>{move?.pp || '—'}</td>
+                    <td className="sd-move-effect">
+                      {move?.flavor_text_entries?.find((e: any) => e.language.name === 'en')?.flavor_text?.replace(/\n/g, ' ') || ''}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </>
   );
 };
 

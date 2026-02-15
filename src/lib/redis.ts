@@ -66,6 +66,8 @@ export const CACHE_KEYS = {
   FILTER_OPTIONS: 'filter:options',
   POKEMON_MOVES: 'pokemon:moves:',
   POKEMON_ABILITIES: 'pokemon:abilities:',
+  MOVE_DETAILS: 'move:details:',
+  COMPETITIVE_ITEMS: 'competitive:items',
 } as const;
 
 /**

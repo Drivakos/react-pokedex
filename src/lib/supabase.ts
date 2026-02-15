@@ -83,7 +83,7 @@ export async function ensureProfile(userId: string, email?: string): Promise<voi
       .select('id')
       .eq('id', userId)
       .single();
-      
+
     if (!existingProfile) {
       await supabase
         .from('profiles')
@@ -150,6 +150,8 @@ export interface TeamMember {
     speed: number;
   };
   level?: number;
+  nickname?: string;
+  is_shiny?: boolean;
   gender?: 'male' | 'female' | 'genderless';
   tera_type?: string;
 }

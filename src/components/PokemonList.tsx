@@ -17,7 +17,7 @@ export const PokemonList: React.FC<PokemonListProps> = ({
 }) => {
   return (
     <>
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 mb-8">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 mb-8 px-4">
         {pokemon.map((pokemonItem, index) => (
           <div
             key={pokemonItem.id}
