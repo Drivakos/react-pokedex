@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useMemo } from 'react';
 import { Pokemon } from '../types/pokemon';
 import { fetchPokemonData } from '../services/api';
 import { sortPokemonByRelevance } from '../utils/pokemon-search';
@@ -70,11 +70,11 @@ export function usePokegridSearch() {
     setSearchQuery(trimmed);
   }, [searchQuery, setSearchQuery]);
 
-  return {
+  return useMemo(() => ({
     searchQuery,
     setSearchQuery: setTrimmedSearchQuery,
     searchResults,
     isSearching,
     resetSearch
-  };
+  }), [searchQuery, setTrimmedSearchQuery, searchResults, isSearching, resetSearch]);
 }

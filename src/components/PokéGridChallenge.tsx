@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { usePokemon } from '../hooks/usePokemon';
 import { usePokegridGame } from '../hooks/usePokegridGame';
 import { usePokegridSearch } from '../hooks/usePokegridSearch';
@@ -8,17 +8,19 @@ import {
   PokemonSearchModal,
   ShareResultsModal,
   GameSidebar,
-  MobileMenu,
-  WeeklyStats
+  MobileMenu
 } from './pokegrid';
 import { FriendsModal } from './friends';
 import { GAME_CONSTANTS } from './pokegrid/constants';
 
+// Sub-components
+import { GridHeader } from './pokegrid-page/GridHeader';
+import { DailyGridSEO } from './pokegrid-page/DailyGridSEO';
 
 const PokéGridChallenge: React.FC = () => {
   const { displayedPokemon, loading } = usePokemon();
 
-  // UI state
+  // State
   const [currentGridDate, setCurrentGridDate] = useState<Date>(() => {
     const today = new Date();
     return new Date(Date.UTC(today.getFullYear(), today.getMonth(), today.getDate()));
@@ -27,49 +29,41 @@ const PokéGridChallenge: React.FC = () => {
   const [showFriendsModal, setShowFriendsModal] = useState(false);
   const [showMobileMenu, setShowMobileMenu] = useState(false);
 
-  // Custom hooks for game logic
+  // Hooks
   const gameState = usePokegridGame(displayedPokemon, 'daily');
   const searchState = usePokegridSearch();
   const { currentGame, selectedCell, isLoading } = gameState;
 
-  // Reset search when modal opens (always call this hook)
+  // Effects
   useEffect(() => {
     if (selectedCell && currentGame) {
       searchState.resetSearch();
     }
   }, [selectedCell, currentGame, searchState.resetSearch]);
 
-  // Initialize game when Pokemon data is ready
   useEffect(() => {
     if (!loading && displayedPokemon.length > 0) {
       gameState.initializeGame(currentGridDate, 'daily');
     }
   }, [loading, displayedPokemon.length, currentGridDate, gameState.initializeGame]);
 
-  // Handle grid date changes (only allow today and last 6 days)
+  // Handlers
   const handleGridDateChange = useCallback((date: Date) => {
-    // Create normalized "today" in UTC to match input format from WeeklyStats
-    // Get current local date components
     const now = new Date();
     const todayNormalized = new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()));
-    
-    // Calculate 6 days ago from the normalized today
     const sixDaysAgoNormalized = new Date(todayNormalized);
     sixDaysAgoNormalized.setUTCDate(todayNormalized.getUTCDate() - 6);
 
-    // Simple timestamp comparison since both are normalized to UTC midnight
     if (date.getTime() >= sixDaysAgoNormalized.getTime() && date.getTime() <= todayNormalized.getTime()) {
-      // Normalize the date to avoid time component issues - use UTC to prevent timezone shifts
       const normalizedDate = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
-
-      // Always update - let React handle optimization
       setCurrentGridDate(normalizedDate);
       gameState.initializeGame(normalizedDate, 'daily');
     }
   }, [gameState]);
 
-  // Check if selected date is today
-  const isToday = currentGridDate.toISOString().split('T')[0] === new Date().toISOString().split('T')[0];
+  const isToday = useMemo(() => 
+    currentGridDate.toISOString().split('T')[0] === new Date().toISOString().split('T')[0],
+  [currentGridDate]);
 
   if (loading || !currentGame) {
     return (
@@ -82,7 +76,6 @@ const PokéGridChallenge: React.FC = () => {
     );
   }
 
-  // After the loading check, currentGame is guaranteed to be non-null
   const game = currentGame;
 
   return (
@@ -95,38 +88,17 @@ const PokéGridChallenge: React.FC = () => {
           </div>
         </div>
       )}
+      <DailyGridSEO />
+
       <div className="max-w-7xl mx-auto px-4">
-        {/* Header */}
-        <div className="relative mb-4 md:mb-6">
-          {/* Mobile Menu Button */}
-          <div className="lg:hidden absolute left-0 top-0">
-            <button
-              onClick={() => setShowMobileMenu(true)}
-              className="p-2 bg-red-500 hover:bg-red-600 text-white rounded-lg shadow-md hover:shadow-lg transition-all duration-200 border border-red-400"
-            >
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-              </svg>
-            </button>
-          </div>
+        <GridHeader 
+          onMenuClick={() => setShowMobileMenu(true)} 
+          currentGridDate={currentGridDate} 
+          isToday={isToday} 
+        />
 
-          <div className="text-center">
-            <h1 className="text-3xl font-bold text-gray-900 mb-1 hidden">
-              Pokemon Grid Challenge
-            </h1>
-            <p className="text-gray-600">
-              {isToday
-                ? `Today's Grid`
-                : `${currentGridDate.getDate().toString().padStart(2, '0')}/${(currentGridDate.getMonth() + 1).toString().padStart(2, '0')}`}
-            </p>
-          </div>
-        </div>
-
-        {/* Main Layout: Grid + Sidebar */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Left/Center: Game Area */}
           <div className="lg:col-span-2 space-y-6">
-            {/* Game Stats */}
             <div className="flex justify-center">
               <GameStats
                 score={game.score}
@@ -137,7 +109,6 @@ const PokéGridChallenge: React.FC = () => {
               />
             </div>
 
-            {/* Game Grid */}
             <GameGrid
               cells={game.cells}
               rowConstraints={game.constraints.rows}
@@ -148,7 +119,6 @@ const PokéGridChallenge: React.FC = () => {
             />
           </div>
 
-          {/* Right: Game Sidebar */}
           <div className="hidden lg:block lg:col-span-1">
             <div className="sticky top-4">
               <GameSidebar
@@ -160,8 +130,6 @@ const PokéGridChallenge: React.FC = () => {
           </div>
         </div>
 
-
-        {/* Pokemon Search Modal */}
         {selectedCell && (
           <PokemonSearchModal
             isOpen={true}
@@ -187,7 +155,6 @@ const PokéGridChallenge: React.FC = () => {
           />
         )}
 
-        {/* Share Results Modal */}
         <ShareResultsModal
           isOpen={showShareModal}
           onClose={() => setShowShareModal(false)}
@@ -205,13 +172,11 @@ const PokéGridChallenge: React.FC = () => {
           gameMode="daily"
         />
 
-        {/* Friends Modal */}
         <FriendsModal
           isOpen={showFriendsModal}
           onClose={() => setShowFriendsModal(false)}
         />
 
-        {/* Mobile Menu */}
         <MobileMenu
           isOpen={showMobileMenu}
           onClose={() => setShowMobileMenu(false)}
@@ -219,7 +184,6 @@ const PokéGridChallenge: React.FC = () => {
           onDateSelect={handleGridDateChange}
           onFriendsClick={() => setShowFriendsModal(true)}
         />
-
       </div>
     </div>
   );

@@ -267,7 +267,7 @@ export function usePokegridGame(displayedPokemon: Pokemon[], gameMode: 'daily') 
     }
   }, [lastAction, currentGame, sessionUndos, user, bonusRetries]);
 
-  return {
+  return useMemo(() => ({
     // State
     currentGame,
     selectedCell,
@@ -289,7 +289,21 @@ export function usePokegridGame(displayedPokemon: Pokemon[], gameMode: 'daily') 
     canUndo: !!lastAction && sessionUndos < GAME_CONSTANTS.MAX_UNDO_PER_SESSION,
     guessesLeft: GAME_CONSTANTS.MAX_TOTAL_GUESSES - (currentGame?.totalGuesses || 0),
     isGameCompleted: currentGame ? isGameCompleted(currentGame.cells) : false
-  };
+  }), [
+    currentGame,
+    selectedCell,
+    bonusRetries,
+    sessionUndos,
+    hasRecentMistake,
+    mistakePokemon,
+    popularityData,
+    isLoading,
+    initializeGame,
+    handlePokemonSelect,
+    handleCellClick,
+    handleUndo,
+    lastAction
+  ]);
 }
 
 function restoreGameFromProgress(

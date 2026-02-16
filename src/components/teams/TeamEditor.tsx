@@ -1,17 +1,17 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { TeamMember } from '../../lib/supabase';
-import {
-  Plus,
-  Search,
-  Upload
-} from 'lucide-react';
 import toast from 'react-hot-toast';
 import MovesetEditor from './MovesetEditor';
-import PokemonImage from '../PokemonImage';
 import { fetchPokemonById, fetchPokemonData } from '../../services/api';
 import './ShowdownStyles.css';
+
+// Sub-components
+import { TeamEditorHeader } from './editor/TeamEditorHeader';
+import { TeamMemberTabs } from './editor/TeamMemberTabs';
+import { TeamMemberCard } from './editor/TeamMemberCard';
+import { PokemonSearchModal } from './editor/PokemonSearchModal';
 
 interface Pokemon {
   id: number;
@@ -43,7 +43,6 @@ interface Pokemon {
   }[];
 }
 
-
 const TeamEditor: React.FC = () => {
   const { teamId } = useParams<{ teamId: string }>();
   const navigate = useNavigate();
@@ -60,14 +59,17 @@ const TeamEditor: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<Pokemon[]>([]);
 
+  const formatName = useCallback((name: string) => {
+    return name.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
+  }, []);
+
   // Load team and members
   useEffect(() => {
     const loadTeamData = async () => {
       if (!teamId || !user) return;
 
       try {
-        // Find team by ID
-        const foundTeam = teams.find(t => t.id === parseInt(teamId));
+        const foundTeam = teams.find((t: any) => t.id === parseInt(teamId));
         if (!foundTeam) {
           toast.error('Team not found');
           navigate('/teams');
@@ -75,18 +77,15 @@ const TeamEditor: React.FC = () => {
         }
         setTeam(foundTeam);
 
-        // Load team members
         const members = await getTeamMembers(parseInt(teamId));
         setTeamMembers(members || []);
 
-        // Load Pokemon data for each member
         const pokemonIds: number[] = members?.map((m: any) => m.pokemon_id) || [];
         const uniqueIds: number[] = [...new Set(pokemonIds)];
         
         for (const pokemonId of uniqueIds) {
           try {
             const pokemon = await fetchPokemonById(pokemonId);
-            
             const transformedPokemon: Pokemon = {
               id: pokemon.id,
               name: pokemon.name,
@@ -98,9 +97,7 @@ const TeamEditor: React.FC = () => {
                   }
                 }
               },
-              types: pokemon.types.map(t => ({
-                type: { name: t }
-              })),
+              types: pokemon.types.map(t => ({ type: { name: t } })),
               stats: [
                 { base_stat: pokemon.stats.hp, stat: { name: 'hp' } },
                 { base_stat: pokemon.stats.attack, stat: { name: 'attack' } },
@@ -109,9 +106,8 @@ const TeamEditor: React.FC = () => {
                 { base_stat: pokemon.stats['special-defense'], stat: { name: 'special-defense' } },
                 { base_stat: pokemon.stats.speed, stat: { name: 'speed' } },
               ],
-              abilities: [] // Abilities will be loaded in MovesetEditor if needed
+              abilities: []
             };
-            
             setPokemonData(prev => ({ ...prev, [pokemonId]: transformedPokemon }));
           } catch (error) {
             console.error(`Failed to load Pokemon ${pokemonId}:`, error);
@@ -129,67 +125,50 @@ const TeamEditor: React.FC = () => {
   }, [teamId, user, teams, getTeamMembers, navigate]);
 
   // Search Pokemon
-  const searchPokemon = async (query: string) => {
-    if (query.length < 2) {
-      setSearchResults([]);
-      return;
-    }
-
-    try {
-      const results = await fetchPokemonData(
-        10,
-        0,
-        query,
-        {
-          types: [],
-          moves: [],
-          generation: '',
-          weight: { min: 0, max: 1000 },
-          height: { min: 0, max: 100 },
-          hasEvolutions: null
-        }
-      );
-
-      const transformedResults: Pokemon[] = results.map(p => ({
-        id: p.id,
-        name: p.name,
-        sprites: {
-          front_default: p.sprites.front_default,
-          other: {
-            'official-artwork': {
-              front_default: p.sprites.official_artwork
-            }
-          }
-        },
-        types: p.types.map(t => ({
-          type: { name: t }
-        })),
-        stats: [
-          { base_stat: p.stats.hp, stat: { name: 'hp' } },
-          { base_stat: p.stats.attack, stat: { name: 'attack' } },
-          { base_stat: p.stats.defense, stat: { name: 'defense' } },
-          { base_stat: p.stats['special-attack'], stat: { name: 'special-attack' } },
-          { base_stat: p.stats['special-defense'], stat: { name: 'special-defense' } },
-          { base_stat: p.stats.speed, stat: { name: 'speed' } },
-        ],
-        abilities: []
-      }));
-
-      setSearchResults(transformedResults);
-    } catch (error) {
-      console.error('Failed to search Pokemon:', error);
-    }
-  };
-
   useEffect(() => {
-    const timeoutId = setTimeout(() => searchPokemon(searchQuery), 300);
+    const searchPokemon = async () => {
+      if (searchQuery.length < 2) {
+        setSearchResults([]);
+        return;
+      }
+
+      try {
+        const results = await fetchPokemonData(10, 0, searchQuery, {
+          types: [], moves: [], generation: '', weight: { min: 0, max: 1000 }, height: { min: 0, max: 100 }, hasEvolutions: null
+        });
+
+        const transformedResults: Pokemon[] = results.map(p => ({
+          id: p.id,
+          name: p.name,
+          sprites: {
+            front_default: p.sprites.front_default,
+            other: { 'official-artwork': { front_default: p.sprites.official_artwork } }
+          },
+          types: p.types.map(t => ({ type: { name: t } })),
+          stats: [
+            { base_stat: p.stats.hp, stat: { name: 'hp' } },
+            { base_stat: p.stats.attack, stat: { name: 'attack' } },
+            { base_stat: p.stats.defense, stat: { name: 'defense' } },
+            { base_stat: p.stats['special-attack'], stat: { name: 'special-attack' } },
+            { base_stat: p.stats['special-defense'], stat: { name: 'special-defense' } },
+            { base_stat: p.stats.speed, stat: { name: 'speed' } },
+          ],
+          abilities: []
+        }));
+
+        setSearchResults(transformedResults);
+      } catch (error) {
+        console.error('Failed to search Pokemon:', error);
+      }
+    };
+
+    const timeoutId = setTimeout(searchPokemon, 300);
     return () => clearTimeout(timeoutId);
   }, [searchQuery]);
 
   const handleAddPokemon = async (pokemon: any) => {
     if (!teamId) return;
 
-    // Find next available position
     const positions = teamMembers.map(m => m.position).sort((a, b) => a - b);
     let nextPosition = 1;
     for (const pos of positions) {
@@ -203,13 +182,11 @@ const TeamEditor: React.FC = () => {
     }
 
     try {
-      await addPokemonToTeam(parseInt(teamId), pokemon.id || pokemon.url.split('/').slice(-2)[0], nextPosition);
-      toast.success(`${pokemon.name} added to team!`);
+      await addPokemonToTeam(parseInt(teamId), pokemon.id, nextPosition);
+      toast.success(`${formatName(pokemon.name)} added to team!`);
 
-      // Refresh team data
       const members = await getTeamMembers(parseInt(teamId));
       setTeamMembers(members || []);
-
       setShowPokemonSearch(false);
       setSearchQuery('');
     } catch (error) {
@@ -219,11 +196,8 @@ const TeamEditor: React.FC = () => {
 
   const handleRemovePokemon = async (position: number) => {
     if (!teamId) return;
-
     try {
       await removePokemonFromTeam(parseInt(teamId), position);
-
-      // Refresh team data
       const members = await getTeamMembers(parseInt(teamId));
       setTeamMembers(members || []);
     } catch (error) {
@@ -240,28 +214,13 @@ const TeamEditor: React.FC = () => {
     if (!teamId || !selectedMember) return;
 
     try {
-      // Map the PokemonBuild data to TeamMember format for database
       const teamMemberData = {
         moves: buildData.moves || [],
         item: buildData.heldItem || '',
         ability: buildData.ability || '',
         nature: buildData.nature || 'hardy',
-        evs: buildData.evs || {
-          hp: 0,
-          attack: 0,
-          defense: 0,
-          'special-attack': 0,
-          'special-defense': 0,
-          speed: 0
-        },
-        ivs: buildData.ivs || {
-          hp: 31,
-          attack: 31,
-          defense: 31,
-          'special-attack': 31,
-          'special-defense': 31,
-          speed: 31
-        },
+        evs: buildData.evs || { hp: 0, attack: 0, defense: 0, 'special-attack': 0, 'special-defense': 0, speed: 0 },
+        ivs: buildData.ivs || { hp: 31, attack: 31, defense: 31, 'special-attack': 31, 'special-defense': 31, speed: 31 },
         level: selectedMember.level || 50,
         gender: buildData.gender || selectedMember.gender || 'male',
         tera_type: buildData.teraType || selectedMember.tera_type || 'normal',
@@ -270,26 +229,14 @@ const TeamEditor: React.FC = () => {
       };
 
       await updateTeamMemberBuild(parseInt(teamId), selectedMember.position, teamMemberData);
-
-      // Refresh team data
       const members = await getTeamMembers(parseInt(teamId));
       setTeamMembers(members || []);
-
       setShowMovesetEditor(false);
       setSelectedMember(null);
     } catch (error) {
       console.error('Failed to save build:', error);
       toast.error('Failed to save build');
     }
-  };
-
-  const handleCloseMovesetEditor = () => {
-    setShowMovesetEditor(false);
-    setSelectedMember(null);
-  };
-
-  const formatName = (name: string) => {
-    return name.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
   };
 
   const exportTeamToShowdown = async () => {
@@ -300,7 +247,6 @@ const TeamEditor: React.FC = () => {
 
     try {
       const pokemonExports: string[] = [];
-
       for (const member of teamMembers) {
         const pokemon = pokemonData[member.pokemon_id];
         if (!pokemon) continue;
@@ -310,47 +256,26 @@ const TeamEditor: React.FC = () => {
         const ability = member.ability ? formatName(member.ability) : '';
         const nature = member.nature ? formatName(member.nature) : 'Hardy';
 
-        let entry = '';
+        let entry = member.nickname 
+          ? `${member.nickname} (${pokemonName})${heldItem ? ` @ ${heldItem}` : ''}\n`
+          : `${pokemonName}${heldItem ? ` @ ${heldItem}` : ''}\n`;
 
-        // Line 1: Name (with nickname) @ Item
-        if (member.nickname) {
-          entry += heldItem
-            ? `${member.nickname} (${pokemonName}) @ ${heldItem}\n`
-            : `${member.nickname} (${pokemonName})\n`;
-        } else {
-          entry += heldItem
-            ? `${pokemonName} @ ${heldItem}\n`
-            : `${pokemonName}\n`;
-        }
-
-        // Ability
-        if (ability) {
-          entry += `Ability: ${ability}\n`;
-        }
-
-        // Tera Type
-        if (member.tera_type) {
-          entry += `Tera Type: ${formatName(member.tera_type)}\n`;
-        }
-
-        // EVs (only non-zero)
+        if (ability) entry += `Ability: ${ability}\n`;
+        if (member.tera_type) entry += `Tera Type: ${formatName(member.tera_type)}\n`;
+        
+        const evStrings: string[] = [];
         if (member.evs) {
-          const evStrings: string[] = [];
           if (member.evs.hp > 0) evStrings.push(`${member.evs.hp} HP`);
           if (member.evs.attack > 0) evStrings.push(`${member.evs.attack} Atk`);
           if (member.evs.defense > 0) evStrings.push(`${member.evs.defense} Def`);
           if (member.evs['special-attack'] > 0) evStrings.push(`${member.evs['special-attack']} SpA`);
           if (member.evs['special-defense'] > 0) evStrings.push(`${member.evs['special-defense']} SpD`);
           if (member.evs.speed > 0) evStrings.push(`${member.evs.speed} Spe`);
-          if (evStrings.length > 0) {
-            entry += `EVs: ${evStrings.join(' / ')}\n`;
-          }
+          if (evStrings.length > 0) entry += `EVs: ${evStrings.join(' / ')}\n`;
         }
 
-        // Nature
         entry += `${nature} Nature\n`;
 
-        // IVs (only non-perfect)
         if (member.ivs) {
           const ivStrings: string[] = [];
           if (member.ivs.hp < 31) ivStrings.push(`${member.ivs.hp} HP`);
@@ -359,132 +284,70 @@ const TeamEditor: React.FC = () => {
           if (member.ivs['special-attack'] < 31) ivStrings.push(`${member.ivs['special-attack']} SpA`);
           if (member.ivs['special-defense'] < 31) ivStrings.push(`${member.ivs['special-defense']} SpD`);
           if (member.ivs.speed < 31) ivStrings.push(`${member.ivs.speed} Spe`);
-          if (ivStrings.length > 0) {
-            entry += `IVs: ${ivStrings.join(' / ')}\n`;
-          }
+          if (ivStrings.length > 0) entry += `IVs: ${ivStrings.join(' / ')}\n`;
         }
 
-        // Moves
-        if (member.moves && member.moves.length > 0) {
-          member.moves.forEach((move: string) => {
-            entry += `- ${formatName(move)}\n`;
-          });
+        if (member.moves?.length) {
+          member.moves.forEach((move: string) => entry += `- ${formatName(move)}\n`);
         }
-
         pokemonExports.push(entry.trim());
       }
 
-      const fullExport = pokemonExports.join('\n\n');
-      await navigator.clipboard.writeText(fullExport);
-      toast.success(`Team "${team.name}" exported to clipboard!`);
+      await navigator.clipboard.writeText(pokemonExports.join('\n\n'));
+      toast.success(`Team "${team.name}" exported!`);
     } catch (error) {
-      console.error('Error exporting team:', error);
       toast.error('Failed to export team');
     }
   };
 
-  const getTypeColor = (typeName: string) => {
-    const typeColors: Record<string, string> = {
-      normal: '#A8A878', fire: '#F08030', water: '#6890F0', electric: '#F8D030',
-      grass: '#78C850', ice: '#98D8D8', fighting: '#C03028', poison: '#A040A0',
-      ground: '#E0C068', flying: '#A890F0', psychic: '#F85888', bug: '#A8B820',
-      rock: '#B8A038', ghost: '#705898', dragon: '#7038F8', dark: '#705848',
-      steel: '#B8B8D0', fairy: '#EE99AC',
-    };
-    return typeColors[typeName] || '#68A090';
+  const handleCopySingle = (member: TeamMember, pokemon: any) => {
+    const pokemonName = formatName(pokemon.name);
+    const item = member.item ? formatName(member.item) : '';
+    let text = item ? `${pokemonName} @ ${item}\n` : `${pokemonName}\n`;
+    if (member.ability) text += `Ability: ${formatName(member.ability)}\n`;
+    if (member.nature) text += `${formatName(member.nature)} Nature\n`;
+    if (member.moves?.length) member.moves.forEach((m: string) => text += `- ${formatName(m)}\n`);
+    navigator.clipboard.writeText(text.trim());
+    toast.success('Copied to clipboard!');
   };
 
-  const statBarClass = (stat: string) => {
-    const map: Record<string, string> = {
-      hp: 'sd-stat-bar--hp', attack: 'sd-stat-bar--atk', defense: 'sd-stat-bar--def',
-      'special-attack': 'sd-stat-bar--spa', 'special-defense': 'sd-stat-bar--spd', speed: 'sd-stat-bar--spe',
-    };
-    return map[stat] || '';
-  };
-
-  const statLabel = (stat: string) => {
-    const map: Record<string, string> = {
-      hp: 'HP', attack: 'Atk', defense: 'Def',
-      'special-attack': 'SpA', 'special-defense': 'SpD', speed: 'Spe',
-    };
-    return map[stat] || stat;
-  };
-
-  if (loading) {
-    return (
-      <div className="sd-container">
-        <div className="sd-panel" style={{ padding: 40, textAlign: 'center' }}>
-          <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600 mx-auto"></div>
-          <p style={{ marginTop: 12, color: '#666' }}>Loading team editor...</p>
-        </div>
+  if (loading) return (
+    <div className="sd-container">
+      <div className="sd-panel" style={{ padding: 40, textAlign: 'center' }}>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+        <p className="mt-4 text-gray-500 font-bold uppercase tracking-tight">Loading Editor...</p>
       </div>
-    );
-  }
+    </div>
+  );
 
-  if (!user) {
-    return (
-      <div className="sd-container">
-        <div className="sd-panel" style={{ padding: 40, textAlign: 'center' }}>
-          <p style={{ color: '#666' }}>Please sign in to edit teams.</p>
-        </div>
+  if (!user || !team) return (
+    <div className="sd-container">
+      <div className="sd-panel" style={{ padding: 40, textAlign: 'center' }}>
+        <p className="text-gray-500 font-bold uppercase tracking-tight">{!user ? 'Please sign in' : 'Team not found'}</p>
+        <button className="sd-header-btn mt-4" onClick={() => navigate('/teams')}>Back to Teams</button>
       </div>
-    );
-  }
-
-  if (!team) {
-    return (
-      <div className="sd-container">
-        <div className="sd-panel" style={{ padding: 40, textAlign: 'center' }}>
-          <p style={{ marginBottom: 12, color: '#666' }}>Team not found.</p>
-          <button className="sd-header-btn" onClick={() => navigate('/teams')}>Back to Teams</button>
-        </div>
-      </div>
-    );
-  }
+    </div>
+  );
 
   return (
     <div className="sd-container">
-      {/* Header Bar */}
-      <div className="sd-panel">
-        <div className="sd-header">
-          <button className="sd-header-btn" onClick={() => navigate('/teams')}>
-            ‹ List
-          </button>
-          <input
-            className="sd-team-name-input"
-            value={team.name}
-            readOnly
-          />
-          <button className="sd-header-btn" onClick={exportTeamToShowdown} disabled={teamMembers.length === 0}>
-            <Upload size={12} style={{ marginRight: 3 }} />
-            Export
-          </button>
-        </div>
+      <TeamEditorHeader 
+        teamName={team.name} 
+        onBack={() => navigate('/teams')} 
+        onExport={exportTeamToShowdown} 
+        exportDisabled={teamMembers.length === 0}
+      />
 
-        {/* Team Member Tabs */}
-        <div className="sd-team-tabs">
-          {teamMembers.map((member) => {
-            const pokemon = pokemonData[member.pokemon_id];
-            return (
-              <div
-                key={member.position}
-                className={`sd-team-tab ${selectedMember?.position === member.position && showMovesetEditor ? 'sd-team-tab--active' : ''}`}
-                onClick={() => handleEditPokemon(member)}
-              >
-                <PokemonImage pokemonId={member.pokemon_id} alt={pokemon?.name || ''} className="w-10 h-10" />
-                <span>{member.nickname || formatName(pokemon?.name || 'Unknown')}</span>
-              </div>
-            );
-          })}
-          {teamMembers.length < 6 && (
-            <button className="sd-team-tab-add" onClick={() => setShowPokemonSearch(true)} title="Add Pokémon">
-              +
-            </button>
-          )}
-        </div>
-      </div>
+      <TeamMemberTabs 
+        teamMembers={teamMembers}
+        pokemonData={pokemonData}
+        selectedMember={selectedMember}
+        showMovesetEditor={showMovesetEditor}
+        onEditMember={handleEditPokemon}
+        onShowSearch={() => setShowPokemonSearch(true)}
+        formatName={formatName}
+      />
 
-      {/* Moveset Editor (inline, shown when a tab is active) */}
       {showMovesetEditor && selectedMember && (
         <MovesetEditor
           pokemon={{
@@ -495,7 +358,7 @@ const TeamEditor: React.FC = () => {
             moves: selectedMember.moves || []
           }}
           teamId={parseInt(teamId!)}
-          onBack={handleCloseMovesetEditor}
+          onBack={() => { setShowMovesetEditor(false); setSelectedMember(null); }}
           initialBuild={{
             moves: selectedMember.moves || [],
             nature: selectedMember.nature || 'hardy',
@@ -505,223 +368,45 @@ const TeamEditor: React.FC = () => {
             nickname: selectedMember.nickname || '',
             isShiny: selectedMember.is_shiny || false,
             teraType: selectedMember.tera_type || '',
-            ivs: selectedMember.ivs || {
-              hp: 31, attack: 31, defense: 31,
-              'special-attack': 31, 'special-defense': 31, speed: 31
-            },
-            evs: selectedMember.evs || {
-              hp: 0, attack: 0, defense: 0,
-              'special-attack': 0, 'special-defense': 0, speed: 0
-            }
+            ivs: selectedMember.ivs || { hp: 31, attack: 31, defense: 31, 'special-attack': 31, 'special-defense': 31, speed: 31 },
+            evs: selectedMember.evs || { hp: 0, attack: 0, defense: 0, 'special-attack': 0, 'special-defense': 0, speed: 0 }
           }}
           onSave={handleSaveBuild}
         />
       )}
 
-      {/* Build Cards (one per Pokémon, shown when NOT editing) */}
       {!showMovesetEditor && (
-        <>
-          {teamMembers.map((member) => {
-            const pokemon = pokemonData[member.pokemon_id];
-            if (!pokemon) return null;
-
-            const evs = member.evs || { hp: 0, attack: 0, defense: 0, 'special-attack': 0, 'special-defense': 0, speed: 0 };
-            const ivs = member.ivs || { hp: 31, attack: 31, defense: 31, 'special-attack': 31, 'special-defense': 31, speed: 31 };
-
-            return (
-              <div key={member.position} className="sd-panel">
-                {/* Action buttons */}
-                <div className="sd-actions">
-                  <button className="sd-action-btn" onClick={() => {
-                    /* copy single pokemon */
-                    const pokemonName = formatName(pokemon.name);
-                    const item = member.item ? formatName(member.item) : '';
-                    let text = item ? `${pokemonName} @ ${item}\n` : `${pokemonName}\n`;
-                    if (member.ability) text += `Ability: ${formatName(member.ability)}\n`;
-                    if (member.nature) text += `${formatName(member.nature)} Nature\n`;
-                    if (member.moves?.length) member.moves.forEach((m: string) => text += `- ${formatName(m)}\n`);
-                    navigator.clipboard.writeText(text.trim());
-                    toast.success('Copied!');
-                  }}>
-                    ⊕ Copy
-                  </button>
-                  <button className="sd-action-btn" onClick={() => handleEditPokemon(member)}>✎ Edit</button>
-                  <button className="sd-action-btn sd-action-btn--danger" onClick={() => handleRemovePokemon(member.position)}>🗑 Delete</button>
-                </div>
-
-                {/* Build card body */}
-                <div className="sd-build-card">
-                  {/* Sprite */}
-                  <div className="sd-build-sprite">
-                    <PokemonImage pokemonId={pokemon.id} alt={pokemon.name} className="w-20 h-20" />
-                  </div>
-
-                  {/* Top row: Nickname/Pokemon/Item | Details | Moves */}
-                  <div className="sd-build-top">
-                    <div>
-                      <div className="sd-field-group">
-                        <span className="sd-field-label">Nickname</span>
-                        <span className="sd-field-input" style={{ background: '#f8f8f8' }}>{member.nickname || '—'}</span>
-                      </div>
-                      <div className="sd-details-row" style={{ marginTop: 4 }}>
-                        <div><label>Level</label> <strong>{member.level || 100}</strong></div>
-                        <div><label>Gender</label> <strong>{member.gender === 'male' ? '♂' : member.gender === 'female' ? '♀' : '—'}</strong></div>
-                        <div><label>Shiny</label> <strong>{member.is_shiny ? 'Yes' : 'No'}</strong></div>
-                        <div><label>Tera</label> <strong>{member.tera_type ? formatName(member.tera_type) : '—'}</strong></div>
-                      </div>
-                      {/* Type badges */}
-                      <div style={{ marginTop: 4, display: 'flex', gap: 3 }}>
-                        {pokemon.types.map((type: any, i: number) => (
-                          <span key={i} className="sd-type-badge" style={{ backgroundColor: getTypeColor(type.type.name) }}>
-                            {type.type.name}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-
-                    <div>
-                      <div className="sd-field-group">
-                        <span className="sd-field-label">Moves</span>
-                        <div className="sd-moves-list">
-                          {[0, 1, 2, 3].map((i) => (
-                            <div key={i} className="sd-move-slot">
-                              <span className="sd-move-slot-input" style={{ background: '#f8f8f8' }}>
-                                {member.moves?.[i] ? formatName(member.moves[i]) : ''}
-                              </span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-
-                    <div>
-                      <div className="sd-stats-grid sd-stats-grid--with-ivs">
-                        <span></span>
-                        <span></span>
-                        <span className="sd-ev-header">EV</span>
-                        <span className="sd-iv-header">IV</span>
-                        {Object.entries(evs).map(([stat, value]) => (
-                          <React.Fragment key={stat}>
-                            <span className="sd-stat-label">{statLabel(stat)}</span>
-                            <div className="sd-stat-bar-container">
-                              <div
-                                className={`sd-stat-bar ${statBarClass(stat)}`}
-                                style={{ width: `${Math.min(100, ((value as number) / 252) * 100)}%` }}
-                              />
-                            </div>
-                            <span className="sd-stat-value">{value as number || ''}</span>
-                            <span className="sd-iv-value" style={{ color: (ivs as any)[stat] < 31 ? '#e53e3e' : '#888' }}>{(ivs as any)[stat]}</span>
-                          </React.Fragment>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Bottom row: Pokemon name, Item, Ability */}
-                  <div className="sd-build-bottom">
-                    <div className="sd-field-group">
-                      <span className="sd-field-label">Pokémon</span>
-                      <span className="sd-field-input" style={{ background: '#f8f8f8', fontWeight: 'bold' }}>{formatName(pokemon.name)}</span>
-                    </div>
-                    <div className="sd-field-group">
-                      <span className="sd-field-label">Item</span>
-                      <span className="sd-field-input" style={{ background: '#f8f8f8' }}>{member.item ? formatName(member.item) : '—'}</span>
-                    </div>
-                    <div className="sd-field-group">
-                      <span className="sd-field-label">Ability</span>
-                      <span className="sd-field-input" style={{ background: '#f8f8f8' }}>{member.ability ? formatName(member.ability) : '—'}</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-
-          {/* Add Pokemon button */}
+        <div className="space-y-4 mt-4">
+          {teamMembers.map((member) => (
+            <TeamMemberCard 
+              key={member.position}
+              member={member}
+              pokemon={pokemonData[member.pokemon_id]}
+              onEdit={handleEditPokemon}
+              onRemove={handleRemovePokemon}
+              onCopy={handleCopySingle}
+              formatName={formatName}
+            />
+          ))}
           {teamMembers.length < 6 && (
             <div className="sd-panel">
               <div className="sd-add-card" onClick={() => setShowPokemonSearch(true)}>
-                <Plus size={16} />
-                <span>Add Pokémon</span>
+                <span>+ Add Pokémon</span>
               </div>
             </div>
           )}
-        </>
+        </div>
       )}
 
-      {/* Pokemon Search Modal */}
       {showPokemonSearch && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="sd-panel" style={{ maxWidth: 600, width: '100%', maxHeight: '80vh', display: 'flex', flexDirection: 'column' }}>
-            <div className="sd-header">
-              <span style={{ fontWeight: 'bold', flex: 1 }}>Add Pokémon to Team</span>
-              <button className="sd-header-btn" onClick={() => { setShowPokemonSearch(false); setSearchQuery(''); setSearchResults([]); }}>
-                ✕
-              </button>
-            </div>
-            <div className="sd-search-bar">
-              <div style={{ position: 'relative' }}>
-                <Search size={14} style={{ position: 'absolute', left: 8, top: 6, color: '#999' }} />
-                <input
-                  className="sd-search-input"
-                  style={{ paddingLeft: 28 }}
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Pokémon"
-                  autoFocus
-                />
-              </div>
-            </div>
-            <div style={{ flex: 1, overflow: 'auto' }}>
-              {searchResults.length > 0 ? (
-                <table className="sd-search-table">
-                  <thead>
-                    <tr>
-                      <th></th>
-                      <th>Name</th>
-                      <th>Types</th>
-                      <th>HP</th>
-                      <th>Atk</th>
-                      <th>Def</th>
-                      <th>SpA</th>
-                      <th>SpD</th>
-                      <th>Spe</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {searchResults.map((pokemon) => (
-                      <tr key={pokemon.id} onClick={() => handleAddPokemon(pokemon)}>
-                        <td style={{ width: 32 }}>
-                          <PokemonImage pokemonId={pokemon.id} alt={pokemon.name} className="w-6 h-6" />
-                        </td>
-                        <td className="sd-pokemon-name">{formatName(pokemon.name)}</td>
-                        <td>
-                          <div style={{ display: 'flex', gap: 2 }}>
-                            {pokemon.types?.map((t: any, i: number) => (
-                              <span key={i} className="sd-type-badge" style={{ backgroundColor: getTypeColor(t.type?.name || t) }}>
-                                {t.type?.name || t}
-                              </span>
-                            ))}
-                          </div>
-                        </td>
-                        <td className="sd-stat-cell">{pokemon.stats?.find((s: any) => s.stat?.name === 'hp')?.base_stat || '—'}</td>
-                        <td className="sd-stat-cell">{pokemon.stats?.find((s: any) => s.stat?.name === 'attack')?.base_stat || '—'}</td>
-                        <td className="sd-stat-cell">{pokemon.stats?.find((s: any) => s.stat?.name === 'defense')?.base_stat || '—'}</td>
-                        <td className="sd-stat-cell">{pokemon.stats?.find((s: any) => s.stat?.name === 'special-attack')?.base_stat || '—'}</td>
-                        <td className="sd-stat-cell">{pokemon.stats?.find((s: any) => s.stat?.name === 'special-defense')?.base_stat || '—'}</td>
-                        <td className="sd-stat-cell">{pokemon.stats?.find((s: any) => s.stat?.name === 'speed')?.base_stat || '—'}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              ) : searchQuery.length >= 2 ? (
-                <p style={{ textAlign: 'center', padding: 20, color: '#888' }}>No Pokémon found</p>
-              ) : (
-                <p style={{ textAlign: 'center', padding: 20, color: '#888' }}>Start typing to search...</p>
-              )}
-            </div>
-          </div>
-        </div>
+        <PokemonSearchModal 
+          searchQuery={searchQuery}
+          onSearchChange={setSearchQuery}
+          searchResults={searchResults}
+          onAddPokemon={handleAddPokemon}
+          onClose={() => { setShowPokemonSearch(false); setSearchQuery(''); setSearchResults([]); }}
+          formatName={formatName}
+        />
       )}
     </div>
   );
