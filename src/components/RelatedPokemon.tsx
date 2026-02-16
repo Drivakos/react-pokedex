@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { TYPE_COLORS } from '../types/pokemon';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import PokemonImage from './PokemonImage';
-import pokemonDb from '../data/pokemon-db.json';
+import { fetchPokemonData } from '../services/api';
 
 interface Pokemon {
   id: number;
@@ -36,34 +36,32 @@ const RelatedPokemon: React.FC<RelatedPokemonProps> = ({
     setError(null);
     
     try {
-      // 1. Get all potential candidates
-      let candidates: any[] = [];
+      // Use the API service which now uses Supabase
+      const results = await fetchPokemonData(
+        limit + 5, // Fetch a few extra to account for the current pokemonId being filtered out
+        0,
+        '',
+        {
+          types: pokemonType ? [pokemonType] : [],
+          moves: [],
+          generation: '',
+          weight: { min: 0, max: 1000 },
+          height: { min: 0, max: 100 },
+          hasEvolutions: null
+        }
+      );
       
-      if (pokemonType) {
-        candidates = (pokemonDb as any[]).filter(p => 
-          p.types.includes(pokemonType) && p.id !== pokemonId && p.id < 10000
-        );
-      } else if (pokemonId) {
-        candidates = (pokemonDb as any[]).filter(p => p.id !== pokemonId && p.id < 10000);
-      } else {
-        candidates = (pokemonDb as any[]).filter(p => p.id < 10000);
-      }
-
-      // 2. Fisher-Yates Shuffle for unbiased randomness
-      const shuffled = [...candidates];
-      for (let i = shuffled.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-      }
+      // Filter out current pokemon and limit to requested amount
+      const filteredResults = results
+        .filter(p => p.id !== pokemonId)
+        .slice(0, limit)
+        .map(p => ({
+          id: p.id,
+          name: p.name,
+          types: p.types
+        }));
       
-      // 3. Take the first 'limit' items from the shuffled list
-      const results: Pokemon[] = shuffled.slice(0, limit).map(p => ({
-        id: p.id,
-        name: p.name,
-        types: p.types
-      }));
-      
-      setPokemon(results);
+      setPokemon(filteredResults);
     } catch (error) {
       console.error('Error fetching related Pokemon:', error);
       setError('Failed to load related Pokémon');

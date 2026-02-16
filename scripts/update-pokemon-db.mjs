@@ -1,9 +1,16 @@
-import fs from 'fs';
+import { createClient } from '@supabase/supabase-js';
+import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
+dotenv.config();
+
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const OUTPUT_FILE = path.join(__dirname, '..', 'src', 'data', 'pokemon-db.json');
+
+const supabase = createClient(
+  process.env.VITE_SUPABASE_URL || '',
+  process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_ANON_KEY || ''
+);
 
 const POKEAPI_GRAPHQL_URL = 'https://beta.pokeapi.co/graphql/v1beta';
 
@@ -60,24 +67,20 @@ query MyQuery {
 }
 `;
 
-async function fetchPokemonData() {
-  console.log('Fetching ALL Pokemon data (including all moves) from PokeAPI GraphQL...');
+async function syncPokemonData() {
+  console.log('🚀 Starting Pokemon data sync to Supabase...');
   
   try {
+    console.log('📡 Fetching data from PokeAPI GraphQL...');
     const response = await fetch(POKEAPI_GRAPHQL_URL, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ query: QUERY }),
     });
 
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
+    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
 
     const json = await response.json();
-    
     if (json.errors) {
       console.error('GraphQL Errors:', json.errors);
       throw new Error('GraphQL query failed');
@@ -95,14 +98,12 @@ async function fetchPokemonData() {
         id: p.id,
         name: p.name,
         types: p.pokemon_v2_pokemontypes.map(t => t.pokemon_v2_type.name),
-        stats: {
-          hp: p.pokemon_v2_pokemonstats.find(s => s.pokemon_v2_stat.name === 'hp')?.base_stat || 0,
-          attack: p.pokemon_v2_pokemonstats.find(s => s.pokemon_v2_stat.name === 'attack')?.base_stat || 0,
-          defense: p.pokemon_v2_pokemonstats.find(s => s.pokemon_v2_stat.name === 'defense')?.base_stat || 0,
-          'special-attack': p.pokemon_v2_pokemonstats.find(s => s.pokemon_v2_stat.name === 'special-attack')?.base_stat || 0,
-          'special-defense': p.pokemon_v2_pokemonstats.find(s => s.pokemon_v2_stat.name === 'special-defense')?.base_stat || 0,
-          speed: p.pokemon_v2_pokemonstats.find(s => s.pokemon_v2_stat.name === 'speed')?.base_stat || 0,
-        },
+        hp: p.pokemon_v2_pokemonstats.find(s => s.pokemon_v2_stat.name === 'hp')?.base_stat || 0,
+        attack: p.pokemon_v2_pokemonstats.find(s => s.pokemon_v2_stat.name === 'attack')?.base_stat || 0,
+        defense: p.pokemon_v2_pokemonstats.find(s => s.pokemon_v2_stat.name === 'defense')?.base_stat || 0,
+        special_attack: p.pokemon_v2_pokemonstats.find(s => s.pokemon_v2_stat.name === 'special-attack')?.base_stat || 0,
+        special_defense: p.pokemon_v2_pokemonstats.find(s => s.pokemon_v2_stat.name === 'special-defense')?.base_stat || 0,
+        speed: p.pokemon_v2_pokemonstats.find(s => s.pokemon_v2_stat.name === 'speed')?.base_stat || 0,
         height: p.height,
         weight: p.weight,
         base_experience: p.base_experience,
@@ -110,22 +111,58 @@ async function fetchPokemonData() {
         is_legendary: species.is_legendary,
         is_mythical: species.is_mythical,
         moves: [...new Set(p.pokemon_v2_pokemonmoves.map(m => m.pokemon_v2_move.name))],
-        evolution: {
-          is_starter: STARTER_POKEMON.includes(p.name.toLowerCase()),
-          evolves_from: species.evolves_from_species_id,
-          can_evolve: actuallyCanEvolve
-        }
+        is_starter: STARTER_POKEMON.includes(p.name.toLowerCase()),
+        evolves_from_id: species.evolves_from_species_id,
+        can_evolve: actuallyCanEvolve
       };
     });
 
-    console.log(`Fetched ${pokemons.length} Pokemon.`);
-    
-    fs.writeFileSync(OUTPUT_FILE, JSON.stringify(pokemons, null, 2));
-    console.log(`Saved complete data to ${OUTPUT_FILE}`);
-    
+    console.log(`✅ Fetched ${pokemons.length} Pokemon. Starting Supabase upload...`);
+
+    // Upsert in chunks
+    const CHUNK_SIZE = 50;
+    for (let i = 0; i < pokemons.length; i += CHUNK_SIZE) {
+      const chunk = pokemons.slice(i, i + CHUNK_SIZE);
+      const { error } = await supabase
+        .from('pokemon')
+        .upsert(chunk, { onConflict: 'id' });
+
+      if (error) {
+        console.error(`❌ Error upserting chunk ${i / CHUNK_SIZE + 1}:`, error.message);
+      } else {
+        process.stdout.write(`\rProgress: ${Math.min(i + CHUNK_SIZE, pokemons.length)}/${pokemons.length} Pokemon synced...`);
+      }
+    }
+
+    console.log('\n✨ Pokemon sync complete!');
+
+    // Refresh filter options
+    console.log('🔄 Refreshing filter options...');
+    await refreshFilterOptions(pokemons);
+
   } catch (error) {
-    console.error('Failed to fetch data:', error);
+    console.error('❌ Failed to sync data:', error);
     process.exit(1);
+  }
+}
+
+async function refreshFilterOptions(pokemons) {
+  const types = [...new Set(pokemons.flatMap(p => p.types))];
+  const generations = [...new Set(pokemons.map(p => p.generation))];
+
+  const options = [
+    ...types.map(t => ({ category: 'type', name: t })),
+    ...generations.map(g => ({ category: 'generation', name: g }))
+  ];
+
+  const { error } = await supabase
+    .from('filter_options')
+    .upsert(options, { onConflict: 'category, name' });
+
+  if (error) {
+    console.error('❌ Error refreshing filter options:', error.message);
+  } else {
+    console.log('✅ Filter options refreshed.');
   }
 }
 
@@ -136,4 +173,4 @@ function intToRoman(num) {
   return roman[num] || 'i';
 }
 
-fetchPokemonData();
+syncPokemonData();

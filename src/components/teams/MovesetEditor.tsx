@@ -2,10 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { Save, Copy } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { formatName } from '../../utils/helpers';
-import { fetchMoveDetails, fetchPokemonAbilities, fetchCompetitiveItems } from '../../services/api';
+import { fetchMoveDetails, fetchPokemonAbilities, fetchCompetitiveItems, fetchPokemonById } from '../../services/api';
 import PokemonImage from '../PokemonImage';
-import localPokemonDb from '../../data/pokemon-db.json';
-import localMovesDb from '../../data/moves-db.json';
 import './ShowdownStyles.css';
 
 interface PokemonWithMoves {
@@ -326,10 +324,8 @@ const MovesetEditorContent: React.FC<MovesetEditorProps> = ({ pokemon, teamId, o
       try {
         // Fetch detailed Pokemon data
         try {
-          // Load moves from local JSON DB (instant, no API call needed)
-          const localPokemon = (localPokemonDb as any[]).find((p: any) => p.id === pokemon.id);
-          const localMoves: string[] = localPokemon?.moves || [];
-          setAvailableMoves(localMoves);
+          const fullPokemonData = await fetchPokemonById(pokemon.id);
+          setAvailableMoves(fullPokemonData.moves || []);
 
           // Fetch abilities
           const abilitiesData = await fetchPokemonAbilities(pokemon.id);
@@ -358,7 +354,7 @@ const MovesetEditorContent: React.FC<MovesetEditorProps> = ({ pokemon, teamId, o
           // Set default ability
           setPokemonBuild(prev => ({
             ...prev,
-            ability: abilities[0] || ''
+            ability: prev.ability || abilities[0] || ''
           }));
 
           // Set Pokemon description (we'll get this from the detailed Pokemon data later)
@@ -454,44 +450,33 @@ const MovesetEditorContent: React.FC<MovesetEditorProps> = ({ pokemon, teamId, o
     loadPokemonData();
   }, [pokemon.id, teamId]);
 
-  // Load move details from local JSON DB (instant, no API calls)
+  // Load move details for all available moves
   useEffect(() => {
     if (availableMoves.length === 0) return;
 
-    const localDb = localMovesDb as Record<string, any>;
-    const newDetails: Record<string, MoveDetails> = {};
-
-    for (const moveName of availableMoves) {
-      if (moveDetailsCache[moveName]) continue;
-
-      const localMove = localDb[moveName];
-      if (localMove) {
-        const details: MoveDetails = {
-          name: localMove.name,
-          type: { name: localMove.type },
-          power: localMove.power,
-          accuracy: localMove.accuracy,
-          pp: localMove.pp,
-          damage_class: { name: localMove.damage_class },
-          effect_entries: localMove.short_effect ? [{
-            short_effect: localMove.short_effect,
-            language: { name: 'en' }
-          }] : [],
-          flavor_text_entries: localMove.flavor_text ? [{
-            flavor_text: localMove.flavor_text,
-            language: { name: 'en' }
-          }] : [],
-          target: { name: localMove.target },
-          priority: localMove.priority
-        };
-        moveDetailsCache[moveName] = details;
-        newDetails[moveName] = details;
+    const loadAllMoveDetails = async () => {
+      const newDetails: Record<string, MoveDetails> = {};
+      
+      // Load move details in chunks to avoid overwhelming the API/DB
+      const CHUNK_SIZE = 10;
+      for (let i = 0; i < availableMoves.length; i += CHUNK_SIZE) {
+        const chunk = availableMoves.slice(i, i + CHUNK_SIZE);
+        await Promise.all(chunk.map(async (moveName) => {
+          if (!moveDetails[moveName] && !moveDetailsCache[moveName]) {
+            const details = await loadMoveDetails(moveName);
+            if (details) {
+              newDetails[moveName] = details;
+            }
+          }
+        }));
+        
+        if (Object.keys(newDetails).length > 0) {
+          setMoveDetails(prev => ({ ...prev, ...newDetails }));
+        }
       }
-    }
+    };
 
-    if (Object.keys(newDetails).length > 0) {
-      setMoveDetails(prev => ({ ...prev, ...newDetails }));
-    }
+    loadAllMoveDetails();
   }, [availableMoves]);
 
   // Load move details when selectedMoves changes (including from saved builds)
@@ -650,34 +635,7 @@ const MovesetEditorContent: React.FC<MovesetEditorProps> = ({ pokemon, teamId, o
       return moveDetailsCache[moveName];
     }
 
-    // Check local JSON DB (instant, no API call)
-    const localDb = localMovesDb as Record<string, any>;
-    const localMove = localDb[moveName];
-    if (localMove) {
-      const details: MoveDetails = {
-        name: localMove.name,
-        type: { name: localMove.type },
-        power: localMove.power,
-        accuracy: localMove.accuracy,
-        pp: localMove.pp,
-        damage_class: { name: localMove.damage_class },
-        effect_entries: localMove.short_effect ? [{
-          short_effect: localMove.short_effect,
-          language: { name: 'en' }
-        }] : [],
-        flavor_text_entries: localMove.flavor_text ? [{
-          flavor_text: localMove.flavor_text,
-          language: { name: 'en' }
-        }] : [],
-        target: { name: localMove.target },
-        priority: localMove.priority
-      };
-      moveDetailsCache[moveName] = details;
-      setMoveDetails(prev => ({ ...prev, [moveName]: details }));
-      return details;
-    }
-
-    // Fallback to GraphQL API for moves not in local DB
+    // Use api.service which now uses Supabase
     try {
       const moveData = await fetchMoveDetails(moveName);
       if (moveData) {
@@ -978,78 +936,80 @@ const MovesetEditorContent: React.FC<MovesetEditorProps> = ({ pokemon, teamId, o
 
         {/* EVs / IVs Panel */}
         <div style={{ borderTop: '1px solid #ddd' }}>
-          <div className="sd-ev-panel">
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-              <span style={{ fontSize: 11, fontWeight: 'bold', color: '#555' }}>EVs ({totalEVs}/510)</span>
-              <div style={{ display: 'flex', gap: 4 }}>
-                {Object.entries(EV_PRESETS).slice(0, 4).map(([name, evs]) => (
-                  <button
-                    key={name}
-                    className="sd-preset-btn"
-                    onClick={() => setPokemonBuild(prev => ({ ...prev, evs }))}
-                    title={name}
-                  >
-                    {name.replace(' Attacker', '').replace(' Wall', '')}
-                  </button>
-                ))}
-              </div>
-            </div>
-            {Object.entries(pokemonBuild.evs).map(([stat, value]) => (
-              <div key={stat} className="sd-ev-row">
-                <label>{statLabelShort(stat)}</label>
-                <input
-                  type="number"
-                  min="0"
-                  max="252"
-                  value={value}
-                  onChange={(e) => handleEVChange(stat as keyof PokemonBuild['evs'], e.target.value)}
-                />
-                <div className="sd-ev-bar-bg">
-                  <div
-                    className={`sd-stat-bar ${statBarClass(stat)}`}
-                    style={{ width: `${Math.min(100, (value / 252) * 100)}%`, height: '100%', borderRadius: 2 }}
-                  />
+          <div className="sd-eviv-row">
+            <div className="sd-ev-panel" style={{ flex: 1 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                <span style={{ fontSize: 11, fontWeight: 'bold', color: '#555' }}>EVs ({totalEVs}/510)</span>
+                <div style={{ display: 'flex', gap: 4 }}>
+                  {Object.entries(EV_PRESETS).slice(0, 4).map(([name, evs]) => (
+                    <button
+                      key={name}
+                      className="sd-preset-btn"
+                      onClick={() => setPokemonBuild(prev => ({ ...prev, evs }))}
+                      title={name}
+                    >
+                      {name.replace(' Attacker', '').replace(' Wall', '')}
+                    </button>
+                  ))}
                 </div>
               </div>
-            ))}
-            <div className="sd-ev-total">
-              {remainingEVs} remaining
-              {remainingEVs === 0 && <span style={{ color: '#2a8c2a', marginLeft: 6 }}>✓ Fully trained</span>}
+              {Object.entries(pokemonBuild.evs).map(([stat, value]) => (
+                <div key={stat} className="sd-ev-row">
+                  <label>{statLabelShort(stat)}</label>
+                  <input
+                    type="number"
+                    min="0"
+                    max="252"
+                    value={value}
+                    onChange={(e) => handleEVChange(stat as keyof PokemonBuild['evs'], e.target.value)}
+                  />
+                  <div className="sd-ev-bar-bg">
+                    <div
+                      className={`sd-stat-bar ${statBarClass(stat)}`}
+                      style={{ width: `${Math.min(100, (value / 252) * 100)}%`, height: '100%', borderRadius: 2 }}
+                    />
+                  </div>
+                </div>
+              ))}
+              <div className="sd-ev-total">
+                {remainingEVs} remaining
+                {remainingEVs === 0 && <span style={{ color: '#2a8c2a', marginLeft: 6 }}>✓ Fully trained</span>}
+              </div>
             </div>
-          </div>
 
-          {/* IVs Panel */}
-          <div className="sd-ev-panel" style={{ borderTop: '1px solid #ddd', paddingTop: 6 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-              <span style={{ fontSize: 11, fontWeight: 'bold', color: '#555' }}>IVs</span>
-              <button
-                className="sd-preset-btn"
-                onClick={() => setPokemonBuild(prev => ({
-                  ...prev,
-                  ivs: { hp: 31, attack: 31, defense: 31, 'special-attack': 31, 'special-defense': 31, speed: 31 }
-                }))}
-              >
-                Max All
-              </button>
-            </div>
-            {Object.entries(pokemonBuild.ivs).map(([stat, value]) => (
-              <div key={stat} className="sd-ev-row">
-                <label>{statLabelShort(stat)}</label>
-                <input
-                  type="number"
-                  min="0"
-                  max="31"
-                  value={value}
-                  onChange={(e) => handleIVChange(stat as keyof PokemonBuild['ivs'], e.target.value)}
-                />
-                <div className="sd-ev-bar-bg">
-                  <div
-                    className={`sd-stat-bar ${statBarClass(stat)}`}
-                    style={{ width: `${Math.min(100, (value / 31) * 100)}%`, height: '100%', borderRadius: 2 }}
-                  />
-                </div>
+            {/* IVs Panel */}
+            <div className="sd-ev-panel" style={{ flex: 1 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                <span style={{ fontSize: 11, fontWeight: 'bold', color: '#555' }}>IVs</span>
+                <button
+                  className="sd-preset-btn"
+                  onClick={() => setPokemonBuild(prev => ({
+                    ...prev,
+                    ivs: { hp: 31, attack: 31, defense: 31, 'special-attack': 31, 'special-defense': 31, speed: 31 }
+                  }))}
+                >
+                  Max All
+                </button>
               </div>
-            ))}
+              {Object.entries(pokemonBuild.ivs).map(([stat, value]) => (
+                <div key={stat} className="sd-ev-row">
+                  <label>{statLabelShort(stat)}</label>
+                  <input
+                    type="number"
+                    min="0"
+                    max="31"
+                    value={value}
+                    onChange={(e) => handleIVChange(stat as keyof PokemonBuild['ivs'], e.target.value)}
+                  />
+                  <div className="sd-ev-bar-bg">
+                    <div
+                      className={`sd-stat-bar ${statBarClass(stat)}`}
+                      style={{ width: `${Math.min(100, (value / 31) * 100)}%`, height: '100%', borderRadius: 2 }}
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </div>

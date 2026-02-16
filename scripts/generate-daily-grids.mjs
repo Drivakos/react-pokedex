@@ -30,29 +30,48 @@ const supabase = createClient(
 
 // --- POKEMON DATA LOADING ---
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-// Correct path to the database in src/data
-const POKEMON_DB_PATH = path.join(__dirname, '..', 'src', 'data', 'pokemon-db.json');
 
 let POKEMON_DB = [];
-try {
-  if (fs.existsSync(POKEMON_DB_PATH)) {
-    console.log(`Loading Pokemon data from ${POKEMON_DB_PATH}...`);
-    POKEMON_DB = JSON.parse(fs.readFileSync(POKEMON_DB_PATH, 'utf8'));
+
+async function loadPokemonFromSupabase() {
+  console.log('Loading Pokemon data from Supabase...');
+  try {
+    const { data, error } = await supabase
+      .from('pokemon')
+      .select('*');
+
+    if (error) throw error;
+
+    POKEMON_DB = data.map(p => ({
+      id: p.id,
+      name: p.name,
+      types: p.types,
+      stats: {
+        hp: p.hp,
+        attack: p.attack,
+        defense: p.defense,
+        'special-attack': p.special_attack,
+        'special-defense': p.special_defense,
+        speed: p.speed
+      },
+      height: p.height,
+      weight: p.weight,
+      base_experience: p.base_experience,
+      generation: p.generation,
+      is_legendary: p.is_legendary,
+      is_mythical: p.is_mythical,
+      moves: p.moves || [],
+      evolution: {
+        is_starter: p.is_starter,
+        evolves_from: p.evolves_from_id,
+        can_evolve: p.can_evolve
+      }
+    }));
     console.log(`Loaded ${POKEMON_DB.length} Pokemon for validation.`);
-  } else {
-    // Try alternative path just in case
-    const altPath = path.join(process.cwd(), 'src', 'data', 'pokemon-db.json');
-    if (fs.existsSync(altPath)) {
-      console.log(`Loading Pokemon data from ${altPath}...`);
-      POKEMON_DB = JSON.parse(fs.readFileSync(altPath, 'utf8'));
-      console.log(`Loaded ${POKEMON_DB.length} Pokemon for validation.`);
-    } else {
-      console.warn(`⚠️ Warning: Pokemon database not found. Solvability checks will be limited to heuristics.`);
-      console.warn(`Checked paths: \n  - ${POKEMON_DB_PATH}\n  - ${altPath}`);
-    }
+  } catch (error) {
+    console.error('Error loading Pokemon from Supabase:', error);
+    process.exit(1);
   }
-} catch (error) {
-  console.error('Error loading Pokemon database:', error);
 }
 
 // Type effectiveness chart for checking weaknesses and resistances
@@ -593,6 +612,8 @@ async function generateDailyGrids(days = 0) {
     console.error('❌ Error: VITE_SUPABASE_URL and either SUPABASE_SERVICE_ROLE_KEY or VITE_SUPABASE_ANON_KEY must be set in .env');
     process.exit(1);
   }
+
+  await loadPokemonFromSupabase();
   
   const today = new Date();
   today.setHours(0, 0, 0, 0);

@@ -801,12 +801,6 @@ const PokemonPage: React.FC = () => {
                           </div>
                         ))}
                       </div>
-                      
-                      <div className="mt-4 bg-gray-50 p-4 rounded-lg border border-gray-200">
-                        <p className="text-sm text-gray-600">
-                          Note: Evolution data is approximated. For exact evolution methods, please refer to official Pokémon resources.
-                        </p>
-                      </div>
                     </div>
                   </div>
                 ) : (

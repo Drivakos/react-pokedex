@@ -8,9 +8,7 @@ import {
 import { buildCompleteWhereClause, POKEMON_FIELDS } from '../utils/query-builder';
 import { transformSinglePokemon, transformRawData } from '../utils/pokemon-transform';
 import { cacheAside, CACHE_KEYS, CACHE_TTL, generateSearchCacheKey, isCacheEnabled } from '../lib/redis';
-// Import local database
-import localPokemonDb from '../data/pokemon-db.json';
-import localFilterOptions from '../data/filter-options.json';
+import { supabase } from '../lib/supabase';
 
 // Use environment variables for API endpoints (fallback for direct calls)
 const GRAPHQL_ENDPOINT = import.meta.env.VITE_API_GRAPHQL_URL;
@@ -24,16 +22,16 @@ if (!GRAPHQL_ENDPOINT || !REST_ENDPOINT) {
 // Query building functions moved to ../utils/query-builder.ts
 
 /**
- * Transform local DB Pokemon to application Pokemon type
+ * Transform Supabase Pokemon to application Pokemon type
  */
-const transformLocalPokemon = (localPokemon: any): Pokemon => {
+const transformSupabasePokemon = (p: any): Pokemon => {
   return {
-    id: localPokemon.id,
-    name: localPokemon.name,
-    height: localPokemon.height,
-    weight: localPokemon.weight,
-    types: localPokemon.types,
-    moves: localPokemon.moves || [],
+    id: p.id,
+    name: p.name,
+    height: p.height,
+    weight: p.weight,
+    types: p.types,
+    moves: p.moves || [],
     sprites: {
       front_default: '', // Handled by PokemonImage component
       back_default: '',
@@ -41,149 +39,82 @@ const transformLocalPokemon = (localPokemon: any): Pokemon => {
       back_shiny: '',
       official_artwork: ''
     },
-    generation: localPokemon.generation || 'unknown',
-    has_evolutions: localPokemon.evolution?.can_evolve || false,
-    is_starter: localPokemon.evolution?.is_starter || false,
-    evolution_chain: localPokemon.evolution ? {
-      evolves_from: localPokemon.evolution.evolves_from ? String(localPokemon.evolution.evolves_from) : undefined
+    generation: p.generation || 'unknown',
+    has_evolutions: p.can_evolve || false,
+    is_starter: p.is_starter || false,
+    evolution_chain: p.evolves_from_id ? {
+      evolves_from: String(p.evolves_from_id)
     } : undefined,
     is_default: true,
-    base_experience: localPokemon.base_experience || 0,
-    stats: localPokemon.stats,
-    is_legendary: localPokemon.is_legendary,
-    is_mythical: localPokemon.is_mythical
-  };
-};
-
-/**
- * Filter local Pokemon data based on criteria
- */
-const filterLocalPokemon = (
-  allPokemon: any[],
-  searchTerm: string,
-  filters: Filters
-): any[] => {
-  return allPokemon.filter(p => {
-    // Search term filter (name or ID)
-    if (searchTerm) {
-      const term = searchTerm.toLowerCase();
-      const matchesName = p.name.includes(term);
-      const matchesId = p.id.toString() === term;
-      if (!matchesName && !matchesId) return false;
-    }
-
-    // Type filter (match all selected types)
-    if (filters.types.length > 0) {
-      const hasAllTypes = filters.types.every(type => p.types.includes(type));
-      if (!hasAllTypes) return false;
-    }
-
-    // Move filter (match all selected moves)
-    if (filters.moves.length > 0) {
-      if (!p.moves) return false;
-      const hasAllMoves = filters.moves.every(move => p.moves.includes(move));
-      if (!hasAllMoves) return false;
-    }
-
-    // Generation filter
-    if (filters.generation && p.generation !== filters.generation) {
-      return false;
-    }
-
-    // Weight filter
-    if (filters.weight.min > 0 && p.weight < filters.weight.min) return false;
-    if (filters.weight.max > 0 && filters.weight.max < 1000 && p.weight > filters.weight.max) return false;
-
-    // Height filter
-    if (filters.height.min > 0 && p.height < filters.height.min) return false;
-    if (filters.height.max > 0 && filters.height.max < 100 && p.height > filters.height.max) return false;
-
-    // Has Evolutions filter
-    if (filters.hasEvolutions !== null) {
-      const hasEvo = p.evolution?.can_evolve || false;
-      if (filters.hasEvolutions !== hasEvo) return false;
-    }
-
-    return true;
-  });
-};
-
-/**
- * Transform local DB Pokemon to application PokemonDetails type
- */
-const transformLocalToDetails = (localPokemon: any): PokemonDetails => {
-  return {
-    id: localPokemon.id,
-    name: localPokemon.name,
-    height: localPokemon.height,
-    weight: localPokemon.weight,
-    types: localPokemon.types,
-    abilities: [], // Local DB doesn't have abilities details
+    base_experience: p.base_experience || 0,
     stats: {
-      hp: localPokemon.stats.hp,
-      attack: localPokemon.stats.attack,
-      defense: localPokemon.stats.defense,
-      // Local DB is missing special stats, default to 0
-      special_attack: localPokemon.stats.special_attack || localPokemon.stats['special-attack'] || 0,
-      special_defense: localPokemon.stats.special_defense || localPokemon.stats['special-defense'] || 0,
-      speed: localPokemon.stats.speed
+      hp: p.hp,
+      attack: p.attack,
+      defense: p.defense,
+      'special-attack': p.special_attack,
+      'special-defense': p.special_defense,
+      speed: p.speed
     },
-    sprites: {
-      front_default: '', // PokemonImage handles this
-      back_default: '',
-      front_shiny: '',
-      back_shiny: '',
-      official_artwork: ''
-    },
-    moves: (localPokemon.moves || []).map((name: string) => ({
-      name,
-      learned_at_level: 0,
-      learn_method: 'unknown'
-    })),
-    flavor_text: '',
-    genera: 'Pokémon',
-    generation: localPokemon.generation,
-    evolution_chain: [
-      {
-        species_name: localPokemon.name,
-        species_id: localPokemon.id,
-        evolves_from_id: localPokemon.evolution?.evolves_from || null,
-        min_level: null,
-        trigger_name: null,
-        item: null
-      }
-    ],
-    base_experience: localPokemon.base_experience || 0,
-    has_evolutions: localPokemon.evolution?.can_evolve || false
+    is_legendary: p.is_legendary,
+    is_mythical: p.is_mythical
   };
 };
 
 /**
  * Fetches a single Pokemon by ID with caching support
- * Priority: Redis Cache → Supabase Cache → API
+ * Priority: Redis Cache → Supabase Cache (Edge) → Supabase Database → API
  */
 export const fetchPokemonById = async (id: number): Promise<Pokemon> => {
   // 1. Try Redis cache first if enabled
   if (isCacheEnabled()) {
     const cacheKey = `${CACHE_KEYS.POKEMON_BY_ID}${id}`;
     return cacheAside(cacheKey, async () => {
-      // 2. Try Supabase cache
+      // 2. Try Supabase cache (Edge Functions)
       try {
         return await fetchCachedPokemonById(id);
       } catch (error) {
-        // Supabase cache failed, continue to API
+        // Supabase cache failed, continue
       }
 
-      // 3. Fetch from direct GraphQL API
+      // 3. Try Supabase database
+      try {
+        const { data, error } = await supabase
+          .from('pokemon')
+          .select('*')
+          .eq('id', id)
+          .single();
+        
+        if (data && !error) {
+          return transformSupabasePokemon(data);
+        }
+      } catch (error) {
+        // Supabase DB failed, continue
+      }
+
+      // 4. Fetch from direct GraphQL API
       return fetchPokemonByIdDirect(id);
     }, CACHE_TTL.POKEMON);
   }
 
-  // No Redis - try Supabase cache then API
+  // No Redis - try Cache -> Supabase DB -> API
   try {
     return await fetchCachedPokemonById(id);
   } catch (error) {
-    // Supabase cache failed, continue to API
+    // Continue
+  }
+
+  try {
+    const { data, error } = await supabase
+      .from('pokemon')
+      .select('*')
+      .eq('id', id)
+      .single();
+    
+    if (data && !error) {
+      return transformSupabasePokemon(data);
+    }
+  } catch (error) {
+    // Continue
   }
 
   // Fallback to direct API call
@@ -230,7 +161,7 @@ async function fetchPokemonByIdDirect(id: number): Promise<Pokemon> {
 
 /**
  * Fetches Pokemon data from GraphQL API with caching support
- * Priority: Redis Cache → Local Database → Supabase Cache → API
+ * Priority: Redis Cache → Supabase Cache (Edge) → Supabase Database → API
  */
 export const fetchPokemonData = async (
   limit: number,
@@ -242,23 +173,56 @@ export const fetchPokemonData = async (
   if (isCacheEnabled()) {
     const cacheKey = generateSearchCacheKey(limit, offset, searchTerm, filters);
     return cacheAside(cacheKey, async () => {
-      // 2. Try local database as fallback
-      try {
-        const localResults = filterLocalPokemon(localPokemonDb, searchTerm, filters);
-
-        if (localResults.length > 0) {
-          const paginatedResults = localResults.slice(offset, offset + limit);
-          return paginatedResults.map(transformLocalPokemon);
-        }
-      } catch (error) {
-        // Local DB failed, continue to next source
-      }
-
-      // 3. Try Supabase cache
+      // 2. Try Supabase cache (Edge Functions)
       try {
         return await fetchCachedPokemonData(limit, offset, searchTerm, filters);
       } catch (error) {
-        // Supabase cache failed, continue to API
+        // Supabase cache failed, continue
+      }
+
+      // 3. Try Supabase Database
+      try {
+        let query = supabase.from('pokemon').select('*');
+
+        if (searchTerm) {
+          if (!isNaN(Number(searchTerm))) {
+            query = query.eq('id', Number(searchTerm));
+          } else {
+            query = query.ilike('name', `%${searchTerm}%`);
+          }
+        }
+
+        if (filters.types.length > 0) {
+          query = query.contains('types', filters.types);
+        }
+
+        if (filters.moves.length > 0) {
+          query = query.contains('moves', filters.moves);
+        }
+
+        if (filters.generation) {
+          query = query.eq('generation', filters.generation);
+        }
+
+        if (filters.weight.min > 0) query = query.gte('weight', filters.weight.min);
+        if (filters.weight.max > 0 && filters.weight.max < 1000) query = query.lte('weight', filters.weight.max);
+        
+        if (filters.height.min > 0) query = query.gte('height', filters.height.min);
+        if (filters.height.max > 0 && filters.height.max < 100) query = query.lte('height', filters.height.max);
+
+        if (filters.hasEvolutions !== null) {
+          query = query.eq('can_evolve', filters.hasEvolutions);
+        }
+
+        const { data, error } = await query
+          .order('id', { ascending: true })
+          .range(offset, offset + limit - 1);
+
+        if (data && !error && data.length > 0) {
+          return data.map(transformSupabasePokemon);
+        }
+      } catch (error) {
+        // Supabase DB failed, continue
       }
 
       // 4. Fetch from direct GraphQL API
@@ -266,27 +230,58 @@ export const fetchPokemonData = async (
     }, CACHE_TTL.POKEMON_LIST);
   }
 
-  // No Redis - fall back to original priority
-  // 1. Try local data first
-  try {
-    const localResults = filterLocalPokemon(localPokemonDb, searchTerm, filters);
-
-    if (localResults.length > 0) {
-      const paginatedResults = localResults.slice(offset, offset + limit);
-      return paginatedResults.map(transformLocalPokemon);
-    }
-  } catch (error) {
-    // Local DB failed, continue
-  }
-
-  // 2. Try Supabase cache
+  // No Redis - fall back to Cache -> Supabase DB -> API
   try {
     return await fetchCachedPokemonData(limit, offset, searchTerm, filters);
   } catch (error) {
-    // Supabase cache failed, continue to API
+    // Continue
   }
 
-  // 3. Fallback to direct API call
+  try {
+    let query = supabase.from('pokemon').select('*');
+
+    if (searchTerm) {
+      if (!isNaN(Number(searchTerm))) {
+        query = query.eq('id', Number(searchTerm));
+      } else {
+        query = query.ilike('name', `%${searchTerm}%`);
+      }
+    }
+
+    if (filters.types.length > 0) {
+      query = query.contains('types', filters.types);
+    }
+
+    if (filters.moves.length > 0) {
+      query = query.contains('moves', filters.moves);
+    }
+
+    if (filters.generation) {
+      query = query.eq('generation', filters.generation);
+    }
+
+    if (filters.weight.min > 0) query = query.gte('weight', filters.weight.min);
+    if (filters.weight.max > 0 && filters.weight.max < 1000) query = query.lte('weight', filters.weight.max);
+    
+    if (filters.height.min > 0) query = query.gte('height', filters.height.min);
+    if (filters.height.max > 0 && filters.height.max < 100) query = query.lte('height', filters.height.max);
+
+    if (filters.hasEvolutions !== null) {
+      query = query.eq('can_evolve', filters.hasEvolutions);
+    }
+
+    const { data, error } = await query
+      .order('id', { ascending: true })
+      .range(offset, offset + limit - 1);
+
+    if (data && !error && data.length > 0) {
+      return data.map(transformSupabasePokemon);
+    }
+  } catch (error) {
+    // Continue
+  }
+
+  // Fallback to direct API call
   return fetchPokemonDataDirect(limit, offset, searchTerm, filters);
 };
 
@@ -610,17 +605,7 @@ async function fetchPokemonDetailsDirect(id: number): Promise<PokemonDetails> {
       has_evolutions: evolutions.length > 1
     };
   } catch (error) {
-    // Fallback to local data as a last resort
-    try {
-      const localDb = localPokemonDb as any[];
-      const localPokemon = localDb.find((p: any) => p.id === id);
-      if (localPokemon) {
-        return transformLocalToDetails(localPokemon);
-      }
-    } catch (localError) {
-      // Local DB also failed
-    }
-
+    console.error(`Error fetching Pokemon details for ID ${id}:`, error);
     throw error;
   }
 }
@@ -705,6 +690,32 @@ export const fetchMoveDetails = async (moveName: string) => {
   const cacheKey = `${CACHE_KEYS.MOVE_DETAILS}${moveName}`;
 
   return cacheAside(cacheKey, async () => {
+    // 1. Try Supabase Database
+    try {
+      const { data, error } = await supabase
+        .from('moves')
+        .select('*')
+        .eq('name', moveName)
+        .single();
+      
+      if (data && !error) {
+        return {
+          ...data,
+          effect_entries: [{
+            short_effect: data.short_effect || '',
+            language: { name: 'en' }
+          }],
+          flavor_text_entries: [{
+            flavor_text: data.flavor_text || '',
+            language: { name: 'en' }
+          }]
+        };
+      }
+    } catch (error) {
+      // Continue
+    }
+
+    // 2. Fetch from direct GraphQL API
     try {
       const query = `
         query GetMoveDetails($moveName: String!) {
@@ -942,27 +953,36 @@ export const fetchCompetitiveItems = async () => {
  * Fetches available filter options (types, moves, generations)
  */
 export const fetchFilterOptions = async () => {
-  // Use local filter options data
+  // 1. Try Supabase Database filter_options table
   try {
-    const { types, moves, generations } = localFilterOptions.data;
-    return {
-      types: types.map((t: { name: string }) => t.name),
-      moves: moves.map((m: { name: string }) => m.name),
-      generations: generations.map((g: { name: string }) => g.name),
-    };
+    const { data, error } = await supabase
+      .from('filter_options')
+      .select('category, name')
+      .order('name', { ascending: true });
+
+    if (!error && data && data.length > 0) {
+      const result = {
+        types: data.filter(i => i.category === 'type').map(i => i.name),
+        moves: data.filter(i => i.category === 'move').map(i => i.name),
+        generations: data.filter(i => i.category === 'generation').map(i => i.name),
+      };
+      
+      if (result.types.length > 0 || result.generations.length > 0) {
+        return result;
+      }
+    }
   } catch (error) {
-    console.error('Error processing local filter options:', error);
-    // Fallback if local processing fails (though unlikely)
+    // Supabase failed, continue to fallback
   }
 
-  // Fallback to cached version
+  // 2. Try Supabase cache (Edge Functions)
   try {
     return await fetchCachedFilterOptions();
   } catch (error) {
-    // Cached API failed, falling back to direct API
+    // Continue
   }
 
-  // Fallback to direct API call
+  // 3. Fallback to direct API call
   try {
     const query = `
       query GetFilterOptions {
@@ -985,20 +1005,10 @@ export const fetchFilterOptions = async () => {
     });
 
     if (!response.ok) {
-      throw new Error(`GraphQL HTTP error! Status: ${response.status} ${response.statusText}`);
+      throw new Error(`GraphQL HTTP error! Status: ${response.status}`);
     }
 
     const result = await response.json();
-
-    if (result.errors) {
-      console.error('GraphQL errors:', JSON.stringify(result.errors));
-      throw new Error(`GraphQL error: ${result.errors[0]?.message || 'Unknown GraphQL error'}`);
-    }
-
-    if (!result.data) {
-      console.error('No data returned from GraphQL:', result);
-      throw new Error('No data returned from GraphQL query');
-    }
 
     return {
       types: result.data.types.map((t: { name: string }) => t.name),
@@ -1006,15 +1016,7 @@ export const fetchFilterOptions = async () => {
       generations: result.data.generations.map((g: { name: string }) => g.name),
     };
   } catch (error) {
-    console.error('Error fetching filter options:', error);
-    // Log more details about the error
-    if (error instanceof Error) {
-      console.error('Error name:', error.name);
-      console.error('Error message:', error.message);
-      console.error('Error stack:', error.stack);
-    } else {
-      console.error('Unknown error type:', typeof error);
-    }
+    console.error('Error fetching filter options from API:', error);
     throw error;
   }
 };

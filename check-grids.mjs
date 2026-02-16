@@ -13,19 +13,48 @@ const supabase = createClient(
 
 // --- POKEMON DATA LOADING ---
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const POKEMON_DB_PATH = path.join(__dirname, 'scripts', 'data', 'pokemon-db.json');
 
 let POKEMON_DB = [];
-try {
-  if (fs.existsSync(POKEMON_DB_PATH)) {
-    console.log(`Loading Pokemon data from ${POKEMON_DB_PATH}...`);
-    POKEMON_DB = JSON.parse(fs.readFileSync(POKEMON_DB_PATH, 'utf8'));
-    console.log(`Loaded ${POKEMON_DB.length} Pokemon for validation.`);
-  } else {
-    console.warn(`⚠️ Warning: Pokemon database not found at ${POKEMON_DB_PATH}.`);
+
+async function loadPokemonFromSupabase() {
+  console.log('Loading Pokemon data from Supabase...');
+  try {
+    const { data, error } = await supabase
+      .from('pokemon')
+      .select('*');
+
+    if (error) throw error;
+
+    POKEMON_DB = data.map(p => ({
+      id: p.id,
+      name: p.name,
+      types: p.types,
+      stats: {
+        hp: p.hp,
+        attack: p.attack,
+        defense: p.defense,
+        'special-attack': p.special_attack,
+        'special-defense': p.special_defense,
+        speed: p.speed
+      },
+      height: p.height,
+      weight: p.weight,
+      base_experience: p.base_experience,
+      generation: p.generation,
+      is_legendary: p.is_legendary,
+      is_mythical: p.is_mythical,
+      moves: p.moves || [],
+      evolution: {
+        is_starter: p.is_starter,
+        evolves_from: p.evolves_from_id,
+        can_evolve: p.can_evolve
+      }
+    }));
+    console.log(`Loaded ${POKEMON_DB.length} Pokemon for verification.`);
+  } catch (error) {
+    console.error('Error loading Pokemon from Supabase:', error);
+    process.exit(1);
   }
-} catch (error) {
-  console.error('Error loading Pokemon database:', error);
 }
 
 // Type effectiveness chart
@@ -118,6 +147,7 @@ function checkConstraint(pokemon, constraint) {
 }
 
 async function verifyGrids() {
+  await loadPokemonFromSupabase();
   try {
     const today = new Date().toISOString().split('T')[0];
     const { data: grids, error } = await supabase

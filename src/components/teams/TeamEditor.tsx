@@ -10,7 +10,7 @@ import {
 import toast from 'react-hot-toast';
 import MovesetEditor from './MovesetEditor';
 import PokemonImage from '../PokemonImage';
-import localPokemonDb from '../../data/pokemon-db.json';
+import { fetchPokemonById, fetchPokemonData } from '../../services/api';
 import './ShowdownStyles.css';
 
 interface Pokemon {
@@ -79,124 +79,40 @@ const TeamEditor: React.FC = () => {
         const members = await getTeamMembers(parseInt(teamId));
         setTeamMembers(members || []);
 
-        // Load Pokemon data for each member — use local JSON first, GraphQL as fallback
+        // Load Pokemon data for each member
         const pokemonIds: number[] = members?.map((m: any) => m.pokemon_id) || [];
         const uniqueIds: number[] = [...new Set(pokemonIds)];
-        const localDb = localPokemonDb as any[];
-        const missingIds: number[] = [];
-
-        // Phase 1: Load from local JSON DB (instant)
+        
         for (const pokemonId of uniqueIds) {
-          const localPokemon = localDb.find((p: any) => p.id === pokemonId);
-          if (localPokemon) {
-            const transformedPokemon = {
-              id: localPokemon.id,
-              name: localPokemon.name,
+          try {
+            const pokemon = await fetchPokemonById(pokemonId);
+            
+            const transformedPokemon: Pokemon = {
+              id: pokemon.id,
+              name: pokemon.name,
               sprites: {
-                front_default: `/images/pokemon/thumbnails/${String(pokemonId).padStart(3, '0')}.png`,
-                other: { 'official-artwork': { front_default: '' } }
+                front_default: pokemon.sprites.front_default,
+                other: {
+                  'official-artwork': {
+                    front_default: pokemon.sprites.official_artwork
+                  }
+                }
               },
-              types: (localPokemon.types || []).map((t: string) => ({
+              types: pokemon.types.map(t => ({
                 type: { name: t }
               })),
-              stats: Object.entries(localPokemon.stats || {}).map(([name, value]) => ({
-                base_stat: value as number,
-                stat: { name }
-              })),
-              abilities: []
+              stats: [
+                { base_stat: pokemon.stats.hp, stat: { name: 'hp' } },
+                { base_stat: pokemon.stats.attack, stat: { name: 'attack' } },
+                { base_stat: pokemon.stats.defense, stat: { name: 'defense' } },
+                { base_stat: pokemon.stats['special-attack'], stat: { name: 'special-attack' } },
+                { base_stat: pokemon.stats['special-defense'], stat: { name: 'special-defense' } },
+                { base_stat: pokemon.stats.speed, stat: { name: 'speed' } },
+              ],
+              abilities: [] // Abilities will be loaded in MovesetEditor if needed
             };
+            
             setPokemonData(prev => ({ ...prev, [pokemonId]: transformedPokemon }));
-          } else {
-            missingIds.push(pokemonId);
-          }
-        }
-
-        // Phase 2: Fallback to GraphQL for any Pokemon not in local DB
-        for (const pokemonId of missingIds) {
-          try {
-            const query = `
-              query GetPokemonBasic($id: Int!) {
-                pokemon_v2_pokemon_by_pk(id: $id) {
-                  id
-                  name
-                  types: pokemon_v2_pokemontypes {
-                    type: pokemon_v2_type {
-                      name
-                    }
-                  }
-                  stats: pokemon_v2_pokemonstats {
-                    base_stat
-                    pokemon_v2_stat {
-                      name
-                    }
-                  }
-                  abilities: pokemon_v2_pokemonabilities {
-                    ability: pokemon_v2_ability {
-                      name
-                    }
-                    is_hidden
-                  }
-                  sprites: pokemon_v2_pokemonsprites(limit: 1) {
-                    sprites
-                  }
-                }
-              }
-            `;
-
-            const response = await fetch(import.meta.env.VITE_API_GRAPHQL_URL, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ query, variables: { id: pokemonId } }),
-            });
-
-            if (response.ok) {
-              const result = await response.json();
-
-              if (result.data?.pokemon_v2_pokemon_by_pk) {
-                const pokemon = result.data.pokemon_v2_pokemon_by_pk;
-
-                let sprites: { front_default: string; other?: { 'official-artwork': { front_default: string } } } = {
-                  front_default: `/images/pokemon/thumbnails/${String(pokemonId).padStart(3, '0')}.png`,
-                };
-                try {
-                  if (pokemon.sprites?.[0]?.sprites) {
-                    const spriteData = pokemon.sprites[0].sprites;
-                    if (typeof spriteData === 'string') {
-                      sprites = JSON.parse(spriteData);
-                    } else if (typeof spriteData === 'object') {
-                      sprites = spriteData;
-                    }
-                  } else {
-                    sprites = {
-                      front_default: `/images/pokemon/thumbnails/${String(pokemonId).padStart(3, '0')}.png`,
-                    };
-                  }
-                } catch (e) {
-                  sprites = {
-                    front_default: `/images/pokemon/thumbnails/${String(pokemonId).padStart(3, '0')}.png`,
-                  };
-                }
-
-                const transformedPokemon = {
-                  id: pokemon.id,
-                  name: pokemon.name,
-                  sprites: sprites,
-                  types: pokemon.types?.map((t: any) => ({
-                    type: { name: t.type.name }
-                  })) || [],
-                  stats: pokemon.stats?.map((s: any) => ({
-                    base_stat: s.base_stat,
-                    stat: { name: s.pokemon_v2_stat.name }
-                  })) || [],
-                  abilities: pokemon.abilities?.map((a: any) => ({
-                    ability: { name: a.ability.name },
-                    is_hidden: a.is_hidden
-                  })) || []
-                };
-
-                setPokemonData(prev => ({ ...prev, [pokemonId]: transformedPokemon }));
-              }
-            }
           } catch (error) {
             console.error(`Failed to load Pokemon ${pokemonId}:`, error);
           }
@@ -212,7 +128,7 @@ const TeamEditor: React.FC = () => {
     loadTeamData();
   }, [teamId, user, teams, getTeamMembers, navigate]);
 
-  // Search Pokemon using GraphQL
+  // Search Pokemon
   const searchPokemon = async (query: string) => {
     if (query.length < 2) {
       setSearchResults([]);
@@ -220,46 +136,46 @@ const TeamEditor: React.FC = () => {
     }
 
     try {
-      const searchQuery = `
-        query SearchPokemon($searchTerm: String!) {
-          pokemon_v2_pokemon(
-            where: {
-              name: { _ilike: $searchTerm }
-              pokemon_v2_pokemonforms: { is_default: { _eq: true } }
-            }
-            limit: 10
-            order_by: { id: asc }
-          ) {
-            id
-            name
-            pokemon_v2_pokemonsprites {
-              data: sprites
+      const results = await fetchPokemonData(
+        10,
+        0,
+        query,
+        {
+          types: [],
+          moves: [],
+          generation: '',
+          weight: { min: 0, max: 1000 },
+          height: { min: 0, max: 100 },
+          hasEvolutions: null
+        }
+      );
+
+      const transformedResults: Pokemon[] = results.map(p => ({
+        id: p.id,
+        name: p.name,
+        sprites: {
+          front_default: p.sprites.front_default,
+          other: {
+            'official-artwork': {
+              front_default: p.sprites.official_artwork
             }
           }
-        }
-      `;
+        },
+        types: p.types.map(t => ({
+          type: { name: t }
+        })),
+        stats: [
+          { base_stat: p.stats.hp, stat: { name: 'hp' } },
+          { base_stat: p.stats.attack, stat: { name: 'attack' } },
+          { base_stat: p.stats.defense, stat: { name: 'defense' } },
+          { base_stat: p.stats['special-attack'], stat: { name: 'special-attack' } },
+          { base_stat: p.stats['special-defense'], stat: { name: 'special-defense' } },
+          { base_stat: p.stats.speed, stat: { name: 'speed' } },
+        ],
+        abilities: []
+      }));
 
-      const response = await fetch(import.meta.env.VITE_API_GRAPHQL_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          query: searchQuery,
-          variables: { searchTerm: `%${query.toLowerCase()}%` }
-        }),
-      });
-
-      if (response.ok) {
-        const result = await response.json();
-        if (result.data?.pokemon_v2_pokemon) {
-          // Transform GraphQL results to match expected format
-          const transformedResults = result.data.pokemon_v2_pokemon.map((p: any) => ({
-            id: p.id,
-            name: p.name,
-            url: `https://pokeapi.co/api/v2/pokemon/${p.id}/` // Mock URL for compatibility
-          }));
-          setSearchResults(transformedResults);
-        }
-      }
+      setSearchResults(transformedResults);
     } catch (error) {
       console.error('Failed to search Pokemon:', error);
     }
