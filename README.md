@@ -68,6 +68,31 @@ A modern, feature-rich Pokédex application built with React, TypeScript, and Ta
 - **Animations**: CSS transitions and transforms
 - **Testing**: Jest with 68 test cases, 80%+ backend coverage
 - **Deployment**: Netlify with Edge Functions
+- **CI/CD**: GitHub Actions with Semantic Release
+
+## 🔄 CI/CD & Automation
+
+The project employs a robust CI/CD pipeline to ensure code quality and automate the release process.
+
+### Pipeline Workflow (`.github/workflows/ci-cd.yml`)
+
+1.  **Test & Lint**:
+    *   **Linting**: Runs `eslint` on every push and pull request. The pipeline is configured to fail on any linting errors to maintain high code standards.
+    *   **Unit Tests**: Executes the full suite of Jest tests (`npm run test:ci`).
+    *   **Security Audit**: Performs an `npm audit` to identify and report high-level vulnerabilities.
+
+2.  **Automated Versioning (Semantic Release)**:
+    *   When changes are merged into the `main` branch, **Semantic Release** automatically determines the next version number based on the commit history.
+    *   It follows the **Conventional Commits** specification:
+        *   `feat(...)`: Triggers a **Minor** release (e.g., 1.0.0 → 1.1.0).
+        *   `fix(...)`: Triggers a **Patch** release (e.g., 1.0.0 → 1.0.1).
+        *   `perf(...)`: Triggers a **Patch** release.
+        *   `BREAKING CHANGE:`: Triggers a **Major** release (e.g., 1.0.0 → 2.0.0).
+    *   The process automatically updates `package.json`, generates a `CHANGELOG.md`, creates a Git tag, and publishes a GitHub Release.
+
+3.  **Automated Deployment**:
+    *   Following a successful release, the application is built and deployed to **Netlify**.
+    *   Deployment messages include the new version number for easy tracking.
 
 ## 🚀 Multi-Tier Caching System
 
@@ -404,6 +429,12 @@ tests/                           # Test suites
   - 90%+ reduction in external API calls
   - Automatic fallback and graceful degradation
   - Browser-compatible implementation with polyfills
+
+- **🔄 CI/CD & Release Automation**: Established a full pipeline for code quality and versioning
+  - **Semantic Release**: Automatic versioning and changelog generation based on Conventional Commits
+  - **GitHub Actions**: Integrated linting, testing, and deployment to Netlify
+  - **Zero-error Linting**: Resolved all linting errors across Netlify functions and scripts
+  - **Automated Tags**: Automatic creation of Git tags and GitHub Releases on every feature/fix
 
 - **🎮 Pokemon Grid Challenge**: Daily Pokédoku-style puzzle game
   - Daily generated grids with type/generation constraints
