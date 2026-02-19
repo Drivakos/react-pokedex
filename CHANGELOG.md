@@ -1,3 +1,10 @@
+# [1.1.0](https://github.com/Drivakos/react-pokedex/compare/v1.0.0...v1.1.0) (2026-02-19)
+
+
+### Features
+
+* **state:** migrate PokéGrid and Team Builder to Zustand ([a40ce20](https://github.com/Drivakos/react-pokedex/commit/a40ce20222899f165569206f4a4dae6d702ef4cc))
+
 # 1.0.0 (2026-02-19)
 
 
