@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Save, Copy } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { formatName } from '../../utils/helpers';
-import { fetchMoveDetails, fetchPokemonAbilities, fetchCompetitiveItems, fetchPokemonById } from '../../services/api';
+import { fetchMoveDetails, fetchPokemonAbilities, fetchCompetitiveItems, fetchPokemonById, fetchPokemonMoves } from '../../services/api';
 import PokemonImage from '../PokemonImage';
 import './ShowdownStyles.css';
 
@@ -268,7 +268,7 @@ const HELD_ITEMS = [
 // Module-level in-memory cache for move details (persists across re-mounts)
 const moveDetailsCache: Record<string, MoveDetails> = {};
 
-const MovesetEditorContent: React.FC<MovesetEditorProps> = ({ pokemon, teamId, onBack: _onBack, initialBuild, onSave }) => {
+const MovesetEditorContent: React.FC<MovesetEditorProps> = ({ pokemon, teamId, initialBuild, onSave }) => {
   const [selectedMoves, setSelectedMoves] = useState<string[]>([]);
   const [availableMoves, setAvailableMoves] = useState<string[]>([]);
   const [moveDetails, setMoveDetails] = useState<Record<string, MoveDetails>>(moveDetailsCache);
@@ -306,13 +306,38 @@ const MovesetEditorContent: React.FC<MovesetEditorProps> = ({ pokemon, teamId, o
     }
   );
 
-  const [availableNatures, setAvailableNatures] = useState<Nature[]>([]);
+  const [availableNatures] = useState<Nature[]>([
+    { name: 'hardy', description: 'Neutral nature (no stat changes)' },
+    { name: 'lonely', description: '+Attack, -Defense' },
+    { name: 'brave', description: '+Attack, -Speed' },
+    { name: 'adamant', description: '+Attack, -Sp. Attack' },
+    { name: 'naughty', description: '+Attack, -Sp. Defense' },
+    { name: 'bold', description: '+Defense, -Attack' },
+    { name: 'docile', description: 'Neutral nature (no stat changes)' },
+    { name: 'relaxed', description: '+Defense, -Speed' },
+    { name: 'impish', description: '+Defense, -Sp. Attack' },
+    { name: 'lax', description: '+Defense, -Sp. Defense' },
+    { name: 'timid', description: '+Speed, -Attack' },
+    { name: 'hasty', description: '+Speed, -Defense' },
+    { name: 'serious', description: 'Neutral nature (no stat changes)' },
+    { name: 'jolly', description: '+Speed, -Sp. Attack' },
+    { name: 'naive', description: '+Speed, -Sp. Defense' },
+    { name: 'modest', description: '+Sp. Attack, -Attack' },
+    { name: 'mild', description: '+Sp. Attack, -Defense' },
+    { name: 'quiet', description: '+Sp. Attack, -Speed' },
+    { name: 'bashful', description: 'Neutral nature (no stat changes)' },
+    { name: 'rash', description: '+Sp. Attack, -Sp. Defense' },
+    { name: 'calm', description: '+Sp. Defense, -Attack' },
+    { name: 'gentle', description: '+Sp. Defense, -Defense' },
+    { name: 'sassy', description: '+Sp. Defense, -Speed' },
+    { name: 'careful', description: '+Sp. Defense, -Sp. Attack' },
+    { name: 'quirky', description: 'Neutral nature (no stat changes)' }
+  ]);
   const [availableAbilities, setAvailableAbilities] = useState<string[]>([]);
-  const [hasGenderDifference, setHasGenderDifference] = useState(false);
+  const [hasGenderDifference] = useState(false);
 
 
   // Description states
-  const [pokemonDescription, setPokemonDescription] = useState<string>('');
   const [abilityDescriptions, setAbilityDescriptions] = useState<Record<string, string>>({});
   const [itemDescriptions, setItemDescriptions] = useState<Record<string, string>>({});
 
@@ -322,81 +347,66 @@ const MovesetEditorContent: React.FC<MovesetEditorProps> = ({ pokemon, teamId, o
     const loadPokemonData = async () => {
       setLoading(true);
       try {
-        // Fetch detailed Pokemon data
-        try {
-          const fullPokemonData = await fetchPokemonById(pokemon.id);
-          setAvailableMoves(fullPokemonData.moves || []);
-
-          // Fetch abilities
-          const abilitiesData = await fetchPokemonAbilities(pokemon.id);
-          const abilities = abilitiesData
-            .filter((abilityData: any) => abilityData?.ability?.name)
-            .map((abilityData: any) => abilityData.ability.name);
-
-          // Remove duplicates if any
-          const uniqueAbilities = [...new Set(abilities)];
-          setAvailableAbilities(uniqueAbilities);
-
-          // Process ability descriptions
-          const abilityDescs: Record<string, string> = {};
-          abilitiesData.forEach((abilityData: any) => {
-            if (abilityData?.ability?.name) {
-              const abilityName = abilityData.ability.name;
-              const englishEntry = abilityData.ability.effect_entries?.find((entry: any) => entry?.language?.name === 'en');
-              abilityDescs[abilityName] = englishEntry?.short_effect || englishEntry?.effect || 'No description available';
-            }
-          });
-          setAbilityDescriptions(abilityDescs);
-
-          // Check for gender differences (simplified - assume false for now)
-          setHasGenderDifference(false);
-
-          // Set default ability
-          setPokemonBuild(prev => ({
-            ...prev,
-            ability: prev.ability || abilities[0] || ''
-          }));
-
-          // Set Pokemon description (we'll get this from the detailed Pokemon data later)
-          setPokemonDescription('Loading description...');
-        } catch (error) {
-          console.error('Failed to fetch Pokemon data:', error);
-          toast.error('Failed to load Pokemon data');
-        }
-
-        // Set available natures
-        setAvailableNatures([
-          { name: 'hardy', description: 'Neutral nature (no stat changes)' },
-          { name: 'lonely', description: '+Attack, -Defense' },
-          { name: 'brave', description: '+Attack, -Speed' },
-          { name: 'adamant', description: '+Attack, -Sp. Attack' },
-          { name: 'naughty', description: '+Attack, -Sp. Defense' },
-          { name: 'bold', description: '+Defense, -Attack' },
-          { name: 'docile', description: 'Neutral nature (no stat changes)' },
-          { name: 'relaxed', description: '+Defense, -Speed' },
-          { name: 'impish', description: '+Defense, -Sp. Attack' },
-          { name: 'lax', description: '+Defense, -Sp. Defense' },
-          { name: 'timid', description: '+Speed, -Attack' },
-          { name: 'hasty', description: '+Speed, -Defense' },
-          { name: 'serious', description: 'Neutral nature (no stat changes)' },
-          { name: 'jolly', description: '+Speed, -Sp. Attack' },
-          { name: 'naive', description: '+Speed, -Sp. Defense' },
-          { name: 'modest', description: '+Sp. Attack, -Attack' },
-          { name: 'mild', description: '+Sp. Attack, -Defense' },
-          { name: 'quiet', description: '+Sp. Attack, -Speed' },
-          { name: 'bashful', description: 'Neutral nature (no stat changes)' },
-          { name: 'rash', description: '+Sp. Attack, -Sp. Defense' },
-          { name: 'calm', description: '+Sp. Defense, -Attack' },
-          { name: 'gentle', description: '+Sp. Defense, -Defense' },
-          { name: 'sassy', description: '+Sp. Defense, -Speed' },
-          { name: 'careful', description: '+Sp. Defense, -Sp. Attack' },
-          { name: 'quirky', description: 'Neutral nature (no stat changes)' }
+        // Fetch detailed Pokemon data and moves in parallel
+        const [, movesData, abilitiesData, itemsData] = await Promise.all([
+          fetchPokemonById(pokemon.id),
+          fetchPokemonMoves(pokemon.id),
+          fetchPokemonAbilities(pokemon.id),
+          fetchCompetitiveItems().catch(() => [])
         ]);
 
-        // Fetch item descriptions for competitive items using GraphQL
-        try {
-          const itemsData = await fetchCompetitiveItems();
-          const itemDescs: Record<string, string> = {};
+        // Process moves
+        const moveNames = movesData.map((m: any) => m.move.name);
+        setAvailableMoves(moveNames);
+
+        const newMoveDetails: Record<string, MoveDetails> = { ...moveDetailsCache };
+        movesData.forEach((m: any) => {
+          const move = m.move;
+          if (!newMoveDetails[move.name]) {
+            newMoveDetails[move.name] = {
+              name: move.name,
+              type: move.type,
+              power: move.power,
+              accuracy: move.accuracy,
+              pp: move.pp,
+              damage_class: move.damage_class,
+              target: move.target,
+              priority: move.priority,
+              effect_entries: move.effect?.effect_text?.map((et: any) => ({
+                short_effect: et.short_effect,
+                language: { name: 'en' }
+              })) || [],
+              flavor_text_entries: move.flavor_text?.map((ft: any) => ({
+                flavor_text: ft.flavor_text,
+                language: { name: 'en' }
+              })) || []
+            };
+            // Also update module-level cache
+            moveDetailsCache[move.name] = newMoveDetails[move.name];
+          }
+        });
+        setMoveDetails(newMoveDetails);
+
+        // Process abilities
+        const abilities = abilitiesData
+          .filter((abilityData: any) => abilityData?.ability?.name)
+          .map((abilityData: any) => abilityData.ability.name);
+
+        setAvailableAbilities([...new Set(abilities)]);
+
+        const abilityDescs: Record<string, string> = {};
+        abilitiesData.forEach((abilityData: any) => {
+          if (abilityData?.ability?.name) {
+            const abilityName = abilityData.ability.name;
+            const englishEntry = abilityData.ability.effect_entries?.find((entry: any) => entry?.language?.name === 'en');
+            abilityDescs[abilityName] = englishEntry?.short_effect || englishEntry?.effect || 'No description available';
+          }
+        });
+        setAbilityDescriptions(abilityDescs);
+
+        // Process item descriptions
+        const itemDescs: Record<string, string> = {};
+        if (itemsData.length > 0) {
           itemsData.forEach((itemData: any) => {
             if (itemData?.name) {
               const itemName = itemData.name;
@@ -404,10 +414,8 @@ const MovesetEditorContent: React.FC<MovesetEditorProps> = ({ pokemon, teamId, o
               itemDescs[itemName] = englishEntry?.short_effect || englishEntry?.effect || 'Competitive battle item';
             }
           });
-          setItemDescriptions(itemDescs);
-        } catch (error) {
-          console.warn('Failed to fetch item descriptions:', error);
-          // Provide fallback descriptions
+        } else {
+          // Fallback items
           const fallbackDescriptions: Record<string, string> = {
             'leftovers': 'Restores HP gradually each turn',
             'choice-band': 'Boosts Attack but locks you into one move',
@@ -424,10 +432,17 @@ const MovesetEditorContent: React.FC<MovesetEditorProps> = ({ pokemon, teamId, o
             'black-sludge': 'Restores HP for Poison-types, damages others',
             'air-balloon': 'Makes holder immune to Ground moves until popped'
           };
-          setItemDescriptions(fallbackDescriptions);
+          Object.assign(itemDescs, fallbackDescriptions);
         }
+        setItemDescriptions(itemDescs);
 
-        // Load saved build - use initialBuild if provided, otherwise try localStorage
+        // Set default ability
+        setPokemonBuild(prev => ({
+          ...prev,
+          ability: prev.ability || abilities[0] || ''
+        }));
+
+        // Load saved build
         if (initialBuild) {
           setPokemonBuild(initialBuild);
           setSelectedMoves(initialBuild.moves || []);
@@ -449,50 +464,6 @@ const MovesetEditorContent: React.FC<MovesetEditorProps> = ({ pokemon, teamId, o
 
     loadPokemonData();
   }, [pokemon.id, teamId]);
-
-  // Load move details for all available moves
-  useEffect(() => {
-    if (availableMoves.length === 0) return;
-
-    const loadAllMoveDetails = async () => {
-      const newDetails: Record<string, MoveDetails> = {};
-      
-      // Load move details in chunks to avoid overwhelming the API/DB
-      const CHUNK_SIZE = 10;
-      for (let i = 0; i < availableMoves.length; i += CHUNK_SIZE) {
-        const chunk = availableMoves.slice(i, i + CHUNK_SIZE);
-        await Promise.all(chunk.map(async (moveName) => {
-          if (!moveDetails[moveName] && !moveDetailsCache[moveName]) {
-            const details = await loadMoveDetails(moveName);
-            if (details) {
-              newDetails[moveName] = details;
-            }
-          }
-        }));
-        
-        if (Object.keys(newDetails).length > 0) {
-          setMoveDetails(prev => ({ ...prev, ...newDetails }));
-        }
-      }
-    };
-
-    loadAllMoveDetails();
-  }, [availableMoves]);
-
-  // Load move details when selectedMoves changes (including from saved builds)
-  useEffect(() => {
-    const loadDetailsForSelectedMoves = async () => {
-      for (const moveName of selectedMoves) {
-        if (!moveDetails[moveName] && !moveDetailsCache[moveName]) {
-          await loadMoveDetails(moveName);
-        }
-      }
-    };
-
-    if (selectedMoves.length > 0) {
-      loadDetailsForSelectedMoves();
-    }
-  }, [selectedMoves]); // Only depend on selectedMoves, not moveDetails to avoid infinite loop
 
   const handleSaveBuild = () => {
     const completeBuild = {

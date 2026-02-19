@@ -319,6 +319,9 @@ function restoreGameFromProgress(
       if (savedCell) {
         let restoredPokemon = null;
         if (savedCell.pokemon && savedCell.pokemon.id) {
+          // Priority 1: Check displayed list (though it might be empty with skipFetch)
+          // Priority 2: Use the saved pokemon object directly (it's stored in game_data)
+          // Priority 3: Create a fallback if somehow it's missing fields
           restoredPokemon = displayedPokemon.find(p => p.id === savedCell.pokemon.id) ||
                            displayedPokemon.find(p => p.name.toLowerCase() === savedCell.pokemon.name.toLowerCase()) ||
                            createFallbackPokemon(savedCell.pokemon);
@@ -368,7 +371,12 @@ function restoreGameFromProgress(
         if (lastAttempt.pokemon_id) {
           pokemonObject = displayedPokemon.find(p => p.id === lastAttempt.pokemon_id) ||
                          displayedPokemon.find(p => p.name.toLowerCase() === lastAttempt.pokemon_name.toLowerCase()) ||
-                         createFallbackPokemon({ id: lastAttempt.pokemon_id, name: lastAttempt.pokemon_name });
+                         createFallbackPokemon({ 
+                           id: lastAttempt.pokemon_id, 
+                           name: lastAttempt.pokemon_name,
+                           types: lastAttempt.types, // Might not exist in history
+                           sprites: lastAttempt.sprites
+                         });
         }
 
         return {
@@ -388,17 +396,35 @@ function restoreGameFromProgress(
 }
 
 function createFallbackPokemon(savedPokemon: any): Pokemon {
+  // If savedPokemon already looks like a complete Pokemon object, return it
+  if (savedPokemon.id && savedPokemon.name && savedPokemon.types && savedPokemon.sprites) {
+    return savedPokemon as Pokemon;
+  }
+
   return {
     id: savedPokemon.id,
     name: savedPokemon.name,
-    height: 0,
-    weight: 0,
+    height: savedPokemon.height || 0,
+    weight: savedPokemon.weight || 0,
     types: savedPokemon.types || [],
-    moves: [],
-    sprites: { front_default: savedPokemon.sprites?.front_default || '' },
-    generation: '',
-    has_evolutions: false,
-    is_default: true,
-    base_experience: 0
+    moves: savedPokemon.moves || [],
+    sprites: { 
+      front_default: savedPokemon.sprites?.front_default || '',
+      official_artwork: savedPokemon.sprites?.official_artwork || ''
+    },
+    generation: savedPokemon.generation || '',
+    has_evolutions: savedPokemon.has_evolutions || false,
+    is_default: savedPokemon.is_default !== undefined ? savedPokemon.is_default : true,
+    base_experience: savedPokemon.base_experience || 0,
+    stats: savedPokemon.stats || {
+      hp: 0,
+      attack: 0,
+      defense: 0,
+      'special-attack': 0,
+      'special-defense': 0,
+      speed: 0
+    },
+    is_legendary: savedPokemon.is_legendary || false,
+    is_mythical: savedPokemon.is_mythical || false
   };
 }

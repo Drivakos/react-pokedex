@@ -22,23 +22,54 @@ export interface UserSearchResult {
 }
 
 class FriendsService {
+  private cache: Record<string, { data: any; timestamp: number }> = {};
+  private CACHE_DURATION = 2 * 60 * 1000; // 2 minutes
+
+  private getFromCache(key: string) {
+    const cached = this.cache[key];
+    if (cached && Date.now() - cached.timestamp < this.CACHE_DURATION) {
+      return cached.data;
+    }
+    return null;
+  }
+
+  private setInCache(key: string, data: any) {
+    this.cache[key] = { data, timestamp: Date.now() };
+  }
+
+  private clearCache(keyPrefix?: string) {
+    if (keyPrefix) {
+      Object.keys(this.cache).forEach(key => {
+        if (key.startsWith(keyPrefix)) {
+          delete this.cache[key];
+        }
+      });
+    } else {
+      this.cache = {};
+    }
+  }
+
   /**
    * Get the current user's friends list
    */
   async getFriends(userId: string): Promise<Friend[]> {
     if (!userId) return [];
 
+    const cacheKey = `friends_${userId}`;
+    const cached = this.getFromCache(cacheKey);
+    if (cached) return cached;
+
     try {
       const { data, error } = await supabase.rpc('get_user_friends', {
         p_user_id: userId
       });
 
-      if (error) {
-        console.error('Error fetching friends:', error);
-        return [];
+      const result = data || [];
+      if (!error) {
+        this.setInCache(cacheKey, result);
       }
 
-      return data || [];
+      return result;
     } catch (error) {
       console.error('Error in getFriends:', error);
       return [];
@@ -51,17 +82,21 @@ class FriendsService {
   async getPendingRequests(userId: string): Promise<FriendRequest[]> {
     if (!userId) return [];
 
+    const cacheKey = `requests_${userId}`;
+    const cached = this.getFromCache(cacheKey);
+    if (cached) return cached;
+
     try {
       const { data, error } = await supabase.rpc('get_pending_friend_requests', {
         p_user_id: userId
       });
 
-      if (error) {
-        console.error('Error fetching pending requests:', error);
-        return [];
+      const result = data || [];
+      if (!error) {
+        this.setInCache(cacheKey, result);
       }
 
-      return data || [];
+      return result;
     } catch (error) {
       console.error('Error in getPendingRequests:', error);
       return [];
@@ -150,6 +185,9 @@ class FriendsService {
         return { success: false, error: 'Friend request not found or already processed' };
       }
 
+      // Clear cache to force refresh
+      this.clearCache(userId);
+
       return { success: true };
     } catch (error: any) {
       console.error('Error in acceptFriendRequest:', error);
@@ -181,6 +219,9 @@ class FriendsService {
         return { success: false, error: 'Friend request not found or already processed' };
       }
 
+      // Clear cache
+      this.clearCache(userId);
+
       return { success: true };
     } catch (error: any) {
       console.error('Error in rejectFriendRequest:', error);
@@ -211,6 +252,9 @@ class FriendsService {
       if (result === false) {
         return { success: false, error: 'Friendship not found' };
       }
+
+      // Clear cache
+      this.clearCache(userId);
 
       return { success: true };
     } catch (error: any) {

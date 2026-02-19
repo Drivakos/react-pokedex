@@ -12,15 +12,13 @@ interface GameStats {
 }
 
 const PokemonMemoryGame: React.FC = () => {
-  const { displayedPokemon, loading, loadMorePokemon, hasMore } = usePokemon();
+  const { loading: initialLoading } = usePokemon({ skipFetch: true });
   const [gamePokemon, setGamePokemon] = useState<Pokemon[]>([]);
-  const [gameLoading, setGameLoading] = useState(false);
+  const [gameLoading, setGameLoading] = useState(true);
 
   // Load a diverse set of Pokemon for the game
   useEffect(() => {
     const loadGamePokemon = async () => {
-      if (loading) return;
-
       setGameLoading(true);
       try {
         // Load 100 Pokemon directly for fast loading and good diversity
@@ -34,22 +32,20 @@ const PokemonMemoryGame: React.FC = () => {
         });
 
         setGamePokemon(pokemon);
-
       } catch (error) {
-        // Fallback to displayed Pokemon
-        setGamePokemon(displayedPokemon);
+        console.error('Error fetching game Pokemon:', error);
       } finally {
         setGameLoading(false);
       }
     };
 
     loadGamePokemon();
-  }, [loading, displayedPokemon]);
+  }, []);
 
   const handleGameComplete = (stats: GameStats) => {
   };
 
-  if (loading || gameLoading) {
+  if (gameLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">

@@ -14,11 +14,10 @@ import { ProfileTeams } from './profile/ProfileTeams';
 
 const Profile: React.FC = () => {
   const navigate = useNavigate();
-  const { user, profile, signOut, updateProfile, teams, favorites, getTeamMembers } = useAuth();
+  const { user, profile, signOut, updateProfile, teams, favorites } = useAuth();
   
   // State
   const [status, setStatus] = useState<{ type: 'success' | 'error' | null; message: string }>({ type: null, message: '' });
-  const [teamMembers, setTeamMembers] = useState<Record<number, TeamMember[]>>({});
   const [friends, setFriends] = useState<Friend[]>([]);
   const [loadingFriends, setLoadingFriends] = useState(true);
   const [showFriendsModal, setShowFriendsModal] = useState(false);
@@ -29,27 +28,23 @@ const Profile: React.FC = () => {
   const favoritePokemonIds = useMemo(() => user?.id ? (favorites ?? []).map(f => f.pokemon_id) : [], [user, favorites]);
   const userTeams = useMemo(() => user?.id ? (teams ?? []) : [], [user, teams]);
 
+  // Extract team members from userTeams directly
+  const teamMembers = useMemo(() => {
+    const members: Record<number, TeamMember[]> = {};
+    userTeams.slice(0, 3).forEach(team => {
+      if (team.team_members) {
+        members[team.id] = team.team_members;
+      }
+    });
+    return members;
+  }, [userTeams]);
+
   // Sync profile username to form
   useEffect(() => {
     if (profile && profile.username !== formData.username) {
       setFormData({ username: profile.username ?? '' });
     }
   }, [profile?.username]);
-
-  // Load team members
-  useEffect(() => {
-    const fetchTeamMembers = async () => {
-      if (userTeams.length > 0) {
-        const members: Record<number, TeamMember[]> = {};
-        for (const team of userTeams.slice(0, 3)) {
-          const teamMembersData = await getTeamMembers(team.id);
-          members[team.id] = teamMembersData;
-        }
-        setTeamMembers(members);
-      }
-    };
-    fetchTeamMembers();
-  }, [userTeams, getTeamMembers]);
 
   // Load friends & friend code
   const loadFriendsData = useCallback(async () => {

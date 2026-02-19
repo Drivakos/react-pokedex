@@ -52,6 +52,21 @@ export interface WeeklyHistoryDay {
 }
 
 class PokegridService {
+  private cache: Record<string, { data: any; timestamp: number }> = {};
+  private CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+
+  private getFromCache(key: string) {
+    const cached = this.cache[key];
+    if (cached && Date.now() - cached.timestamp < this.CACHE_DURATION) {
+      return cached.data;
+    }
+    return null;
+  }
+
+  private setInCache(key: string, data: any) {
+    this.cache[key] = { data, timestamp: Date.now() };
+  }
+
   async loadUserProgress(userId: string, gridDate: string): Promise<GameProgress | null> {
     if (!userId) return null;
 
@@ -273,28 +288,16 @@ class PokegridService {
   async getUserStats(userId: string): Promise<any> {
     if (!userId) return null;
 
+    const cacheKey = `stats_${userId}`;
+    const cached = this.getFromCache(cacheKey);
+    if (cached) return cached;
+
     try {
       const { data, error } = await supabase.rpc('get_user_pokegrid_stats', {
         p_user_id: userId
       });
 
-      if (error) {
-        // Return default stats if function doesn't exist
-        return {
-          totalGames: 0,
-          completedGames: 0,
-          perfectGames: 0,
-          averageScore: 0,
-          bestScore: 0,
-          currentStreak: 0,
-          longestStreak: 0,
-          averageGuesses: 0,
-          totalGuesses: 0,
-          accuracy: 0
-        };
-      }
-
-      return data?.[0] || {
+      const result = data?.[0] || {
         totalGames: 0,
         completedGames: 0,
         perfectGames: 0,
@@ -306,6 +309,12 @@ class PokegridService {
         totalGuesses: 0,
         accuracy: 0
       };
+
+      if (!error) {
+        this.setInCache(cacheKey, result);
+      }
+
+      return result;
     } catch (error) {
       return {
         totalGames: 0,
@@ -342,16 +351,21 @@ class PokegridService {
   async getUserAchievements(userId: string): Promise<any[]> {
     if (!userId) return [];
 
+    const cacheKey = `achievements_${userId}`;
+    const cached = this.getFromCache(cacheKey);
+    if (cached) return cached;
+
     try {
       const { data, error } = await supabase.rpc('get_user_achievements', {
         p_user_id: userId
       });
 
-      if (error) {
-        return [];
+      const result = data || [];
+      if (!error) {
+        this.setInCache(cacheKey, result);
       }
 
-      return data || [];
+      return result;
     } catch (error) {
       return [];
     }

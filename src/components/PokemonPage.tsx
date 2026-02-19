@@ -17,7 +17,7 @@ import { PokemonEvolutionTab } from './pokemon-page/PokemonEvolutionTab';
 
 const PokemonPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
-  const { getPokemonDetails } = usePokemon();
+  const { getPokemonDetails } = usePokemon({ skipFetch: true });
   
   const [pokemonDetails, setPokemonDetails] = useState<PokemonDetails | null>(null);
   const [loading, setLoading] = useState(true);

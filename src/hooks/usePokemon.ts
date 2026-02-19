@@ -5,7 +5,9 @@ import { fetchPokemonData, fetchFilterOptions, fetchPokemonById, fetchPokemonDet
 export const POKEMON_PER_PAGE = 20;
 export const SEARCH_DEBOUNCE_MS = 250; // Reduced for better responsiveness
 
-export const usePokemon = () => {
+export const usePokemon = (options: { skipFetch?: boolean } = {}) => {
+  const { skipFetch = false } = options;
+
   // State for Pokemon data
   const [displayedPokemon, setDisplayedPokemon] = useState<Pokemon[]>([]);
   const [page, setPage] = useState(0);
@@ -59,7 +61,7 @@ export const usePokemon = () => {
   // Separate effect for loading filter options (only once)
   useEffect(() => {
     const loadFilterOptions = async () => {
-      if (filterOptionsLoaded) return;
+      if (filterOptionsLoaded || skipFetch) return;
 
       try {
         setLoadingProgress(5);
@@ -76,10 +78,16 @@ export const usePokemon = () => {
     };
 
     loadFilterOptions();
-  }, [filterOptionsLoaded]);
+  }, [filterOptionsLoaded, skipFetch]);
 
   // Fetch Pokemon data when search or filters change
   useEffect(() => {
+    if (skipFetch) {
+      setLoading(false);
+      setInitialLoad(false);
+      return;
+    }
+
     if (!filterOptionsLoaded) return; // Wait for filter options to load first
 
     setIsSearching(true);
@@ -115,7 +123,8 @@ export const usePokemon = () => {
     };
 
     fetchPokemon();
-  }, [debouncedSearchTerm, filters, initialLoad, filterOptionsLoaded]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [debouncedSearchTerm, filters, filterOptionsLoaded, skipFetch]);
 
   // Load more Pokemon when scrolling
   const loadMorePokemon = useCallback(async () => {

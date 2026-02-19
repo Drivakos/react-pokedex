@@ -1,4 +1,4 @@
-import React, { createContext, useState, useEffect, useContext } from 'react';
+import React, { createContext, useState, useEffect, useContext, useCallback } from 'react';
 import { Session, User, AuthError } from '@supabase/supabase-js';
 import { Profile, Favorite } from '../lib/supabase';
 import authService, { withAuthSession } from '../services/auth.service';
@@ -11,6 +11,7 @@ interface AuthContextType {
   profile: Profile | null;
   favorites: Favorite[];
   teams: any[];
+  teamsLoaded: boolean;
   loading: boolean;
 
   // Auth methods
@@ -63,121 +64,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [teams, setTeams] = useState<any[]>([]);
   const [teamsLoaded, setTeamsLoaded] = useState(false);
 
-  // Track when teams are loaded
-  React.useEffect(() => {
-    if (teams.length > 0) {
-      setTeamsLoaded(true);
-    }
-  }, [teams, teamsLoaded]);
-
-  // Fetch teams when user becomes available and teams aren't loaded yet
-  React.useEffect(() => {
-    if (user && !teamsLoaded) {
-      fetchTeams();
-    }
-  }, [user, teamsLoaded]);
-
   const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const initAuth = async () => {
-      setLoading(true);
-      try {
-        const session = await authService.getSession();
-
-        if (session) {
-          setSession(session);
-          setUser(session.user);
-
-          if (session.user) {
-            const userProfile = await authService.fetchProfile(session.user.id);
-            if (userProfile) {
-              setProfile(userProfile);
-            }
-
-            await fetchFavorites(session.user.id);
-            // Teams will be fetched by useEffect when user state is available
-          }
-        } else {
-          setSession(null);
-          setUser(null);
-          setProfile(null);
-          setFavorites([]);
-          setTeams([]);
-        }
-      } catch (err) {
-        setSession(null);
-        setUser(null);
-        setProfile(null);
-        setFavorites([]);
-        setTeams([]);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    initAuth();
-
-    const { data: { subscription } } = authService.onAuthStateChange(
-      async (event, session) => {
-        try {
-          switch (event) {
-            case 'SIGNED_IN':
-              if (session) {
-                setSession(session);
-                setUser(session.user);
-
-                if (session.user) {
-                  const userProfile = await authService.fetchProfile(session.user.id);
-                  if (userProfile) {
-                    setProfile(userProfile);
-                  } else {
-                    await authService.ensureProfile(session.user.id, session.user.email);
-                    const newProfile = await authService.fetchProfile(session.user.id);
-                    setProfile(newProfile);
-                  }
-
-                  await fetchFavorites(session.user.id);
-                  // Teams will be fetched by useEffect when user state is available
-                }
-              }
-              break;
-
-            case 'TOKEN_REFRESHED':
-              if (session) {
-                setSession(session);
-                setUser(session.user);
-              }
-              break;
-
-            case 'USER_UPDATED':
-              if (session) {
-                setSession(session);
-                setUser(session.user);
-              }
-              break;
-
-            case 'SIGNED_OUT':
-              setSession(null);
-              setUser(null);
-              setProfile(null);
-              setFavorites([]);
-              setTeams([]);
-              setTeamsLoaded(false);
-              break;
-          }
-        } catch (err) {
-          return;
-        } finally {
-          setLoading(false);
-        }
-      }
-    );
-
-    return () => {
-      subscription.unsubscribe();
-    };
-  }, []);
 
   const signUp = async (email: string, password: string) => {
     return await authService.signUp(email, password);
@@ -226,7 +113,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return { data: null, error: new Error('Failed to update profile') };
   };
 
-  const fetchFavorites = async (userId: string) => {
+  const fetchFavorites = useCallback(async (userId: string) => {
     const result = await withAuthSession(async () => {
       const { data, error } = await supabase
         .from('favorites')
@@ -243,7 +130,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (result.data) {
       setFavorites(result.data);
     }
-  };
+  }, []);
 
   const addFavorite = async (pokemonId: number) => {
     if (!user) {
@@ -307,13 +194,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const isFavorite = (pokemonId: number): boolean => {
+  const isFavorite = useCallback((pokemonId: number): boolean => {
     return favorites.some(fav => fav.pokemon_id === pokemonId);
-  };
+  }, [favorites]);
 
-  const fetchTeams = async () => {
+  const fetchTeams = useCallback(async () => {
     if (!user) {
       setTeams([]);
+      setTeamsLoaded(false);
       return;
     }
 
@@ -333,8 +221,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     if (result.data) {
       setTeams(result.data);
+      setTeamsLoaded(true);
     }
-  };
+  }, [user]);
+
+  // Fetch teams when user becomes available and teams aren't loaded yet
+  useEffect(() => {
+    if (user && !teamsLoaded) {
+      fetchTeams();
+    }
+  }, [user, teamsLoaded, fetchTeams]);
 
   const createTeam = async (name: string, description?: string) => {
     if (!user) {
@@ -585,10 +481,104 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   useEffect(() => {
-    if (user) {
-      fetchTeams();
-    }
-  }, [user]);
+    const initAuth = async () => {
+      setLoading(true);
+      try {
+        const session = await authService.getSession();
+
+        if (session) {
+          setSession(session);
+          setUser(session.user);
+
+          if (session.user) {
+            const userProfile = await authService.fetchProfile(session.user.id);
+            if (userProfile) {
+              setProfile(userProfile);
+            }
+
+            await fetchFavorites(session.user.id);
+            // Teams will be fetched by separate useEffect when user state is available
+          }
+        } else {
+          setSession(null);
+          setUser(null);
+          setProfile(null);
+          setFavorites([]);
+          setTeams([]);
+        }
+      } catch (err) {
+        setSession(null);
+        setUser(null);
+        setProfile(null);
+        setFavorites([]);
+        setTeams([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    initAuth();
+
+    const { data: { subscription } } = authService.onAuthStateChange(
+      async (event, session) => {
+        try {
+          switch (event) {
+            case 'SIGNED_IN':
+              if (session) {
+                setSession(session);
+                setUser(session.user);
+
+                if (session.user) {
+                  const userProfile = await authService.fetchProfile(session.user.id);
+                  if (userProfile) {
+                    setProfile(userProfile);
+                  } else {
+                    await authService.ensureProfile(session.user.id, session.user.email);
+                    const newProfile = await authService.fetchProfile(session.user.id);
+                    setProfile(newProfile);
+                  }
+
+                  await fetchFavorites(session.user.id);
+                  // Teams will be fetched by separate useEffect when user state is available
+                }
+              }
+              break;
+
+            case 'TOKEN_REFRESHED':
+              if (session) {
+                setSession(session);
+                setUser(session.user);
+              }
+              break;
+
+            case 'USER_UPDATED':
+              if (session) {
+                setSession(session);
+                setUser(session.user);
+              }
+              break;
+
+            case 'SIGNED_OUT':
+              setSession(null);
+              setUser(null);
+              setProfile(null);
+              setFavorites([]);
+              setTeams([]);
+              setTeamsLoaded(false);
+              break;
+          }
+        } catch (err) {
+          return;
+        } finally {
+          setLoading(false);
+        }
+      }
+    );
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [fetchFavorites]);
 
   const value = {
     session,
@@ -596,6 +586,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     profile,
     favorites,
     teams,
+    teamsLoaded,
     loading,
     // Auth methods
     refreshSession: authService.refreshSession.bind(authService),

@@ -41,6 +41,21 @@ export const fetchPokemonMoves = async (pokemonId: number) => {
                   name
                 }
                 priority
+                flavor_text: pokemon_v2_moveflavortexts(
+                  where: { pokemon_v2_language: { name: { _eq: "en" } } }
+                  order_by: { pokemon_v2_versiongroup: { id: desc } }
+                  limit: 1
+                ) {
+                  flavor_text
+                }
+                effect: pokemon_v2_moveeffect {
+                  effect_text: pokemon_v2_moveeffecteffecttexts(
+                    where: { pokemon_v2_language: { name: { _eq: "en" } } }
+                    limit: 1
+                  ) {
+                    short_effect
+                  }
+                }
               }
               level
               pokemon_v2_movelearnmethod {

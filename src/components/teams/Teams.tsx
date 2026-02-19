@@ -1,51 +1,20 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { ChevronRight, Plus, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 const Teams: React.FC = () => {
-  const { user, teams, fetchTeams, createTeam } = useAuth();
+  const { user, teams, teamsLoaded, fetchTeams, createTeam } = useAuth();
   const navigate = useNavigate();
-  const [loading, setLoading] = useState(true);
-  const teamsLoadedRef = useRef(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [formData, setFormData] = useState({ name: '', description: '' });
   const [creating, setCreating] = useState(false);
-
-  const loadTeams = useCallback(async () => {
-    if (!user || teamsLoadedRef.current) {
-      setLoading(false);
-      return;
-    }
-
-    teamsLoadedRef.current = true;
-
-    try {
-      await fetchTeams();
-    } catch (error) {
-      console.error('Error loading teams:', error);
-      toast.error('Failed to load teams');
-      teamsLoadedRef.current = false; // Reset on error to allow retry
-    } finally {
-      setLoading(false);
-    }
-  }, [user]); // Removed fetchTeams from dependencies
-
-  useEffect(() => {
-    loadTeams();
-  }, [loadTeams]);
-
-  // Reset teams loaded flag when user changes
-  useEffect(() => {
-    teamsLoadedRef.current = false;
-  }, [user]);
 
   const handleTeamSelect = (team: any) => {
     // Navigate directly to team editor instead of showing details
     navigate(`/team-editor/${team.id}`);
   };
-
 
   const handleCreateTeam = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -62,8 +31,7 @@ const Teams: React.FC = () => {
       if (newTeam) {
         setShowCreateModal(false);
         setFormData({ name: '', description: '' });
-        teamsLoadedRef.current = false; // Allow reloading teams
-        await fetchTeams(); // Refresh teams list
+        // fetchTeams is already called within createTeam (in AuthProvider)
         toast.success(`Team "${newTeam.name}" created!`);
       }
     } catch (error) {
@@ -74,8 +42,7 @@ const Teams: React.FC = () => {
     }
   };
 
-
-  if (loading) {
+  if (!teamsLoaded && user) {
     return (
       <div className="min-h-screen bg-gray-50 p-6">
         <div className="max-w-4xl mx-auto">

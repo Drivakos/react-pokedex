@@ -30,6 +30,7 @@ export const LeaderboardSidebar: React.FC<LeaderboardSidebarProps> = ({
   const [leaderboardData, setLeaderboardData] = useState<LeaderboardEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [hasInitialized, setHasInitialized] = useState(false);
+  const initializingRef = useRef(false);
 
   // Load leaderboard data - handles both initialization and updates
   useEffect(() => {
@@ -51,36 +52,36 @@ export const LeaderboardSidebar: React.FC<LeaderboardSidebarProps> = ({
     }
 
     const loadLeaderboard = async () => {
+      // If we are already initializing and this is a re-run from setActiveTab, 
+      // we might want to let the first one finish OR let the second one handle it.
+      // But simpler: just use a ref to track if we've already started the first load.
+      
       setLoading(true);
       try {
         let data: LeaderboardEntry[] = [];
+        let tabToFetch = activeTab;
 
-        // On first load, also check friends count to determine initial tab
-        if (!hasInitialized) {
+        // On first load, check friends count to determine initial tab
+        if (!hasInitialized && !initializingRef.current) {
+          initializingRef.current = true;
           const friendsCount = await friendsService.getFriendsCount(user.id);
           const initialTab: LeaderboardTab = friendsCount > 0 ? 'friends' : 'worldwide';
-          setActiveTab(initialTab);
+          
+          if (initialTab !== activeTab) {
+            setActiveTab(initialTab);
+            tabToFetch = initialTab;
+          }
+        }
 
-          if (initialTab === 'worldwide') {
-            data = await pokegridService.getLeaderboard(timeframe, timeframe === 'daily' ? gridDate : undefined);
-          } else {
-            data = await pokegridService.getFriendsLeaderboard(
-              user.id,
-              timeframe,
-              timeframe === 'daily' ? gridDate : undefined
-            );
-          }
+        // Fetch data for the determined tab
+        if (tabToFetch === 'worldwide') {
+          data = await pokegridService.getLeaderboard(timeframe, timeframe === 'daily' ? gridDate : undefined);
         } else {
-          // Subsequent loads based on tab/timeframe changes
-          if (activeTab === 'worldwide') {
-            data = await pokegridService.getLeaderboard(timeframe, timeframe === 'daily' ? gridDate : undefined);
-          } else {
-            data = await pokegridService.getFriendsLeaderboard(
-              user.id,
-              timeframe,
-              timeframe === 'daily' ? gridDate : undefined
-            );
-          }
+          data = await pokegridService.getFriendsLeaderboard(
+            user.id,
+            timeframe,
+            timeframe === 'daily' ? gridDate : undefined
+          );
         }
 
         setLeaderboardData(data);
@@ -94,7 +95,7 @@ export const LeaderboardSidebar: React.FC<LeaderboardSidebarProps> = ({
     };
 
     loadLeaderboard();
-  }, [user, activeTab, timeframe, gridDate, testMode, testData, testFriendsCount]);
+  }, [user, activeTab, timeframe, gridDate, testMode, testData, testFriendsCount, hasInitialized]);
 
   const handleTabChange = (tab: LeaderboardTab) => {
     setActiveTab(tab);

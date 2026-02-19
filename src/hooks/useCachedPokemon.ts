@@ -15,7 +15,9 @@ export const SEARCH_DEBOUNCE_MS = 250;
  * Hook for fetching Pokemon with automatic Redis caching
  * This is a cached version of usePokemon
  */
-export const useCachedPokemon = () => {
+export const useCachedPokemon = (options: { skipFetch?: boolean } = {}) => {
+  const { skipFetch = false } = options;
+
   // State for Pokemon data
   const [displayedPokemon, setDisplayedPokemon] = useState<Pokemon[]>([]);
   const [page, setPage] = useState(0);
@@ -69,7 +71,7 @@ export const useCachedPokemon = () => {
   // Load filter options (cached)
   useEffect(() => {
     const loadFilterOptions = async () => {
-      if (filterOptionsLoaded) return;
+      if (filterOptionsLoaded || skipFetch) return;
 
       try {
         setLoadingProgress(5);
@@ -86,10 +88,16 @@ export const useCachedPokemon = () => {
     };
 
     loadFilterOptions();
-  }, [filterOptionsLoaded]);
+  }, [filterOptionsLoaded, skipFetch]);
 
   // Fetch Pokemon data with caching
   useEffect(() => {
+    if (skipFetch) {
+      setLoading(false);
+      setInitialLoad(false);
+      return;
+    }
+
     if (!filterOptionsLoaded) return;
 
     setIsSearching(true);
@@ -126,7 +134,8 @@ export const useCachedPokemon = () => {
     };
 
     fetchPokemon();
-  }, [debouncedSearchTerm, filters, initialLoad, filterOptionsLoaded]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [debouncedSearchTerm, filters, filterOptionsLoaded, skipFetch]);
 
   // Load more Pokemon when scrolling (with caching)
   const loadMorePokemon = useCallback(async () => {

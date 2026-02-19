@@ -18,7 +18,7 @@ import { GridHeader } from './pokegrid-page/GridHeader';
 import { DailyGridSEO } from './pokegrid-page/DailyGridSEO';
 
 const PokéGridChallenge: React.FC = () => {
-  const { displayedPokemon, loading } = usePokemon();
+  const { displayedPokemon, loading } = usePokemon({ skipFetch: true });
 
   // State
   const [currentGridDate, setCurrentGridDate] = useState<Date>(() => {
@@ -42,10 +42,12 @@ const PokéGridChallenge: React.FC = () => {
   }, [selectedCell, currentGame, searchState.resetSearch]);
 
   useEffect(() => {
-    if (!loading && displayedPokemon.length > 0) {
+    // Initialize game on mount or date change, no longer waiting for displayedPokemon
+    if (!loading) {
       gameState.initializeGame(currentGridDate, 'daily');
     }
-  }, [loading, displayedPokemon.length, currentGridDate, gameState.initializeGame]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading, currentGridDate, gameState.initializeGame]);
 
   // Handlers
   const handleGridDateChange = useCallback((date: Date) => {

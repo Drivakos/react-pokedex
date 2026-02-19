@@ -13,11 +13,38 @@ export interface Notification {
 }
 
 class NotificationsService {
+  private cache: Record<string, { data: any; timestamp: number }> = {};
+  private CACHE_DURATION = 1 * 60 * 1000; // 1 minute
+
+  private getFromCache(key: string) {
+    const cached = this.cache[key];
+    if (cached && Date.now() - cached.timestamp < this.CACHE_DURATION) {
+      return cached.data;
+    }
+    return null;
+  }
+
+  private setInCache(key: string, data: any) {
+    this.cache[key] = { data, timestamp: Date.now() };
+  }
+
+  private clearCache(userId: string) {
+    Object.keys(this.cache).forEach(key => {
+      if (key.includes(userId)) {
+        delete this.cache[key];
+      }
+    });
+  }
+
   /**
    * Get user notifications
    */
   async getNotifications(userId: string, limit: number = 50, offset: number = 0): Promise<Notification[]> {
     if (!userId) return [];
+
+    const cacheKey = `notifications_${userId}_${limit}_${offset}`;
+    const cached = this.getFromCache(cacheKey);
+    if (cached) return cached;
 
     try {
       const { data, error } = await supabase.rpc('get_user_notifications', {
@@ -26,12 +53,12 @@ class NotificationsService {
         p_offset: offset
       });
 
-      if (error) {
-        logger.serviceError('NotificationsService', 'getNotifications', error);
-        return [];
+      const result = data || [];
+      if (!error) {
+        this.setInCache(cacheKey, result);
       }
 
-      return data || [];
+      return result;
     } catch (error) {
       logger.serviceError('NotificationsService', 'getNotifications', error);
       return [];
@@ -78,6 +105,7 @@ class NotificationsService {
         return false;
       }
 
+      this.clearCache(userId);
       logger.debug('markAsRead completed successfully');
       return data || false;
     } catch (error) {
@@ -100,6 +128,7 @@ class NotificationsService {
         return 0;
       }
 
+      this.clearCache(userId);
       return data || 0;
     } catch (error) {
       logger.serviceError('NotificationsService', 'markAllAsRead', error);
