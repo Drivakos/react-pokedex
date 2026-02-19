@@ -908,7 +908,7 @@ const MovesetEditorContent: React.FC<MovesetEditorProps> = ({ pokemon, teamId, i
         {/* EVs / IVs Panel */}
         <div style={{ borderTop: '1px solid #ddd' }}>
           <div className="sd-eviv-row">
-            <div className="sd-ev-panel" style={{ flex: 1 }}>
+            <div className="sd-ev-panel" style={{ borderRight: '1px solid #eee' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
                 <span style={{ fontSize: 11, fontWeight: 'bold', color: '#555' }}>EVs ({totalEVs}/510)</span>
                 <div style={{ display: 'flex', gap: 4 }}>

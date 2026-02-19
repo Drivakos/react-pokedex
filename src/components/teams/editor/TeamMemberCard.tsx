@@ -1,12 +1,13 @@
 import React from 'react';
 import PokemonImage from '../../PokemonImage';
 import { TeamMember } from '../../../lib/supabase';
+import { X } from 'lucide-react';
 
 interface TeamMemberCardProps {
   member: TeamMember;
   pokemon: any;
   onEdit: (member: TeamMember) => void;
-  onRemove: (position: number) => void;
+  onRemoveClick: (member: TeamMember) => void;
   onCopy: (member: TeamMember, pokemon: any) => void;
   formatName: (name: string) => string;
 }
@@ -15,7 +16,7 @@ export const TeamMemberCard: React.FC<TeamMemberCardProps> = ({
   member,
   pokemon,
   onEdit,
-  onRemove,
+  onRemoveClick,
   onCopy,
   formatName
 }) => {
@@ -50,14 +51,14 @@ export const TeamMemberCard: React.FC<TeamMemberCardProps> = ({
   };
 
   return (
-    <div className="sd-panel">
+    <div className="sd-panel relative">
       {/* Action buttons */}
       <div className="sd-actions">
         <button className="sd-action-btn" onClick={() => onCopy(member, pokemon)}>
           ⊕ Copy
         </button>
         <button className="sd-action-btn" onClick={() => onEdit(member)}>✎ Edit</button>
-        <button className="sd-action-btn sd-action-btn--danger" onClick={() => onRemove(member.position)}>🗑 Delete</button>
+        <button className="sd-action-btn sd-action-btn--danger" onClick={() => onRemoveClick(member)}>🗑 Delete</button>
       </div>
 
       {/* Build card body */}

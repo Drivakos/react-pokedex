@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { TeamMember } from '../../lib/supabase';
 import toast from 'react-hot-toast';
+import { Trash2 } from 'lucide-react';
 import MovesetEditor from './MovesetEditor';
 import { fetchPokemonData } from '../../services/api';
 import { PokemonService } from '../../services/pokemon.service';
@@ -55,6 +56,7 @@ const TeamEditor: React.FC = () => {
   const [pokemonData, setPokemonData] = useState<Record<number, Pokemon>>({});
   const [loading, setLoading] = useState(true);
   const [selectedMember, setSelectedMember] = useState<TeamMember | null>(null);
+  const [memberToRemove, setMemberToRemove] = useState<TeamMember | null>(null);
   const [showPokemonSearch, setShowPokemonSearch] = useState(false);
   const [showMovesetEditor, setShowMovesetEditor] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -196,14 +198,24 @@ const TeamEditor: React.FC = () => {
     }
   };
 
-  const handleRemovePokemon = async (position: number) => {
-    if (!teamId) return;
+  const handleRemoveClick = (member: TeamMember) => {
+    setMemberToRemove(member);
+  };
+
+  const handleRemoveConfirm = async () => {
+    if (!teamId || !memberToRemove) return;
     try {
-      await removePokemonFromTeam(parseInt(teamId), position);
+      await removePokemonFromTeam(parseInt(teamId), memberToRemove.position);
       const members = await getTeamMembers(parseInt(teamId));
       setTeamMembers(members || []);
+      setMemberToRemove(null);
+      if (selectedMember?.position === memberToRemove.position) {
+        setShowMovesetEditor(false);
+        setSelectedMember(null);
+      }
     } catch (error) {
       console.error('Failed to remove Pokemon:', error);
+      toast.error('Failed to remove Pokemon');
     }
   };
 
@@ -346,17 +358,18 @@ const TeamEditor: React.FC = () => {
         selectedMember={selectedMember}
         showMovesetEditor={showMovesetEditor}
         onEditMember={handleEditPokemon}
+        onRemoveClick={handleRemoveClick}
         onShowSearch={() => setShowPokemonSearch(true)}
         formatName={formatName}
       />
 
-      {showMovesetEditor && selectedMember && (
+      {showMovesetEditor && selectedMember && pokemonData[selectedMember.pokemon_id] && (
         <MovesetEditor
           pokemon={{
             id: selectedMember.pokemon_id,
-            name: pokemonData[selectedMember.pokemon_id]?.name || 'Unknown',
-            sprites: pokemonData[selectedMember.pokemon_id]?.sprites || { other: { 'official-artwork': { front_default: '' } } },
-            types: pokemonData[selectedMember.pokemon_id]?.types || [],
+            name: pokemonData[selectedMember.pokemon_id].name,
+            sprites: pokemonData[selectedMember.pokemon_id].sprites,
+            types: pokemonData[selectedMember.pokemon_id].types,
             moves: selectedMember.moves || []
           }}
           teamId={parseInt(teamId!)}
@@ -380,15 +393,17 @@ const TeamEditor: React.FC = () => {
       {!showMovesetEditor && (
         <div className="space-y-4 mt-4">
           {teamMembers.map((member) => (
-            <TeamMemberCard 
-              key={member.position}
-              member={member}
-              pokemon={pokemonData[member.pokemon_id]}
-              onEdit={handleEditPokemon}
-              onRemove={handleRemovePokemon}
-              onCopy={handleCopySingle}
-              formatName={formatName}
-            />
+            pokemonData[member.pokemon_id] && (
+              <TeamMemberCard 
+                key={member.position}
+                member={member}
+                pokemon={pokemonData[member.pokemon_id]}
+                onEdit={handleEditPokemon}
+                onRemoveClick={handleRemoveClick}
+                onCopy={handleCopySingle}
+                formatName={formatName}
+              />
+            )
           ))}
           {teamMembers.length < 6 && (
             <div className="sd-panel">
@@ -409,6 +424,35 @@ const TeamEditor: React.FC = () => {
           onClose={() => { setShowPokemonSearch(false); setSearchQuery(''); setSearchResults([]); }}
           formatName={formatName}
         />
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {memberToRemove && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[100] p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-sm w-full p-6 animate-in fade-in zoom-in duration-200">
+            <h3 className="text-lg font-bold text-gray-900 mb-2">
+              Remove {memberToRemove.pokemon_id && pokemonData[memberToRemove.pokemon_id] ? formatName(pokemonData[memberToRemove.pokemon_id].name) : 'this Pokémon'}?
+            </h3>
+            <p className="text-gray-600 mb-6 text-sm">
+              Are you sure you want to remove this Pokémon from your team? This action cannot be undone.
+            </p>
+            <div className="flex gap-3">
+              <button
+                className="flex-1 px-4 py-2 bg-gray-100 text-gray-700 rounded-md font-medium hover:bg-gray-200 transition-colors"
+                onClick={() => setMemberToRemove(null)}
+              >
+                Cancel
+              </button>
+              <button
+                className="flex-1 px-4 py-2 bg-red-500 text-white rounded-md font-medium hover:bg-red-600 transition-colors flex items-center justify-center gap-2"
+                onClick={handleRemoveConfirm}
+              >
+                <Trash2 size={16} />
+                Remove
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

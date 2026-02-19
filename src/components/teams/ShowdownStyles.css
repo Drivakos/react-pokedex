@@ -533,6 +533,17 @@
 }
 
 /* --- EV/IV Editing Panel --- */
+.sd-eviv-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+}
+
+@media (max-width: 480px) {
+  .sd-eviv-row {
+    grid-template-columns: 1fr;
+  }
+}
+
 .sd-ev-panel {
   padding: 8px;
 }
