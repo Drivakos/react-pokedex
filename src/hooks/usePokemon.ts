@@ -1,12 +1,24 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Pokemon, Filters, PokemonDetails } from '../types/pokemon';
-import { fetchPokemonData, fetchFilterOptions, fetchPokemonById, fetchPokemonDetails } from '../services/api';
+import { fetchPokemonData, fetchPokemonById, fetchPokemonDetails } from '../services/api';
+import { useFilterStore } from '../store/filterStore';
 
 export const POKEMON_PER_PAGE = 20;
 export const SEARCH_DEBOUNCE_MS = 250; // Reduced for better responsiveness
 
 export const usePokemon = (options: { skipFetch?: boolean } = {}) => {
   const { skipFetch = false } = options;
+
+  // Store state with granular selectors
+  const filters = useFilterStore(state => state.filters);
+  const searchTerm = useFilterStore(state => state.searchTerm);
+  const setSearchTerm = useFilterStore(state => state.setSearchTerm);
+  const availableTypes = useFilterStore(state => state.availableTypes);
+  const availableMoves = useFilterStore(state => state.availableMoves);
+  const availableGenerations = useFilterStore(state => state.availableGenerations);
+  const loadFilterOptions = useFilterStore(state => state.loadFilterOptions);
+  const optionsLoaded = useFilterStore(state => state.optionsLoaded);
+  const lastUpdated = useFilterStore(state => state.lastUpdated);
 
   // State for Pokemon data
   const [displayedPokemon, setDisplayedPokemon] = useState<Pokemon[]>([]);
@@ -17,8 +29,7 @@ export const usePokemon = (options: { skipFetch?: boolean } = {}) => {
   const [loadingProgress, setLoadingProgress] = useState(0);
 
   // State for search and filters
-  const [searchTerm, setSearchTerm] = useState('');
-  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState(searchTerm);
   const [isSearching, setIsSearching] = useState(false);
   const loadingRef = useRef(false);
   const searchTimeoutRef = useRef<number>();
@@ -26,22 +37,6 @@ export const usePokemon = (options: { skipFetch?: boolean } = {}) => {
 
   // State for selected Pokemon
   const [selectedPokemon, setSelectedPokemon] = useState<Pokemon | null>(null);
-
-  // State for filters
-  const [filters, setFilters] = useState<Filters>({
-    types: [],
-    moves: [],
-    generation: '',
-    weight: { min: 0, max: 0 },
-    height: { min: 0, max: 0 },
-    hasEvolutions: null,
-  });
-
-  // State for available filter options - cache these to avoid refetching
-  const [availableTypes, setAvailableTypes] = useState<string[]>([]);
-  const [availableMoves, setAvailableMoves] = useState<string[]>([]);
-  const [availableGenerations, setAvailableGenerations] = useState<string[]>([]);
-  const [filterOptionsLoaded, setFilterOptionsLoaded] = useState(false);
 
   // Debounce search term
   useEffect(() => {
@@ -61,25 +56,10 @@ export const usePokemon = (options: { skipFetch?: boolean } = {}) => {
 
   // Separate effect for loading filter options (only once)
   useEffect(() => {
-    const loadFilterOptions = async () => {
-      if (filterOptionsLoaded || skipFetch) return;
-
-      try {
-        setLoadingProgress(5);
-        const { types, moves, generations } = await fetchFilterOptions();
-        setAvailableTypes(types);
-        setAvailableMoves(moves);
-        setAvailableGenerations(generations);
-        setFilterOptionsLoaded(true);
-        setLoadingProgress(20);
-      } catch (error) {
-        console.error('Error fetching filter options:', error);
-        setFilterOptionsLoaded(true); // Don't block loading if filter options fail
-      }
-    };
-
-    loadFilterOptions();
-  }, [filterOptionsLoaded, skipFetch]);
+    if (!skipFetch) {
+      loadFilterOptions();
+    }
+  }, [skipFetch, loadFilterOptions]);
 
   // Fetch Pokemon data when search or filters change
   useEffect(() => {
@@ -89,7 +69,7 @@ export const usePokemon = (options: { skipFetch?: boolean } = {}) => {
       return;
     }
 
-    if (!filterOptionsLoaded) return; // Wait for filter options to load first
+    if (!optionsLoaded) return; // Wait for filter options to load first
 
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
@@ -142,7 +122,7 @@ export const usePokemon = (options: { skipFetch?: boolean } = {}) => {
       }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [debouncedSearchTerm, filters, filterOptionsLoaded, skipFetch]);
+  }, [debouncedSearchTerm, filters, optionsLoaded, skipFetch, lastUpdated]);
 
   // Load more Pokemon when scrolling
   const loadMorePokemon = useCallback(async () => {
@@ -173,11 +153,12 @@ export const usePokemon = (options: { skipFetch?: boolean } = {}) => {
       loadingRef.current = false;
       setLoading(false); // Clear loading state
     }
-  }, [page, hasMore, debouncedSearchTerm, filters]);
+  }, [page, hasMore, debouncedSearchTerm, filters, lastUpdated]);
 
-  // Handle filter changes
+  // Handle filter changes - now just a proxy to the store if needed, 
+  // but better to use useFilterStore directly in components
   const handleFilterChange = useCallback((newFilters: Filters) => {
-    setFilters(newFilters);
+    useFilterStore.getState().setFilters(newFilters);
   }, []);
 
   // Get a single Pokemon by ID

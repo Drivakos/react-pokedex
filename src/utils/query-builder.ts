@@ -10,14 +10,8 @@ import { Filters } from '../types/pokemon';
  */
 export const buildWhereConditions = (searchTerm: string, filters: Filters): string => {
   const conditions = {
-    types: filters.types.length > 0
-      ? `pokemon_v2_pokemontypes: { pokemon_v2_type: { name: { _in: ${JSON.stringify(filters.types)} } } }`
-      : '',
+    // Types and Moves are handled separately via AND conditions in buildCompleteWhereClause
     
-    moves: filters.moves.length > 0
-      ? `pokemon_v2_pokemonmoves: { pokemon_v2_move: { name: { _in: ${JSON.stringify(filters.moves)} } } }`
-      : '',
-
     generation: filters.generation
       ? `pokemon_v2_pokemonspecy: { pokemon_v2_generation: { name: { _eq: "${filters.generation}" } } }`
       : '',
@@ -49,14 +43,21 @@ export const buildWhereConditions = (searchTerm: string, filters: Filters): stri
 };
 
 /**
- * Builds the type AND condition for multiple type filtering
+ * Builds individual type conditions for multiple type filtering
  */
-export const buildTypeAndCondition = (types: string[]): string => {
-  if (types.length === 0) return '';
-  
-  return `_and: [${types.map(type => 
+export const buildTypeConditions = (types: string[]): string[] => {
+  return types.map(type => 
     `{ pokemon_v2_pokemontypes: { pokemon_v2_type: { name: { _eq: ${JSON.stringify(type)} } } } }`
-  ).join(',')}]`;
+  );
+};
+
+/**
+ * Builds individual move conditions for multiple move filtering
+ */
+export const buildMoveConditions = (moves: string[]): string[] => {
+  return moves.map(move => 
+    `{ pokemon_v2_pokemonmoves: { pokemon_v2_move: { name: { _eq: ${JSON.stringify(move)} } } } }`
+  );
 };
 
 /**
@@ -64,13 +65,19 @@ export const buildTypeAndCondition = (types: string[]): string => {
  */
 export const buildCompleteWhereClause = (searchTerm: string, filters: Filters): string => {
   const whereConditions = buildWhereConditions(searchTerm, filters);
-  const typeAndCondition = buildTypeAndCondition(filters.types);
+  const typeConditions = buildTypeConditions(filters.types);
+  const moveConditions = buildMoveConditions(filters.moves);
 
-  return [
-    whereConditions,
-    typeAndCondition,
-    `pokemon_v2_pokemonforms: { is_default: { _eq: true } }`
-  ].filter(Boolean).join(', ');
+  // Combine all conditions into a single _and array
+  const allConditions = [
+    // Parse whereConditions if it exists (it's a comma-separated list of key: value)
+    ...(whereConditions ? whereConditions.split(',').map(c => `{ ${c.trim()} }`) : []),
+    ...typeConditions,
+    ...moveConditions,
+    `{ pokemon_v2_pokemonforms: { is_default: { _eq: true } } }`
+  ].filter(Boolean);
+
+  return `_and: [${allConditions.join(', ')}]`;
 };
 
 /**

@@ -111,8 +111,8 @@ export function generateSearchCacheKey(
   filters: any
 ): string {
   const filterKey = JSON.stringify({
-    types: filters.types?.sort() || [],
-    moves: filters.moves?.sort() || [],
+    types: filters.types ? [...filters.types].sort() : [],
+    moves: filters.moves ? [...filters.moves].sort() : [],
     generation: filters.generation || '',
     weight: filters.weight || { min: 0, max: 0 },
     height: filters.height || { min: 0, max: 0 },

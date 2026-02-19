@@ -1,39 +1,46 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { RefreshCw, X, SlidersHorizontal } from 'lucide-react';
 import { FilterTabs } from './filters/FilterTabs';
 import { TypesFilter } from './filters/TypesFilter';
 import { MovesFilter } from './filters/MovesFilter';
 import { OtherFilters } from './filters/OtherFilters';
-import { Filters } from '../types/pokemon';
+import { useFilterStore } from '../store/filterStore';
 
 interface FilterManagerProps {
   showDesktopFilters: boolean;
   showMobileFilters: boolean;
   setShowMobileFilters: (show: boolean) => void;
-  filters: Filters;
-  handleFilterChange: (filters: Filters) => void;
-  availableTypes: string[];
-  availableMoves: string[];
-  availableGenerations: string[];
-  totalFiltersCount: number;
-  resetFilters: () => void;
 }
 
 export const FilterManager: React.FC<FilterManagerProps> = ({
   showDesktopFilters,
   showMobileFilters,
   setShowMobileFilters,
-  filters,
-  handleFilterChange,
-  availableTypes,
-  availableMoves,
-  availableGenerations,
-  totalFiltersCount,
-  resetFilters,
 }) => {
+  const { 
+    filters, 
+    updateFilter, 
+    setFilters, 
+    resetFilters, 
+    availableTypes, 
+    availableMoves, 
+    availableGenerations 
+  } = useFilterStore();
+  
   const [activeFilterTab, setActiveFilterTab] = useState<'types' | 'moves' | 'other'>('types');
   const [moveSearch, setMoveSearch] = useState('');
   const [typeSearch, setTypeSearch] = useState('');
+
+  const totalFiltersCount = useMemo(() => {
+    let count = 0;
+    count += filters.types.length;
+    count += filters.moves.length;
+    if (filters.generation) count++;
+    if (filters.weight.min > 0 || (filters.weight.max > 0 && filters.weight.max < 1000)) count++;
+    if (filters.height.min > 0 || (filters.height.max > 0 && filters.height.max < 100)) count++;
+    if (filters.hasEvolutions !== null) count++;
+    return count;
+  }, [filters]);
 
   const renderFilterContent = () => {
     switch (activeFilterTab) {
@@ -48,7 +55,7 @@ export const FilterManager: React.FC<FilterManagerProps> = ({
               const newTypes = filters.types.includes(type)
                 ? filters.types.filter(t => t !== type)
                 : [...filters.types, type];
-              handleFilterChange({ ...filters, types: newTypes });
+              updateFilter('types', newTypes);
             }}
           />
         );
@@ -63,7 +70,7 @@ export const FilterManager: React.FC<FilterManagerProps> = ({
               const newMoves = filters.moves.includes(move)
                 ? filters.moves.filter(m => m !== move)
                 : [...filters.moves, move];
-              handleFilterChange({ ...filters, moves: newMoves });
+              updateFilter('moves', newMoves);
             }}
           />
         );
@@ -72,20 +79,14 @@ export const FilterManager: React.FC<FilterManagerProps> = ({
           <OtherFilters
             filters={filters}
             availableGenerations={availableGenerations}
-            onGenerationChange={(generation: string) => handleFilterChange({ ...filters, generation })}
-            onWeightChange={(min: number | null, max: number | null) => handleFilterChange({
-              ...filters,
-              weight: {
-                min: min ? min * 10 : 0,
-                max: max ? max * 10 : 1000
-              }
+            onGenerationChange={(generation: string) => updateFilter('generation', generation)}
+            onWeightChange={(min: number | null, max: number | null) => updateFilter('weight', {
+              min: min ? min * 10 : 0,
+              max: max ? max * 10 : 1000
             })}
-            onHeightChange={(min: number | null, max: number | null) => handleFilterChange({
-              ...filters,
-              height: {
-                min: min ? min * 10 : 0,
-                max: max ? max * 10 : 100
-              }
+            onHeightChange={(min: number | null, max: number | null) => updateFilter('height', {
+              min: min ? min * 10 : 0,
+              max: max ? max * 10 : 100
             })}
           />
         );

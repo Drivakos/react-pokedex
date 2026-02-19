@@ -185,16 +185,15 @@ export const fetchPokemonData = async (
   signal?: AbortSignal
 ): Promise<Pokemon[]> => {
   const executeQuery = async () => {
-    try {
-      return await fetchCachedPokemonData(limit, offset, searchTerm, filters);
-    } catch (error) { /* continue */ }
-
+    // Only use local/Supabase database cache, skip Redis for filtered lists
+    // to ensure user always gets fresh results when clicking filters
     try {
       let query = supabase.from('pokemon').select('*');
       if (searchTerm) {
         if (!isNaN(Number(searchTerm))) query = query.eq('id', Number(searchTerm));
         else query = query.ilike('name', `%${searchTerm}%`);
       }
+      
       if (filters.types.length > 0) query = query.contains('types', filters.types);
       if (filters.moves.length > 0) query = query.contains('moves', filters.moves);
       if (filters.generation) query = query.eq('generation', filters.generation);
@@ -214,11 +213,6 @@ export const fetchPokemonData = async (
 
     return fetchPokemonDataDirect(limit, offset, searchTerm, filters, signal);
   };
-
-  if (isCacheEnabled()) {
-    const cacheKey = generateSearchCacheKey(limit, offset, searchTerm, filters);
-    return cacheAside(cacheKey, executeQuery, CACHE_TTL.POKEMON_LIST);
-  }
 
   return executeQuery();
 };

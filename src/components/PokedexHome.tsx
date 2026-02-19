@@ -6,6 +6,7 @@ import { FilterManager } from './FilterManager';
 import { PokemonDetailModal } from './PokemonDetailModal';
 import { usePokemon } from '../hooks/usePokemon';
 import { useUI } from '../hooks/useUI';
+import { useFilterStore } from '../store/filterStore';
 import Footer from './Footer';
 
 const PokedexHome: React.FC = () => {
@@ -16,15 +17,10 @@ const PokedexHome: React.FC = () => {
     selectedPokemon,
     setSelectedPokemon,
     loadMorePokemon,
-    searchTerm,
-    setSearchTerm,
     isSearching,
-    filters,
-    handleFilterChange,
-    availableTypes,
-    availableMoves,
-    availableGenerations,
   } = usePokemon();
+
+  const { searchTerm, setSearchTerm, filters } = useFilterStore();
 
   const { lastPokemonElementRef } = useUI();
   const [showMobileFilters, setShowMobileFilters] = useState(false);
@@ -55,17 +51,6 @@ const PokedexHome: React.FC = () => {
     return count;
   }, [filters]);
 
-  const resetFilters = () => {
-    handleFilterChange({
-      types: [],
-      moves: [],
-      generation: '',
-      weight: { min: 0, max: 0 },
-      height: { min: 0, max: 0 },
-      hasEvolutions: null
-    });
-  };
-
   return (
     <div className="min-h-screen bg-gray-200 md:p-8">
       <HomeSEO />
@@ -83,13 +68,6 @@ const PokedexHome: React.FC = () => {
           showDesktopFilters={showDesktopFilters}
           showMobileFilters={showMobileFilters}
           setShowMobileFilters={setShowMobileFilters}
-          filters={filters}
-          handleFilterChange={handleFilterChange}
-          availableTypes={availableTypes}
-          availableMoves={availableMoves}
-          availableGenerations={availableGenerations}
-          totalFiltersCount={totalFiltersCount}
-          resetFilters={resetFilters}
         />
 
         <div className="flex-1">
