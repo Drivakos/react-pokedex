@@ -100,7 +100,9 @@ export const useCachedPokemon = (options: { skipFetch?: boolean } = {}) => {
 
     if (!filterOptionsLoaded) return;
 
+    const controller = new AbortController();
     setIsSearching(true);
+
     const fetchPokemon = async () => {
       try {
         if (initialLoad) {
@@ -118,6 +120,9 @@ export const useCachedPokemon = (options: { skipFetch?: boolean } = {}) => {
           filters
         );
 
+        // Check if signal was aborted before updating state
+        if (controller.signal.aborted) return;
+
         setLoadingProgress(90);
         setDisplayedPokemon(results);
         setHasMore(results.length === POKEMON_PER_PAGE);
@@ -127,6 +132,8 @@ export const useCachedPokemon = (options: { skipFetch?: boolean } = {}) => {
         setIsSearching(false);
         setLoadingProgress(100);
       } catch (error) {
+        if ((error as Error).name === 'AbortError') return;
+        
         console.error('Error fetching Pokemon data:', error);
         setLoading(false);
         setIsSearching(false);
@@ -134,6 +141,10 @@ export const useCachedPokemon = (options: { skipFetch?: boolean } = {}) => {
     };
 
     fetchPokemon();
+
+    return () => {
+      controller.abort();
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [debouncedSearchTerm, filters, filterOptionsLoaded, skipFetch]);
 

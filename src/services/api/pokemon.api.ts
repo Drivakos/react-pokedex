@@ -52,7 +52,7 @@ export const transformSupabasePokemon = (p: any): Pokemon => {
 /**
  * Direct fetch from GraphQL (internal helper)
  */
-async function fetchPokemonByIdDirect(id: number): Promise<Pokemon> {
+async function fetchPokemonByIdDirect(id: number, signal?: AbortSignal): Promise<Pokemon> {
   try {
     const query = `
       query GetPokemonById($id: Int!) {
@@ -66,6 +66,7 @@ async function fetchPokemonByIdDirect(id: number): Promise<Pokemon> {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ query, variables: { id } }),
+      signal
     });
 
     const data = await handleGraphQLResponse<{ pokemon_v2_pokemon_by_pk: RawPokemonData }>(response);
@@ -77,6 +78,9 @@ async function fetchPokemonByIdDirect(id: number): Promise<Pokemon> {
 
     return transformSinglePokemon(rawPokemon);
   } catch (error) {
+    if ((error as Error).name === 'AbortError') {
+      throw error;
+    }
     console.error(`Error fetching Pokemon with ID ${id}:`, error);
     throw error;
   }
@@ -89,7 +93,8 @@ async function fetchPokemonDataDirect(
   limit: number,
   offset: number,
   searchTerm: string,
-  filters: Filters
+  filters: Filters,
+  signal?: AbortSignal
 ): Promise<Pokemon[]> {
   try {
     const whereClause = buildCompleteWhereClause(searchTerm, filters);
@@ -113,11 +118,15 @@ async function fetchPokemonDataDirect(
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ query, variables: { limit, offset } }),
+      signal
     });
 
     const data = await handleGraphQLResponse<{ pokemon_v2_pokemon: RawPokemonData[] }>(response);
     return transformRawData(data.pokemon_v2_pokemon);
   } catch (error) {
+    if ((error as Error).name === 'AbortError') {
+      throw error;
+    }
     console.error('Error fetching Pokemon data:', error);
     throw error;
   }
@@ -127,7 +136,7 @@ async function fetchPokemonDataDirect(
  * Fetches a single Pokemon by ID with caching support
  * Priority: Redis Cache → Supabase Cache (Edge) → Supabase Database → API
  */
-export const fetchPokemonById = async (id: number): Promise<Pokemon> => {
+export const fetchPokemonById = async (id: number, signal?: AbortSignal): Promise<Pokemon> => {
   if (isCacheEnabled()) {
     const cacheKey = `${CACHE_KEYS.POKEMON_BY_ID}${id}`;
     return cacheAside(cacheKey, async () => {
@@ -144,7 +153,7 @@ export const fetchPokemonById = async (id: number): Promise<Pokemon> => {
         if (data && !error) return transformSupabasePokemon(data);
       } catch (error) { /* continue */ }
 
-      return fetchPokemonByIdDirect(id);
+      return fetchPokemonByIdDirect(id, signal);
     }, CACHE_TTL.POKEMON);
   }
 
@@ -161,7 +170,7 @@ export const fetchPokemonById = async (id: number): Promise<Pokemon> => {
     if (data && !error) return transformSupabasePokemon(data);
   } catch (error) { /* continue */ }
 
-  return fetchPokemonByIdDirect(id);
+  return fetchPokemonByIdDirect(id, signal);
 };
 
 /**
@@ -172,7 +181,8 @@ export const fetchPokemonData = async (
   limit: number,
   offset: number,
   searchTerm: string,
-  filters: Filters
+  filters: Filters,
+  signal?: AbortSignal
 ): Promise<Pokemon[]> => {
   const executeQuery = async () => {
     try {
@@ -196,12 +206,13 @@ export const fetchPokemonData = async (
 
       const { data, error } = await query
         .order('id', { ascending: true })
-        .range(offset, offset + limit - 1);
+        .range(offset, offset + limit - 1)
+        .abortSignal(signal as any); // Supabase supports abortSignal
 
       if (data && !error && data.length > 0) return data.map(transformSupabasePokemon);
     } catch (error) { /* continue */ }
 
-    return fetchPokemonDataDirect(limit, offset, searchTerm, filters);
+    return fetchPokemonDataDirect(limit, offset, searchTerm, filters, signal);
   };
 
   if (isCacheEnabled()) {

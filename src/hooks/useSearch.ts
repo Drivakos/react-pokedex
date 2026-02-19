@@ -7,7 +7,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 
 export interface UseSearchOptions<T> {
   /** Function to perform the actual search */
-  searchFn: (query: string, searchId: number) => Promise<T[]>;
+  searchFn: (query: string, searchId: number, signal?: AbortSignal) => Promise<T[]>;
   /** Debounce delay in milliseconds (default: 250ms) */
   debounceMs?: number;
   /** Minimum query length to trigger search (default: 0) */
@@ -48,6 +48,7 @@ export function useSearch<T = any>(
   // Track the current search request ID to prevent race conditions
   const currentSearchIdRef = useRef<number>(0);
   const timeoutRef = useRef<number>();
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   // Perform search with race condition handling
   const performSearch = useCallback(async (searchQuery: string, searchId: number) => {
@@ -65,16 +66,24 @@ export function useSearch<T = any>(
       return;
     }
 
+    // Abort previous request
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    abortControllerRef.current = new AbortController();
+
     setIsSearching(true);
 
     try {
-      const searchResults = await searchFn(searchQuery, searchId);
+      const searchResults = await searchFn(searchQuery, searchId, abortControllerRef.current.signal);
 
       // Check if this is still the most recent search
       if (searchId === currentSearchIdRef.current) {
         setResults(searchResults);
       }
     } catch (error) {
+      if ((error as Error).name === 'AbortError') return;
+
       console.error('Search error:', error);
       // Only clear results if this is still the current search
       if (searchId === currentSearchIdRef.current) {
@@ -97,6 +106,9 @@ export function useSearch<T = any>(
 
     // Reset for empty query
     if (query.length === 0) {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
       setResults([]);
       setIsSearching(false);
       currentSearchIdRef.current = 0;
@@ -114,6 +126,9 @@ export function useSearch<T = any>(
     return () => {
       if (timeoutRef.current) {
         clearTimeout(timeoutRef.current);
+      }
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
       }
     };
   }, [query, debounceMs, performSearch]);

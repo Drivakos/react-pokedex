@@ -10,7 +10,7 @@ import { useSearch } from './useSearch';
  */
 export function usePokegridSearch() {
   // Search function that fetches and sorts Pokemon
-  const searchFn = useCallback(async (query: string) => {
+  const searchFn = useCallback(async (query: string, _searchId: number, signal?: AbortSignal) => {
     // Query is already trimmed by our wrapper
     if (query.length === 0) {
       return [];
@@ -30,7 +30,8 @@ export function usePokegridSearch() {
           weight: { min: 0, max: 0 },
           height: { min: 0, max: 0 },
           hasEvolutions: null,
-        }
+        },
+        signal
       );
 
       // Sort results by relevance using centralized utility

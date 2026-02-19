@@ -106,7 +106,7 @@ class FriendsService {
   /**
    * Search for users by email or username
    */
-  async searchUsers(currentUserId: string, query: string, limit: number = 20): Promise<UserSearchResult[]> {
+  async searchUsers(currentUserId: string, query: string, limit: number = 20, signal?: AbortSignal): Promise<UserSearchResult[]> {
     if (!currentUserId || !query || query.trim().length === 0) return [];
 
     try {
@@ -114,15 +114,17 @@ class FriendsService {
         p_current_user_id: currentUserId,
         p_search_query: query.trim(),
         p_limit: limit
-      });
+      }).abortSignal(signal as any);
 
       if (error) {
+        if (error.message?.includes('AbortError')) throw error;
         console.error('Error searching users:', error);
         return [];
       }
 
       return data || [];
     } catch (error) {
+      if ((error as any).name === 'AbortError') throw error;
       console.error('Error in searchUsers:', error);
       return [];
     }

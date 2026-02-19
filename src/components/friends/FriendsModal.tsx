@@ -28,6 +28,7 @@ export const FriendsModal: React.FC<FriendsModalProps> = ({ isOpen, onClose, ini
   const [sendingRequestTo, setSendingRequestTo] = useState<string | null>(null);
   const debounceTimerRef = useRef<number | null>(null);
   const lastSearchedQueryRef = useRef<string>('');
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   // Update active tab when initialTab prop changes or modal opens
   React.useEffect(() => {
@@ -74,13 +75,21 @@ export const FriendsModal: React.FC<FriendsModalProps> = ({ isOpen, onClose, ini
       return;
     }
 
+    // Abort previous search
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    abortControllerRef.current = new AbortController();
+
     lastSearchedQueryRef.current = searchTerm;
     setSearching(true);
 
     try {
-      const results = await friendsService.searchUsers(user.id, searchTerm);
+      const results = await friendsService.searchUsers(user.id, searchTerm, 20, abortControllerRef.current.signal);
       setSearchResults(results);
     } catch (error) {
+      if ((error as any).name === 'AbortError') return;
+      
       console.error('Error searching users:', error);
       toast.error('Failed to search users');
       setSearchResults([]);
@@ -96,6 +105,9 @@ export const FriendsModal: React.FC<FriendsModalProps> = ({ isOpen, onClose, ini
     }
 
     if (searchQuery.trim().length < 2) {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
       setSearchResults([]);
       lastSearchedQueryRef.current = '';
       return;
@@ -108,6 +120,9 @@ export const FriendsModal: React.FC<FriendsModalProps> = ({ isOpen, onClose, ini
     return () => {
       if (debounceTimerRef.current) {
         clearTimeout(debounceTimerRef.current);
+      }
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
       }
     };
   }, [searchQuery, performSearch]);
