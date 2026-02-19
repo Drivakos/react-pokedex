@@ -4,7 +4,8 @@ import { useAuth } from '../../hooks/useAuth';
 import { TeamMember } from '../../lib/supabase';
 import toast from 'react-hot-toast';
 import MovesetEditor from './MovesetEditor';
-import { fetchPokemonById, fetchPokemonData } from '../../services/api';
+import { fetchPokemonData } from '../../services/api';
+import { PokemonService } from '../../services/pokemon.service';
 import './ShowdownStyles.css';
 
 // Sub-components
@@ -66,27 +67,29 @@ const TeamEditor: React.FC = () => {
   // Load team and members
   useEffect(() => {
     const loadTeamData = async () => {
-      if (!teamId || !user) return;
+      if (!teamId || !user || !teams) return;
 
       try {
         const foundTeam = teams.find((t: any) => t.id === parseInt(teamId));
         if (!foundTeam) {
-          toast.error('Team not found');
-          navigate('/teams');
+          // If not found in memory, we might need a fetch or wait for teamsLoaded
           return;
         }
         setTeam(foundTeam);
 
-        const members = await getTeamMembers(parseInt(teamId));
-        setTeamMembers(members || []);
+        // team_members is already included in teams from AuthProvider
+        const members = foundTeam.team_members || [];
+        setTeamMembers(members);
 
-        const pokemonIds: number[] = members?.map((m: any) => m.pokemon_id) || [];
-        const uniqueIds: number[] = [...new Set(pokemonIds)];
-        
-        for (const pokemonId of uniqueIds) {
-          try {
-            const pokemon = await fetchPokemonById(pokemonId);
-            const transformedPokemon: Pokemon = {
+        if (members.length > 0) {
+          const pokemonIds: number[] = members.map((m: any) => m.pokemon_id);
+          const uniqueIds = [...new Set(pokemonIds)];
+          
+          const pokemonList = await PokemonService.getBatch(uniqueIds);
+          const newData: Record<number, Pokemon> = {};
+          
+          pokemonList.forEach(pokemon => {
+            newData[pokemon.id] = {
               id: pokemon.id,
               name: pokemon.name,
               sprites: {
@@ -108,10 +111,9 @@ const TeamEditor: React.FC = () => {
               ],
               abilities: []
             };
-            setPokemonData(prev => ({ ...prev, [pokemonId]: transformedPokemon }));
-          } catch (error) {
-            console.error(`Failed to load Pokemon ${pokemonId}:`, error);
-          }
+          });
+          
+          setPokemonData(newData);
         }
       } catch (error) {
         console.error('Failed to load team data:', error);
@@ -122,7 +124,7 @@ const TeamEditor: React.FC = () => {
     };
 
     loadTeamData();
-  }, [teamId, user, teams, getTeamMembers, navigate]);
+  }, [teamId, user, teams]);
 
   // Search Pokemon
   useEffect(() => {

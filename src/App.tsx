@@ -1,28 +1,37 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import PokedexHome from './components/PokedexHome';
-import PokemonPage from './components/PokemonPage';
-import Login from './components/auth/Login';
-import SignUp from './components/auth/SignUp';
-import Profile from './components/auth/Profile';
-import AuthCallback from './components/auth/AuthCallback';
-import ResetPassword from './components/auth/ResetPassword';
-import ResetPasswordConfirm from './components/auth/ResetPasswordConfirm';
-import MagicLinkLogin from './components/auth/MagicLinkLogin';
-import ProtectedRoute from './components/auth/ProtectedRoute';
-import Navigation from './components/Navigation';
 import React, { Suspense } from 'react';
-import Teams from './components/teams/Teams';
-import TeamEditor from './components/teams/TeamEditor';
+import Navigation from './components/Navigation';
 
-// Lazy load the memory game for better bundle splitting
+// Lazy load all non-critical components
+const PokemonPage = React.lazy(() => import('./components/PokemonPage'));
+const Login = React.lazy(() => import('./components/auth/Login'));
+const SignUp = React.lazy(() => import('./components/auth/SignUp'));
+const Profile = React.lazy(() => import('./components/auth/Profile'));
+const AuthCallback = React.lazy(() => import('./components/auth/AuthCallback'));
+const ResetPassword = React.lazy(() => import('./components/auth/ResetPassword'));
+const ResetPasswordConfirm = React.lazy(() => import('./components/auth/ResetPasswordConfirm'));
+const MagicLinkLogin = React.lazy(() => import('./components/auth/MagicLinkLogin'));
+const ProtectedRoute = React.lazy(() => import('./components/auth/ProtectedRoute'));
+const Teams = React.lazy(() => import('./components/teams/Teams'));
+const TeamEditor = React.lazy(() => import('./components/teams/TeamEditor'));
 const PokemonMemoryGame = React.lazy(() => import('./components/PokemonMemoryGame'));
 const PokéGridChallenge = React.lazy(() => import('./components/PokéGridChallenge'));
+
+const LoadingFallback = ({ message = 'Loading...' }: { message?: string }) => (
+  <div className="min-h-screen flex items-center justify-center bg-gray-50">
+    <div className="text-center">
+      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-600 mx-auto mb-4"></div>
+      <p className="text-gray-600 font-medium">{message}</p>
+    </div>
+  </div>
+);
 
 function AppContent() {
   return (
     <>
       <Navigation />
-      <div>
+      <Suspense fallback={<LoadingFallback />}>
         <Routes>
           <Route path="/" element={<PokedexHome />} />
           <Route path="/pokemon/:id" element={<PokemonPage />} />
@@ -48,18 +57,10 @@ function AppContent() {
               <TeamEditor />
             </ProtectedRoute>
           } />
-          <Route path="/memory-game" element={
-            <Suspense fallback={<div>Loading Memory Game...</div>}>
-              <PokemonMemoryGame />
-            </Suspense>
-          } />
-          <Route path="/pkmn-grid-challenge" element={
-            <Suspense fallback={<div>Loading Grid Challenge...</div>}>
-              <PokéGridChallenge />
-            </Suspense>
-          } />
+          <Route path="/memory-game" element={<PokemonMemoryGame />} />
+          <Route path="/pkmn-grid-challenge" element={<PokéGridChallenge />} />
         </Routes>
-      </div>
+      </Suspense>
     </>
   );
 }

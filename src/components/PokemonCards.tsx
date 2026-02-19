@@ -24,7 +24,7 @@ interface PokemonCardsProps {
 
 // Cache configuration
 const CACHE_KEY_PREFIX = 'pokemon_tcg_cards_';
-const CACHE_DURATION = 7 * 24 * 60 * 60 * 1000; // 7 days in milliseconds
+const CACHE_DURATION = 365 * 24 * 60 * 60 * 1000; // 1 year in milliseconds
 
 interface CachedData {
   cards: PokemonCard[];

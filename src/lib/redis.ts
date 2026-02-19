@@ -74,11 +74,11 @@ export const CACHE_KEYS = {
  * Cache TTL (Time To Live) in seconds
  */
 export const CACHE_TTL = {
-  POKEMON: 60 * 60 * 24 * 7, // 7 days - Pokemon data rarely changes
-  POKEMON_DETAILS: 60 * 60 * 24 * 7, // 7 days
-  POKEMON_LIST: 60 * 60 * 4, // 4 hours - Lists can change based on filters
-  SEARCH_RESULTS: 60 * 60 * 2, // 2 hours - Search results
-  FILTER_OPTIONS: 60 * 60 * 24, // 24 hours - Filter options rarely change
+  POKEMON: 60 * 60 * 24 * 365, // 1 year - Pokemon data is static
+  POKEMON_DETAILS: 60 * 60 * 24 * 365, // 1 year
+  POKEMON_LIST: 60 * 60 * 24 * 30, // 30 days - Lists with filters
+  SEARCH_RESULTS: 60 * 60 * 24 * 7, // 7 days
+  FILTER_OPTIONS: 60 * 60 * 24 * 30, // 30 days
   SHORT: 60 * 15, // 15 minutes - For frequently changing data
 } as const;
 
