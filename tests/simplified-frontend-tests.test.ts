@@ -50,9 +50,15 @@ describe('Frontend Services Integration Tests', () => {
       expect(typeof buildWhereConditions).toBe('function');
     });
 
-    it('should have buildTypeAndCondition function available', async () => {
-      const { buildTypeAndCondition } = await import('../src/utils/query-builder');
-      expect(typeof buildTypeAndCondition).toBe('function');
+    it('should have new query-builder functions available', async () => {
+      const { 
+        buildTypeConditions, 
+        buildMoveConditions, 
+        buildCompleteWhereClause 
+      } = await import('../src/utils/query-builder');
+      expect(typeof buildTypeConditions).toBe('function');
+      expect(typeof buildMoveConditions).toBe('function');
+      expect(typeof buildCompleteWhereClause).toBe('function');
     });
 
     it('should handle buildWhereConditions with empty filters', async () => {
@@ -70,8 +76,8 @@ describe('Frontend Services Integration Tests', () => {
       expect(typeof result).toBe('string');
     });
 
-    it('should handle buildWhereConditions with type filters', async () => {
-      const { buildWhereConditions } = await import('../src/utils/query-builder');
+    it('should handle buildCompleteWhereClause with type filters', async () => {
+      const { buildCompleteWhereClause } = await import('../src/utils/query-builder');
       const mockFilters = {
         types: ['fire', 'water'],
         moves: [],
@@ -81,10 +87,11 @@ describe('Frontend Services Integration Tests', () => {
         hasEvolutions: null
       };
       
-      const result = buildWhereConditions('', mockFilters);
+      const result = buildCompleteWhereClause('', mockFilters);
       expect(result).toContain('pokemon_v2_pokemontypes');
       expect(result).toContain('fire');
       expect(result).toContain('water');
+      expect(result).toContain('_and');
     });
 
     it('should handle transformSinglePokemon function', async () => {
