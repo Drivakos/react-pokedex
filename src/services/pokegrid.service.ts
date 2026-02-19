@@ -186,7 +186,7 @@ class PokegridService {
     try {
       const { error } = await supabase.rpc('save_pokegrid_guess', {
         p_user_id: userId,
-        p_grid_date: gridDate,
+        p_grid_date: gridDate instanceof Date ? gridDate.toISOString().split('T')[0] : gridDate,
         p_cell_id: cellId,
         p_pokemon_id: pokemonId,
         p_pokemon_name: pokemonName,

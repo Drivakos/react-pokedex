@@ -16,18 +16,21 @@ import { GAME_CONSTANTS } from './pokegrid/constants';
 // Sub-components
 import { GridHeader } from './pokegrid-page/GridHeader';
 import { DailyGridSEO } from './pokegrid-page/DailyGridSEO';
+import { useUIStore } from '../store/uiStore';
 
 const PokéGridChallenge: React.FC = () => {
   const { displayedPokemon, loading } = usePokemon({ skipFetch: true });
+  const { 
+    showShareModal, setShowShareModal, 
+    showFriendsModal, setShowFriendsModal, 
+    showMobileMenu, setShowMobileMenu 
+  } = useUIStore();
 
   // State
   const [currentGridDate, setCurrentGridDate] = useState<Date>(() => {
     const today = new Date();
     return new Date(Date.UTC(today.getFullYear(), today.getMonth(), today.getDate()));
   });
-  const [showShareModal, setShowShareModal] = useState(false);
-  const [showFriendsModal, setShowFriendsModal] = useState(false);
-  const [showMobileMenu, setShowMobileMenu] = useState(false);
 
   // Hooks
   const gameState = usePokegridGame(displayedPokemon, 'daily');
@@ -154,6 +157,7 @@ const PokéGridChallenge: React.FC = () => {
             hasRecentMistake={gameState.hasRecentMistake}
             mistakePokemon={gameState.mistakePokemon}
             popularityData={gameState.popularityData}
+            alreadyUsedIds={game.cells.filter(c => c.isCorrect && c.pokemon).map(c => c.pokemon!.id)}
           />
         )}
 
