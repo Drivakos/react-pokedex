@@ -1,3 +1,10 @@
+# [1.2.0](https://github.com/Drivakos/react-pokedex/compare/v1.1.0...v1.2.0) (2026-02-19)
+
+
+### Features
+
+* **state:** centralized state overhaul and advanced filtering fixes ([40c06b1](https://github.com/Drivakos/react-pokedex/commit/40c06b1655db7afaa9c3991b3087983073866964))
+
 # [1.1.0](https://github.com/Drivakos/react-pokedex/compare/v1.0.0...v1.1.0) (2026-02-19)
 
 
