@@ -1,19 +1,42 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
-import { ChevronRight, Plus, X } from 'lucide-react';
+import { ChevronRight, Plus, X, Trash2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 const Teams: React.FC = () => {
-  const { user, teams, teamsLoaded, fetchTeams, createTeam } = useAuth();
+  const { user, teams, teamsLoaded, fetchTeams, createTeam, deleteTeam } = useAuth() as any;
   const navigate = useNavigate();
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [formData, setFormData] = useState({ name: '', description: '' });
   const [creating, setCreating] = useState(false);
+  const [teamToDelete, setTeamToDelete] = useState<any>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const handleTeamSelect = (team: any) => {
     // Navigate directly to team editor instead of showing details
     navigate(`/team-editor/${team.id}`);
+  };
+
+  const handleDeleteClick = (e: React.MouseEvent, team: any) => {
+    e.stopPropagation(); // Don't navigate to editor
+    setTeamToDelete(team);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!teamToDelete) return;
+
+    try {
+      setDeleting(true);
+      await deleteTeam(teamToDelete.id);
+      setTeamToDelete(null);
+      toast.success(`Team "${teamToDelete.name}" deleted`);
+    } catch (error) {
+      console.error('Failed to delete team:', error);
+      toast.error('Failed to delete team');
+    } finally {
+      setDeleting(false);
+    }
   };
 
   const handleCreateTeam = async (e: React.FormEvent) => {
@@ -101,10 +124,19 @@ const Teams: React.FC = () => {
                   <div>
                     <h3 className="text-xl font-bold text-gray-800">{team.name}</h3>
                     {team.description && (
-                      <p className="text-gray-600 mt-1">{team.description}</p>
+                      <p className="text-gray-600 mt-1 line-clamp-2">{team.description}</p>
                     )}
                   </div>
-                  <ChevronRight className="text-blue-500" />
+                  <div className="flex gap-2">
+                    <button
+                      onClick={(e) => handleDeleteClick(e, team)}
+                      className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-full transition-colors"
+                      title="Delete Team"
+                    >
+                      <Trash2 size={20} />
+                    </button>
+                    <ChevronRight className="text-blue-500 self-center" />
+                  </div>
                 </div>
 
                 <div className="text-sm text-gray-500">
@@ -198,6 +230,45 @@ const Teams: React.FC = () => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Team Confirmation Modal */}
+      {teamToDelete && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[60] p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6 animate-in fade-in zoom-in duration-200">
+            <h3 className="text-xl font-bold text-gray-900 mb-2">Delete Team?</h3>
+            <p className="text-gray-600 mb-6">
+              Are you sure you want to delete <span className="font-bold text-gray-800">"{teamToDelete.name}"</span>? 
+              This will remove all Pokémon from this team and cannot be undone.
+            </p>
+            <div className="flex gap-3">
+              <button
+                className="flex-1 px-4 py-3 bg-gray-100 text-gray-700 rounded-md font-medium hover:bg-gray-200 transition-colors disabled:opacity-50"
+                onClick={() => setTeamToDelete(null)}
+                disabled={deleting}
+              >
+                Cancel
+              </button>
+              <button
+                className="flex-1 px-4 py-3 bg-red-500 text-white rounded-md font-medium hover:bg-red-600 transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+                onClick={handleDeleteConfirm}
+                disabled={deleting}
+              >
+                {deleting ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-1"></div>
+                    Deleting...
+                  </>
+                ) : (
+                  <>
+                    <Trash2 size={18} />
+                    Delete Team
+                  </>
+                )}
+              </button>
+            </div>
           </div>
         </div>
       )}

@@ -22,6 +22,7 @@ export const usePokemon = (options: { skipFetch?: boolean } = {}) => {
   const [isSearching, setIsSearching] = useState(false);
   const loadingRef = useRef(false);
   const searchTimeoutRef = useRef<number>();
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   // State for selected Pokemon
   const [selectedPokemon, setSelectedPokemon] = useState<Pokemon | null>(null);
@@ -90,9 +91,13 @@ export const usePokemon = (options: { skipFetch?: boolean } = {}) => {
 
     if (!filterOptionsLoaded) return; // Wait for filter options to load first
 
-    const controller = new AbortController();
-    setIsSearching(true);
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    abortControllerRef.current = new AbortController();
+    const signal = abortControllerRef.current.signal;
 
+    setIsSearching(true);
     const fetchPokemon = async () => {
       try {
         if (initialLoad) {
@@ -107,8 +112,10 @@ export const usePokemon = (options: { skipFetch?: boolean } = {}) => {
           0,
           debouncedSearchTerm,
           filters,
-          controller.signal
+          signal
         );
+
+        if (signal.aborted) return;
 
         setLoadingProgress(90);
         setDisplayedPokemon(results);
@@ -130,7 +137,9 @@ export const usePokemon = (options: { skipFetch?: boolean } = {}) => {
     fetchPokemon();
 
     return () => {
-      controller.abort();
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [debouncedSearchTerm, filters, filterOptionsLoaded, skipFetch]);
@@ -150,13 +159,15 @@ export const usePokemon = (options: { skipFetch?: boolean } = {}) => {
         POKEMON_PER_PAGE,
         offset,
         debouncedSearchTerm,
-        filters
+        filters,
+        abortControllerRef.current?.signal
       );
 
       setDisplayedPokemon(prev => [...prev, ...newPokemon]);
       setHasMore(newPokemon.length === POKEMON_PER_PAGE);
       setPage(nextPage);
     } catch (error) {
+      if ((error as Error).name === 'AbortError') return;
       console.error('Error loading more Pokemon:', error);
     } finally {
       loadingRef.current = false;

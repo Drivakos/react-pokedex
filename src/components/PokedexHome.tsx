@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { PokemonList } from './PokemonList';
 import { HomeSEO } from './HomeSEO';
 import { HomeHeader } from './HomeHeader';
@@ -30,8 +30,8 @@ const PokedexHome: React.FC = () => {
   const [showMobileFilters, setShowMobileFilters] = useState(false);
   const [showDesktopFilters, setShowDesktopFilters] = useState(false);
 
-  // Setup the intersection observer for infinite scrolling
-  const setupObserver = (node: HTMLDivElement | null) => {
+  // Setup the intersection observer for infinite scrolling - stable reference
+  const setupObserver = useCallback((node: HTMLDivElement | null) => {
     if (!node) return;
     const observer = lastPokemonElementRef(node);
     if (observer) {
@@ -41,7 +41,7 @@ const PokedexHome: React.FC = () => {
         }
       });
     }
-  };
+  }, [hasMore, loadMorePokemon, lastPokemonElementRef]);
 
   // Calculate total active filters
   const totalFiltersCount = useMemo(() => {
