@@ -25,6 +25,7 @@ interface PokemonSearchModalProps {
   hasRecentMistake?: boolean; // Show undo only after a wrong guess
   mistakePokemon?: any; // The specific Pokemon that was the wrong choice
   popularityData?: any[]; // Popularity data for the current grid
+  alreadyUsedIds?: number[]; // IDs of Pokemon already used correctly in the grid
 }
 
 export const PokemonSearchModal: React.FC<PokemonSearchModalProps> = ({
@@ -43,7 +44,8 @@ export const PokemonSearchModal: React.FC<PokemonSearchModalProps> = ({
   maxSessionUndos = 3,
   hasRecentMistake = false,
   mistakePokemon = null,
-  popularityData = []
+  popularityData = [],
+  alreadyUsedIds = []
 }) => {
 
   if (!isOpen || !selectedCell) return null;
@@ -115,6 +117,9 @@ export const PokemonSearchModal: React.FC<PokemonSearchModalProps> = ({
                 {searchResults.map((pokemon) => {
                   // Check if this Pokemon was the wrong choice
                   const isMistakePokemon = mistakePokemon && pokemon.id === mistakePokemon.id;
+                  
+                  // Check if this Pokemon is already used correctly in the grid
+                  const isAlreadyUsed = alreadyUsedIds.includes(pokemon.id);
 
                   // Find popularity data for this Pokemon in the current cell
                   const pokemonPopularity = popularityData.find(
@@ -142,9 +147,13 @@ export const PokemonSearchModal: React.FC<PokemonSearchModalProps> = ({
                   return (
                     <div
                       key={pokemon.id}
-                      onClick={() => onPokemonSelect(pokemon)}
-                      className={`flex items-center p-3 rounded-lg border transition-all cursor-pointer hover:bg-gray-50 hover:border-gray-300 ${
-                        isMistakePokemon ? 'border-red-300 bg-red-50' : 'border-gray-200'
+                      onClick={() => !isAlreadyUsed && onPokemonSelect(pokemon)}
+                      className={`flex items-center p-3 rounded-lg border transition-all ${
+                        isAlreadyUsed 
+                          ? 'bg-gray-50 border-gray-100 opacity-60 cursor-not-allowed' 
+                          : isMistakePokemon 
+                            ? 'border-red-300 bg-red-50 cursor-pointer hover:bg-red-100' 
+                            : 'border-gray-200 cursor-pointer hover:bg-gray-50 hover:border-gray-300'
                       }`}
                     >
                       {/* Pokemon Image */}
@@ -159,8 +168,11 @@ export const PokemonSearchModal: React.FC<PokemonSearchModalProps> = ({
                       {/* Pokemon Info */}
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between">
-                          <h3 className="text-sm sm:text-base font-semibold text-gray-900 truncate">
+                          <h3 className={`text-sm sm:text-base font-semibold truncate ${
+                            isAlreadyUsed ? 'text-gray-400' : 'text-gray-900'
+                          }`}>
                             {formatName(pokemon.name)}
+                            {isAlreadyUsed && <span className="ml-2 text-[10px] uppercase tracking-wider text-gray-400">(Used)</span>}
                           </h3>
                           <span className={`text-xs font-medium ml-2 ${popularityColor}`}>
                             {popularityText}
@@ -172,11 +184,17 @@ export const PokemonSearchModal: React.FC<PokemonSearchModalProps> = ({
                         </div>
                       </div>
 
-                      {/* Select Arrow */}
-                      <div className="text-gray-400 group-hover:text-blue-500 transition-colors">
-                        <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                        </svg>
+                      {/* Select Arrow / Used Icon */}
+                      <div className={`${isAlreadyUsed ? 'text-gray-300' : 'text-gray-400 group-hover:text-blue-500'} transition-colors`}>
+                        {isAlreadyUsed ? (
+                          <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                          </svg>
+                        ) : (
+                          <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                          </svg>
+                        )}
                       </div>
                     </div>
                   );

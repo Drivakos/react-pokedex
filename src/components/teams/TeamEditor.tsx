@@ -5,8 +5,6 @@ import { TeamMember } from '../../lib/supabase';
 import toast from 'react-hot-toast';
 import { Trash2 } from 'lucide-react';
 import MovesetEditor from './MovesetEditor';
-import { fetchPokemonData } from '../../services/api';
-import { PokemonService } from '../../services/pokemon.service';
 import './ShowdownStyles.css';
 
 // Sub-components
@@ -14,36 +12,7 @@ import { TeamEditorHeader } from './editor/TeamEditorHeader';
 import { TeamMemberTabs } from './editor/TeamMemberTabs';
 import { TeamMemberCard } from './editor/TeamMemberCard';
 import { PokemonSearchModal } from './editor/PokemonSearchModal';
-
-interface Pokemon {
-  id: number;
-  name: string;
-  sprites: {
-    front_default: string;
-    other?: {
-      'official-artwork': {
-        front_default: string;
-      };
-    };
-  };
-  types: {
-    type: {
-      name: string;
-    };
-  }[];
-  stats: {
-    base_stat: number;
-    stat: {
-      name: string;
-    };
-  }[];
-  abilities: {
-    ability: {
-      name: string;
-    };
-    is_hidden: boolean;
-  }[];
-}
+import { useTeamStore } from '../../store/teamStore';
 
 const TeamEditor: React.FC = () => {
   const { teamId } = useParams<{ teamId: string }>();
@@ -51,217 +20,74 @@ const TeamEditor: React.FC = () => {
   const auth = useAuth();
   const { user, getTeamMembers, addPokemonToTeam, removePokemonFromTeam, updateTeamMemberBuild, teams } = auth as any;
 
-  const [team, setTeam] = useState<any>(null);
-  const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
-  const [pokemonData, setPokemonData] = useState<Record<number, Pokemon>>({});
-  const [loading, setLoading] = useState(true);
-  const [selectedMember, setSelectedMember] = useState<TeamMember | null>(null);
+  const store = useTeamStore();
   const [memberToRemove, setMemberToRemove] = useState<TeamMember | null>(null);
-  const [showPokemonSearch, setShowPokemonSearch] = useState(false);
-  const [showMovesetEditor, setShowMovesetEditor] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [searchResults, setSearchResults] = useState<Pokemon[]>([]);
 
   const formatName = useCallback((name: string) => {
     return name.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
   }, []);
 
-  // Load team and members
+  // Load team and members using store
   useEffect(() => {
-    const loadTeamData = async () => {
-      if (!teamId || !user || !teams) return;
+    if (teamId && user && teams) {
+      store.loadTeam(parseInt(teamId), teams, getTeamMembers);
+    }
+  }, [teamId, user, teams, getTeamMembers]);
 
-      try {
-        const foundTeam = teams.find((t: any) => t.id === parseInt(teamId));
-        if (!foundTeam) {
-          // If not found in memory, we might need a fetch or wait for teamsLoaded
-          return;
-        }
-        setTeam(foundTeam);
-
-        // team_members is already included in teams from AuthProvider
-        const members = foundTeam.team_members || [];
-        setTeamMembers(members);
-
-        if (members.length > 0) {
-          const pokemonIds: number[] = members.map((m: any) => m.pokemon_id);
-          const uniqueIds = [...new Set(pokemonIds)];
-          
-          const pokemonList = await PokemonService.getBatch(uniqueIds);
-          const newData: Record<number, Pokemon> = {};
-          
-          pokemonList.forEach(pokemon => {
-            newData[pokemon.id] = {
-              id: pokemon.id,
-              name: pokemon.name,
-              sprites: {
-                front_default: pokemon.sprites.front_default,
-                other: {
-                  'official-artwork': {
-                    front_default: pokemon.sprites.official_artwork
-                  }
-                }
-              },
-              types: pokemon.types.map(t => ({ type: { name: t } })),
-              stats: [
-                { base_stat: pokemon.stats.hp, stat: { name: 'hp' } },
-                { base_stat: pokemon.stats.attack, stat: { name: 'attack' } },
-                { base_stat: pokemon.stats.defense, stat: { name: 'defense' } },
-                { base_stat: pokemon.stats['special-attack'], stat: { name: 'special-attack' } },
-                { base_stat: pokemon.stats['special-defense'], stat: { name: 'special-defense' } },
-                { base_stat: pokemon.stats.speed, stat: { name: 'speed' } },
-              ],
-              abilities: []
-            };
-          });
-          
-          setPokemonData(newData);
-        }
-      } catch (error) {
-        console.error('Failed to load team data:', error);
-        toast.error('Failed to load team data');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadTeamData();
-  }, [teamId, user, teams]);
-
-  // Search Pokemon
+  // Handle Search using store
   useEffect(() => {
-    const searchPokemon = async () => {
-      if (searchQuery.length < 2) {
-        setSearchResults([]);
-        return;
-      }
-
-      try {
-        const results = await fetchPokemonData(10, 0, searchQuery, {
-          types: [], moves: [], generation: '', weight: { min: 0, max: 1000 }, height: { min: 0, max: 100 }, hasEvolutions: null
-        });
-
-        const transformedResults: Pokemon[] = results.map(p => ({
-          id: p.id,
-          name: p.name,
-          sprites: {
-            front_default: p.sprites.front_default,
-            other: { 'official-artwork': { front_default: p.sprites.official_artwork } }
-          },
-          types: p.types.map(t => ({ type: { name: t } })),
-          stats: [
-            { base_stat: p.stats.hp, stat: { name: 'hp' } },
-            { base_stat: p.stats.attack, stat: { name: 'attack' } },
-            { base_stat: p.stats.defense, stat: { name: 'defense' } },
-            { base_stat: p.stats['special-attack'], stat: { name: 'special-attack' } },
-            { base_stat: p.stats['special-defense'], stat: { name: 'special-defense' } },
-            { base_stat: p.stats.speed, stat: { name: 'speed' } },
-          ],
-          abilities: []
-        }));
-
-        setSearchResults(transformedResults);
-      } catch (error) {
-        console.error('Failed to search Pokemon:', error);
-      }
-    };
-
-    const timeoutId = setTimeout(searchPokemon, 300);
+    const timeoutId = setTimeout(() => {
+      store.searchPokemon(store.searchQuery);
+    }, 300);
     return () => clearTimeout(timeoutId);
-  }, [searchQuery]);
+  }, [store.searchQuery]);
 
   const handleAddPokemon = async (pokemon: any) => {
     if (!teamId) return;
-
-    const positions = teamMembers.map(m => m.position).sort((a, b) => a - b);
-    let nextPosition = 1;
-    for (const pos of positions) {
-      if (nextPosition === pos) nextPosition++;
-      else break;
-    }
-
-    if (nextPosition > 6) {
-      toast.error('Team is full (6 Pokémon maximum)');
-      return;
-    }
-
-    try {
-      await addPokemonToTeam(parseInt(teamId), pokemon.id, nextPosition);
-
-      const members = await getTeamMembers(parseInt(teamId));
-      setTeamMembers(members || []);
-      setShowPokemonSearch(false);
-      setSearchQuery('');
-    } catch (error) {
-      toast.error('Failed to add Pokemon to team');
-    }
-  };
-
-  const handleRemoveClick = (member: TeamMember) => {
-    setMemberToRemove(member);
+    await store.addPokemon(parseInt(teamId), pokemon, addPokemonToTeam, getTeamMembers);
   };
 
   const handleRemoveConfirm = async () => {
     if (!teamId || !memberToRemove) return;
-    try {
-      await removePokemonFromTeam(parseInt(teamId), memberToRemove.position);
-      const members = await getTeamMembers(parseInt(teamId));
-      setTeamMembers(members || []);
-      setMemberToRemove(null);
-      if (selectedMember?.position === memberToRemove.position) {
-        setShowMovesetEditor(false);
-        setSelectedMember(null);
-      }
-    } catch (error) {
-      console.error('Failed to remove Pokemon:', error);
-      toast.error('Failed to remove Pokemon');
-    }
+    await store.removePokemon(parseInt(teamId), memberToRemove.position, removePokemonFromTeam, getTeamMembers);
+    setMemberToRemove(null);
   };
 
   const handleEditPokemon = (member: TeamMember) => {
-    setSelectedMember(member);
-    setShowMovesetEditor(true);
+    store.setSelectedMember(member);
+    store.setShowMovesetEditor(true);
   };
 
   const handleSaveBuild = async (buildData: any) => {
-    if (!teamId || !selectedMember) return;
+    if (!teamId || !store.selectedMember) return;
+    
+    const teamMemberData = {
+      moves: buildData.moves || [],
+      item: buildData.heldItem || '',
+      ability: buildData.ability || '',
+      nature: buildData.nature || 'hardy',
+      evs: buildData.evs || { hp: 0, attack: 0, defense: 0, 'special-attack': 0, 'special-defense': 0, speed: 0 },
+      ivs: buildData.ivs || { hp: 31, attack: 31, defense: 31, 'special-attack': 31, 'special-defense': 31, speed: 31 },
+      level: store.selectedMember.level || 50,
+      gender: buildData.gender || store.selectedMember.gender || 'male',
+      tera_type: buildData.teraType || store.selectedMember.tera_type || 'normal',
+      nickname: buildData.nickname || '',
+      is_shiny: buildData.isShiny || false
+    };
 
-    try {
-      const teamMemberData = {
-        moves: buildData.moves || [],
-        item: buildData.heldItem || '',
-        ability: buildData.ability || '',
-        nature: buildData.nature || 'hardy',
-        evs: buildData.evs || { hp: 0, attack: 0, defense: 0, 'special-attack': 0, 'special-defense': 0, speed: 0 },
-        ivs: buildData.ivs || { hp: 31, attack: 31, defense: 31, 'special-attack': 31, 'special-defense': 31, speed: 31 },
-        level: selectedMember.level || 50,
-        gender: buildData.gender || selectedMember.gender || 'male',
-        tera_type: buildData.teraType || selectedMember.tera_type || 'normal',
-        nickname: buildData.nickname || '',
-        is_shiny: buildData.isShiny || false
-      };
-
-      await updateTeamMemberBuild(parseInt(teamId), selectedMember.position, teamMemberData);
-      const members = await getTeamMembers(parseInt(teamId));
-      setTeamMembers(members || []);
-      setShowMovesetEditor(false);
-      setSelectedMember(null);
-    } catch (error) {
-      console.error('Failed to save build:', error);
-      toast.error('Failed to save build');
-    }
+    await store.updateMemberBuild(parseInt(teamId), store.selectedMember.position, teamMemberData, updateTeamMemberBuild, getTeamMembers);
   };
 
   const exportTeamToShowdown = async () => {
-    if (teamMembers.length === 0) {
+    if (store.teamMembers.length === 0) {
       toast.error('No Pokémon in team to export');
       return;
     }
 
     try {
       const pokemonExports: string[] = [];
-      for (const member of teamMembers) {
-        const pokemon = pokemonData[member.pokemon_id];
+      for (const member of store.teamMembers) {
+        const pokemon = store.pokemonData[member.pokemon_id];
         if (!pokemon) continue;
 
         const pokemonName = formatName(pokemon.name);
@@ -307,7 +133,7 @@ const TeamEditor: React.FC = () => {
       }
 
       await navigator.clipboard.writeText(pokemonExports.join('\n\n'));
-      toast.success(`Team "${team.name}" exported!`);
+      toast.success(`Team "${store.currentTeam?.name}" exported!`);
     } catch (error) {
       toast.error('Failed to export team');
     }
@@ -324,7 +150,7 @@ const TeamEditor: React.FC = () => {
     toast.success('Copied to clipboard!');
   };
 
-  if (loading) return (
+  if (store.loading) return (
     <div className="sd-container">
       <div className="sd-panel" style={{ padding: 40, textAlign: 'center' }}>
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
@@ -333,7 +159,7 @@ const TeamEditor: React.FC = () => {
     </div>
   );
 
-  if (!user || !team) return (
+  if (!user || !store.currentTeam) return (
     <div className="sd-container">
       <div className="sd-panel" style={{ padding: 40, textAlign: 'center' }}>
         <p className="text-gray-500 font-bold uppercase tracking-tight">{!user ? 'Please sign in' : 'Team not found'}</p>
@@ -345,68 +171,68 @@ const TeamEditor: React.FC = () => {
   return (
     <div className="sd-container">
       <TeamEditorHeader 
-        teamName={team.name} 
+        teamName={store.currentTeam.name} 
         onBack={() => navigate('/teams')} 
         onExport={exportTeamToShowdown} 
-        exportDisabled={teamMembers.length === 0}
+        exportDisabled={store.teamMembers.length === 0}
       />
 
       <TeamMemberTabs 
-        teamMembers={teamMembers}
-        pokemonData={pokemonData}
-        selectedMember={selectedMember}
-        showMovesetEditor={showMovesetEditor}
+        teamMembers={store.teamMembers}
+        pokemonData={store.pokemonData}
+        selectedMember={store.selectedMember}
+        showMovesetEditor={store.showMovesetEditor}
         onEditMember={handleEditPokemon}
-        onRemoveClick={handleRemoveClick}
-        onShowSearch={() => setShowPokemonSearch(true)}
+        onRemoveClick={(m) => setMemberToRemove(m)}
+        onShowSearch={() => store.setShowPokemonSearch(true)}
         formatName={formatName}
       />
 
-      {showMovesetEditor && selectedMember && pokemonData[selectedMember.pokemon_id] && (
+      {store.showMovesetEditor && store.selectedMember && store.pokemonData[store.selectedMember.pokemon_id] && (
         <MovesetEditor
           pokemon={{
-            id: selectedMember.pokemon_id,
-            name: pokemonData[selectedMember.pokemon_id].name,
-            sprites: pokemonData[selectedMember.pokemon_id].sprites,
-            types: pokemonData[selectedMember.pokemon_id].types,
-            moves: selectedMember.moves || []
+            id: store.selectedMember.pokemon_id,
+            name: store.pokemonData[store.selectedMember.pokemon_id].name,
+            sprites: store.pokemonData[store.selectedMember.pokemon_id].sprites,
+            types: store.pokemonData[store.selectedMember.pokemon_id].types,
+            moves: store.selectedMember.moves || []
           }}
           teamId={parseInt(teamId!)}
-          onBack={() => { setShowMovesetEditor(false); setSelectedMember(null); }}
+          onBack={() => { store.setShowMovesetEditor(false); store.setSelectedMember(null); }}
           initialBuild={{
-            moves: selectedMember.moves || [],
-            nature: selectedMember.nature || 'hardy',
-            ability: selectedMember.ability || '',
-            gender: selectedMember.gender || null,
-            heldItem: selectedMember.item || '',
-            nickname: selectedMember.nickname || '',
-            isShiny: selectedMember.is_shiny || false,
-            teraType: selectedMember.tera_type || '',
-            ivs: selectedMember.ivs || { hp: 31, attack: 31, defense: 31, 'special-attack': 31, 'special-defense': 31, speed: 31 },
-            evs: selectedMember.evs || { hp: 0, attack: 0, defense: 0, 'special-attack': 0, 'special-defense': 0, speed: 0 }
+            moves: store.selectedMember.moves || [],
+            nature: store.selectedMember.nature || 'hardy',
+            ability: store.selectedMember.ability || '',
+            gender: store.selectedMember.gender || null,
+            heldItem: store.selectedMember.item || '',
+            nickname: store.selectedMember.nickname || '',
+            isShiny: store.selectedMember.is_shiny || false,
+            teraType: store.selectedMember.tera_type || '',
+            ivs: store.selectedMember.ivs || { hp: 31, attack: 31, defense: 31, 'special-attack': 31, 'special-defense': 31, speed: 31 },
+            evs: store.selectedMember.evs || { hp: 0, attack: 0, defense: 0, 'special-attack': 0, 'special-defense': 0, speed: 0 }
           }}
           onSave={handleSaveBuild}
         />
       )}
 
-      {!showMovesetEditor && (
+      {!store.showMovesetEditor && (
         <div className="space-y-4 mt-4">
-          {teamMembers.map((member) => (
-            pokemonData[member.pokemon_id] && (
+          {store.teamMembers.map((member) => (
+            store.pokemonData[member.pokemon_id] && (
               <TeamMemberCard 
                 key={member.position}
                 member={member}
-                pokemon={pokemonData[member.pokemon_id]}
+                pokemon={store.pokemonData[member.pokemon_id]}
                 onEdit={handleEditPokemon}
-                onRemoveClick={handleRemoveClick}
+                onRemoveClick={(m) => setMemberToRemove(m)}
                 onCopy={handleCopySingle}
                 formatName={formatName}
               />
             )
           ))}
-          {teamMembers.length < 6 && (
+          {store.teamMembers.length < 6 && (
             <div className="sd-panel">
-              <div className="sd-add-card" onClick={() => setShowPokemonSearch(true)}>
+              <div className="sd-add-card" onClick={() => store.setShowPokemonSearch(true)}>
                 <span>+ Add Pokémon</span>
               </div>
             </div>
@@ -414,13 +240,13 @@ const TeamEditor: React.FC = () => {
         </div>
       )}
 
-      {showPokemonSearch && (
+      {store.showPokemonSearch && (
         <PokemonSearchModal 
-          searchQuery={searchQuery}
-          onSearchChange={setSearchQuery}
-          searchResults={searchResults}
+          searchQuery={store.searchQuery}
+          onSearchChange={(q) => store.setSearchQuery(q)}
+          searchResults={store.searchResults}
           onAddPokemon={handleAddPokemon}
-          onClose={() => { setShowPokemonSearch(false); setSearchQuery(''); setSearchResults([]); }}
+          onClose={() => { store.setShowPokemonSearch(false); store.setSearchQuery(''); }}
           formatName={formatName}
         />
       )}
@@ -430,7 +256,7 @@ const TeamEditor: React.FC = () => {
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[100] p-4">
           <div className="bg-white rounded-lg shadow-xl max-w-sm w-full p-6 animate-in fade-in zoom-in duration-200">
             <h3 className="text-lg font-bold text-gray-900 mb-2">
-              Remove {memberToRemove.pokemon_id && pokemonData[memberToRemove.pokemon_id] ? formatName(pokemonData[memberToRemove.pokemon_id].name) : 'this Pokémon'}?
+              Remove {memberToRemove.pokemon_id && store.pokemonData[memberToRemove.pokemon_id] ? formatName(store.pokemonData[memberToRemove.pokemon_id].name) : 'this Pokémon'}?
             </h3>
             <p className="text-gray-600 mb-6 text-sm">
               Are you sure you want to remove this Pokémon from your team? This action cannot be undone.
