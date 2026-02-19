@@ -1,4 +1,4 @@
-import React, { createContext, useState, useEffect, useContext, useCallback } from 'react';
+import React, { createContext, useState, useEffect, useContext, useCallback, useMemo } from 'react';
 import { Session, User, AuthError } from '@supabase/supabase-js';
 import { Profile, Favorite } from '../lib/supabase';
 import authService, { withAuthSession } from '../services/auth.service';
@@ -66,35 +66,35 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const [loading, setLoading] = useState(true);
 
-  const signUp = async (email: string, password: string) => {
+  const signUp = useCallback(async (email: string, password: string) => {
     return await authService.signUp(email, password);
-  };
+  }, []);
 
-  const signIn = async (email: string, password: string) => {
+  const signIn = useCallback(async (email: string, password: string) => {
     return await authService.signInWithEmail(email, password);
-  };
+  }, []);
 
-  const signInWithGoogle = async () => {
+  const signInWithGoogle = useCallback(async () => {
     return await authService.signInWithGoogle();
-  };
+  }, []);
 
-  const signInWithMagicLink = async (email: string) => {
+  const signInWithMagicLink = useCallback(async (email: string) => {
     return await authService.signInWithMagicLink(email);
-  };
+  }, []);
 
-  const signOut = async () => {
+  const signOut = useCallback(async () => {
     return await authService.signOut();
-  };
+  }, []);
 
-  const resetPassword = async (email: string) => {
+  const resetPassword = useCallback(async (email: string) => {
     return await authService.resetPassword(email);
-  };
+  }, []);
 
-  const updatePassword = async (password: string) => {
+  const updatePassword = useCallback(async (password: string) => {
     return await authService.updatePassword(password);
-  };
+  }, []);
 
-  const updateProfile = async (updates: Partial<Profile>) => {
+  const updateProfile = useCallback(async (updates: Partial<Profile>) => {
     if (!user) {
       toast.error('You must be logged in to update your profile');
       return { data: null, error: new Error('Not authenticated') };
@@ -111,7 +111,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
 
     return { data: null, error: new Error('Failed to update profile') };
-  };
+  }, [user]);
 
   const fetchFavorites = useCallback(async (userId: string) => {
     const result = await withAuthSession(async () => {
@@ -132,7 +132,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, []);
 
-  const addFavorite = async (pokemonId: number) => {
+  const addFavorite = useCallback(async (pokemonId: number) => {
     if (!user) {
       toast.error('You must be logged in to add favorites');
       return;
@@ -161,9 +161,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       await fetchFavorites(user.id);
       toast.success('Added to favorites!');
     }
-  };
+  }, [user, fetchFavorites]);
 
-  const removeFavorite = async (pokemonId: number) => {
+  const removeFavorite = useCallback(async (pokemonId: number) => {
     if (!user) {
       toast.error('You must be logged in to remove favorites');
       return;
@@ -192,7 +192,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setFavorites(favorites.filter(fav => fav.pokemon_id !== pokemonId));
       toast.success('Removed from favorites');
     }
-  };
+  }, [user, favorites]);
 
   const isFavorite = useCallback((pokemonId: number): boolean => {
     return favorites.some(fav => fav.pokemon_id === pokemonId);
@@ -232,7 +232,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, [user, teamsLoaded, fetchTeams]);
 
-  const createTeam = async (name: string, description?: string) => {
+  const createTeam = useCallback(async (name: string, description?: string) => {
     if (!user) {
       toast.error('You must be logged in to create a team');
       return null;
@@ -279,9 +279,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
 
     return null;
-  };
+  }, [user, fetchTeams]);
 
-  const updateTeam = async (teamId: number, name: string, description?: string) => {
+  const updateTeam = useCallback(async (teamId: number, name: string, description?: string) => {
     if (!user) {
       toast.error('You must be logged in to update a team');
       return;
@@ -312,9 +312,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       await fetchTeams();
       toast.success('Team updated successfully!');
     }
-  };
+  }, [user, fetchTeams]);
 
-  const deleteTeam = async (teamId: number) => {
+  const deleteTeam = useCallback(async (teamId: number) => {
     if (!user) {
       toast.error('You must be logged in to delete a team');
       return;
@@ -339,9 +339,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       await fetchTeams();
       toast.success('Team deleted successfully!');
     }
-  };
+  }, [user, fetchTeams]);
 
-  const addPokemonToTeam = async (teamId: number, pokemonId: number, position: number) => {
+  const addPokemonToTeam = useCallback(async (teamId: number, pokemonId: number, position: number) => {
     if (!user) {
       toast.error('You must be logged in to add Pokémon to a team');
       return;
@@ -388,9 +388,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       await fetchTeams();
       toast.success('Pokémon added to team!');
     }
-  };
+  }, [user, fetchTeams]);
 
-  const removePokemonFromTeam = async (teamId: number, position: number) => {
+  const removePokemonFromTeam = useCallback(async (teamId: number, position: number) => {
     if (!user) {
       toast.error('You must be logged in to remove Pokémon from a team');
       return;
@@ -415,9 +415,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       await fetchTeams();
       toast.success('Pokémon removed from team!');
     }
-  };
+  }, [user, fetchTeams]);
 
-  const getTeamMembers = async (teamId: number) => {
+  const getTeamMembers = useCallback(async (teamId: number) => {
     if (!user) {
       return [];
     }
@@ -436,9 +436,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     });
 
     return result.data || [];
-  };
+  }, [user]);
 
-  const updateTeamMemberBuild = async (teamId: number, position: number, buildData: any) => {
+  const updateTeamMemberBuild = useCallback(async (teamId: number, position: number, buildData: any) => {
     if (!user) {
       toast.error('You must be logged in to update team member builds');
       return;
@@ -478,7 +478,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (result.data) {
       toast.success('Build saved successfully!');
     }
-  };
+  }, [user]);
 
   useEffect(() => {
     const initAuth = async () => {
@@ -580,7 +580,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
   }, [fetchFavorites]);
 
-  const value = {
+  const value = useMemo(() => ({
     session,
     user,
     profile,
@@ -611,7 +611,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     removePokemonFromTeam,
     getTeamMembers,
     updateTeamMemberBuild
-  };
+  }), [
+    session, user, profile, favorites, teams, teamsLoaded, loading,
+    signUp, signIn, signInWithGoogle, signInWithMagicLink, signOut, 
+    resetPassword, updatePassword, updateProfile,
+    addFavorite, removeFavorite, isFavorite,
+    fetchTeams, createTeam, updateTeam, deleteTeam, 
+    addPokemonToTeam, removePokemonFromTeam, getTeamMembers, updateTeamMemberBuild
+  ]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };

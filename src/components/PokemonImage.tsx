@@ -64,6 +64,7 @@ const PokemonImage: React.FC<PokemonImageProps> = ({
       alt={alt || `Pokemon #${pokemonId}`}
       onError={handleImageError}
       className={className}
+      loading="lazy"
       {...imgProps}
     />
   );

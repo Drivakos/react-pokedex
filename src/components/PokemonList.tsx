@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { memo } from 'react';
 import { Pokemon } from '../types/pokemon';
 import { PokemonCard } from './PokemonCard';
 
@@ -9,7 +9,7 @@ interface PokemonListProps {
   isLoading: boolean;
 }
 
-export const PokemonList: React.FC<PokemonListProps> = ({
+export const PokemonList: React.FC<PokemonListProps> = memo(({
   pokemon,
   onSelectPokemon,
   lastPokemonRef,
@@ -51,6 +51,6 @@ export const PokemonList: React.FC<PokemonListProps> = ({
       )}
     </>
   );
-};
+});
 
 export default PokemonList;
