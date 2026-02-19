@@ -65,7 +65,7 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({ onOpenFriend
         clearTimeout(debounceTimerRef.current);
       }
     };
-  }, [user]);
+  }, [user, handleNewNotification]);
 
   // Load notifications when dropdown opens
   useEffect(() => {

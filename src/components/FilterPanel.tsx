@@ -428,11 +428,11 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
   // Define our callback handlers
   const handleMoveSearchCallback = useCallback((value: string) => {
     setMoveSearch(value);
-  }, []);
+  }, [setMoveSearch]);
 
   const handleTypeSearchCallback = useCallback((value: string) => {
     setTypeSearch(value);
-  }, []);
+  }, [setTypeSearch]);
 
   // Don't render anything if we're on mobile and the panel is closed
   if (!isDesktop && !isMobileOpen) {

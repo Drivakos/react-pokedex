@@ -15,9 +15,6 @@
 
 import { createClient } from '@supabase/supabase-js';
 import dotenv from 'dotenv';
-import fs from 'fs';
-import path from 'path';
-import { fileURLToPath } from 'url';
 
 // Load environment variables
 dotenv.config();
@@ -29,7 +26,6 @@ const supabase = createClient(
 );
 
 // --- POKEMON DATA LOADING ---
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 let POKEMON_DB = [];
 
