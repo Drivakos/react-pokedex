@@ -33,32 +33,32 @@ function AppContent() {
       <Navigation />
       <Suspense fallback={<LoadingFallback />}>
         <Routes>
-          <Route path="/" element={<PokedexHome />} />
-          <Route path="/pokemon/:id" element={<PokemonPage />} />
-          <Route path="/login" element={<Login />} />
-          <Route path="/signup" element={<SignUp />} />
-          <Route path="/magic-link" element={<MagicLinkLogin />} />
-          <Route path="/reset-password" element={<ResetPassword />} />
-          <Route path="/reset-password/confirm" element={<ResetPasswordConfirm />} />
-          <Route path="/auth/update-password" element={<ResetPasswordConfirm />} />
-          <Route path="/auth/callback" element={<AuthCallback />} />
+          <Route path="/" element={<div data-testid="pokedex-home"><PokedexHome /></div>} />
+          <Route path="/pokemon/:id" element={<div data-testid="pokemon-page"><PokemonPage /></div>} />
+          <Route path="/login" element={<div data-testid="login"><Login /></div>} />
+          <Route path="/signup" element={<div data-testid="signup"><SignUp /></div>} />
+          <Route path="/magic-link" element={<div data-testid="magic-link-login"><MagicLinkLogin /></div>} />
+          <Route path="/reset-password" element={<div data-testid="reset-password"><ResetPassword /></div>} />
+          <Route path="/reset-password/confirm" element={<div data-testid="reset-password-confirm"><ResetPasswordConfirm /></div>} />
+          <Route path="/auth/update-password" element={<div data-testid="reset-password-confirm"><ResetPasswordConfirm /></div>} />
+          <Route path="/auth/callback" element={<div data-testid="auth-callback"><AuthCallback /></div>} />
           <Route path="/profile" element={
             <ProtectedRoute>
-              <Profile />
+              <div data-testid="profile"><Profile /></div>
             </ProtectedRoute>
           } />
           <Route path="/teams" element={
             <ProtectedRoute>
-              <Teams />
+              <div data-testid="teams"><Teams /></div>
             </ProtectedRoute>
           } />
           <Route path="/team-editor/:teamId" element={
             <ProtectedRoute>
-              <TeamEditor />
+              <div data-testid="team-editor"><TeamEditor /></div>
             </ProtectedRoute>
           } />
-          <Route path="/memory-game" element={<PokemonMemoryGame />} />
-          <Route path="/pkmn-grid-challenge" element={<PokéGridChallenge />} />
+          <Route path="/memory-game" element={<div data-testid="pokemon-memory-game"><PokemonMemoryGame /></div>} />
+          <Route path="/pkmn-grid-challenge" element={<div data-testid="pokegrid-challenge"><PokéGridChallenge /></div>} />
         </Routes>
       </Suspense>
     </>

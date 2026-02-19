@@ -187,7 +187,6 @@ const TeamEditor: React.FC = () => {
 
     try {
       await addPokemonToTeam(parseInt(teamId), pokemon.id, nextPosition);
-      toast.success(`${formatName(pokemon.name)} added to team!`);
 
       const members = await getTeamMembers(parseInt(teamId));
       setTeamMembers(members || []);

@@ -18,6 +18,8 @@ const PokemonMemoryGame: React.FC = () => {
 
   // Load a diverse set of Pokemon for the game
   useEffect(() => {
+    const controller = new AbortController();
+    
     const loadGamePokemon = async () => {
       setGameLoading(true);
       try {
@@ -29,17 +31,26 @@ const PokemonMemoryGame: React.FC = () => {
           weight: { min: 0, max: 0 },
           height: { min: 0, max: 0 },
           hasEvolutions: null,
-        });
+        }, controller.signal);
 
-        setGamePokemon(pokemon);
+        if (!controller.signal.aborted) {
+          setGamePokemon(pokemon);
+        }
       } catch (error) {
+        if ((error as Error).name === 'AbortError') return;
         console.error('Error fetching game Pokemon:', error);
       } finally {
-        setGameLoading(false);
+        if (!controller.signal.aborted) {
+          setGameLoading(false);
+        }
       }
     };
 
     loadGamePokemon();
+
+    return () => {
+      controller.abort();
+    };
   }, []);
 
   const handleGameComplete = (stats: GameStats) => {

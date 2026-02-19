@@ -30,7 +30,6 @@ const Teams: React.FC = () => {
       setDeleting(true);
       await deleteTeam(teamToDelete.id);
       setTeamToDelete(null);
-      toast.success(`Team "${teamToDelete.name}" deleted`);
     } catch (error) {
       console.error('Failed to delete team:', error);
       toast.error('Failed to delete team');
@@ -55,7 +54,6 @@ const Teams: React.FC = () => {
         setShowCreateModal(false);
         setFormData({ name: '', description: '' });
         // fetchTeams is already called within createTeam (in AuthProvider)
-        toast.success(`Team "${newTeam.name}" created!`);
       }
     } catch (error) {
       console.error('Failed to create team:', error);

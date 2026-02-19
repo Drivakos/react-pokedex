@@ -13,9 +13,15 @@ const mockLimit = jest.fn();
 
 // Use jest.doMock to avoid hoisting issues
 jest.mock('../src/lib/supabase', () => {
+  const createMockChain = (data = null, error = null) => {
+    const chain = Promise.resolve({ data, error });
+    (chain as any).abortSignal = jest.fn().mockReturnValue(chain);
+    return chain;
+  };
+
   return {
     supabase: {
-      rpc: jest.fn(),
+      rpc: jest.fn().mockImplementation(() => createMockChain()),
       from: jest.fn()
     }
   };
@@ -29,9 +35,24 @@ import { supabase } from '../src/lib/supabase';
 const mockedRpc = supabase.rpc as jest.Mock;
 const mockedFrom = supabase.from as jest.Mock;
 
+const setRpcResponse = (data: any = null, error: any = null) => {
+  const chain = Promise.resolve({ data, error });
+  (chain as any).abortSignal = jest.fn().mockReturnValue(chain);
+  mockedRpc.mockReturnValue(chain);
+  return chain;
+};
+
+const setRpcError = (error: any) => {
+  const chain = Promise.reject(error);
+  (chain as any).abortSignal = jest.fn().mockReturnValue(chain);
+  mockedRpc.mockReturnValue(chain);
+  return chain;
+};
+
 describe('FriendsService', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    friendsService.clearCache();
 
     // Setup default mock chain for from()
     mockLimit.mockReturnValue({ data: [], error: null });
@@ -59,7 +80,7 @@ describe('FriendsService', () => {
         }
       ];
 
-      mockedRpc.mockResolvedValue({ data: mockFriends, error: null });
+      setRpcResponse(mockFriends);
 
       const result = await friendsService.getFriends(mockUserId);
 
@@ -70,10 +91,7 @@ describe('FriendsService', () => {
     });
 
     it('should return empty array on RPC error', async () => {
-      mockedRpc.mockResolvedValue({
-        data: null,
-        error: { message: 'Database error' }
-      });
+      setRpcResponse(null, { message: 'Database error' });
 
       const result = await friendsService.getFriends(mockUserId);
 
@@ -81,7 +99,7 @@ describe('FriendsService', () => {
     });
 
     it('should handle exceptions gracefully', async () => {
-      mockedRpc.mockRejectedValue(new Error('Network error'));
+      setRpcError(new Error('Network error'));
 
       const result = await friendsService.getFriends(mockUserId);
 
@@ -108,7 +126,7 @@ describe('FriendsService', () => {
         }
       ];
 
-      mockedRpc.mockResolvedValue({ data: mockRequests, error: null });
+      setRpcResponse(mockRequests);
 
       const result = await friendsService.getPendingRequests(mockUserId);
 
@@ -119,10 +137,7 @@ describe('FriendsService', () => {
     });
 
     it('should return empty array on RPC error', async () => {
-      mockedRpc.mockResolvedValue({
-        data: null,
-        error: { message: 'Database error' }
-      });
+      setRpcResponse(null, { message: 'Database error' });
 
       const result = await friendsService.getPendingRequests(mockUserId);
 
@@ -163,7 +178,7 @@ describe('FriendsService', () => {
         }
       ];
 
-      mockedRpc.mockResolvedValue({ data: mockResults, error: null });
+      setRpcResponse(mockResults);
 
       const result = await friendsService.searchUsers(mockUserId, mockQuery, 10);
 
@@ -176,7 +191,7 @@ describe('FriendsService', () => {
     });
 
     it('should trim the search query', async () => {
-      mockedRpc.mockResolvedValue({ data: [], error: null });
+      setRpcResponse([]);
 
       await friendsService.searchUsers(mockUserId, '  john  ');
 
@@ -188,7 +203,7 @@ describe('FriendsService', () => {
     });
 
     it('should use default limit of 20', async () => {
-      mockedRpc.mockResolvedValue({ data: [], error: null });
+      setRpcResponse([]);
 
       await friendsService.searchUsers(mockUserId, mockQuery);
 
@@ -223,7 +238,7 @@ describe('FriendsService', () => {
     });
 
     it('should call send_friend_request RPC with correct parameters', async () => {
-      mockedRpc.mockResolvedValue({ data: 1, error: null });
+      setRpcResponse(1);
 
       const result = await friendsService.sendFriendRequest(mockSenderId, mockReceiverId);
 
@@ -235,10 +250,7 @@ describe('FriendsService', () => {
     });
 
     it('should return error for already friends', async () => {
-      mockedRpc.mockResolvedValue({
-        data: null,
-        error: { message: 'Already friends with this user' }
-      });
+      setRpcResponse(null, { message: 'Already friends with this user' });
 
       const result = await friendsService.sendFriendRequest(mockSenderId, mockReceiverId);
 
@@ -263,7 +275,7 @@ describe('FriendsService', () => {
     });
 
     it('should call accept_friend_request RPC with correct parameters', async () => {
-      mockedRpc.mockResolvedValue({ data: true, error: null });
+      setRpcResponse(true);
 
       const result = await friendsService.acceptFriendRequest(mockRequestId, mockUserId);
 
@@ -275,7 +287,7 @@ describe('FriendsService', () => {
     });
 
     it('should return error when request not found', async () => {
-      mockedRpc.mockResolvedValue({ data: false, error: null });
+      setRpcResponse(false);
 
       const result = await friendsService.acceptFriendRequest(mockRequestId, mockUserId);
 
@@ -294,7 +306,7 @@ describe('FriendsService', () => {
     });
 
     it('should call reject_friend_request RPC with correct parameters', async () => {
-      mockedRpc.mockResolvedValue({ data: true, error: null });
+      setRpcResponse(true);
 
       const result = await friendsService.rejectFriendRequest(mockRequestId, mockUserId);
 
@@ -306,7 +318,7 @@ describe('FriendsService', () => {
     });
 
     it('should return error when request not found', async () => {
-      mockedRpc.mockResolvedValue({ data: false, error: null });
+      setRpcResponse(false);
 
       const result = await friendsService.rejectFriendRequest(mockRequestId, mockUserId);
 
@@ -331,7 +343,7 @@ describe('FriendsService', () => {
     });
 
     it('should call remove_friendship RPC with correct parameters', async () => {
-      mockedRpc.mockResolvedValue({ data: true, error: null });
+      setRpcResponse(true);
 
       const result = await friendsService.removeFriend(mockUserId, mockFriendId);
 
@@ -343,7 +355,7 @@ describe('FriendsService', () => {
     });
 
     it('should return error when friendship not found', async () => {
-      mockedRpc.mockResolvedValue({ data: false, error: null });
+      setRpcResponse(false);
 
       const result = await friendsService.removeFriend(mockUserId, mockFriendId);
 
@@ -374,7 +386,7 @@ describe('FriendsService', () => {
         }
       ];
 
-      mockedRpc.mockResolvedValue({ data: mockFriends, error: null });
+      setRpcResponse(mockFriends);
 
       const result = await friendsService.areFriends(mockUserId, mockOtherUserId);
 
@@ -382,7 +394,7 @@ describe('FriendsService', () => {
     });
 
     it('should return false when users are not friends', async () => {
-      mockedRpc.mockResolvedValue({ data: [], error: null });
+      setRpcResponse([]);
 
       const result = await friendsService.areFriends(mockUserId, mockOtherUserId);
 
@@ -418,7 +430,7 @@ describe('FriendsService', () => {
         { friend_id: '3', friend_name: 'C', friendship_created_at: '' }
       ];
 
-      mockedRpc.mockResolvedValue({ data: mockFriends, error: null });
+      setRpcResponse(mockFriends);
 
       const result = await friendsService.getFriendsCount('user-123');
 
@@ -426,7 +438,7 @@ describe('FriendsService', () => {
     });
 
     it('should return 0 when no friends', async () => {
-      mockedRpc.mockResolvedValue({ data: [], error: null });
+      setRpcResponse([]);
 
       const result = await friendsService.getFriendsCount('user-123');
 
@@ -441,7 +453,7 @@ describe('FriendsService', () => {
         { request_id: 2, sender_id: '2', sender_name: 'B', created_at: '' }
       ];
 
-      mockedRpc.mockResolvedValue({ data: mockRequests, error: null });
+      setRpcResponse(mockRequests);
 
       const result = await friendsService.getPendingRequestsCount('user-123');
 
@@ -451,7 +463,7 @@ describe('FriendsService', () => {
 
   describe('getMyFriendCode', () => {
     it('should call get_my_friend_code RPC', async () => {
-      mockedRpc.mockResolvedValue({ data: 'ABC12345', error: null });
+      setRpcResponse('ABC12345');
 
       const result = await friendsService.getMyFriendCode();
 
@@ -460,7 +472,7 @@ describe('FriendsService', () => {
     });
 
     it('should return null on error', async () => {
-      mockedRpc.mockResolvedValue({ data: null, error: { message: 'Not authenticated' } });
+      setRpcResponse(null, { message: 'Not authenticated' });
 
       const result = await friendsService.getMyFriendCode();
 

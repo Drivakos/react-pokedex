@@ -49,7 +49,8 @@ describe('usePokegridSearch', () => {
         1000,
         0,
         'pikachu', // Should be trimmed
-        expect.any(Object)
+        expect.any(Object),
+        expect.anything()
       );
     });
 
@@ -149,7 +150,8 @@ describe('usePokegridSearch', () => {
         1000,
         0,
         'pokemon',
-        expect.any(Object)
+        expect.any(Object),
+        expect.anything()
       );
 
       // Should only return 50 results due to limiting in hook

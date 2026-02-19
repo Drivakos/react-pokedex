@@ -37,26 +37,30 @@ const PokemonImage: React.FC<PokemonImageProps> = ({
   className,
   ...imgProps
 }) => {
-  // For Pokemon IDs > 905, we don't have local thumbnails, so start with CDN
-  const [imageSrc, setImageSrc] = useState<string>(
-    pokemonId > 905 ? getPokemonImageFallback(pokemonId) : getPokemonImageSource(pokemonId)
-  );
-  const [hasTriedFallback, setHasTriedFallback] = useState<boolean>(pokemonId > 905);
+  // Use state only for tracking errors/fallbacks
+  const [hasError, setHasError] = useState<boolean>(false);
+  const [errorId, setErrorId] = useState<number | null>(null);
+
+  // Derive source based on whether we've encountered an error for this ID
+  const imageSrc = React.useMemo(() => {
+    const useFallback = pokemonId > 905 || (hasError && errorId === pokemonId);
+    return useFallback ? getPokemonImageFallback(pokemonId) : getPokemonImageSource(pokemonId);
+  }, [pokemonId, hasError, errorId]);
 
   const handleImageError = () => {
-    // For Pokemon IDs <= 905, try CDN fallback if we haven't already
-    if (fallbackToCdn && !hasTriedFallback && pokemonId <= 905) {
-      setImageSrc(getPokemonImageFallback(pokemonId));
-      setHasTriedFallback(true);
+    if (fallbackToCdn && !hasError && pokemonId <= 905) {
+      setHasError(true);
+      setErrorId(pokemonId);
     }
   };
 
-  // Reset when pokemonId changes
-  useEffect(() => {
-    const newImageSrc = pokemonId > 905 ? getPokemonImageFallback(pokemonId) : getPokemonImageSource(pokemonId);
-    setImageSrc(newImageSrc);
-    setHasTriedFallback(pokemonId > 905);
-  }, [pokemonId]);
+  // Reset error state if ID changes to something that might work locally
+  React.useEffect(() => {
+    if (errorId !== pokemonId) {
+      setHasError(false);
+      setErrorId(null);
+    }
+  }, [pokemonId, errorId]);
 
   return (
     <img
@@ -65,6 +69,7 @@ const PokemonImage: React.FC<PokemonImageProps> = ({
       onError={handleImageError}
       className={className}
       loading="lazy"
+      decoding="async" // Further optimize decoding
       {...imgProps}
     />
   );

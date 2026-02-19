@@ -37,7 +37,7 @@ class FriendsService {
     this.cache[key] = { data, timestamp: Date.now() };
   }
 
-  private clearCache(keyPrefix?: string) {
+  public clearCache(keyPrefix?: string) {
     if (keyPrefix) {
       Object.keys(this.cache).forEach(key => {
         if (key.startsWith(keyPrefix)) {

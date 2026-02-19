@@ -21,8 +21,8 @@ export const useUI = () => {
         }
       }, {
         root: null,
-        rootMargin: '0px',
-        threshold: 0.1,
+        rootMargin: '400px', // Trigger fetch 400px before reaching the bottom
+        threshold: 0.01,
       });
       
       observerRef.current.observe(node);
