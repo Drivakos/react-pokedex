@@ -50,11 +50,11 @@ describe('Pokemon Image Helper Functions', () => {
   });
 
   describe('getPokemonImageFallback', () => {
-    it('should return correctly formatted GitHub CDN URL', () => {
-      expect(getPokemonImageFallback(1)).toBe('https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/1.png');
-      expect(getPokemonImageFallback(25)).toBe('https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/25.png');
-      expect(getPokemonImageFallback(905)).toBe('https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/905.png');
-      expect(getPokemonImageFallback(10177)).toBe('https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/10177.png');
+    it('should return correctly formatted image proxy URL', () => {
+      expect(getPokemonImageFallback(1)).toBe('/api/pokemon/images/1');
+      expect(getPokemonImageFallback(25)).toBe('/api/pokemon/images/25');
+      expect(getPokemonImageFallback(905)).toBe('/api/pokemon/images/905');
+      expect(getPokemonImageFallback(10177)).toBe('/api/pokemon/images/10177');
     });
   });
 

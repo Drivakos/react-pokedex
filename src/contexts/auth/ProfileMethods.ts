@@ -1,9 +1,13 @@
+import { User, Session } from '@supabase/supabase-js';
+import type { PostgrestError } from '@supabase/supabase-js';
 import { supabase, Profile } from '../../lib/supabase';
 import toast from 'react-hot-toast';
 
+type RefreshResult = { success: boolean; session: Session | null };
+
 type ProfileMethodsProps = {
-  user: any;
-  refreshSession: () => Promise<any>;
+  user: User | null;
+  refreshSession: () => Promise<RefreshResult>;
   setProfile: (profile: Profile | null) => void;
 };
 
@@ -12,7 +16,7 @@ export interface ProfileMethodsInterface {
   refreshProfile: (userId: string) => Promise<void>;
   updateProfile: (profile: Partial<Profile>) => Promise<{
     data: Profile | null;
-    error: any | null;
+    error: PostgrestError | Error | null;
   }>;
 }
 
@@ -92,7 +96,7 @@ export const ProfileMethods = ({
 
   const updateProfile = async (updates: Partial<Profile>): Promise<{
     data: Profile | null;
-    error: any | null;
+    error: PostgrestError | Error | null;
   }> => {
     try {
       if (!user) {

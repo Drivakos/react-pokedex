@@ -1,6 +1,7 @@
 import React, { useState, useEffect, createContext, useContext, useMemo, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Session, User } from '@supabase/supabase-js';
-import { supabase, Profile, Favorite } from '../../lib/supabase';
+import { supabase, Profile, Favorite, Team } from '../../lib/supabase';
 import toast from 'react-hot-toast';
 import { AuthMethods, AuthMethodsInterface } from './AuthMethods';
 import { ProfileMethods, ProfileMethodsInterface } from './ProfileMethods';
@@ -31,13 +32,14 @@ export const useAuth = () => {
 };
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const navigate = useNavigate();
   const [session, setSession] = useState<Session | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const { refreshSession } = useSessionRefresher();
   const [favorites, setFavorites] = useState<Favorite[]>([]);
-  const [teams, setTeams] = useState<any[]>([]);
+  const [teams, setTeams] = useState<Team[]>([]);
 
 
   
@@ -124,7 +126,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     createProfile,
     refreshProfile,
     fetchFavorites,
-    fetchTeams: teamsMethods.fetchTeams
+    fetchTeams: teamsMethods.fetchTeams,
+    onSignUpSuccess: (path) => navigate(path)
   }), [
     setSession,
     setUser,
@@ -132,7 +135,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     createProfile,
     refreshProfile,
     fetchFavorites,
-    teamsMethods.fetchTeams
+    teamsMethods.fetchTeams,
+    navigate
   ]);
 
   useEffect(() => {
@@ -143,7 +147,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (error) throw error;
         
         if (data.session) {
-          localStorage.setItem('supabase.auth.token', JSON.stringify(data.session));
           setSession(data.session);
           setUser(data.session.user);
 
@@ -165,9 +168,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        if (event === 'SIGNED_IN' && session) {
-          localStorage.setItem('supabase.auth.token', JSON.stringify(session));
-        } else if (event === 'SIGNED_OUT') {
+        if (event === 'SIGNED_OUT') {
           localStorage.removeItem('supabase.auth.token');
         }
         

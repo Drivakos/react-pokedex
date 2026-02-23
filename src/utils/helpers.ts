@@ -113,10 +113,10 @@ export const getPokemonImageSource = (pokemonId: number): string => {
 };
 
 /**
- * Get the fallback Pokemon image source from GitHub CDN
+ * Get the fallback Pokemon image source from the CDN proxy (which fetches from GitHub)
  */
 export const getPokemonImageFallback = (pokemonId: number): string => {
-  return `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${pokemonId}.png`;
+  return `/api/pokemon/images/${pokemonId}`;
 };
 
 /**

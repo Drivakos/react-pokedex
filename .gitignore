@@ -22,6 +22,7 @@ dist-ssr
 build
 *.local
 .netlify
+.claude
 
 # Environment variables
 .env
@@ -68,6 +69,7 @@ dist/stats.html
 tech_stack.md
 feature_log.md
 changelog.md
+claude.md
 
 # Supabase temp files and schema dumps
 supabase/.temp/

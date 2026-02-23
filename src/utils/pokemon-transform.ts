@@ -18,8 +18,8 @@ export const transformSinglePokemon = (p: RawPokemonData): Pokemon => {
     moves: p.moves?.map(m => m.move.name) || [],
     sprites: p.sprites?.[0]?.data || {},
     generation: p.species?.generation?.name || 'unknown',
-    has_evolutions: p.species?.pokemon_v2_evolutionchain?.pokemon_v2_pokemonspecies && 
-                   p.species.pokemon_v2_evolutionchain.pokemon_v2_pokemonspecies.length > 1 || false,
+    has_evolutions: !!(p.species?.pokemon_v2_evolutionchain?.pokemon_v2_pokemonspecies &&
+                   p.species.pokemon_v2_evolutionchain.pokemon_v2_pokemonspecies.length > 1),
     is_default: p.is_default,
     base_experience: p.base_experience,
   };

@@ -1,4 +1,4 @@
-import { fetchCachedFilterOptions } from '../cached-api';
+import { fetchCachedFilterOptions } from './filters.cached';
 import { supabase } from '../../lib/supabase';
 import { GRAPHQL_ENDPOINT } from './base';
 
@@ -24,12 +24,16 @@ export const fetchFilterOptions = async () => {
         return result;
       }
     }
-  } catch (error) { /* continue */ }
+  } catch (error) {
+    if (import.meta.env.DEV) console.warn('[cache fallback]', error);
+  }
 
   // 2. Try Supabase cache (Edge Functions)
   try {
     return await fetchCachedFilterOptions();
-  } catch (error) { /* continue */ }
+  } catch (error) {
+    if (import.meta.env.DEV) console.warn('[cache fallback]', error);
+  }
 
   // 3. Fallback to direct API call
   try {

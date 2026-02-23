@@ -106,7 +106,7 @@ const PokéGridChallenge: React.FC = () => {
           <div className="lg:col-span-2 space-y-6">
             <div className="flex justify-center">
               <GameStats
-                score={game.score}
+                score={game.score ?? 0}
                 totalGuesses={game.totalGuesses}
                 maxTotalGuesses={GAME_CONSTANTS.MAX_TOTAL_GUESSES}
                 bonusRetries={gameState.bonusRetries}
@@ -165,7 +165,7 @@ const PokéGridChallenge: React.FC = () => {
           isOpen={showShareModal}
           onClose={() => setShowShareModal(false)}
           gameResult={{
-            score: game.score,
+            score: game.score ?? 0,
             solvedCount: game.cells.filter((cell: any) => cell.isCorrect).length,
             totalCells: 9,
             accuracy: game.totalGuesses > 0
