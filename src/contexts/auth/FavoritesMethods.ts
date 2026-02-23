@@ -1,9 +1,12 @@
+import { User, Session } from '@supabase/supabase-js';
 import { supabase, Favorite } from '../../lib/supabase';
 import toast from 'react-hot-toast';
 
+type RefreshResult = { success: boolean; session: Session | null };
+
 type FavoritesMethodsProps = {
-  user: any;
-  refreshSession: () => Promise<any>;
+  user: User | null;
+  refreshSession: () => Promise<RefreshResult>;
   favorites: Favorite[];
   setFavorites: (favorites: Favorite[]) => void;
 };

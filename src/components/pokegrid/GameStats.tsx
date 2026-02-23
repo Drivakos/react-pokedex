@@ -11,7 +11,7 @@ const AnimatedCounter: React.FC<AnimatedCounterProps> = ({
   duration = 1000,
   className = ''
 }) => {
-  const [displayValue, setDisplayValue] = useState(value);
+  const [displayValue, setDisplayValue] = useState(value ?? 0);
   const [isAnimating, setIsAnimating] = useState(false);
 
   useEffect(() => {
@@ -44,7 +44,7 @@ const AnimatedCounter: React.FC<AnimatedCounterProps> = ({
 
   return (
     <span className={`${className} ${isAnimating ? 'text-yellow-500' : ''}`}>
-      {displayValue.toLocaleString()}
+      {(displayValue ?? 0).toLocaleString()}
     </span>
   );
 };

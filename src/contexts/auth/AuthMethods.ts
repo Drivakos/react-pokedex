@@ -1,15 +1,16 @@
-import { AuthResponse, OAuthResponse, AuthError, Provider } from '@supabase/supabase-js';
+import { AuthResponse, OAuthResponse, AuthError, Provider, User, Session } from '@supabase/supabase-js';
 import { supabase } from '../../lib/supabase';
 import toast from 'react-hot-toast';
 
 type AuthMethodsProps = {
-  setSession: (session: any) => void;
-  setUser: (user: any) => void;
+  setSession: (session: Session | null) => void;
+  setUser: (user: User | null) => void;
   resetAuthState: () => void;
   createProfile?: (userId: string) => Promise<void>;
   refreshProfile?: (userId: string) => Promise<void>;
   fetchFavorites?: () => Promise<void>;
   fetchTeams?: () => Promise<void>;
+  onSignUpSuccess?: (path: string) => void;
 };
 
 export interface AuthMethodsInterface {
@@ -25,9 +26,10 @@ export interface AuthMethodsInterface {
 export const AuthMethods = ({
   setSession,
   setUser,
-  resetAuthState
+  resetAuthState,
+  onSignUpSuccess
 }: AuthMethodsProps): AuthMethodsInterface => {
-  
+
   const signUp = async (email: string, password: string): Promise<AuthResponse> => {
     try {
       localStorage.removeItem('supabase.auth.token');
@@ -46,14 +48,10 @@ export const AuthMethods = ({
           toast.success('Account created successfully! Welcome!');
           setSession(response.data.session);
           setUser(response.data.user);
-          localStorage.setItem('supabase.auth.token', JSON.stringify(response.data.session));
 
-          // Navigate to intended destination or profile
-          setTimeout(() => {
-            const intendedPath = localStorage.getItem('auth_redirect') || '/profile';
-            localStorage.removeItem('auth_redirect');
-            window.location.href = window.location.origin + intendedPath;
-          }, 100);
+          const intendedPath = localStorage.getItem('auth_redirect') || '/profile';
+          localStorage.removeItem('auth_redirect');
+          onSignUpSuccess?.(intendedPath);
         } else {
           // Email confirmation is enabled - user needs to check email
           toast.success('Check your email to confirm your account!');
@@ -70,20 +68,19 @@ export const AuthMethods = ({
   const signIn = async (email: string, password: string): Promise<AuthResponse> => {
     try {
       localStorage.removeItem('supabase.auth.token');
-      
-      const response = await supabase.auth.signInWithPassword({ 
-        email, 
-        password 
+
+      const response = await supabase.auth.signInWithPassword({
+        email,
+        password
       });
-      
+
       if (response.error) {
         toast.error(response.error.message);
       } else if (response.data.session) {
         setSession(response.data.session);
         setUser(response.data.user);
-        localStorage.setItem('supabase.auth.token', JSON.stringify(response.data.session));
       }
-      
+
       return response;
     } catch (err) {
       toast.error('An unexpected error occurred');
@@ -126,14 +123,14 @@ export const AuthMethods = ({
   const signOut = async (scope: 'global' | 'local' | 'others' = 'global'): Promise<{ error: AuthError | null }> => {
     try {
       const { error } = await supabase.auth.signOut({ scope });
-      
+
       if (error) {
         toast.error(error.message || 'Error signing out');
       } else {
         setSession(null);
         setUser(null);
         resetAuthState();
-        
+
         const authItems = [
           'supabase.auth.token',
           'access_token',
@@ -148,7 +145,7 @@ export const AuthMethods = ({
         authItems.forEach(item => localStorage.removeItem(item));
         toast.success('You have been signed out');
       }
-      
+
       return { error };
     } catch (err) {
       localStorage.removeItem('supabase.auth.token');
@@ -163,13 +160,13 @@ export const AuthMethods = ({
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
         redirectTo: `${window.location.origin}/auth/callback?type=recovery`
       });
-      
+
       if (error) {
         toast.error(error.message || 'Failed to send password reset email');
       } else {
         toast.success('Check your email for password reset instructions');
       }
-      
+
       return { error };
     } catch (err) {
       toast.error('An unexpected error occurred while sending the reset email');
@@ -182,16 +179,16 @@ export const AuthMethods = ({
       if (password.length < 8) {
         return { error: { message: 'Password must be at least 8 characters long', status: 400 } as AuthError };
       }
-      
+
       const { error } = await supabase.auth.updateUser({ password });
-      
+
       if (error) {
         toast.error(error.message || 'Failed to update password');
       } else {
         toast.success('Password updated successfully. Please sign in with your new password.');
         await signOut('global');
       }
-      
+
       return { error };
     } catch (err) {
       toast.error('An unexpected error occurred while updating your password');
@@ -202,7 +199,7 @@ export const AuthMethods = ({
   const signInWithMagicLink = async (email: string, createUser = true): Promise<{ error: AuthError | null }> => {
     try {
       localStorage.removeItem('supabase.auth.token');
-      
+
       const { error } = await supabase.auth.signInWithOtp({
         email,
         options: {
@@ -210,13 +207,13 @@ export const AuthMethods = ({
           emailRedirectTo: `${window.location.origin}/auth/callback`
         }
       });
-      
+
       if (error) {
         toast.error(error.message || 'Failed to send magic link');
       } else {
         toast.success('Check your email for the magic link');
       }
-      
+
       return { error };
     } catch (err) {
       toast.error('An unexpected error occurred while sending the magic link');

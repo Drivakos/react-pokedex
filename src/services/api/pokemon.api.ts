@@ -3,7 +3,7 @@ import {
   fetchCachedPokemonById,
   fetchCachedPokemonData,
   fetchCachedPokemonDetails
-} from '../cached-api';
+} from './pokemon.cached';
 import { buildCompleteWhereClause, POKEMON_FIELDS } from '../../utils/query-builder';
 import { transformSinglePokemon, transformRawData } from '../../utils/pokemon-transform';
 import { cacheAside, CACHE_KEYS, CACHE_TTL, generateSearchCacheKey, isCacheEnabled } from '../../lib/redis';
@@ -142,7 +142,9 @@ export const fetchPokemonById = async (id: number, signal?: AbortSignal): Promis
     return cacheAside(cacheKey, async () => {
       try {
         return await fetchCachedPokemonById(id);
-      } catch (error) { /* continue */ }
+      } catch (error) {
+        if (import.meta.env.DEV) console.warn('[cache fallback]', error);
+      }
 
       try {
         const { data, error } = await supabase
@@ -151,7 +153,9 @@ export const fetchPokemonById = async (id: number, signal?: AbortSignal): Promis
           .eq('id', id)
           .single();
         if (data && !error) return transformSupabasePokemon(data);
-      } catch (error) { /* continue */ }
+      } catch (error) {
+        if (import.meta.env.DEV) console.warn('[cache fallback]', error);
+      }
 
       return fetchPokemonByIdDirect(id, signal);
     }, CACHE_TTL.POKEMON);
@@ -159,7 +163,9 @@ export const fetchPokemonById = async (id: number, signal?: AbortSignal): Promis
 
   try {
     return await fetchCachedPokemonById(id);
-  } catch (error) { /* continue */ }
+  } catch (error) {
+    if (import.meta.env.DEV) console.warn('[cache fallback]', error);
+  }
 
   try {
     const { data, error } = await supabase
@@ -168,7 +174,9 @@ export const fetchPokemonById = async (id: number, signal?: AbortSignal): Promis
       .eq('id', id)
       .single();
     if (data && !error) return transformSupabasePokemon(data);
-  } catch (error) { /* continue */ }
+  } catch (error) {
+    if (import.meta.env.DEV) console.warn('[cache fallback]', error);
+  }
 
   return fetchPokemonByIdDirect(id, signal);
 };
@@ -209,7 +217,9 @@ export const fetchPokemonData = async (
         .abortSignal(signal as any); // Supabase supports abortSignal
 
       if (data && !error && data.length > 0) return data.map(transformSupabasePokemon);
-    } catch (error) { /* continue */ }
+    } catch (error) {
+      if (import.meta.env.DEV) console.warn('[cache fallback]', error);
+    }
 
     return fetchPokemonDataDirect(limit, offset, searchTerm, filters, signal);
   };
@@ -415,7 +425,9 @@ export const fetchPokemonDetails = async (id: number): Promise<PokemonDetails> =
   const executeQuery = async () => {
     try {
       return await fetchCachedPokemonDetails(id);
-    } catch (error) { /* continue */ }
+    } catch (error) {
+      if (import.meta.env.DEV) console.warn('[cache fallback]', error);
+    }
     return fetchPokemonDetailsDirect(id);
   };
 

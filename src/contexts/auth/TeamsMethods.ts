@@ -1,9 +1,12 @@
+import { User, Session } from '@supabase/supabase-js';
 import { supabase, Team, TeamMember } from '../../lib/supabase';
 import toast from 'react-hot-toast';
 
+type RefreshResult = { success: boolean; session: Session | null };
+
 type TeamsMethodsProps = {
-  user: any;
-  refreshSession: () => Promise<any>;
+  user: User | null;
+  refreshSession: () => Promise<RefreshResult>;
   teams: Team[];
   setTeams: (teams: Team[]) => void;
 };
@@ -369,7 +372,7 @@ export const TeamsMethods = ({
       }
 
       // Prepare the update data
-      const updateData: any = {
+      const updateData: Partial<TeamMember> & { updated_at: string } = {
         updated_at: new Date().toISOString()
       };
 

@@ -77,6 +77,7 @@ graph TB
 - **🔔 Real-time Notifications**: Implemented a notification system with live updates for social interactions.
 - **🎮 PokéGrid Enhancements**: Added a **Hint System**, **Weekly Stats**, and **Result Sharing** functionality.
 - **🧪 Testing Milestone**: Expanded test suite from 68 to **508 passing tests**, reaching high coverage in core business logic.
+- **🏗️ Service Layer Modularization**: Refactored the monolithic `cached-api.ts` into domain-specific services (`pokemon.cached.ts`, `filters.cached.ts`) for better maintainability and scalability.
 - **🧹 Architecture Clean-up**: Centralized API logic and reduced code duplication by ~40% through reusable hooks and utility functions.
 
 ### 2025 Q4 - Core Game & Infrastructure

@@ -1,0 +1,247 @@
+import { Pokemon, RawPokemonData, Filters, PokemonDetails } from '../../types/pokemon';
+import { buildCompleteWhereClause, POKEMON_FIELDS } from '../../utils/query-builder';
+import { transformSinglePokemon, transformRawData } from '../../utils/pokemon-transform';
+import { areCachedEndpointsAvailable, fetchCachedGraphQL, fetchCachedREST } from './cache-base';
+
+/**
+ * Fetches a single Pokemon by ID using cached endpoint (with availability check)
+ */
+export const fetchCachedPokemonById = async (id: number): Promise<Pokemon> => {
+  // Check if cached endpoints are available first
+  if (!(await areCachedEndpointsAvailable())) {
+    throw new Error('Cached endpoints not available');
+  }
+
+  try {
+    const query = `
+      query GetPokemonById($id: Int!) {
+        pokemon_v2_pokemon_by_pk(id: $id) {
+          ${POKEMON_FIELDS}
+        }
+      }
+    `;
+
+    const result = await fetchCachedGraphQL(query, { id });
+    const rawPokemon = result.data.pokemon_v2_pokemon_by_pk as RawPokemonData;
+    
+    if (!rawPokemon) {
+      throw new Error(`Pokemon with ID ${id} not found`);
+    }
+    
+    return transformSinglePokemon(rawPokemon);
+  } catch (error) {
+    console.error(`Error fetching cached Pokemon with ID ${id}:`, error);
+    throw error;
+  }
+};
+
+/**
+ * Fetches Pokemon data using cached GraphQL endpoint (with availability check)
+ */
+export const fetchCachedPokemonData = async (
+  limit: number, 
+  offset: number, 
+  searchTerm: string, 
+  filters: Filters
+): Promise<Pokemon[]> => {
+  // Check if cached endpoints are available first
+  if (!(await areCachedEndpointsAvailable())) {
+    throw new Error('Cached endpoints not available');
+  }
+
+  try {
+    const whereClause = buildCompleteWhereClause(searchTerm, filters);
+
+    const query = `
+      query GetFilteredPokemon($limit: Int!, $offset: Int!) {
+        pokemon_v2_pokemon(
+          limit: $limit, 
+          offset: $offset, 
+          order_by: {id: asc}
+          where: {
+            ${whereClause}
+          }
+        ) {
+          ${POKEMON_FIELDS}
+        }
+      }
+    `;
+
+    const result = await fetchCachedGraphQL(query, { limit, offset });
+    const rawData = result.data.pokemon_v2_pokemon as RawPokemonData[];
+    
+    return transformRawData(rawData);
+  } catch (error) {
+    console.error('Error fetching cached Pokemon data:', error);
+    throw error;
+  }
+};
+
+/**
+ * Fetches Pokemon details using cached REST endpoint (with availability check)
+ */
+export const fetchCachedPokemonDetails = async (id: number): Promise<PokemonDetails> => {
+  // Check if cached endpoints are available first
+  if (!(await areCachedEndpointsAvailable())) {
+    throw new Error('Cached endpoints not available');
+  }
+
+  try {
+    // Fetch from cached REST endpoint
+    const pokemon = await fetchCachedREST(`pokemon/${id}`);
+    const species = await fetchCachedREST(`pokemon-species/${id}`);
+
+    // Extract English flavor text
+    const englishFlavorText = species.flavor_text_entries
+      ?.find((entry: any) => entry.language.name === 'en')?.flavor_text
+      ?.replace(/\f/g, ' ')
+      ?.replace(/\n/g, ' ') || '';
+
+    // Format stats
+    const stats = pokemon.stats.reduce((acc: any, stat: any) => {
+      const statName = stat.stat.name.replace('-', '_');
+      acc[statName] = stat.base_stat;
+      return acc;
+    }, {});
+
+    // Fetch abilities with descriptions
+    const abilitiesPromises = pokemon.abilities.map(async (ability: any) => {
+      try {
+        const abilityData = await fetchCachedREST(`ability/${ability.ability.name}`);
+        
+        // Find English description
+        const englishEntry = abilityData.flavor_text_entries?.find(
+          (entry: any) => entry.language.name === 'en'
+        );
+        
+        return {
+          name: ability.ability.name.replace('-', ' '),
+          is_hidden: ability.is_hidden,
+          description: englishEntry ? englishEntry.flavor_text : 'No description available.'
+        };
+      } catch (error) {
+        console.warn(`Failed to fetch ability ${ability.ability.name}:`, error);
+        return {
+          name: ability.ability.name.replace('-', ' '),
+          is_hidden: ability.is_hidden,
+          description: 'No description available.'
+        };
+      }
+    });
+
+    const abilities = await Promise.all(abilitiesPromises);
+
+    // Fetch evolution chain if available
+    const evolutionChain: any[] = [];
+    if (species.evolution_chain?.url) {
+      try {
+        const evolutionResponse = await fetch(species.evolution_chain.url);
+        const evolutionData = await evolutionResponse.json();
+        
+        // Process evolution chain with species IDs
+        if (evolutionData) {
+          const evoData = evolutionData.chain;
+          
+          // Fetch species data for the base form
+          const baseSpeciesResponse = await fetchCachedREST(`pokemon-species/${evoData.species.name}`);
+          
+          const baseId = baseSpeciesResponse.id;
+          const evoDetails = {
+            species_name: evoData.species.name,
+            species_id: baseId,
+            evolves_from_id: null,
+            min_level: 1,
+            trigger_name: null,
+            item: null
+          };
+          evolutionChain.push(evoDetails);
+          
+          // Process first evolution
+          if (evoData.evolves_to.length > 0) {
+            for (const evo1 of evoData.evolves_to) {
+              const speciesData = await fetchCachedREST(`pokemon-species/${evo1.species.name}`);
+              const evo1Id = speciesData.id;
+              
+              const evoDetails = {
+                species_name: evo1.species.name,
+                species_id: evo1Id,
+                evolves_from_id: baseId,
+                min_level: evo1.evolution_details[0]?.min_level || null,
+                trigger_name: evo1.evolution_details[0]?.trigger?.name || null,
+                item: evo1.evolution_details[0]?.item?.name || null
+              };
+              evolutionChain.push(evoDetails);
+              
+              // Process second evolution
+              if (evo1.evolves_to.length > 0) {
+                for (const evo2 of evo1.evolves_to) {
+                  const speciesData2 = await fetchCachedREST(`pokemon-species/${evo2.species.name}`);
+                  
+                  const evoDetails = {
+                    species_name: evo2.species.name,
+                    species_id: speciesData2.id,
+                    evolves_from_id: evo1Id,
+                    min_level: evo2.evolution_details[0]?.min_level || null,
+                    trigger_name: evo2.evolution_details[0]?.trigger?.name || null,
+                    item: evo2.evolution_details[0]?.item?.name || null
+                  };
+                  evolutionChain.push(evoDetails);
+                }
+              }
+            }
+          }
+        }
+      } catch (error) {
+        console.warn(`Failed to fetch evolution chain for ${species.name}:`, error);
+      }
+    }
+
+    return {
+      id: pokemon.id,
+      name: pokemon.name,
+      height: pokemon.height,
+      weight: pokemon.weight,
+      types: pokemon.types.map((t: any) => t.type.name),
+      abilities,
+      stats,
+      sprites: {
+        front_default: pokemon.sprites.front_default,
+        back_default: pokemon.sprites.back_default,
+        front_shiny: pokemon.sprites.front_shiny,
+        back_shiny: pokemon.sprites.back_shiny,
+        official_artwork: pokemon.sprites.other?.['official-artwork']?.front_default
+      },
+      moves: pokemon.moves.map((m: any) => {
+        // Pick the latest version group details
+        const latestDetail = m.version_group_details.reduce((latest: any, current: any) => {
+          const latestId = parseInt(latest.version_group.url.split('/').filter(Boolean).pop() || '0');
+          const currentId = parseInt(current.version_group.url.split('/').filter(Boolean).pop() || '0');
+          return currentId > latestId ? current : latest;
+        }, m.version_group_details[0]);
+
+        return {
+          name: m.move.name,
+          learned_at_level: latestDetail?.level_learned_at || 0,
+          learn_method: latestDetail?.move_learn_method.name || 'unknown'
+        };
+      }).filter((m: any) => ['level-up', 'machine', 'egg', 'tutor'].includes(m.learn_method))
+      .sort((a: any, b: any) => {
+        if (a.learn_method === 'level-up' && b.learn_method === 'level-up') {
+          return a.learned_at_level - b.learned_at_level;
+        }
+        if (a.learn_method === 'level-up') return -1;
+        if (b.learn_method === 'level-up') return 1;
+        return a.name.localeCompare(b.name);
+      }),
+      flavor_text: englishFlavorText,
+      genera: species.genera?.find((g: any) => g.language.name === 'en')?.genus || '',
+      generation: species.generation?.name || 'unknown',
+      evolution_chain: evolutionChain,
+      base_experience: pokemon.base_experience,
+      has_evolutions: evolutionChain.length > 1
+    };
+  } catch (error) {
+    console.error(`Error fetching cached Pokemon details for ID ${id}:`, error);
+    throw error;
+  }
+};
