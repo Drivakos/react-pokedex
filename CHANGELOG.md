@@ -1,3 +1,10 @@
+## [1.2.1](https://github.com/Drivakos/react-pokedex/compare/v1.2.0...v1.2.1) (2026-02-23)
+
+
+### Bug Fixes
+
+* **auth:** correct env var usage, boolean coercion, and auth type safety ([9434e6e](https://github.com/Drivakos/react-pokedex/commit/9434e6e34cab374aeb1560959e7416a414839f10))
+
 # [1.2.0](https://github.com/Drivakos/react-pokedex/compare/v1.1.0...v1.2.0) (2026-02-19)
 
 
