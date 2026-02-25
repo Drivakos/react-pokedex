@@ -1,3 +1,10 @@
+## [1.2.2](https://github.com/Drivakos/react-pokedex/compare/v1.2.1...v1.2.2) (2026-02-25)
+
+
+### Bug Fixes
+
+* **security:** address code review round 2 — CSP, injection, observability, resilience ([90883ad](https://github.com/Drivakos/react-pokedex/commit/90883ad736c274140522142b159033154789d150))
+
 ## [1.2.1](https://github.com/Drivakos/react-pokedex/compare/v1.2.0...v1.2.1) (2026-02-23)
 
 
