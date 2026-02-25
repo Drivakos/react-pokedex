@@ -1,3 +1,4 @@
+import * as Sentry from '@sentry/react';
 import { fetchCachedFilterOptions } from './filters.cached';
 import { supabase } from '../../lib/supabase';
 import { GRAPHQL_ENDPOINT } from './base';
@@ -26,6 +27,7 @@ export const fetchFilterOptions = async () => {
     }
   } catch (error) {
     if (import.meta.env.DEV) console.warn('[cache fallback]', error);
+    else Sentry.captureException(error, { tags: { context: 'cache-fallback' } });
   }
 
   // 2. Try Supabase cache (Edge Functions)
@@ -33,6 +35,7 @@ export const fetchFilterOptions = async () => {
     return await fetchCachedFilterOptions();
   } catch (error) {
     if (import.meta.env.DEV) console.warn('[cache fallback]', error);
+    else Sentry.captureException(error, { tags: { context: 'cache-fallback' } });
   }
 
   // 3. Fallback to direct API call

@@ -114,8 +114,7 @@ export default defineConfig(({ mode }) => {
       'X-Content-Type-Options': 'nosniff',
       'X-Frame-Options': 'DENY',
       'Referrer-Policy': 'strict-origin-when-cross-origin',
-      // Temporarily disable CSP for development testing
-      // 'Content-Security-Policy': "default-src 'self'; connect-src 'self' http://localhost:* https://localhost:* https://kefcxvcbpadksfizrckw.supabase.co https://pokeapi.co https://beta.pokeapi.co https://api.pokemontcg.io https://*.supabase.co https://*.google.com https://*.googleapis.com; img-src 'self' https://raw.githubusercontent.com https://images.pokemontcg.io https://*.googleusercontent.com data:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; font-src 'self' data:; frame-src 'self' http://localhost:* https://localhost:* https://*.supabase.co https://*.google.com;",
+      'Content-Security-Policy': `default-src 'self'; connect-src 'self' http://localhost:* https://localhost:* ${env.VITE_SUPABASE_URL} https://pokeapi.co https://beta.pokeapi.co https://api.pokemontcg.io https://*.supabase.co wss://*.supabase.co https://*.upstash.io https://*.sentry.io https://*.ingest.de.sentry.io https://*.google.com https://*.googleapis.com; img-src 'self' https://raw.githubusercontent.com https://images.pokemontcg.io https://*.googleusercontent.com https://storage.googleapis.com data:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; font-src 'self' data:; frame-src 'self' http://localhost:* https://localhost:* https://*.supabase.co https://*.google.com;`,
       'Strict-Transport-Security': 'max-age=31536000; includeSubDomains',
       'Permissions-Policy': 'camera=(), microphone=(), geolocation=()',
     },
@@ -128,8 +127,7 @@ export default defineConfig(({ mode }) => {
       'X-Content-Type-Options': 'nosniff',
       'X-Frame-Options': 'DENY',
       'Referrer-Policy': 'strict-origin-when-cross-origin',
-      // Temporarily disable CSP for development testing
-      // 'Content-Security-Policy': "default-src 'self'; connect-src 'self' http://localhost:* https://localhost:* https://kefcxvcbpadksfizrckw.supabase.co https://pokeapi.co https://beta.pokeapi.co https://api.pokemontcg.io https://*.supabase.co https://*.google.com https://*.googleapis.com; img-src 'self' https://raw.githubusercontent.com https://images.pokemontcg.io https://*.googleusercontent.com data:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; font-src 'self' data:; frame-src 'self' http://localhost:* https://localhost:* https://*.supabase.co https://*.google.com;",
+      'Content-Security-Policy': `default-src 'self'; connect-src 'self' http://localhost:* https://localhost:* ${env.VITE_SUPABASE_URL} https://pokeapi.co https://beta.pokeapi.co https://api.pokemontcg.io https://*.supabase.co wss://*.supabase.co https://*.upstash.io https://*.sentry.io https://*.ingest.de.sentry.io https://*.google.com https://*.googleapis.com; img-src 'self' https://raw.githubusercontent.com https://images.pokemontcg.io https://*.googleusercontent.com https://storage.googleapis.com data:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; font-src 'self' data:; frame-src 'self' http://localhost:* https://localhost:* https://*.supabase.co https://*.google.com;`,
       'Strict-Transport-Security': 'max-age=31536000; includeSubDomains',
       'Permissions-Policy': 'camera=(), microphone=(), geolocation=()',
     },

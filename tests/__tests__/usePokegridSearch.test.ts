@@ -46,7 +46,7 @@ describe('usePokegridSearch', () => {
 
       // Verify the search was called with trimmed query
       expect(mockFetchPokemonData).toHaveBeenCalledWith(
-        1000,
+        50,
         0,
         'pikachu', // Should be trimmed
         expect.any(Object),
@@ -128,8 +128,8 @@ describe('usePokegridSearch', () => {
 
   describe('Search behavior', () => {
     test('should limit results to 50 items', async () => {
-      // Mock API to return more than 50 results
-      const mockResults = Array.from({ length: 100 }, (_, i) => ({
+      // Mock API to return 50 results (limit is now passed to the API, not sliced client-side)
+      const mockResults = Array.from({ length: 50 }, (_, i) => ({
         id: i + 1,
         name: `pokemon-${i + 1}`,
         types: ['normal']
@@ -147,7 +147,7 @@ describe('usePokegridSearch', () => {
 
       // Verify the search was called
       expect(mockFetchPokemonData).toHaveBeenCalledWith(
-        1000,
+        50,
         0,
         'pokemon',
         expect.any(Object),

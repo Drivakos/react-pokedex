@@ -13,7 +13,7 @@ export const buildWhereConditions = (searchTerm: string, filters: Filters): stri
     // Types and Moves are handled separately via AND conditions in buildCompleteWhereClause
     
     generation: filters.generation
-      ? `pokemon_v2_pokemonspecy: { pokemon_v2_generation: { name: { _eq: "${filters.generation}" } } }`
+      ? `pokemon_v2_pokemonspecy: { pokemon_v2_generation: { name: { _eq: ${JSON.stringify(filters.generation)} } } }`
       : '',
 
     name: searchTerm
