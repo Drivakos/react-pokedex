@@ -1,3 +1,5 @@
+import * as Sentry from '@sentry/react';
+import { withRetry } from '../../utils/retry';
 import { Pokemon, RawPokemonData, Filters, PokemonDetails } from '../../types/pokemon';
 import {
   fetchCachedPokemonById,
@@ -62,12 +64,12 @@ async function fetchPokemonByIdDirect(id: number, signal?: AbortSignal): Promise
       }
     `;
 
-    const response = await fetch(GRAPHQL_ENDPOINT, {
+    const response = await withRetry(() => fetch(GRAPHQL_ENDPOINT, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ query, variables: { id } }),
       signal
-    });
+    }));
 
     const data = await handleGraphQLResponse<{ pokemon_v2_pokemon_by_pk: RawPokemonData }>(response);
     const rawPokemon = data.pokemon_v2_pokemon_by_pk;
@@ -114,12 +116,12 @@ async function fetchPokemonDataDirect(
       }
     `;
 
-    const response = await fetch(GRAPHQL_ENDPOINT, {
+    const response = await withRetry(() => fetch(GRAPHQL_ENDPOINT, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ query, variables: { limit, offset } }),
       signal
-    });
+    }));
 
     const data = await handleGraphQLResponse<{ pokemon_v2_pokemon: RawPokemonData[] }>(response);
     return transformRawData(data.pokemon_v2_pokemon);
@@ -144,6 +146,7 @@ export const fetchPokemonById = async (id: number, signal?: AbortSignal): Promis
         return await fetchCachedPokemonById(id);
       } catch (error) {
         if (import.meta.env.DEV) console.warn('[cache fallback]', error);
+        else Sentry.captureException(error, { tags: { context: 'cache-fallback' } });
       }
 
       try {
@@ -155,6 +158,7 @@ export const fetchPokemonById = async (id: number, signal?: AbortSignal): Promis
         if (data && !error) return transformSupabasePokemon(data);
       } catch (error) {
         if (import.meta.env.DEV) console.warn('[cache fallback]', error);
+        else Sentry.captureException(error, { tags: { context: 'cache-fallback' } });
       }
 
       return fetchPokemonByIdDirect(id, signal);
@@ -165,6 +169,7 @@ export const fetchPokemonById = async (id: number, signal?: AbortSignal): Promis
     return await fetchCachedPokemonById(id);
   } catch (error) {
     if (import.meta.env.DEV) console.warn('[cache fallback]', error);
+    else Sentry.captureException(error, { tags: { context: 'cache-fallback' } });
   }
 
   try {
@@ -176,6 +181,7 @@ export const fetchPokemonById = async (id: number, signal?: AbortSignal): Promis
     if (data && !error) return transformSupabasePokemon(data);
   } catch (error) {
     if (import.meta.env.DEV) console.warn('[cache fallback]', error);
+    else Sentry.captureException(error, { tags: { context: 'cache-fallback' } });
   }
 
   return fetchPokemonByIdDirect(id, signal);
@@ -219,6 +225,7 @@ export const fetchPokemonData = async (
       if (data && !error && data.length > 0) return data.map(transformSupabasePokemon);
     } catch (error) {
       if (import.meta.env.DEV) console.warn('[cache fallback]', error);
+      else Sentry.captureException(error, { tags: { context: 'cache-fallback' } });
     }
 
     return fetchPokemonDataDirect(limit, offset, searchTerm, filters, signal);
@@ -310,11 +317,11 @@ async function fetchPokemonDetailsDirect(id: number): Promise<PokemonDetails> {
       }
     `;
 
-    const response = await fetch(GRAPHQL_ENDPOINT, {
+    const response = await withRetry(() => fetch(GRAPHQL_ENDPOINT, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ query, variables: { id } }),
-    });
+    }));
 
     const data = await handleGraphQLResponse<any>(response);
     const pokemon = data.pokemon_v2_pokemon_by_pk;
@@ -427,6 +434,7 @@ export const fetchPokemonDetails = async (id: number): Promise<PokemonDetails> =
       return await fetchCachedPokemonDetails(id);
     } catch (error) {
       if (import.meta.env.DEV) console.warn('[cache fallback]', error);
+      else Sentry.captureException(error, { tags: { context: 'cache-fallback' } });
     }
     return fetchPokemonDetailsDirect(id);
   };

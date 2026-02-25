@@ -23,6 +23,7 @@
   },
   "dependencies": {
     "@netlify/cache": "^3.0.4",
+    "@sentry/react": "^10.40.0",
     "@supabase/supabase-js": "^2.49.4",
     "@types/react-helmet": "^6.1.11",
     "@upstash/redis": "^1.34.3",

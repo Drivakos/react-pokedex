@@ -12,6 +12,7 @@ if ((window as any).trustedTypes && (window as any).trustedTypes.createPolicy) {
   }
 }
 
+import * as Sentry from '@sentry/react';
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { HelmetProvider } from 'react-helmet-async';
@@ -23,6 +24,15 @@ import './styles/card-animations.css';
 import './styles/pokemon-types.css';
 import { Toaster } from 'react-hot-toast';
 import { logger } from './utils/logger';
+
+if (import.meta.env.VITE_SENTRY_DSN) {
+  Sentry.init({
+    dsn: import.meta.env.VITE_SENTRY_DSN,
+    environment: import.meta.env.MODE,
+    enabled: import.meta.env.PROD,
+    tracesSampleRate: 0.1,
+  });
+}
 
 // Global error handling - only log actionable errors in production
 window.addEventListener('error', (event) => {

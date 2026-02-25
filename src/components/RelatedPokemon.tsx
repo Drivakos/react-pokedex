@@ -166,9 +166,8 @@ const RelatedPokemon: React.FC<RelatedPokemonProps> = ({
                   style={{ width: 'calc(50% - 16px)', maxWidth: '180px' }}
                 >
                   <div className="w-24 h-24 flex items-center justify-center">
-                    <PokemonImage 
-                      pokemonId={poke.id} 
-                      pokemonName={poke.name} 
+                    <PokemonImage
+                      pokemonId={poke.id}
                       className="w-full h-full object-contain"
                     />
                   </div>

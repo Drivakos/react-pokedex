@@ -20,7 +20,7 @@ export function usePokegridSearch() {
       // For the challenge, we want to search through ALL Pokemon (no filters, just search term)
       // We'll fetch a larger batch to get comprehensive results
       const results = await fetchPokemonData(
-        1000, // Large limit to get comprehensive results
+        50,
         0,
         query,
         {
@@ -35,10 +35,7 @@ export function usePokegridSearch() {
       );
 
       // Sort results by relevance using centralized utility
-      const sorted = sortPokemonByRelevance(results, query);
-
-      // Limit results to 50 for performance
-      return sorted.slice(0, 50);
+      return sortPokemonByRelevance(results, query);
     } catch (error) {
       console.error('Error searching Pokemon:', error);
       return [];

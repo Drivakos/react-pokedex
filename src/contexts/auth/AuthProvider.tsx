@@ -1,4 +1,4 @@
-import React, { useState, useEffect, createContext, useContext, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useRef, createContext, useContext, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase, Profile, Favorite, Team } from '../../lib/supabase';
@@ -119,6 +119,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, [createProfile, refreshProfile]);
   
+  // Stable refs so the auth subscription never needs to be torn down
+  const initProfileRef = useRef(initProfile);
+  const resetAuthStateRef = useRef(resetAuthState);
+  const refreshProfileRef = useRef(refreshProfile);
+
+  useEffect(() => {
+    initProfileRef.current = initProfile;
+    resetAuthStateRef.current = resetAuthState;
+    refreshProfileRef.current = refreshProfile;
+  });
+
   const authMethods = useMemo(() => AuthMethods({
     setSession,
     setUser,
@@ -145,76 +156,76 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       try {
         const { data, error } = await supabase.auth.getSession();
         if (error) throw error;
-        
+
         if (data.session) {
           setSession(data.session);
           setUser(data.session.user);
 
           if (data.session.user) {
-            await initProfile(data.session.user.id);
+            await initProfileRef.current(data.session.user.id);
           }
         } else {
-          resetAuthState();
+          resetAuthStateRef.current();
         }
       } catch (err) {
         console.error("Auth initialization error:", err);
-        resetAuthState();
+        resetAuthStateRef.current();
       } finally {
         setLoading(false);
       }
     };
-    
+
     initAuth();
-    
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         if (event === 'SIGNED_OUT') {
           localStorage.removeItem('supabase.auth.token');
         }
-        
+
         switch (event) {
           case 'SIGNED_IN':
             if (session) {
               setSession(session);
               setUser(session.user);
               setLoading(true);
-              await initProfile(session.user.id);
+              await initProfileRef.current(session.user.id);
               setLoading(false);
             }
             break;
-            
+
           case 'SIGNED_OUT':
-            resetAuthState();
+            resetAuthStateRef.current();
             toast.success('You have been signed out');
             break;
-            
+
           case 'TOKEN_REFRESHED':
             if (session) {
               setSession(session);
               setUser(session.user);
             }
             break;
-            
+
           case 'USER_UPDATED':
             if (session) {
               setSession(session);
               setUser(session.user);
               if (session.user) {
-                await refreshProfile(session.user.id);
+                await refreshProfileRef.current(session.user.id);
               }
             }
             break;
-            
+
           default:
             break;
         }
       }
     );
-    
+
     return () => {
       subscription.unsubscribe();
     };
-  }, [user]);
+  }, []);
   
   // Simple context value - no complex memoization needed
   const value = {

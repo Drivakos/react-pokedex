@@ -25,7 +25,7 @@ export const usePokemon = (options: { skipFetch?: boolean } = {}) => {
   const [page, setPage] = useState(0);
   const [hasMore, setHasMore] = useState(true);
   const [loading, setLoading] = useState(true);
-  const [initialLoad, setInitialLoad] = useState(true);
+  const isFirstLoadRef = useRef(true);
   const [loadingProgress, setLoadingProgress] = useState(0);
 
   // State for search and filters
@@ -65,7 +65,7 @@ export const usePokemon = (options: { skipFetch?: boolean } = {}) => {
   useEffect(() => {
     if (skipFetch) {
       setLoading(false);
-      setInitialLoad(false);
+      isFirstLoadRef.current = false;
       return;
     }
 
@@ -80,7 +80,7 @@ export const usePokemon = (options: { skipFetch?: boolean } = {}) => {
     setIsSearching(true);
     const fetchPokemon = async () => {
       try {
-        if (initialLoad) {
+        if (isFirstLoadRef.current) {
           setLoading(true);
           setLoadingProgress(20);
         }
@@ -101,7 +101,7 @@ export const usePokemon = (options: { skipFetch?: boolean } = {}) => {
         setDisplayedPokemon(results);
         setHasMore(results.length === POKEMON_PER_PAGE);
         setPage(0);
-        setInitialLoad(false);
+        isFirstLoadRef.current = false;
         setLoading(false);
         setIsSearching(false);
         setLoadingProgress(100);
@@ -121,7 +121,6 @@ export const usePokemon = (options: { skipFetch?: boolean } = {}) => {
         abortControllerRef.current.abort();
       }
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [debouncedSearchTerm, filters, optionsLoaded, skipFetch, lastUpdated]);
 
   // Load more Pokemon when scrolling

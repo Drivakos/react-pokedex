@@ -104,12 +104,17 @@ export const useGridStore = create<GridState>()(
           if (mode === 'daily') {
             const dateString = date.toISOString().split('T')[0];
 
-            const [gridConfig, popularityData, guessHistory, progress] = await Promise.all([
+            const results = await Promise.allSettled([
               pokegridService.loadGridConfiguration(dateString),
               pokegridService.loadPopularityData(dateString),
               user ? pokegridService.loadGuessHistory(user.id, dateString) : Promise.resolve([]),
               user ? pokegridService.loadUserProgress(user.id, dateString) : Promise.resolve(null)
             ]);
+
+            const gridConfig     = results[0].status === 'fulfilled' ? results[0].value : null;
+            const popularityData = results[1].status === 'fulfilled' ? results[1].value : null;
+            const guessHistory   = results[2].status === 'fulfilled' ? results[2].value : [];
+            const progress       = results[3].status === 'fulfilled' ? results[3].value : null;
 
             // Ensure all relevant pokemon are loaded for restoration
             let allRelevantPokemon = [...displayedPokemon];
