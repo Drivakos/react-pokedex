@@ -1,3 +1,17 @@
+# [1.3.0](https://github.com/Drivakos/react-pokedex/compare/v1.2.2...v1.3.0) (2026-02-27)
+
+
+### Bug Fixes
+
+* **auth:** correct env var usage, boolean coercion, and auth type safety ([3cb8022](https://github.com/Drivakos/react-pokedex/commit/3cb802229e369752137bd06e287e5256820eb705))
+* **security:** address code review round 2 — CSP, injection, observability, resilience ([9f8aa77](https://github.com/Drivakos/react-pokedex/commit/9f8aa77db89f2edadb3bff99520b9de8ab3a3caa))
+
+
+### Features
+
+* **state:** centralized state overhaul and advanced filtering fixes ([018d872](https://github.com/Drivakos/react-pokedex/commit/018d87217d1f2ec7227a48ea92a013d95a23527d))
+* **state:** migrate PokéGrid and Team Builder to Zustand ([90fe996](https://github.com/Drivakos/react-pokedex/commit/90fe996575348b5bb14d31d95f4e5560d2db5ccb))
+
 ## [1.2.2](https://github.com/Drivakos/react-pokedex/compare/v1.2.1...v1.2.2) (2026-02-25)
 
 
