@@ -4,7 +4,7 @@ import toast from 'react-hot-toast';
 
 interface FriendsListProps {
   friends: Friend[];
-  onRemoveFriend: (friendId: string) => void;
+  onRemoveFriend: (friendId: string, friendName: string) => void;
 }
 
 export const FriendsList: React.FC<FriendsListProps> = ({ friends, onRemoveFriend }) => {
@@ -52,7 +52,7 @@ export const FriendsList: React.FC<FriendsListProps> = ({ friends, onRemoveFrien
               </div>
             </div>
             <button
-              onClick={() => onRemoveFriend(friend.friend_id)}
+              onClick={() => onRemoveFriend(friend.friend_id, friend.friend_name)}
               className="text-red-500 hover:text-red-600 p-2 rounded-lg"
               title="Remove"
             >

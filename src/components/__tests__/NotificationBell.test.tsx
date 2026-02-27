@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import { NotificationBell } from '../NotificationBell';
 
@@ -25,8 +25,33 @@ jest.mock('../../services/notifications.service', () => ({
   }
 }));
 
+jest.mock('react-hot-toast', () => ({
+  __esModule: true,
+  default: {
+    custom: jest.fn().mockReturnValue('toast-id'),
+    success: jest.fn(),
+    dismiss: jest.fn()
+  }
+}));
+
+jest.mock('../../services/friends.service', () => ({
+  friendsService: {
+    acceptFriendRequest: jest.fn().mockResolvedValue({ success: true }),
+    rejectFriendRequest: jest.fn().mockResolvedValue({ success: true })
+  }
+}));
+
+// Mock FriendRequestToast so we don't need react-hot-toast internals
+jest.mock('../friends/FriendRequestToast', () => ({
+  FriendRequestToast: ({ senderName }: { senderName: string }) => (
+    <div data-testid="friend-request-toast">{senderName}</div>
+  )
+}));
+
 import { useAuth } from '../../hooks/useAuth';
 import { notificationsService, type Notification } from '../../services/notifications.service';
+import toast from 'react-hot-toast';
+import { friendsService } from '../../services/friends.service';
 
 const mockUseAuth = useAuth as jest.Mock;
 const mockGetNotifications = notificationsService.getNotifications as jest.Mock;
@@ -34,6 +59,9 @@ const mockGetUnreadCount = notificationsService.getUnreadCount as jest.Mock;
 const mockSubscribeToNotifications = notificationsService.subscribeToNotifications as jest.Mock;
 const mockMarkAsRead = notificationsService.markAsRead as jest.Mock;
 const mockMarkAllAsRead = notificationsService.markAllAsRead as jest.Mock;
+const mockToastCustom = (toast as any).custom as jest.Mock;
+const mockAcceptFriendRequest = friendsService.acceptFriendRequest as jest.Mock;
+const mockRejectFriendRequest = friendsService.rejectFriendRequest as jest.Mock;
 
 describe('NotificationBell Component', () => {
   const mockUser = {
@@ -49,7 +77,7 @@ describe('NotificationBell Component', () => {
       title: 'New Friend Request',
       message: 'John sent you a friend request',
       url: '/friends',
-      data: {},
+      data: { sender_id: 'john-id', sender_name: 'John', request_id: 42 },
       read: false,
       created_at: '2024-01-01T00:00:00Z'
     },
@@ -59,7 +87,7 @@ describe('NotificationBell Component', () => {
       title: 'Friend Request Accepted!',
       message: 'Jane accepted your friend request',
       url: '/friends',
-      data: {},
+      data: { acceptor_id: 'jane-id', acceptor_name: 'Jane' },
       read: true,
       created_at: '2024-01-01T01:00:00Z'
     }
@@ -210,6 +238,70 @@ describe('NotificationBell Component', () => {
     });
   });
 
+  describe('Real-time friend request toast', () => {
+    beforeEach(() => {
+      jest.useFakeTimers();
+    });
+
+    afterEach(() => {
+      jest.useRealTimers();
+    });
+
+    it('calls toast.custom when a friend_request notification with request_id arrives', async () => {
+      let capturedCallback: ((n: Notification) => void) | null = null;
+      mockSubscribeToNotifications.mockImplementation((_userId: string, cb: (n: Notification) => void) => {
+        capturedCallback = cb;
+        return jest.fn();
+      });
+
+      render(<NotificationBell />);
+
+      const friendRequestNotification: Notification = {
+        id: 10,
+        type: 'friend_request',
+        title: 'New Friend Request',
+        message: 'Alice sent you a friend request',
+        data: { sender_id: 'alice-id', sender_name: 'Alice', request_id: 99 },
+        read: false,
+        created_at: new Date().toISOString()
+      };
+
+      act(() => {
+        capturedCallback!(friendRequestNotification);
+        jest.advanceTimersByTime(200); // past 100ms debounce
+      });
+
+      expect(mockToastCustom).toHaveBeenCalled();
+    });
+
+    it('does NOT call toast.custom for a friend_request without request_id', async () => {
+      let capturedCallback: ((n: Notification) => void) | null = null;
+      mockSubscribeToNotifications.mockImplementation((_userId: string, cb: (n: Notification) => void) => {
+        capturedCallback = cb;
+        return jest.fn();
+      });
+
+      render(<NotificationBell />);
+
+      const noRequestIdNotification: Notification = {
+        id: 11,
+        type: 'friend_request',
+        title: 'New Friend Request',
+        message: 'Bob sent you a friend request',
+        data: { sender_id: 'bob-id', sender_name: 'Bob' },
+        read: false,
+        created_at: new Date().toISOString()
+      };
+
+      act(() => {
+        capturedCallback!(noRequestIdNotification);
+        jest.advanceTimersByTime(200);
+      });
+
+      expect(mockToastCustom).not.toHaveBeenCalled();
+    });
+  });
+
   describe('Click Outside', () => {
     it('should close dropdown when clicking outside', () => {
       render(<NotificationBell />);
@@ -256,6 +348,52 @@ describe('NotificationBell Component', () => {
       // The NotificationDropdown should receive the prop
       // This is tested more thoroughly in NotificationDropdown tests
       expect(screen.getByText('Notifications')).toBeInTheDocument();
+    });
+  });
+
+  describe('Friend request callbacks passed to NotificationDropdown', () => {
+    it('handleAcceptFriendRequest calls friendsService.acceptFriendRequest with requestId and userId', async () => {
+      render(<NotificationBell />);
+
+      // Open the dropdown so NotificationDropdown mounts
+      const button = screen.getByRole('button', { name: /notifications/i });
+      fireEvent.click(button);
+
+      // Wait for async notification load to complete (the notification title will appear)
+      await waitFor(() => {
+        expect(screen.getByText('New Friend Request')).toBeInTheDocument();
+      });
+
+      // Use exact match to avoid matching "Friend Request Accepted!" row button
+      const acceptButton = screen.getByRole('button', { name: 'Accept' });
+      expect(acceptButton).toBeInTheDocument();
+
+      fireEvent.click(acceptButton);
+
+      await waitFor(() => {
+        expect(mockAcceptFriendRequest).toHaveBeenCalledWith(42, mockUser.id);
+      });
+    });
+
+    it('handleDeclineFriendRequest calls friendsService.rejectFriendRequest with requestId and userId', async () => {
+      render(<NotificationBell />);
+
+      const button = screen.getByRole('button', { name: /notifications/i });
+      fireEvent.click(button);
+
+      // Wait for async notification load to complete
+      await waitFor(() => {
+        expect(screen.getByText('New Friend Request')).toBeInTheDocument();
+      });
+
+      const declineButton = screen.getByRole('button', { name: 'Decline' });
+      expect(declineButton).toBeInTheDocument();
+
+      fireEvent.click(declineButton);
+
+      await waitFor(() => {
+        expect(mockRejectFriendRequest).toHaveBeenCalledWith(42, mockUser.id);
+      });
     });
   });
 });

@@ -143,8 +143,8 @@ export const FriendsModal: React.FC<FriendsModalProps> = ({ isOpen, onClose, ini
 
     const result = await friendsService.acceptFriendRequest(requestId, user.id);
     if (result.success) {
-      loadData();
       toast.success('Friend request accepted!');
+      onClose();
     } else {
       toast.error(result.error || 'Failed to accept request');
     }
@@ -155,26 +155,50 @@ export const FriendsModal: React.FC<FriendsModalProps> = ({ isOpen, onClose, ini
 
     const result = await friendsService.rejectFriendRequest(requestId, user.id);
     if (result.success) {
-      toast.success('Friend request rejected');
-      loadData();
+      toast.success('Friend request declined');
+      onClose();
     } else {
-      toast.error(result.error || 'Failed to reject request');
+      toast.error(result.error || 'Failed to decline request');
     }
   };
 
-  const handleRemoveFriend = async (friendId: string) => {
+  const handleRemoveFriend = (friendId: string, friendName: string) => {
     if (!user) return;
 
-    const confirmed = window.confirm('Are you sure you want to remove this friend?');
-    if (!confirmed) return;
-
-    const result = await friendsService.removeFriend(user.id, friendId);
-    if (result.success) {
-      toast.success('Friend removed');
-      loadData();
-    } else {
-      toast.error(result.error || 'Failed to remove friend');
-    }
+    toast.custom(
+      (t) => (
+        <div className="flex items-start space-x-3 bg-white rounded-lg shadow-lg border border-gray-200 p-4 w-80">
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold text-gray-900">Remove {friendName}?</p>
+            <p className="text-sm text-gray-500 mt-1">This will unfriend them. You can always add them back later.</p>
+            <div className="flex space-x-2 mt-3">
+              <button
+                className="flex-1 py-1.5 px-3 bg-red-500 hover:bg-red-600 text-white text-xs font-medium rounded transition-colors"
+                onClick={async () => {
+                  toast.dismiss(t.id);
+                  const result = await friendsService.removeFriend(user!.id, friendId);
+                  if (result.success) {
+                    toast.success(`${friendName} removed`);
+                    loadData();
+                  } else {
+                    toast.error(result.error || 'Failed to remove friend');
+                  }
+                }}
+              >
+                Remove
+              </button>
+              <button
+                className="flex-1 py-1.5 px-3 bg-gray-200 hover:bg-gray-300 text-gray-700 text-xs font-medium rounded transition-colors"
+                onClick={() => toast.dismiss(t.id)}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      ),
+      { duration: Infinity, id: `remove-friend-${friendId}` }
+    );
   };
 
   const handleSendRequest = async (receiverId: string) => {

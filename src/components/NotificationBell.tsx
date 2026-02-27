@@ -1,7 +1,10 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Bell } from 'lucide-react';
+import toast from 'react-hot-toast';
 import { useAuth } from '../hooks/useAuth';
 import { notificationsService, type Notification } from '../services/notifications.service';
+import { friendsService } from '../services/friends.service';
+import { FriendRequestToast } from './friends/FriendRequestToast';
 import { NotificationDropdown } from './NotificationDropdown';
 
 interface NotificationBellProps {
@@ -17,6 +20,16 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({ onOpenFriend
   const bellRef = useRef<HTMLButtonElement>(null);
   const debounceTimerRef = useRef<number | null>(null);
 
+  const markReadLocally = useCallback((notificationId: number) => {
+    setNotifications(prev => {
+      const updated = prev.map(n =>
+        n.id === notificationId ? { ...n, read: true } : n
+      );
+      setUnreadCount(updated.filter(n => !n.read).length);
+      return updated;
+    });
+  }, []);
+
   // Debounced handler for real-time notifications
   const handleNewNotification = useCallback((notification: Notification) => {
     // Debounce rapid updates (e.g., during bulk operations)
@@ -31,8 +44,40 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({ onOpenFriend
         return updated.slice(0, 100); // Keep only latest 100
       });
       setUnreadCount(prev => prev + 1);
+
+      // Show real-time toast for friend requests with a known request_id
+      if (notification.type === 'friend_request' && notification.data?.request_id && user) {
+        const { request_id, sender_name } = notification.data;
+        const displayName = sender_name || 'Someone';
+
+        const toastId = toast.custom(
+          (t) => (
+            <FriendRequestToast
+              senderName={displayName}
+              onAccept={async () => {
+                await friendsService.acceptFriendRequest(request_id!, user.id);
+                await notificationsService.markAsRead(notification.id, user.id);
+                markReadLocally(notification.id);
+                toast.dismiss(t.id);
+                toast.success(`You are now friends with ${displayName}!`);
+              }}
+              onDecline={async () => {
+                await friendsService.rejectFriendRequest(request_id!, user.id);
+                await notificationsService.markAsRead(notification.id, user.id);
+                markReadLocally(notification.id);
+                toast.dismiss(t.id);
+              }}
+              onDismiss={() => toast.dismiss(t.id)}
+            />
+          ),
+          { duration: 12000, id: `friend-request-${notification.id}` }
+        );
+
+        // toastId is unused but assigned to avoid lint warnings; it's the toast id
+        void toastId;
+      }
     }, 100); // 100ms debounce
-  }, []);
+  }, [user, markReadLocally]);
 
 
   // Load only unread count on mount, full notifications when needed
@@ -110,18 +155,7 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({ onOpenFriend
 
     try {
       await notificationsService.markAsRead(notificationId, user.id);
-
-      setNotifications(prev => {
-        const updated = prev.map(n =>
-          n.id === notificationId ? { ...n, read: true } : n
-        );
-
-        // Recalculate unread count from remaining notifications
-        const unreadCount = updated.filter(n => !n.read).length;
-        setUnreadCount(unreadCount);
-
-        return updated;
-      });
+      markReadLocally(notificationId);
     } catch (error) {
       console.error('Error marking notification as read:', error);
     }
@@ -139,6 +173,16 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({ onOpenFriend
     }
   };
 
+  const handleAcceptFriendRequest = async (requestId: number) => {
+    if (!user) return;
+    await friendsService.acceptFriendRequest(requestId, user.id);
+  };
+
+  const handleDeclineFriendRequest = async (requestId: number) => {
+    if (!user) return;
+    await friendsService.rejectFriendRequest(requestId, user.id);
+  };
+
   if (!user) return null;
 
   return (
@@ -153,8 +197,11 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({ onOpenFriend
       >
         <Bell className="h-5 w-5" />
         {unreadCount > 0 && (
-          <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center font-medium">
-            {unreadCount > 99 ? '99+' : unreadCount}
+          <span className="absolute -top-1 -right-1 flex h-5 w-5">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+            <span className="relative inline-flex rounded-full h-5 w-5 bg-red-500 text-white text-xs items-center justify-center font-medium">
+              {unreadCount > 99 ? '99+' : unreadCount}
+            </span>
           </span>
         )}
       </button>
@@ -168,6 +215,8 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({ onOpenFriend
             onClose={() => setIsOpen(false)}
             onOpenFriendsModal={onOpenFriendsModal}
             userId={user?.id}
+            onAcceptFriendRequest={handleAcceptFriendRequest}
+            onDeclineFriendRequest={handleDeclineFriendRequest}
           />
       )}
     </div>

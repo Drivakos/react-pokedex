@@ -7,7 +7,13 @@ export interface Notification {
   title: string;
   message: string;
   url?: string;
-  data?: any;
+  data?: {
+    sender_id?: string;
+    sender_name?: string;
+    request_id?: number;
+    acceptor_id?: string;
+    acceptor_name?: string;
+  };
   read: boolean;
   created_at: string;
 }

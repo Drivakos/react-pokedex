@@ -36,7 +36,7 @@ describe('NotificationDropdown Component', () => {
       title: 'New Friend Request',
       message: 'John sent you a friend request',
       url: undefined, // Friend requests are handled specially, no URL navigation
-      data: { sender_id: 'john-id' },
+      data: { sender_id: 'john-id', sender_name: 'John', request_id: 42 },
       read: false,
       created_at: '2024-01-01T00:00:00Z'
     },
@@ -68,7 +68,9 @@ describe('NotificationDropdown Component', () => {
     onMarkAsRead: jest.fn(),
     onMarkAllAsRead: jest.fn(),
     onClose: jest.fn(),
-    onOpenFriendsModal: jest.fn()
+    onOpenFriendsModal: jest.fn(),
+    onAcceptFriendRequest: jest.fn().mockResolvedValue(undefined),
+    onDeclineFriendRequest: jest.fn().mockResolvedValue(undefined)
   };
 
   beforeEach(() => {
@@ -238,4 +240,105 @@ describe('NotificationDropdown Component', () => {
     });
   });
 
+  describe('Inline friend request actions', () => {
+    it('shows Accept and Decline buttons for an unread friend_request with request_id', () => {
+      render(<NotificationDropdown {...mockProps} />);
+
+      // Use exact string match to avoid matching "Friend Request Accepted!" row button
+      expect(screen.getByRole('button', { name: 'Accept' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Decline' })).toBeInTheDocument();
+    });
+
+    it('calls onAcceptFriendRequest(42) when Accept is clicked', async () => {
+      render(<NotificationDropdown {...mockProps} />);
+
+      // Use exact match to avoid matching "Friend Request Accepted!" row button
+      const acceptButton = screen.getByRole('button', { name: 'Accept' });
+      fireEvent.click(acceptButton);
+
+      await waitFor(() => {
+        expect(mockProps.onAcceptFriendRequest).toHaveBeenCalledWith(42);
+      });
+    });
+
+    it('calls onDeclineFriendRequest(42) when Decline is clicked', async () => {
+      render(<NotificationDropdown {...mockProps} />);
+
+      const declineButton = screen.getByRole('button', { name: 'Decline' });
+      fireEvent.click(declineButton);
+
+      await waitFor(() => {
+        expect(mockProps.onDeclineFriendRequest).toHaveBeenCalledWith(42);
+      });
+    });
+
+    it('does NOT show Accept/Decline for a read friend_request (already processed)', () => {
+      const readFriendRequest: Notification = {
+        id: 5,
+        type: 'friend_request',
+        title: 'Old Friend Request',
+        message: 'Bob sent you a friend request',
+        data: { sender_id: 'bob-id', sender_name: 'Bob', request_id: 77 },
+        read: true,
+        created_at: '2024-01-01T00:00:00Z'
+      };
+
+      render(
+        <NotificationDropdown
+          {...mockProps}
+          notifications={[readFriendRequest]}
+        />
+      );
+
+      // Exact match: no "Accept" or "Decline" standalone buttons
+      expect(screen.queryByRole('button', { name: 'Accept' })).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Decline' })).not.toBeInTheDocument();
+    });
+
+    it('falls back to redirect behaviour for a friend_request without request_id', async () => {
+      const noRequestIdNotification: Notification = {
+        id: 6,
+        type: 'friend_request',
+        title: 'Friend Request (legacy)',
+        message: 'Carol sent you a friend request',
+        data: { sender_id: 'carol-id' },
+        read: false,
+        created_at: '2024-01-01T00:00:00Z'
+      };
+
+      render(
+        <NotificationDropdown
+          {...mockProps}
+          notifications={[noRequestIdNotification]}
+        />
+      );
+
+      // No inline Accept/Decline buttons
+      expect(screen.queryByRole('button', { name: 'Accept' })).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Decline' })).not.toBeInTheDocument();
+
+      // Clicking the row should call onOpenFriendsModal('requests')
+      const notificationButton = screen.getByText('Friend Request (legacy)').closest('button');
+      fireEvent.click(notificationButton!);
+
+      // Handler is async so use waitFor
+      await waitFor(() => {
+        expect(mockProps.onOpenFriendsModal).toHaveBeenCalledWith('requests');
+      });
+    });
+
+    it('does NOT show inline buttons when onAcceptFriendRequest is not provided', () => {
+      render(
+        <NotificationDropdown
+          {...mockProps}
+          onAcceptFriendRequest={undefined}
+          onDeclineFriendRequest={undefined}
+        />
+      );
+
+      // Exact name match so we don't accidentally match "Friend Request Accepted!" row button
+      expect(screen.queryByRole('button', { name: 'Accept' })).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Decline' })).not.toBeInTheDocument();
+    });
+  });
 });

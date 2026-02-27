@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
-import { Check, CheckCheck, ExternalLink, UserPlus, Users } from 'lucide-react';
+import { CheckCheck, ExternalLink, UserPlus, Users } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { notificationsService, type Notification } from '../services/notifications.service';
+import { type Notification } from '../services/notifications.service';
 import { formatDistanceToNow } from 'date-fns';
 
 interface NotificationDropdownProps {
@@ -11,6 +11,9 @@ interface NotificationDropdownProps {
   onMarkAllAsRead: () => void;
   onClose: () => void;
   onOpenFriendsModal?: (initialTab?: 'friends' | 'requests' | 'add') => void;
+  userId?: string;
+  onAcceptFriendRequest?: (requestId: number) => Promise<void>;
+  onDeclineFriendRequest?: (requestId: number) => Promise<void>;
 }
 
 export const NotificationDropdown: React.FC<NotificationDropdownProps> = ({
@@ -19,11 +22,24 @@ export const NotificationDropdown: React.FC<NotificationDropdownProps> = ({
   onMarkAsRead,
   onMarkAllAsRead,
   onClose,
-  onOpenFriendsModal
+  onOpenFriendsModal,
+  onAcceptFriendRequest,
+  onDeclineFriendRequest
 }) => {
   const navigate = useNavigate();
 
   const handleNotificationClick = async (notification: Notification) => {
+    // For unread friend_request with a request_id, the inline buttons handle the action.
+    // Clicking the row itself just marks it as read (no redirect to FriendsModal).
+    if (
+      notification.type === 'friend_request' &&
+      !notification.read &&
+      notification.data?.request_id != null
+    ) {
+      await onMarkAsRead(notification.id);
+      return;
+    }
+
     // Always mark as read when clicked (user has seen/interacted with it)
     await onMarkAsRead(notification.id);
 
@@ -63,6 +79,12 @@ export const NotificationDropdown: React.FC<NotificationDropdownProps> = ({
     [notifications]
   );
 
+  const showInlineActions = (notification: Notification) =>
+    notification.type === 'friend_request' &&
+    !notification.read &&
+    notification.data?.request_id != null &&
+    onAcceptFriendRequest != null &&
+    onDeclineFriendRequest != null;
 
   return (
     <div
@@ -97,46 +119,76 @@ export const NotificationDropdown: React.FC<NotificationDropdownProps> = ({
           </div>
         ) : (
           <div className="divide-y divide-gray-100">
-            {notifications.map((notification) => (
-              <button
-                key={notification.id}
-                className={`w-full text-left p-4 hover:bg-gray-50 cursor-pointer transition-colors ${
-                  !notification.read ? 'bg-blue-50' : ''
-                }`}
-                onClick={async (e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  await handleNotificationClick(notification);
-                }}
-              >
-                <div className="flex items-start space-x-3">
-                  <div className="flex-shrink-0">
-                    {getNotificationIcon(notification.type)}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between">
-                      <p className="text-sm font-medium text-gray-900 truncate">
-                        {notification.title}
-                      </p>
-                      <div className="flex items-center space-x-1 ml-2">
-                        {notification.url && (
-                          <ExternalLink className="h-3 w-3 text-gray-400" />
-                        )}
-                        {!notification.read && (
-                          <div className="h-2 w-2 bg-blue-500 rounded-full"></div>
-                        )}
+            {notifications.map((notification) => {
+              const hasInline = showInlineActions(notification);
+              const unreadBg = !notification.read ? 'bg-blue-50' : '';
+              return (
+                <div key={notification.id}>
+                  {/* Row button — no interactive descendants to avoid nested-button browser issues */}
+                  <button
+                    className={`w-full text-left px-4 pt-4 ${hasInline ? 'pb-2' : 'pb-4'} hover:bg-gray-50 cursor-pointer transition-colors ${unreadBg}`}
+                    onClick={async (e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      await handleNotificationClick(notification);
+                    }}
+                  >
+                    <div className="flex items-start space-x-3">
+                      <div className="flex-shrink-0">
+                        {getNotificationIcon(notification.type)}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between">
+                          <p className="text-sm font-medium text-gray-900 truncate">
+                            {notification.title}
+                          </p>
+                          <div className="flex items-center space-x-1 ml-2">
+                            {notification.url && (
+                              <ExternalLink className="h-3 w-3 text-gray-400" />
+                            )}
+                            {!notification.read && (
+                              <div className="h-2 w-2 bg-blue-500 rounded-full"></div>
+                            )}
+                          </div>
+                        </div>
+                        <p className="text-sm text-gray-600 mt-1">
+                          {notification.message}
+                        </p>
+                        <p className="text-xs text-gray-500 mt-1">
+                          {formatDistanceToNow(new Date(notification.created_at), { addSuffix: true })}
+                        </p>
                       </div>
                     </div>
-                    <p className="text-sm text-gray-600 mt-1">
-                      {notification.message}
-                    </p>
-                    <p className="text-xs text-gray-500 mt-1">
-                      {formatDistanceToNow(new Date(notification.created_at), { addSuffix: true })}
-                    </p>
-                  </div>
+                  </button>
+
+                  {/* Accept / Decline — sibling to the row button, NOT nested inside it */}
+                  {hasInline && (
+                    <div className={`flex space-x-2 px-4 pb-3 ${unreadBg}`}>
+                      <button
+                        className="flex-1 py-1 px-2 bg-green-500 hover:bg-green-600 text-white text-xs font-medium rounded transition-colors"
+                        onClick={async () => {
+                          onClose();
+                          await onAcceptFriendRequest!(notification.data!.request_id!);
+                          await onMarkAsRead(notification.id);
+                        }}
+                      >
+                        Accept
+                      </button>
+                      <button
+                        className="flex-1 py-1 px-2 bg-gray-200 hover:bg-gray-300 text-gray-700 text-xs font-medium rounded transition-colors"
+                        onClick={async () => {
+                          onClose();
+                          await onDeclineFriendRequest!(notification.data!.request_id!);
+                          await onMarkAsRead(notification.id);
+                        }}
+                      >
+                        Decline
+                      </button>
+                    </div>
+                  )}
                 </div>
-              </button>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>
