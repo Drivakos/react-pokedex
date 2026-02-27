@@ -1,3 +1,10 @@
+# [1.4.0](https://github.com/Drivakos/react-pokedex/compare/v1.3.0...v1.4.0) (2026-02-27)
+
+
+### Features
+
+* **friends:** inline accept/decline for friend requests with confirmation toasts ([bc00170](https://github.com/Drivakos/react-pokedex/commit/bc00170cd04077ccadd87d7b865353b12528ae18))
+
 # [1.3.0](https://github.com/Drivakos/react-pokedex/compare/v1.2.2...v1.3.0) (2026-02-27)
 
 
