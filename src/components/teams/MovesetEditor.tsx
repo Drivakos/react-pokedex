@@ -356,11 +356,11 @@ const MovesetEditorContent: React.FC<MovesetEditorProps> = ({ pokemon, teamId, i
         ]);
 
         // Process moves
-        const moveNames = movesData.map((m: any) => m.move.name);
+        const moveNames = movesData.map((m) => m.move.name);
         setAvailableMoves(moveNames);
 
         const newMoveDetails: Record<string, MoveDetails> = { ...moveDetailsCache };
-        movesData.forEach((m: any) => {
+        movesData.forEach((m) => {
           const move = m.move;
           if (!newMoveDetails[move.name]) {
             newMoveDetails[move.name] = {
@@ -372,11 +372,11 @@ const MovesetEditorContent: React.FC<MovesetEditorProps> = ({ pokemon, teamId, i
               damage_class: move.damage_class,
               target: move.target,
               priority: move.priority,
-              effect_entries: move.effect?.effect_text?.map((et: any) => ({
+              effect_entries: move.effect?.effect_text?.map((et) => ({
                 short_effect: et.short_effect,
                 language: { name: 'en' }
               })) || [],
-              flavor_text_entries: move.flavor_text?.map((ft: any) => ({
+              flavor_text_entries: move.flavor_text?.map((ft) => ({
                 flavor_text: ft.flavor_text,
                 language: { name: 'en' }
               })) || []
@@ -389,16 +389,16 @@ const MovesetEditorContent: React.FC<MovesetEditorProps> = ({ pokemon, teamId, i
 
         // Process abilities
         const abilities = abilitiesData
-          .filter((abilityData: any) => abilityData?.ability?.name)
-          .map((abilityData: any) => abilityData.ability.name);
+          .filter((abilityData) => abilityData?.ability?.name)
+          .map((abilityData) => abilityData.ability.name);
 
         setAvailableAbilities([...new Set(abilities)]);
 
         const abilityDescs: Record<string, string> = {};
-        abilitiesData.forEach((abilityData: any) => {
+        abilitiesData.forEach((abilityData) => {
           if (abilityData?.ability?.name) {
             const abilityName = abilityData.ability.name;
-            const englishEntry = abilityData.ability.effect_entries?.find((entry: any) => entry?.language?.name === 'en');
+            const englishEntry = abilityData.ability.effect_entries?.find((entry) => entry?.language?.name === 'en');
             abilityDescs[abilityName] = englishEntry?.short_effect || englishEntry?.effect || 'No description available';
           }
         });
@@ -407,10 +407,10 @@ const MovesetEditorContent: React.FC<MovesetEditorProps> = ({ pokemon, teamId, i
         // Process item descriptions
         const itemDescs: Record<string, string> = {};
         if (itemsData.length > 0) {
-          itemsData.forEach((itemData: any) => {
+          itemsData.forEach((itemData) => {
             if (itemData?.name) {
               const itemName = itemData.name;
-              const englishEntry = itemData.effect_entries?.find((entry: any) => entry?.language?.name === 'en');
+              const englishEntry = itemData.effect_entries?.find((entry) => entry?.language?.name === 'en');
               itemDescs[itemName] = englishEntry?.short_effect || englishEntry?.effect || 'Competitive battle item';
             }
           });
@@ -581,9 +581,8 @@ const MovesetEditorContent: React.FC<MovesetEditorProps> = ({ pokemon, teamId, i
 
       // Moves
       if (moves.length > 0) {
-        moves.forEach((move: any) => {
-          const moveName = typeof move === 'string' ? move : move.name;
-          pokemonExport += `- ${formatName(moveName)}\n`;
+        moves.forEach((move) => {
+          pokemonExport += `- ${formatName(move)}\n`;
         });
       }
 
@@ -1040,7 +1039,7 @@ const MovesetEditorContent: React.FC<MovesetEditorProps> = ({ pokemon, teamId, i
                     <td style={{ textAlign: 'right' }}>{move?.accuracy ? `${move.accuracy}%` : '—'}</td>
                     <td style={{ textAlign: 'right' }}>{move?.pp || '—'}</td>
                     <td className="sd-move-effect">
-                      {move?.flavor_text_entries?.find((e: any) => e.language.name === 'en')?.flavor_text?.replace(/\n/g, ' ') || ''}
+                      {move?.flavor_text_entries?.find((e) => e.language.name === 'en')?.flavor_text?.replace(/\n/g, ' ') || ''}
                     </td>
                   </tr>
                 );

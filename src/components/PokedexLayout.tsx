@@ -1,6 +1,7 @@
 import React, { ReactNode } from 'react';
 import { RefreshCw, Search } from 'lucide-react';
 import { FilterPanel } from './FilterPanel';
+import type { Filters } from '../types/pokemon';
 
 interface PokedexLayoutProps {
   children: ReactNode;
@@ -9,8 +10,8 @@ interface PokedexLayoutProps {
   isSearching: boolean;
   filterCount: number;
   onResetFilters: () => void;
-  filters?: any;
-  onFilterChange?: (filters: any) => void;
+  filters?: Filters;
+  onFilterChange?: (filters: Filters) => void;
   availableTypes?: string[];
   availableMoves?: string[];
   availableGenerations?: string[];

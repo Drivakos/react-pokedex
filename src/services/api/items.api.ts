@@ -1,5 +1,6 @@
 import { cacheAside, CACHE_KEYS, CACHE_TTL } from '../../lib/redis';
 import { GRAPHQL_ENDPOINT, handleGraphQLResponse } from './base';
+import type { RawItemsResponse, RawItemData } from '../../types/api';
 
 /**
  * Fetches competitive items
@@ -55,9 +56,9 @@ export const fetchCompetitiveItems = async () => {
         body: JSON.stringify({ query, variables: { itemNames: competitiveItems } }),
       });
 
-      const data = await handleGraphQLResponse<any>(response);
+      const data = await handleGraphQLResponse<RawItemsResponse>(response);
 
-      return data.pokemon_v2_item.map((item: any) => ({
+      return data.pokemon_v2_item.map((item: RawItemData) => ({
         ...item,
         effect_entries: [{
           short_effect: 'Competitive battle item',

@@ -3,22 +3,23 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { ChevronRight, Plus, X, Trash2 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import type { Team } from '../../lib/supabase';
 
 const Teams: React.FC = () => {
-  const { user, teams, teamsLoaded, fetchTeams, createTeam, deleteTeam } = useAuth() as any;
+  const { user, teams, teamsLoaded, fetchTeams, createTeam, deleteTeam } = useAuth();
   const navigate = useNavigate();
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [formData, setFormData] = useState({ name: '', description: '' });
   const [creating, setCreating] = useState(false);
-  const [teamToDelete, setTeamToDelete] = useState<any>(null);
+  const [teamToDelete, setTeamToDelete] = useState<Team | null>(null);
   const [deleting, setDeleting] = useState(false);
 
-  const handleTeamSelect = (team: any) => {
+  const handleTeamSelect = (team: Team) => {
     // Navigate directly to team editor instead of showing details
     navigate(`/team-editor/${team.id}`);
   };
 
-  const handleDeleteClick = (e: React.MouseEvent, team: any) => {
+  const handleDeleteClick = (e: React.MouseEvent, team: Team) => {
     e.stopPropagation(); // Don't navigate to editor
     setTeamToDelete(team);
   };
@@ -138,7 +139,7 @@ const Teams: React.FC = () => {
                 </div>
 
                 <div className="text-sm text-gray-500">
-                  Created {new Date(team.created_at).toLocaleDateString()}
+                  Created {team.created_at ? new Date(team.created_at).toLocaleDateString() : '—'}
                 </div>
               </div>
             ))}

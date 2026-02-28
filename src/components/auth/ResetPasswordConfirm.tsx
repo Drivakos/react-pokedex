@@ -100,8 +100,8 @@ const ResetPasswordConfirm: React.FC = () => {
       toast.success('Password has been reset successfully!');
       
       navigate('/login', { replace: true });
-    } catch (error: any) {
-      setError(error.message || 'Failed to update password');
+    } catch (error: unknown) {
+      setError((error as Error).message || 'Failed to update password');
     } finally {
       setLoading(false);
     }

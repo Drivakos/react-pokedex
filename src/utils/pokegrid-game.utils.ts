@@ -1,6 +1,7 @@
 import { Pokemon } from '../types/pokemon';
 import type { GridGame, GridCell, GridConstraint } from '../components/pokegrid';
 import { TYPE_CONSTRAINTS, OTHER_CONSTRAINTS, GAME_CONSTANTS } from '../components/pokegrid/constants';
+import type { PreGeneratedConfig, ConstraintWithMeta, CellStat, PopularityData } from '../types/grid';
 
 export function generateGridId(date: string): string {
   return `grid-${date}`;
@@ -330,7 +331,7 @@ export function shuffleArray<T>(array: T[], random: () => number): T[] {
   return shuffled;
 }
 
-export function generateDailyGrid(date: Date, preGeneratedConfig?: any): GridGame {
+export function generateDailyGrid(date: Date, preGeneratedConfig?: PreGeneratedConfig): GridGame {
   const dateString = date.toISOString().split('T')[0];
   
   let rowConstraints: GridConstraint[];
@@ -386,14 +387,14 @@ export function generateDailyGrid(date: Date, preGeneratedConfig?: any): GridGam
   }
   
   // Extract cell stats if available (embedded in first row constraint)
-  const cellStats = (rowConstraints[0] as any).meta?.cellStats || [];
+  const cellStats = (rowConstraints[0] as ConstraintWithMeta).meta?.cellStats || [];
 
   // Generate cells
   const cells: GridCell[] = [];
   for (let row = 0; row < 3; row++) {
     for (let col = 0; col < 3; col++) {
       // Find valid solution count for this cell
-      const stat = cellStats.find((s: any) => s.row === row && s.col === col);
+      const stat = cellStats.find((s: CellStat) => s.row === row && s.col === col);
       const possibleSolutions = stat ? stat.count : undefined;
 
       cells.push({
@@ -518,8 +519,8 @@ export function generateEndlessGrid(): GridGame {
 }
 
 export function calculateScore(
-  cells: GridCell[], 
-  popularityData: any[] = []
+  cells: GridCell[],
+  popularityData: PopularityData[] = []
 ): number {
   return cells.reduce((total, cell) => {
     if (cell.isCorrect && cell.pokemon) {
@@ -541,7 +542,7 @@ export function calculateScore(
 
       // 3. RARITY MULTIPLIER (Based on User Selection % from DB)
       const cellPopularity = popularityData.find(
-        (p: any) => p.cell_id === cell.id && p.pokemon_id === cell.pokemon?.id
+        (p: PopularityData) => p.cell_id === cell.id && p.pokemon_id === cell.pokemon?.id
       );
 
       let rarityMultiplier = 1.0;

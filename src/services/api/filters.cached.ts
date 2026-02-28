@@ -27,9 +27,9 @@ export const fetchCachedFilterOptions = async () => {
     const result = await fetchCachedGraphQL(query);
     
     return {
-      types: result.data.types.map((t: any) => t.name),
-      moves: result.data.moves.map((m: any) => m.name),
-      generations: result.data.generations.map((g: any) => g.name),
+      types: result.data.types.map((t: { name: string }) => t.name),
+      moves: result.data.moves.map((m: { name: string }) => m.name),
+      generations: result.data.generations.map((g: { name: string }) => g.name),
     };
   } catch (error) {
     console.error('Error fetching cached filter options:', error);

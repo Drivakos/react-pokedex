@@ -1,12 +1,13 @@
 import React from 'react';
 import { Search } from 'lucide-react';
 import PokemonImage from '../../PokemonImage';
+import type { TeamPokemonData } from '../../../store/teamStore';
 
 interface PokemonSearchModalProps {
   searchQuery: string;
   onSearchChange: (query: string) => void;
-  searchResults: any[];
-  onAddPokemon: (pokemon: any) => void;
+  searchResults: TeamPokemonData[];
+  onAddPokemon: (pokemon: TeamPokemonData) => void;
   onClose: () => void;
   formatName: (name: string) => string;
 }
@@ -77,7 +78,7 @@ export const PokemonSearchModal: React.FC<PokemonSearchModalProps> = ({
                     <td className="sd-pokemon-name">{formatName(pokemon.name)}</td>
                     <td>
                       <div style={{ display: 'flex', gap: 2 }}>
-                        {pokemon.types?.map((t: any, i: number) => {
+                        {pokemon.types?.map((t, i: number) => {
                           const typeName = t.type?.name || (typeof t === 'string' ? t : '');
                           return (
                             <span key={i} className="sd-type-badge" style={{ backgroundColor: getTypeColor(typeName) }}>
@@ -87,12 +88,12 @@ export const PokemonSearchModal: React.FC<PokemonSearchModalProps> = ({
                         })}
                       </div>
                     </td>
-                    <td className="sd-stat-cell">{pokemon.stats?.find((s: any) => s.stat?.name === 'hp')?.base_stat || '—'}</td>
-                    <td className="sd-stat-cell">{pokemon.stats?.find((s: any) => s.stat?.name === 'attack')?.base_stat || '—'}</td>
-                    <td className="sd-stat-cell">{pokemon.stats?.find((s: any) => s.stat?.name === 'defense')?.base_stat || '—'}</td>
-                    <td className="sd-stat-cell">{pokemon.stats?.find((s: any) => s.stat?.name === 'special-attack')?.base_stat || '—'}</td>
-                    <td className="sd-stat-cell">{pokemon.stats?.find((s: any) => s.stat?.name === 'special-defense')?.base_stat || '—'}</td>
-                    <td className="sd-stat-cell">{pokemon.stats?.find((s: any) => s.stat?.name === 'speed')?.base_stat || '—'}</td>
+                    <td className="sd-stat-cell">{pokemon.stats?.find((s) => s.stat?.name === 'hp')?.base_stat || '—'}</td>
+                    <td className="sd-stat-cell">{pokemon.stats?.find((s) => s.stat?.name === 'attack')?.base_stat || '—'}</td>
+                    <td className="sd-stat-cell">{pokemon.stats?.find((s) => s.stat?.name === 'defense')?.base_stat || '—'}</td>
+                    <td className="sd-stat-cell">{pokemon.stats?.find((s) => s.stat?.name === 'special-attack')?.base_stat || '—'}</td>
+                    <td className="sd-stat-cell">{pokemon.stats?.find((s) => s.stat?.name === 'special-defense')?.base_stat || '—'}</td>
+                    <td className="sd-stat-cell">{pokemon.stats?.find((s) => s.stat?.name === 'speed')?.base_stat || '—'}</td>
                   </tr>
                 ))}
               </tbody>

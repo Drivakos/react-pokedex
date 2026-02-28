@@ -3,6 +3,7 @@ import { Pokemon } from '../../types/pokemon';
 import { formatName } from '../../utils/helpers';
 import { TYPE_COLORS } from '../../types/pokemon';
 import PokemonImage from '../PokemonImage';
+import type { PopularityData } from '../../services/pokegrid.service';
 
 interface PokemonSearchModalProps {
   isOpen: boolean;
@@ -23,8 +24,8 @@ interface PokemonSearchModalProps {
   sessionUndos?: number;
   maxSessionUndos?: number;
   hasRecentMistake?: boolean; // Show undo only after a wrong guess
-  mistakePokemon?: any; // The specific Pokemon that was the wrong choice
-  popularityData?: any[]; // Popularity data for the current grid
+  mistakePokemon?: Pokemon | null; // The specific Pokemon that was the wrong choice
+  popularityData?: PopularityData[]; // Popularity data for the current grid
   alreadyUsedIds?: number[]; // IDs of Pokemon already used correctly in the grid
 }
 
@@ -123,7 +124,7 @@ export const PokemonSearchModal: React.FC<PokemonSearchModalProps> = ({
 
                   // Find popularity data for this Pokemon in the current cell
                   const pokemonPopularity = popularityData.find(
-                    (p: any) => p.cell_id === selectedCell?.id && p.pokemon_id === pokemon.id
+                    (p) => p.cell_id === selectedCell?.id && p.pokemon_id === pokemon.id
                   );
 
                   // Calculate popularity level

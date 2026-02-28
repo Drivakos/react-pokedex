@@ -166,7 +166,7 @@ const PokéGridChallenge: React.FC = () => {
           onClose={() => setShowShareModal(false)}
           gameResult={{
             score: game.score ?? 0,
-            solvedCount: game.cells.filter((cell: any) => cell.isCorrect).length,
+            solvedCount: game.cells.filter((cell) => cell.isCorrect).length,
             totalCells: 9,
             accuracy: game.totalGuesses > 0
               ? Math.round((game.correctGuesses / game.totalGuesses) * 100)

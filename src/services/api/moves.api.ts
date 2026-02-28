@@ -1,6 +1,12 @@
 import { cacheAside, CACHE_KEYS, CACHE_TTL } from '../../lib/redis';
 import { supabase } from '../../lib/supabase';
 import { GRAPHQL_ENDPOINT, handleGraphQLResponse } from './base';
+import type {
+  RawPokemonMovesResponse,
+  RawMoveDetailsResponse,
+  RawMoveFlavorText,
+  RawMoveEffectText,
+} from '../../types/api';
 
 /**
  * Fetches Pokemon moves for moveset editor
@@ -72,8 +78,8 @@ export const fetchPokemonMoves = async (pokemonId: number) => {
         body: JSON.stringify({ query, variables: { pokemonId } }),
       });
 
-      const data = await handleGraphQLResponse<any>(response);
-      return data.pokemon_v2_pokemon_by_pk.moves || [];
+      const data = await handleGraphQLResponse<RawPokemonMovesResponse>(response);
+      return data.pokemon_v2_pokemon_by_pk?.moves || [];
     } catch (error) {
       console.error('Error fetching Pokemon moves:', error);
       throw error;
@@ -163,16 +169,16 @@ export const fetchMoveDetails = async (moveName: string) => {
         body: JSON.stringify({ query, variables: { moveName } }),
       });
 
-      const data = await handleGraphQLResponse<any>(response);
+      const data = await handleGraphQLResponse<RawMoveDetailsResponse>(response);
       const move = data.pokemon_v2_move[0];
-      
+
       if (move) {
-        const flavorTextEntries = (move.flavor_text || []).map((ft: any) => ({
+        const flavorTextEntries = (move.flavor_text || []).map((ft: RawMoveFlavorText) => ({
           flavor_text: ft.flavor_text,
           language: ft.language
         }));
 
-        const effectEntries = move.effect?.effect_text?.map((et: any) => ({
+        const effectEntries = move.effect?.effect_text?.map((et: RawMoveEffectText) => ({
           short_effect: et.short_effect,
           effect: et.effect,
           language: et.language

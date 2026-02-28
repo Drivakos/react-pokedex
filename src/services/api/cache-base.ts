@@ -42,7 +42,7 @@ export const areCachedEndpointsAvailable = async (): Promise<boolean> => {
 /**
  * Makes a cached GraphQL request through Supabase Edge Functions
  */
-export const fetchCachedGraphQL = async (query: string, variables?: any) => {
+export const fetchCachedGraphQL = async (query: string, variables?: Record<string, unknown>) => {
   if (!CACHED_GRAPHQL_ENDPOINT) {
     throw new Error('Cached GraphQL endpoint not available in development');
   }

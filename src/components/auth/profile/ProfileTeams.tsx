@@ -1,9 +1,9 @@
 import React from 'react';
 import PokemonImage from '../../PokemonImage';
-import { TeamMember } from '../../../lib/supabase';
+import { TeamMember, TeamWithJoinedMembers } from '../../../lib/supabase';
 
 interface ProfileTeamsProps {
-  userTeams: any[];
+  userTeams: TeamWithJoinedMembers[];
   teamMembers: Record<number, TeamMember[]>;
   onManage: () => void;
   onNavigateToTeam: (id: number) => void;

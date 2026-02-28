@@ -1,7 +1,8 @@
 // Initialize Trusted Types policy BEFORE any other imports to prevent CSP violations
-if ((window as any).trustedTypes && (window as any).trustedTypes.createPolicy) {
+type TrustedTypesWindow = Window & { trustedTypes?: { createPolicy: (name: string, rules: Record<string, (s: string) => string>) => void } };
+if ((window as TrustedTypesWindow).trustedTypes && (window as TrustedTypesWindow).trustedTypes?.createPolicy) {
   try {
-    (window as any).trustedTypes.createPolicy('default', {
+    (window as TrustedTypesWindow).trustedTypes!.createPolicy('default', {
       createHTML: (string: string) => string,
       createScriptURL: (string: string) => string,
       createScript: (string: string) => string,

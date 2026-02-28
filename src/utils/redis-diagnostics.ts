@@ -137,8 +137,8 @@ export async function testRedisConnection(): Promise<boolean> {
  * Export as window function for easy console access
  */
 if (typeof window !== 'undefined') {
-  (window as any).diagnoseRedis = diagnoseRedis;
-  (window as any).testRedisConnection = testRedisConnection;
+  (window as Window & { diagnoseRedis: typeof diagnoseRedis; testRedisConnection: typeof testRedisConnection }).diagnoseRedis = diagnoseRedis;
+  (window as Window & { diagnoseRedis: typeof diagnoseRedis; testRedisConnection: typeof testRedisConnection }).testRedisConnection = testRedisConnection;
   
   console.log('💡 Redis diagnostics loaded!');
   console.log('   Run these in console:');

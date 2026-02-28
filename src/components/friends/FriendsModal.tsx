@@ -88,7 +88,7 @@ export const FriendsModal: React.FC<FriendsModalProps> = ({ isOpen, onClose, ini
       const results = await friendsService.searchUsers(user.id, searchTerm, 20, abortControllerRef.current.signal);
       setSearchResults(results);
     } catch (error) {
-      if ((error as any).name === 'AbortError') return;
+      if ((error as Error).name === 'AbortError') return;
       
       console.error('Error searching users:', error);
       toast.error('Failed to search users');

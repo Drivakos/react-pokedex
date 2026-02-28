@@ -28,8 +28,8 @@ const Login: React.FC = () => {
       const intendedPath = localStorage.getItem('auth_redirect') || '/profile';
       localStorage.removeItem('auth_redirect'); // Clean up
       navigate(intendedPath);
-    } catch (error: any) {
-      setStatus({ type: 'error', message: error.message || 'Login failed' });
+    } catch (error: unknown) {
+      setStatus({ type: 'error', message: (error as Error).message || 'Login failed' });
     } finally {
       setLoading(false);
     }
@@ -44,8 +44,8 @@ const Login: React.FC = () => {
       if (error) throw error;
 
       // Redirect happens automatically
-    } catch (error: any) {
-      setStatus({ type: 'error', message: error.message || 'Google login failed' });
+    } catch (error: unknown) {
+      setStatus({ type: 'error', message: (error as Error).message || 'Google login failed' });
       setLoading(false);
     }
   };

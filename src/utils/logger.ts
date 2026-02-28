@@ -45,7 +45,7 @@ class Logger {
   }
 
   // Special method for service-level errors that should be minimal in production
-  serviceError(service: string, operation: string, error: any): void {
+  serviceError(service: string, operation: string, error: unknown): void {
     if (this.isDevelopment) {
       console.error(`[${service}] ${operation} failed:`, error);
     } else {

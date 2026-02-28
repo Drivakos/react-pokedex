@@ -12,13 +12,25 @@ import { TeamEditorHeader } from './editor/TeamEditorHeader';
 import { TeamMemberTabs } from './editor/TeamMemberTabs';
 import { TeamMemberCard } from './editor/TeamMemberCard';
 import { PokemonSearchModal } from './editor/PokemonSearchModal';
-import { useTeamStore } from '../../store/teamStore';
+import { useTeamStore, TeamPokemonData } from '../../store/teamStore';
+
+interface MovesetBuildData {
+  moves?: string[];
+  heldItem?: string;
+  ability?: string;
+  nature?: string;
+  evs?: TeamMember['evs'];
+  ivs?: TeamMember['ivs'];
+  gender?: TeamMember['gender'];
+  teraType?: string;
+  nickname?: string;
+  isShiny?: boolean;
+}
 
 const TeamEditor: React.FC = () => {
   const { teamId } = useParams<{ teamId: string }>();
   const navigate = useNavigate();
-  const auth = useAuth();
-  const { user, getTeamMembers, addPokemonToTeam, removePokemonFromTeam, updateTeamMemberBuild, teams } = auth as any;
+  const { user, getTeamMembers, addPokemonToTeam, removePokemonFromTeam, updateTeamMemberBuild, teams } = useAuth();
 
   const store = useTeamStore();
   const [memberToRemove, setMemberToRemove] = useState<TeamMember | null>(null);
@@ -42,7 +54,7 @@ const TeamEditor: React.FC = () => {
     return () => clearTimeout(timeoutId);
   }, [store.searchQuery]);
 
-  const handleAddPokemon = async (pokemon: any) => {
+  const handleAddPokemon = async (pokemon: TeamPokemonData) => {
     if (!teamId) return;
     await store.addPokemon(parseInt(teamId), pokemon, addPokemonToTeam, getTeamMembers);
   };
@@ -58,7 +70,7 @@ const TeamEditor: React.FC = () => {
     store.setShowMovesetEditor(true);
   };
 
-  const handleSaveBuild = async (buildData: any) => {
+  const handleSaveBuild = async (buildData: MovesetBuildData) => {
     if (!teamId || !store.selectedMember) return;
     
     const teamMemberData = {
@@ -139,7 +151,7 @@ const TeamEditor: React.FC = () => {
     }
   };
 
-  const handleCopySingle = (member: TeamMember, pokemon: any) => {
+  const handleCopySingle = (member: TeamMember, pokemon: TeamPokemonData) => {
     const pokemonName = formatName(pokemon.name);
     const item = member.item ? formatName(member.item) : '';
     let text = item ? `${pokemonName} @ ${item}\n` : `${pokemonName}\n`;

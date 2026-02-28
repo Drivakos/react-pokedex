@@ -121,6 +121,11 @@ export interface Team {
   members?: TeamMember[];
 }
 
+/** Team as returned by supabase.from('teams').select('*, team_members(*)') */
+export interface TeamWithJoinedMembers extends Team {
+  team_members?: TeamMember[];
+}
+
 export interface TeamMember {
   id: number;
   team_id: number;

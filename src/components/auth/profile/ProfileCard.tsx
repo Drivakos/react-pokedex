@@ -1,9 +1,11 @@
 import React from 'react';
 import PokemonImage from '../../PokemonImage';
+import type { User } from '@supabase/supabase-js';
+import type { Profile } from '../../../lib/supabase';
 
 interface ProfileCardProps {
-  user: any;
-  profile: any;
+  user: User;
+  profile: Profile | null;
   formData: { username: string };
   setFormData: (data: { username: string }) => void;
   status: { type: 'success' | 'error' | null; message: string };

@@ -1,6 +1,6 @@
 import React, { createContext, useState, useEffect, useContext, useCallback, useMemo } from 'react';
-import { Session, User, AuthError } from '@supabase/supabase-js';
-import { Profile, Favorite } from '../lib/supabase';
+import { Session, User, AuthError, AuthResponse, OAuthResponse } from '@supabase/supabase-js';
+import { Profile, Favorite, Team, TeamMember, TeamWithJoinedMembers } from '../lib/supabase';
 import authService, { withAuthSession } from '../services/auth.service';
 import { supabase } from '../lib/supabase';
 import toast from 'react-hot-toast';
@@ -10,15 +10,15 @@ interface AuthContextType {
   user: User | null;
   profile: Profile | null;
   favorites: Favorite[];
-  teams: any[];
+  teams: TeamWithJoinedMembers[];
   teamsLoaded: boolean;
   loading: boolean;
 
   // Auth methods
   refreshSession: () => Promise<Session | null>;
-  signUp: (email: string, password: string) => Promise<any>;
-  signIn: (email: string, password: string) => Promise<any>;
-  signInWithGoogle: () => Promise<any>;
+  signUp: (email: string, password: string) => Promise<AuthResponse>;
+  signIn: (email: string, password: string) => Promise<AuthResponse>;
+  signInWithGoogle: () => Promise<OAuthResponse>;
   signInWithMagicLink: (email: string) => Promise<{ error: AuthError | null }>;
   signOut: () => Promise<{ error: AuthError | null }>;
   resetPassword: (email: string) => Promise<{ error: AuthError | null }>;
@@ -27,7 +27,7 @@ interface AuthContextType {
   // Profile methods
   updateProfile: (profile: Partial<Profile>) => Promise<{
     data: Profile | null;
-    error: any | null;
+    error: Error | null;
   }>;
 
   // Favorites methods
@@ -37,13 +37,13 @@ interface AuthContextType {
 
   // Team methods
   fetchTeams: () => Promise<void>;
-  createTeam: (name: string, description?: string) => Promise<any>;
+  createTeam: (name: string, description?: string) => Promise<Team | null>;
   updateTeam: (teamId: number, name: string, description?: string) => Promise<void>;
   deleteTeam: (teamId: number) => Promise<void>;
   addPokemonToTeam: (teamId: number, pokemonId: number, position: number) => Promise<void>;
   removePokemonFromTeam: (teamId: number, position: number) => Promise<void>;
-  getTeamMembers: (teamId: number) => Promise<any[]>;
-  updateTeamMemberBuild: (teamId: number, position: number, buildData: any) => Promise<void>;
+  getTeamMembers: (teamId: number) => Promise<TeamMember[]>;
+  updateTeamMemberBuild: (teamId: number, position: number, buildData: Partial<TeamMember>) => Promise<void>;
 }
 
 export const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -61,7 +61,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [favorites, setFavorites] = useState<Favorite[]>([]);
-  const [teams, setTeams] = useState<any[]>([]);
+  const [teams, setTeams] = useState<TeamWithJoinedMembers[]>([]);
   const [teamsLoaded, setTeamsLoaded] = useState(false);
 
   const [loading, setLoading] = useState(true);
@@ -438,14 +438,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return result.data || [];
   }, [user]);
 
-  const updateTeamMemberBuild = useCallback(async (teamId: number, position: number, buildData: any) => {
+  const updateTeamMemberBuild = useCallback(async (teamId: number, position: number, buildData: Partial<TeamMember>) => {
     if (!user) {
       toast.error('You must be logged in to update team member builds');
       return;
     }
 
     const result = await withAuthSession(async () => {
-      const updateData: any = {
+      const updateData: Partial<TeamMember> & { updated_at: string } = {
         updated_at: new Date().toISOString()
       };
 

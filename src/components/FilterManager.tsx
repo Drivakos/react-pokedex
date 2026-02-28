@@ -114,7 +114,7 @@ export const FilterManager: React.FC<FilterManagerProps> = ({
 
             <FilterTabs
               activeTab={activeFilterTab}
-              setActiveTab={(tab) => setActiveFilterTab(tab as any)}
+              setActiveTab={(tab) => setActiveFilterTab(tab as 'types' | 'moves' | 'other')}
               typeCount={filters.types.length}
               moveCount={filters.moves.length}
               otherCount={totalFiltersCount - filters.types.length - filters.moves.length}
@@ -144,7 +144,7 @@ export const FilterManager: React.FC<FilterManagerProps> = ({
           <div className="flex-1 overflow-y-auto p-4">
             <FilterTabs
               activeTab={activeFilterTab}
-              setActiveTab={(tab) => setActiveFilterTab(tab as any)}
+              setActiveTab={(tab) => setActiveFilterTab(tab as 'types' | 'moves' | 'other')}
               typeCount={filters.types.length}
               moveCount={filters.moves.length}
               otherCount={totalFiltersCount - filters.types.length - filters.moves.length}

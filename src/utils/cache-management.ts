@@ -19,7 +19,7 @@ import { PokemonService } from '../services/pokemon.service';
 export async function cacheHealthCheck(): Promise<{
   healthy: boolean;
   enabled: boolean;
-  stats?: any;
+  stats?: { enabled: boolean; keyCount?: number; memoryUsage?: string };
   error?: string;
 }> {
   if (!isCacheEnabled()) {

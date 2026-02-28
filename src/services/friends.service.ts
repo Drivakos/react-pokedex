@@ -22,18 +22,18 @@ export interface UserSearchResult {
 }
 
 class FriendsService {
-  private cache: Record<string, { data: any; timestamp: number }> = {};
+  private cache: Record<string, { data: unknown; timestamp: number }> = {};
   private CACHE_DURATION = 2 * 60 * 1000; // 2 minutes
 
-  private getFromCache(key: string) {
+  private getFromCache<T>(key: string): T | null {
     const cached = this.cache[key];
     if (cached && Date.now() - cached.timestamp < this.CACHE_DURATION) {
-      return cached.data;
+      return cached.data as T;
     }
     return null;
   }
 
-  private setInCache(key: string, data: any) {
+  private setInCache(key: string, data: unknown) {
     this.cache[key] = { data, timestamp: Date.now() };
   }
 
@@ -56,7 +56,7 @@ class FriendsService {
     if (!userId) return [];
 
     const cacheKey = `friends_${userId}`;
-    const cached = this.getFromCache(cacheKey);
+    const cached = this.getFromCache<Friend[]>(cacheKey);
     if (cached) return cached;
 
     try {
@@ -83,7 +83,7 @@ class FriendsService {
     if (!userId) return [];
 
     const cacheKey = `requests_${userId}`;
-    const cached = this.getFromCache(cacheKey);
+    const cached = this.getFromCache<FriendRequest[]>(cacheKey);
     if (cached) return cached;
 
     try {
@@ -110,11 +110,12 @@ class FriendsService {
     if (!currentUserId || !query || query.trim().length === 0) return [];
 
     try {
-      const { data, error } = await supabase.rpc('search_users_for_friends', {
+      const query_ = supabase.rpc('search_users_for_friends', {
         p_current_user_id: currentUserId,
         p_search_query: query.trim(),
         p_limit: limit
-      }).abortSignal(signal as any);
+      });
+      const { data, error } = signal ? await query_.abortSignal(signal) : await query_;
 
       if (error) {
         if (error.message?.includes('AbortError')) throw error;
@@ -124,7 +125,7 @@ class FriendsService {
 
       return data || [];
     } catch (error) {
-      if ((error as any).name === 'AbortError') throw error;
+      if ((error as Error).name === 'AbortError') throw error;
       console.error('Error in searchUsers:', error);
       return [];
     }
@@ -157,9 +158,9 @@ class FriendsService {
       }
 
       return { success: true };
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error in sendFriendRequest:', error);
-      return { success: false, error: error.message || 'Failed to send friend request' };
+      return { success: false, error: (error as Error).message || 'Failed to send friend request' };
     }
   }
 
@@ -191,9 +192,9 @@ class FriendsService {
       this.clearCache(userId);
 
       return { success: true };
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error in acceptFriendRequest:', error);
-      return { success: false, error: error.message || 'Failed to accept friend request' };
+      return { success: false, error: (error as Error).message || 'Failed to accept friend request' };
     }
   }
 
@@ -225,9 +226,9 @@ class FriendsService {
       this.clearCache(userId);
 
       return { success: true };
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error in rejectFriendRequest:', error);
-      return { success: false, error: error.message || 'Failed to reject friend request' };
+      return { success: false, error: (error as Error).message || 'Failed to reject friend request' };
     }
   }
 
@@ -259,9 +260,9 @@ class FriendsService {
       this.clearCache(userId);
 
       return { success: true };
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error in removeFriend:', error);
-      return { success: false, error: error.message || 'Failed to remove friend' };
+      return { success: false, error: (error as Error).message || 'Failed to remove friend' };
     }
   }
 

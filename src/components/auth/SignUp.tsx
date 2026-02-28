@@ -55,8 +55,8 @@ const SignUp: React.FC = () => {
         setStatus({ type: 'success', message });
         setFormData({ email: '', password: '', confirmPassword: '' });
       }
-    } catch (error: any) {
-      setStatus({ type: 'error', message: error.message || 'Failed to create account' });
+    } catch (error: unknown) {
+      setStatus({ type: 'error', message: (error as Error).message || 'Failed to create account' });
     } finally {
       setLoading(false);
     }
@@ -71,8 +71,8 @@ const SignUp: React.FC = () => {
       if (error) throw error;
 
       // Redirect happens automatically
-    } catch (error: any) {
-      setStatus({ type: 'error', message: error.message || 'Google signup failed' });
+    } catch (error: unknown) {
+      setStatus({ type: 'error', message: (error as Error).message || 'Google signup failed' });
       setLoading(false);
     }
   };

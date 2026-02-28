@@ -29,7 +29,7 @@ export const getThumbnailUrl = (pokemonId: number): string => {
 /**
  * Gets the Pokemon image URL, prioritizing local thumbnails with API fallback
  */
-export const getPokemonImage = (pokemonId: number, sprites?: any): string => {
+export const getPokemonImage = (pokemonId: number, sprites?: import('../types/pokemon').PokemonSprites | null): string => {
   // First try local thumbnail
   try {
     return getThumbnailUrl(pokemonId);
@@ -42,7 +42,7 @@ export const getPokemonImage = (pokemonId: number, sprites?: any): string => {
 /**
  * Gets the official artwork URL for a Pokemon
  */
-export const getOfficialArtwork = (sprites: any): string => {
+export const getOfficialArtwork = (sprites: import('../types/pokemon').PokemonSprites | string | null | undefined): string => {
   try {
     const parsedSprites = typeof sprites === 'string'
       ? JSON.parse(sprites)

@@ -3,6 +3,7 @@ import { useAuth } from '../../hooks/useAuth';
 import { Plus, Edit, Trash2, Users } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { TYPE_COLORS } from '../../types/pokemon';
+import type { Team } from '../../lib/supabase';
 
 interface Pokemon {
   id: number;
@@ -107,7 +108,7 @@ const TeamBuilder: React.FC<{
     }
   };
 
-  const startEdit = (team: any) => {
+  const startEdit = (team: Team) => {
     setFormMode('edit');
     setEditingTeamId(team.id);
     setFormData({ name: team.name, description: team.description || '' });

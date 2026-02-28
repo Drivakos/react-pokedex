@@ -418,9 +418,9 @@ const PokemonCards: React.FC<PokemonCardsProps> = ({ pokemonName, pokemonId }) =
       setHasMore(allPokemonCards.length > (page * pageSize));
       setLoadedFromCache(true);
 
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('❌ Failed to load local TCG cards:', err);
-      setError(`Failed to load trading cards: ${err.message}`);
+      setError(`Failed to load trading cards: ${(err as Error).message}`);
     } finally {
       setLoading(false);
       setLoadingMore(false);

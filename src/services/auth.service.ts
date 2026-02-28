@@ -347,7 +347,7 @@ export const authService = new AuthService();
  * @param operation Function that performs a database operation
  * @returns The result of the operation or an error
  */
-export async function withAuthSession<T>(operation: () => Promise<T>): Promise<{ data: T | null, error: any | null }> {
+export async function withAuthSession<T>(operation: () => Promise<T>): Promise<{ data: T | null, error: Error | null }> {
   // Just get the current session without refreshing since Supabase handles this automatically
   const { data } = await supabase.auth.getSession();
   if (!data.session) {

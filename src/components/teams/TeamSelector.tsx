@@ -3,6 +3,7 @@ import { useAuth } from '../../hooks/useAuth';
 import { Plus, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 import PokemonImage from '../PokemonImage';
+import type { TeamWithJoinedMembers, TeamMember } from '../../lib/supabase';
 
 interface Pokemon {
   id: number;
@@ -75,17 +76,17 @@ const TeamSelector: React.FC<TeamSelectorProps> = ({ pokemon, onClose }) => {
     }
   };
 
-  const renderPositionSelector = (team: any) => {
+  const renderPositionSelector = (team: TeamWithJoinedMembers) => {
     // Get positions that are already taken in this team
     // AuthProvider returns 'team_members' from the join
-    const teamMembers = team.team_members || [];
+    const teamMembers: TeamMember[] = team.team_members || [];
 
     return (
       <div className="mt-3">
         <p className="text-sm text-gray-600 mb-2">Select a position for this Pokémon on your team:</p>
         <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
           {[1, 2, 3, 4, 5, 6].map((position) => {
-            const pokemonAtPosition = teamMembers.find((m: any) => m.position === position);
+            const pokemonAtPosition = teamMembers.find((m) => m.position === position);
             const isTaken = !!pokemonAtPosition;
 
             return (

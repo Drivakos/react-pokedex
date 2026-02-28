@@ -2,13 +2,14 @@ import React from 'react';
 import PokemonImage from '../../PokemonImage';
 import { TeamMember } from '../../../lib/supabase';
 import { X } from 'lucide-react';
+import type { TeamPokemonData } from '../../../store/teamStore';
 
 interface TeamMemberCardProps {
   member: TeamMember;
-  pokemon: any;
+  pokemon: TeamPokemonData;
   onEdit: (member: TeamMember) => void;
   onRemoveClick: (member: TeamMember) => void;
-  onCopy: (member: TeamMember, pokemon: any) => void;
+  onCopy: (member: TeamMember, pokemon: TeamPokemonData) => void;
   formatName: (name: string) => string;
 }
 
@@ -83,7 +84,7 @@ export const TeamMemberCard: React.FC<TeamMemberCardProps> = ({
             </div>
             {/* Type badges */}
             <div style={{ marginTop: 4, display: 'flex', gap: 3 }}>
-              {pokemon.types.map((type: any, i: number) => (
+              {pokemon.types.map((type, i: number) => (
                 <span key={i} className="sd-type-badge" style={{ backgroundColor: getTypeColor(type.type.name) }}>
                   {type.type.name}
                 </span>
@@ -122,7 +123,7 @@ export const TeamMemberCard: React.FC<TeamMemberCardProps> = ({
                     />
                   </div>
                   <span className="sd-stat-value">{value as number || ''}</span>
-                  <span className="sd-iv-value" style={{ color: (ivs as any)[stat] < 31 ? '#e53e3e' : '#888' }}>{(ivs as any)[stat]}</span>
+                  <span className="sd-iv-value" style={{ color: (ivs as Record<string, number>)[stat] < 31 ? '#e53e3e' : '#888' }}>{(ivs as Record<string, number>)[stat]}</span>
                 </React.Fragment>
               ))}
             </div>

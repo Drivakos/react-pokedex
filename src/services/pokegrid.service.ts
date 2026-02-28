@@ -1,14 +1,42 @@
 import { supabase } from '../lib/supabase';
 import type { GridGame } from '../components/pokegrid';
+import type { GameProgressData, PreGeneratedConfig } from '../types/grid';
 
 export interface GameProgress {
   id: number;
-  game_data: any;
+  game_data: GameProgressData;
   completed: boolean;
   score: number;
   total_guesses: number;
   correct_guesses: number;
   completed_at?: string;
+}
+
+interface MistakePokemonRef {
+  id: number;
+  name?: string;
+}
+
+interface UserStats {
+  totalGames: number;
+  completedGames: number;
+  perfectGames: number;
+  averageScore: number;
+  bestScore: number;
+  currentStreak: number;
+  longestStreak: number;
+  averageGuesses: number;
+  totalGuesses: number;
+  accuracy: number;
+}
+
+interface GameSubmission {
+  user_id: string;
+  completed: boolean;
+  score: number;
+  total_guesses: number;
+  game_data: GameProgressData;
+  completed_at: string | null;
 }
 
 export interface GuessHistoryItem {
@@ -52,18 +80,18 @@ export interface WeeklyHistoryDay {
 }
 
 class PokegridService {
-  private cache: Record<string, { data: any; timestamp: number }> = {};
+  private cache: Record<string, { data: unknown; timestamp: number }> = {};
   private CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 
-  private getFromCache(key: string) {
+  private getFromCache<T>(key: string): T | null {
     const cached = this.cache[key];
     if (cached && Date.now() - cached.timestamp < this.CACHE_DURATION) {
-      return cached.data;
+      return cached.data as T;
     }
     return null;
   }
 
-  private setInCache(key: string, data: any) {
+  private setInCache(key: string, data: unknown) {
     this.cache[key] = { data, timestamp: Date.now() };
   }
 
@@ -91,7 +119,7 @@ class PokegridService {
     game: GridGame,
     sessionUndos: number,
     hasRecentMistake: boolean,
-    mistakePokemon: any,
+    mistakePokemon: MistakePokemonRef | null,
     bonusRetries: number
   ): Promise<boolean> {
     if (!userId) return false;
@@ -228,7 +256,7 @@ class PokegridService {
     }
   }
 
-  async loadGridConfiguration(gridDate: string): Promise<any | null> {
+  async loadGridConfiguration(gridDate: string): Promise<PreGeneratedConfig | null> {
     try {
       const { data, error } = await supabase.rpc('get_pokegrid_configuration', {
         p_grid_date: gridDate
@@ -246,7 +274,7 @@ class PokegridService {
 
   async saveGridConfiguration(
     gridDate: string,
-    configuration: any,
+    configuration: PreGeneratedConfig,
     difficulty: string = 'medium',
     seed?: string
   ): Promise<boolean> {
@@ -268,7 +296,7 @@ class PokegridService {
     }
   }
 
-  async getWeeklyLeaderboard(startDate: string, limit: number = 50): Promise<any[]> {
+  async getWeeklyLeaderboard(startDate: string, limit: number = 50): Promise<LeaderboardEntry[]> {
     try {
       const { data, error } = await supabase.rpc('get_weekly_pokegrid_leaderboard', {
         p_start_date: startDate,
@@ -285,11 +313,11 @@ class PokegridService {
     }
   }
 
-  async getUserStats(userId: string): Promise<any> {
+  async getUserStats(userId: string): Promise<UserStats | null> {
     if (!userId) return null;
 
     const cacheKey = `stats_${userId}`;
-    const cached = this.getFromCache(cacheKey);
+    const cached = this.getFromCache<UserStats>(cacheKey);
     if (cached) return cached;
 
     try {
@@ -331,7 +359,7 @@ class PokegridService {
     }
   }
 
-  async getLeaderboard(timeframe: 'daily' | 'weekly' | 'all-time', gridDate?: string): Promise<any[]> {
+  async getLeaderboard(timeframe: 'daily' | 'weekly' | 'all-time', gridDate?: string): Promise<LeaderboardEntry[]> {
     try {
       const { data, error } = await supabase.rpc('get_pokegrid_leaderboard', {
         p_timeframe: timeframe,
@@ -348,11 +376,11 @@ class PokegridService {
     }
   }
 
-  async getUserAchievements(userId: string): Promise<any[]> {
+  async getUserAchievements(userId: string): Promise<Record<string, unknown>[]> {
     if (!userId) return [];
 
     const cacheKey = `achievements_${userId}`;
-    const cached = this.getFromCache(cacheKey);
+    const cached = this.getFromCache<Record<string, unknown>[]>(cacheKey);
     if (cached) return cached;
 
     try {
@@ -450,7 +478,7 @@ class PokegridService {
   /**
    * Get all user submissions for a specific date (for friends view)
    */
-  async getUserSubmissionsForDate(gridDate: string, userIds: string[]): Promise<any[]> {
+  async getUserSubmissionsForDate(gridDate: string, userIds: string[]): Promise<GameSubmission[]> {
     if (userIds.length === 0) return [];
 
     try {

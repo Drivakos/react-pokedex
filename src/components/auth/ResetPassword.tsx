@@ -30,8 +30,8 @@ const ResetPassword: React.FC = () => {
       
       setMessage('Password reset email sent! Check your inbox for further instructions.');
       setEmail('');
-    } catch (error: any) {
-      setError(error.message || 'Failed to send password reset email');
+    } catch (error: unknown) {
+      setError((error as Error).message || 'Failed to send password reset email');
     } finally {
       setLoading(false);
     }

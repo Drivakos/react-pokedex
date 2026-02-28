@@ -1,6 +1,16 @@
 import * as Sentry from '@sentry/react';
 import { withRetry } from '../../utils/retry';
-import { Pokemon, RawPokemonData, Filters, PokemonDetails } from '../../types/pokemon';
+import { Pokemon, RawPokemonData, Filters, PokemonDetails, PokemonEvolution } from '../../types/pokemon';
+import type {
+  SupabasePokemonRow,
+  RawPokemonDetailsResponse,
+  RawPokemonDetails,
+  RawStat,
+  RawAbilityEntry,
+  RawMoveEntry,
+  RawEvolutionSpecies,
+  RawTypeEntry,
+} from '../../types/api';
 import {
   fetchCachedPokemonById,
   fetchCachedPokemonData,
@@ -15,7 +25,7 @@ import { GRAPHQL_ENDPOINT, handleGraphQLResponse } from './base';
 /**
  * Transform Supabase Pokemon to application Pokemon type
  */
-export const transformSupabasePokemon = (p: any): Pokemon => {
+export const transformSupabasePokemon = (p: SupabasePokemonRow): Pokemon => {
   return {
     id: p.id,
     name: p.name,
@@ -217,10 +227,12 @@ export const fetchPokemonData = async (
       if (filters.height.max > 0 && filters.height.max < 100) query = query.lte('height', filters.height.max);
       if (filters.hasEvolutions !== null) query = query.eq('can_evolve', filters.hasEvolutions);
 
-      const { data, error } = await query
+      const baseQuery = query
         .order('id', { ascending: true })
-        .range(offset, offset + limit - 1)
-        .abortSignal(signal as any); // Supabase supports abortSignal
+        .range(offset, offset + limit - 1);
+      const { data, error } = signal
+        ? await baseQuery.abortSignal(signal)
+        : await baseQuery;
 
       if (data && !error && data.length > 0) return data.map(transformSupabasePokemon);
     } catch (error) {
@@ -323,29 +335,29 @@ async function fetchPokemonDetailsDirect(id: number): Promise<PokemonDetails> {
       body: JSON.stringify({ query, variables: { id } }),
     }));
 
-    const data = await handleGraphQLResponse<any>(response);
-    const pokemon = data.pokemon_v2_pokemon_by_pk;
+    const data = await handleGraphQLResponse<RawPokemonDetailsResponse>(response);
+    const pokemon: RawPokemonDetails | null = data.pokemon_v2_pokemon_by_pk;
 
     if (!pokemon) {
       throw new Error(`Pokemon with ID ${id} not found`);
     }
 
-    const stats = pokemon.stats.reduce((acc: any, stat: any) => {
+    const stats = pokemon.stats.reduce((acc: Record<string, number>, stat: RawStat) => {
       const statName = stat.pokemon_v2_stat.name.replace('-', '_');
       acc[statName] = stat.base_stat;
       return acc;
     }, {});
 
-    const abilities = pokemon.abilities.map((ability: any) => ({
+    const abilities = pokemon.abilities.map((ability: RawAbilityEntry) => ({
       name: ability.ability.name.replace('-', ' '),
       is_hidden: ability.is_hidden,
       description: ability.ability.pokemon_v2_abilityflavortexts?.[0]?.flavor_text || 'No description available.'
     }));
 
-    const movesMap = new Map();
+    const movesMap = new Map<string, { name: string; learned_at_level: number; learn_method: string; versionGroupId: number }>();
     const validMethods = ['level-up', 'machine', 'egg', 'tutor'];
 
-    pokemon.moves.forEach((m: any) => {
+    pokemon.moves.forEach((m: RawMoveEntry) => {
       const moveName = m.move.name;
       const learnMethod = m.pokemon_v2_movelearnmethod?.name || 'unknown';
       const versionGroupId = m.pokemon_v2_versiongroup?.id || 0;
@@ -372,9 +384,9 @@ async function fetchPokemonDetailsDirect(id: number): Promise<PokemonDetails> {
       return a.name.localeCompare(b.name);
     });
 
-    const evolutions: any[] = [];
+    const evolutions: PokemonEvolution[] = [];
     if (pokemon.species?.evolution_chain?.pokemon_v2_pokemonspecies) {
-      pokemon.species.evolution_chain.pokemon_v2_pokemonspecies.forEach((evo: any) => {
+      pokemon.species.evolution_chain.pokemon_v2_pokemonspecies.forEach((evo: RawEvolutionSpecies) => {
         const evolutionDetails = evo.pokemon_v2_pokemonevolutions?.[0];
         evolutions.push({
           species_name: evo.name,
@@ -407,7 +419,7 @@ async function fetchPokemonDetailsDirect(id: number): Promise<PokemonDetails> {
       name: pokemon.name,
       height: pokemon.height,
       weight: pokemon.weight,
-      types: pokemon.types.map((t: any) => t.type.name),
+      types: pokemon.types.map((t: RawTypeEntry) => t.type.name),
       abilities,
       stats,
       sprites,

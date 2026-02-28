@@ -1,5 +1,6 @@
 import { cacheAside, CACHE_KEYS, CACHE_TTL } from '../../lib/redis';
 import { GRAPHQL_ENDPOINT, handleGraphQLResponse } from './base';
+import type { RawPokemonAbilitiesResponse, RawAbilityRaw } from '../../types/api';
 
 /**
  * Fetches Pokemon abilities
@@ -29,9 +30,9 @@ export const fetchPokemonAbilities = async (pokemonId: number) => {
         body: JSON.stringify({ query, variables: { pokemonId } }),
       });
 
-      const data = await handleGraphQLResponse<any>(response);
-      
-      return data.pokemon_v2_pokemon_by_pk.abilities.map((ability: any) => ({
+      const data = await handleGraphQLResponse<RawPokemonAbilitiesResponse>(response);
+
+      return (data.pokemon_v2_pokemon_by_pk?.abilities ?? []).map((ability: RawAbilityRaw) => ({
         ...ability,
         ability: {
           ...ability.ability,

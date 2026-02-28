@@ -2,9 +2,11 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { immer } from 'zustand/middleware/immer';
 import toast from 'react-hot-toast';
+import type { User } from '@supabase/supabase-js';
 import { Pokemon } from '../types/pokemon';
 import { GridCellData } from '../components/pokegrid';
-import type { GridGame } from '../components/pokegrid';
+import type { GridGame, GridCell } from '../components/pokegrid';
+import type { GameProgress, GameAction, PopularityData, GuessHistoryEntry } from '../types/grid';
 import { pokegridService } from '../services/pokegrid.service';
 import { PokemonService } from '../services/pokemon.service';
 import {
@@ -18,30 +20,23 @@ import {
 } from '../utils/pokegrid-game.utils';
 import { GAME_CONSTANTS } from '../components/pokegrid/constants';
 
-type ExtendedGridCell = GridCellData & {
-  rowConstraint: any;
-  colConstraint: any;
-  hasMistake?: boolean;
-  mistakeCount?: number;
-};
-
 interface GridState {
   currentGame: GridGame | null;
-  selectedCell: ExtendedGridCell | null;
+  selectedCell: GridCell | null;
   bonusRetries: number;
   sessionUndos: number;
-  lastAction: any;
+  lastAction: GameAction | null;
   hasRecentMistake: boolean;
   mistakePokemon: Pokemon | null;
-  popularityData: any[];
+  popularityData: PopularityData[];
   isLoading: boolean;
-  
+
   // Actions
-  initializeGame: (date: Date, mode: 'daily' | 'endless', user: any, displayedPokemon: Pokemon[]) => Promise<void>;
-  handlePokemonSelect: (pokemon: Pokemon, user: any, gameMode: 'daily') => Promise<void>;
-  handleCellClick: (cell: any) => void;
-  handleUndo: (user: any) => Promise<void>;
-  setSelectedCell: (cell: ExtendedGridCell | null) => void;
+  initializeGame: (date: Date, mode: 'daily' | 'endless', user: User | null, displayedPokemon: Pokemon[]) => Promise<void>;
+  handlePokemonSelect: (pokemon: Pokemon, user: User | null, gameMode: 'daily') => Promise<void>;
+  handleCellClick: (cell: GridCellData) => void;
+  handleUndo: (user: User | null) => Promise<void>;
+  setSelectedCell: (cell: GridCell | null) => void;
   setHasRecentMistake: (hasMistake: boolean) => void;
   setMistakePokemon: (pokemon: Pokemon | null) => void;
 }
@@ -49,8 +44,8 @@ interface GridState {
 // Helper to restore game from progress
 const restoreGameFromProgress = (
   baseGame: GridGame,
-  progress: any,
-  guessHistory: any[],
+  progress: GameProgress,
+  guessHistory: GuessHistoryEntry[],
   displayedPokemon: Pokemon[]
 ): GridGame => {
   const cells = baseGame.cells.map(cell => {
@@ -77,7 +72,7 @@ const restoreGameFromProgress = (
     totalGuesses: progress.total_guesses || 0,
     correctGuesses: cells.filter(c => c.isCorrect).length,
     completed: progress.completed || false,
-    perfectGame: (progress.game_data as any)?.perfectGame || false
+    perfectGame: progress.game_data?.perfectGame || false
   };
 };
 
@@ -122,7 +117,7 @@ export const useGridStore = create<GridState>()(
               const missingIds = guessHistory
                 .map(g => g.pokemon_id)
                 .filter(id => id && !allRelevantPokemon.some(p => p.id === id));
-              
+
               if (missingIds.length > 0) {
                 const extraPokemon = await PokemonService.getBatch(missingIds);
                 allRelevantPokemon = [...allRelevantPokemon, ...extraPokemon];
@@ -130,10 +125,15 @@ export const useGridStore = create<GridState>()(
             }
 
             const game = generateDailyGrid(date, gridConfig?.configuration);
-            set({ popularityData });
+            set({ popularityData: (popularityData ?? []) as PopularityData[] });
 
             if (progress?.game_data) {
-              const restoredGame = restoreGameFromProgress(game, progress, guessHistory, allRelevantPokemon);
+              const restoredGame = restoreGameFromProgress(
+                game,
+                progress as GameProgress,
+                (guessHistory as GuessHistoryEntry[]),
+                allRelevantPokemon
+              );
               set({ currentGame: restoredGame });
 
               if (progress.game_data.guessHistory) {
@@ -141,7 +141,7 @@ export const useGridStore = create<GridState>()(
                 set({ sessionUndos: savedHistory.sessionUndos || 0 });
                 if (savedHistory.hasRecentMistake && savedHistory.mistakePokemon) {
                   set({ hasRecentMistake: true });
-                  const pokemonObject = allRelevantPokemon.find(p => p.id === savedHistory.mistakePokemon.id);
+                  const pokemonObject = allRelevantPokemon.find(p => p.id === savedHistory.mistakePokemon?.id);
                   if (pokemonObject) set({ mistakePokemon: pokemonObject });
                 }
               }
@@ -150,7 +150,7 @@ export const useGridStore = create<GridState>()(
                 set({ bonusRetries: GAME_CONSTANTS.BONUS_RETRIES });
               }
             } else {
-              set({ 
+              set({
                 currentGame: game,
                 sessionUndos: 0,
                 bonusRetries: 0,
@@ -196,7 +196,7 @@ export const useGridStore = create<GridState>()(
           }
         });
 
-        const updatedCells = currentGame.cells.map((cell: any) => {
+        const updatedCells = currentGame.cells.map((cell: GridCell) => {
           if (cell.id === selectedCell.id) {
             return {
               ...cell,
@@ -218,7 +218,7 @@ export const useGridStore = create<GridState>()(
         const newStreak = isValid ? currentGame.streak + 1 : 0;
         const completed = isGameCompleted(updatedCells);
         const perfectGame = isPerfectGame(updatedCells);
-        
+
         if (perfectGame && bonusRetries === 0) {
           set({ bonusRetries: GAME_CONSTANTS.BONUS_RETRIES });
         }
@@ -275,12 +275,12 @@ export const useGridStore = create<GridState>()(
         const { currentGame } = get();
         if (!currentGame) return;
 
-        const cellData = currentGame.cells.find((c: any) => c.id === cell.id);
+        const cellData = currentGame.cells.find(c => c.id === cell.id);
         if (!cellData) return;
 
         if (!cellData.pokemon || cellData.hasMistake) {
-          set({ 
-            selectedCell: cellData as ExtendedGridCell,
+          set({
+            selectedCell: cellData,
             hasRecentMistake: false,
             mistakePokemon: null
           });
@@ -298,7 +298,7 @@ export const useGridStore = create<GridState>()(
           score: lastAction.score
         };
 
-        const restoredCell = lastAction.cells.find((cell: any) => cell.id === lastAction.selectedCell);
+        const restoredCell = lastAction.cells.find(cell => cell.id === lastAction.selectedCell);
 
         set({
           currentGame: updatedGame,
@@ -317,7 +317,7 @@ export const useGridStore = create<GridState>()(
     {
       name: 'pokegrid-storage',
       storage: createJSONStorage(() => localStorage),
-      partialize: (state) => ({ 
+      partialize: (state) => ({
         currentGame: state.currentGame,
         bonusRetries: state.bonusRetries,
         sessionUndos: state.sessionUndos

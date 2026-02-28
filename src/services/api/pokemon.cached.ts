@@ -1,4 +1,4 @@
-import { Pokemon, RawPokemonData, Filters, PokemonDetails } from '../../types/pokemon';
+import { Pokemon, RawPokemonData, Filters, PokemonDetails, PokemonEvolution } from '../../types/pokemon';
 import { buildCompleteWhereClause, POKEMON_FIELDS } from '../../utils/query-builder';
 import { transformSinglePokemon, transformRawData } from '../../utils/pokemon-transform';
 import { areCachedEndpointsAvailable, fetchCachedGraphQL, fetchCachedREST } from './cache-base';
@@ -93,25 +93,25 @@ export const fetchCachedPokemonDetails = async (id: number): Promise<PokemonDeta
 
     // Extract English flavor text
     const englishFlavorText = species.flavor_text_entries
-      ?.find((entry: any) => entry.language.name === 'en')?.flavor_text
+      ?.find((entry: { language: { name: string }; flavor_text: string }) => entry.language.name === 'en')?.flavor_text
       ?.replace(/\f/g, ' ')
       ?.replace(/\n/g, ' ') || '';
 
     // Format stats
-    const stats = pokemon.stats.reduce((acc: any, stat: any) => {
+    const stats = pokemon.stats.reduce((acc: Record<string, number>, stat: { stat: { name: string }; base_stat: number }) => {
       const statName = stat.stat.name.replace('-', '_');
       acc[statName] = stat.base_stat;
       return acc;
     }, {});
 
     // Fetch abilities with descriptions
-    const abilitiesPromises = pokemon.abilities.map(async (ability: any) => {
+    const abilitiesPromises = pokemon.abilities.map(async (ability: { ability: { name: string }; is_hidden: boolean }) => {
       try {
         const abilityData = await fetchCachedREST(`ability/${ability.ability.name}`);
-        
+
         // Find English description
         const englishEntry = abilityData.flavor_text_entries?.find(
-          (entry: any) => entry.language.name === 'en'
+          (entry: { language: { name: string }; flavor_text: string }) => entry.language.name === 'en'
         );
         
         return {
@@ -132,7 +132,7 @@ export const fetchCachedPokemonDetails = async (id: number): Promise<PokemonDeta
     const abilities = await Promise.all(abilitiesPromises);
 
     // Fetch evolution chain if available
-    const evolutionChain: any[] = [];
+    const evolutionChain: PokemonEvolution[] = [];
     if (species.evolution_chain?.url) {
       try {
         const evolutionResponse = await fetch(species.evolution_chain.url);
@@ -201,7 +201,7 @@ export const fetchCachedPokemonDetails = async (id: number): Promise<PokemonDeta
       name: pokemon.name,
       height: pokemon.height,
       weight: pokemon.weight,
-      types: pokemon.types.map((t: any) => t.type.name),
+      types: pokemon.types.map((t: { type: { name: string } }) => t.type.name),
       abilities,
       stats,
       sprites: {
@@ -211,9 +211,9 @@ export const fetchCachedPokemonDetails = async (id: number): Promise<PokemonDeta
         back_shiny: pokemon.sprites.back_shiny,
         official_artwork: pokemon.sprites.other?.['official-artwork']?.front_default
       },
-      moves: pokemon.moves.map((m: any) => {
+      moves: pokemon.moves.map((m: { move: { name: string }; version_group_details: { level_learned_at: number; move_learn_method: { name: string }; version_group: { url: string } }[] }) => {
         // Pick the latest version group details
-        const latestDetail = m.version_group_details.reduce((latest: any, current: any) => {
+        const latestDetail = m.version_group_details.reduce((latest, current) => {
           const latestId = parseInt(latest.version_group.url.split('/').filter(Boolean).pop() || '0');
           const currentId = parseInt(current.version_group.url.split('/').filter(Boolean).pop() || '0');
           return currentId > latestId ? current : latest;
@@ -224,8 +224,8 @@ export const fetchCachedPokemonDetails = async (id: number): Promise<PokemonDeta
           learned_at_level: latestDetail?.level_learned_at || 0,
           learn_method: latestDetail?.move_learn_method.name || 'unknown'
         };
-      }).filter((m: any) => ['level-up', 'machine', 'egg', 'tutor'].includes(m.learn_method))
-      .sort((a: any, b: any) => {
+      }).filter((m) => ['level-up', 'machine', 'egg', 'tutor'].includes(m.learn_method))
+      .sort((a, b) => {
         if (a.learn_method === 'level-up' && b.learn_method === 'level-up') {
           return a.learned_at_level - b.learned_at_level;
         }
@@ -234,7 +234,7 @@ export const fetchCachedPokemonDetails = async (id: number): Promise<PokemonDeta
         return a.name.localeCompare(b.name);
       }),
       flavor_text: englishFlavorText,
-      genera: species.genera?.find((g: any) => g.language.name === 'en')?.genus || '',
+      genera: species.genera?.find((g: { language: { name: string }; genus: string }) => g.language.name === 'en')?.genus || '',
       generation: species.generation?.name || 'unknown',
       evolution_chain: evolutionChain,
       base_experience: pokemon.base_experience,

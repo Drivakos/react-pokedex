@@ -74,8 +74,8 @@ const Profile: React.FC = () => {
     try {
       await signOut();
       navigate('/');
-    } catch (error: any) {
-      setStatus({ type: 'error', message: error.message || 'Failed to sign out' });
+    } catch (error: unknown) {
+      setStatus({ type: 'error', message: (error as Error).message || 'Failed to sign out' });
     }
   };
 
@@ -86,8 +86,8 @@ const Profile: React.FC = () => {
       const { error } = await updateProfile({ username: formData.username });
       if (error) throw error;
       setStatus({ type: 'success', message: 'Profile updated!' });
-    } catch (error: any) {
-      setStatus({ type: 'error', message: error.message || 'Failed to update profile' });
+    } catch (error: unknown) {
+      setStatus({ type: 'error', message: (error as Error).message || 'Failed to update profile' });
     }
   };
 

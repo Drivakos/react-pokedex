@@ -5,7 +5,7 @@ export interface Pokemon {
   weight: number;
   types: string[];
   moves: string[];
-  sprites: any;
+  sprites: PokemonSprites;
   generation: string;
   has_evolutions: boolean;
   is_default: boolean;
@@ -123,7 +123,7 @@ export interface RawPokemonData {
     };
   }>;
   sprites: Array<{
-    data: any;
+    data: string | null;
   }>;
   species: Species;
   forms: PokemonForm[];

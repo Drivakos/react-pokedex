@@ -31,7 +31,7 @@ export const PokemonMovesTab: React.FC<PokemonMovesTabProps> = ({ pokemonDetails
           ].map((cat) => (
             <button
               key={cat.id}
-              onClick={() => setSelectedMoveCategory(cat.id as any)}
+              onClick={() => setSelectedMoveCategory(cat.id as 'all' | 'level-up' | 'machine' | 'egg' | 'tutor')}
               className={`px-4 py-2 rounded-lg ${
                 selectedMoveCategory === cat.id
                   ? 'bg-blue-500 text-white'

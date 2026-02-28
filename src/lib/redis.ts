@@ -4,10 +4,12 @@
  */
 
 import { Redis } from '@upstash/redis';
+import type { Filters } from '../types/pokemon';
 
 // Polyfill for Node.js globals that Upstash might check
-if (typeof window !== 'undefined' && typeof (window as any).process === 'undefined') {
-  (window as any).process = { env: {} };
+type WindowWithProcess = Window & { process?: { env: Record<string, string> } };
+if (typeof window !== 'undefined' && typeof (window as WindowWithProcess).process === 'undefined') {
+  (window as WindowWithProcess).process = { env: {} };
 }
 
 // Initialize Upstash Redis client (only if credentials are provided)
@@ -108,7 +110,7 @@ export function generateSearchCacheKey(
   limit: number,
   offset: number,
   searchTerm: string,
-  filters: any
+  filters: Filters
 ): string {
   const filterKey = JSON.stringify({
     types: filters.types ? [...filters.types].sort() : [],

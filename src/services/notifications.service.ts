@@ -19,18 +19,18 @@ export interface Notification {
 }
 
 class NotificationsService {
-  private cache: Record<string, { data: any; timestamp: number }> = {};
+  private cache: Record<string, { data: unknown; timestamp: number }> = {};
   private CACHE_DURATION = 1 * 60 * 1000; // 1 minute
 
-  private getFromCache(key: string) {
+  private getFromCache<T>(key: string): T | null {
     const cached = this.cache[key];
     if (cached && Date.now() - cached.timestamp < this.CACHE_DURATION) {
-      return cached.data;
+      return cached.data as T;
     }
     return null;
   }
 
-  private setInCache(key: string, data: any) {
+  private setInCache(key: string, data: unknown) {
     this.cache[key] = { data, timestamp: Date.now() };
   }
 
@@ -49,7 +49,7 @@ class NotificationsService {
     if (!userId) return [];
 
     const cacheKey = `notifications_${userId}_${limit}_${offset}`;
-    const cached = this.getFromCache(cacheKey);
+    const cached = this.getFromCache<Notification[]>(cacheKey);
     if (cached) return cached;
 
     try {
@@ -151,7 +151,7 @@ class NotificationsService {
     title: string,
     message: string,
     url?: string,
-    data?: any
+    data?: Record<string, unknown>
   ): Promise<number | null> {
     try {
       const { data: result, error } = await supabase.rpc('create_notification', {
