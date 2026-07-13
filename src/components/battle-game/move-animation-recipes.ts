@@ -18,7 +18,52 @@ export interface MoveAnimationRecipe {
 
 const FX_ROOT = '/images/battle-fx';
 
+const FX_ASSET_NAMES = [
+  'bluefireball',
+  'bottombite',
+  'electroball',
+  'energyball',
+  'fireball',
+  'fist',
+  'flareball',
+  'foot',
+  'iceball',
+  'impact',
+  'leaf1',
+  'leaf2',
+  'leftslash',
+  'lightning',
+  'mistball',
+  'petal',
+  'poisonwisp',
+  'rightslash',
+  'rock1',
+  'rock2',
+  'rock3',
+  'shadowball',
+  'shine',
+  'sound',
+  'topbite',
+  'waterwisp',
+  'web',
+] as const;
+
 const asset = (name: string) => `${FX_ROOT}/${name}.png`;
+const fxAssets = FX_ASSET_NAMES.map(asset);
+let preloadedFxImages: HTMLImageElement[] | null = null;
+
+export function preloadMoveAnimationAssets(): void {
+  if (typeof Image === 'undefined' || preloadedFxImages) return;
+
+  preloadedFxImages = fxAssets.map(src => {
+    const image = new Image();
+    image.decoding = 'async';
+    image.src = src;
+    void image.decode().catch(() => undefined);
+    return image;
+  });
+}
+
 const recipe = (kind: MoveEffectKind, accent: string, ...assets: string[]): MoveAnimationRecipe => ({
   kind,
   accent,

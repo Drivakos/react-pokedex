@@ -23,6 +23,7 @@ export function MoveBattleEffect({ event }: { event: BattleVisualEvent }) {
           src={src}
           alt=""
           className={`move-fx-sprite move-fx-sprite-${index + 1}`}
+          decoding="async"
           draggable={false}
         />
       ))}

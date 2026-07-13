@@ -132,7 +132,8 @@
   --move-fx-target-x: 74%;
   position: absolute;
   inset: 0;
-  filter: drop-shadow(0 0 9px color-mix(in srgb, var(--move-fx-accent), transparent 20%));
+  contain: layout paint style;
+  isolation: isolate;
 }
 
 .move-fx-target-player { --move-fx-target-x: 26%; }
@@ -146,7 +147,9 @@
   height: 92px;
   object-fit: contain;
   image-rendering: auto;
+  filter: drop-shadow(0 0 9px color-mix(in srgb, var(--move-fx-accent), transparent 20%));
   user-select: none;
+  will-change: left, top, transform, opacity;
 }
 
 .move-fx-projectile .move-fx-sprite-1 {
@@ -249,6 +252,7 @@
   background: color-mix(in srgb, var(--move-fx-accent), transparent 55%);
   box-shadow: 0 0 35px var(--move-fx-accent), inset 0 0 24px white;
   animation: move-fx-glow 760ms ease-out forwards;
+  will-change: transform, opacity;
 }
 
 .move-fx-particle {
@@ -265,19 +269,22 @@
   background: var(--move-fx-accent);
   box-shadow: 0 0 12px var(--move-fx-accent);
   animation: move-fx-particle 650ms 170ms ease-out forwards;
+  will-change: transform, opacity;
 }
 
 .move-fx-particle-2 { --particle-x: -62px; --particle-y: -38px; animation-delay: 210ms; }
 .move-fx-particle-3 { --particle-x: 32px; --particle-y: 64px; animation-delay: 250ms; }
 
-.battle-lunge-right { animation: battle-lunge-right 760ms cubic-bezier(.2,.8,.2,1); }
-.battle-lunge-left { animation: battle-lunge-left 760ms cubic-bezier(.2,.8,.2,1); }
-.battle-hit { animation: battle-hit 540ms ease-out; }
-.battle-heal { animation: battle-heal 540ms ease-out; }
-.battle-faint { animation: battle-faint 720ms ease-in forwards; }
-.battle-enter { animation: battle-enter 440ms cubic-bezier(.2,.9,.25,1); }
-.battle-impact { animation: battle-impact 540ms ease-out forwards; }
-.battle-event-label { animation: battle-event-label 780ms ease-out forwards; }
+.battle-effects-layer { contain: layout paint style; }
+.battle-health-fill { transition: transform 460ms cubic-bezier(.2,.8,.2,1); will-change: transform; }
+.battle-lunge-right { animation: battle-lunge-right 760ms cubic-bezier(.2,.8,.2,1); will-change: transform; }
+.battle-lunge-left { animation: battle-lunge-left 760ms cubic-bezier(.2,.8,.2,1); will-change: transform; }
+.battle-hit { animation: battle-hit 540ms ease-out; will-change: filter, transform; }
+.battle-heal { animation: battle-heal 540ms ease-out; will-change: filter, transform; }
+.battle-faint { animation: battle-faint 720ms ease-in forwards; will-change: filter, opacity, transform; }
+.battle-enter { animation: battle-enter 440ms cubic-bezier(.2,.9,.25,1); will-change: filter, opacity, transform; }
+.battle-impact { animation: battle-impact 540ms ease-out forwards; will-change: opacity, transform; }
+.battle-event-label { animation: battle-event-label 780ms ease-out forwards; will-change: opacity, transform; }
 
 @media (prefers-reduced-motion: reduce) {
   .battle-lunge-right,

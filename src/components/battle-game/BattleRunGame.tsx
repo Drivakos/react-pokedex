@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   ArrowLeftRight,
   Bot,
@@ -23,6 +23,7 @@ import type { ActiveBattlePokemon, BattleSide, BattleVisualEvent, OpponentTraine
 import { BattlePokemonImage } from './BattlePokemonImage';
 import { MoveBattleEffect } from './MoveBattleEffect';
 import { TrainerImage } from './TrainerImage';
+import { preloadMoveAnimationAssets } from './move-animation-recipes';
 
 const typeClasses: Record<string, string> = {
   Bug: 'bg-lime-600', Dark: 'bg-slate-700', Dragon: 'bg-indigo-600', Electric: 'bg-yellow-500',
@@ -152,39 +153,8 @@ function HealthPanel({ pokemon, opponent = false }: {
   pokemon: ActiveBattlePokemon | null;
   opponent?: boolean;
 }) {
-  const targetHp = pokemon?.hp ?? 0;
-  const identity = pokemon?.species ?? 'empty';
-  const [displayedHp, setDisplayedHp] = useState(targetHp);
-  const displayedHpRef = useRef(targetHp);
-  const identityRef = useRef(identity);
-
-  useEffect(() => {
-    if (identityRef.current !== identity) {
-      identityRef.current = identity;
-      displayedHpRef.current = targetHp;
-      setDisplayedHp(targetHp);
-      return undefined;
-    }
-
-    const from = displayedHpRef.current;
-    if (from === targetHp) return undefined;
-    const startedAt = performance.now();
-    const duration = 460;
-    let frame = 0;
-    const update = (now: number) => {
-      const progress = Math.min(1, (now - startedAt) / duration);
-      const eased = 1 - ((1 - progress) ** 3);
-      const value = Math.round(from + (targetHp - from) * eased);
-      displayedHpRef.current = value;
-      setDisplayedHp(value);
-      if (progress < 1) frame = window.requestAnimationFrame(update);
-    };
-    frame = window.requestAnimationFrame(update);
-    return () => window.cancelAnimationFrame(frame);
-  }, [identity, targetHp]);
-
   if (!pokemon) return <div className="h-24 animate-pulse rounded-2xl bg-white/60" />;
-  const percentage = pokemon.maxhp > 0 ? Math.max(0, Math.round((displayedHp / pokemon.maxhp) * 100)) : 0;
+  const percentage = pokemon.maxhp > 0 ? Math.max(0, Math.round((pokemon.hp / pokemon.maxhp) * 100)) : 0;
   const barColor = percentage > 50 ? 'bg-emerald-500' : percentage > 20 ? 'bg-amber-500' : 'bg-red-500';
 
   return (
@@ -196,12 +166,15 @@ function HealthPanel({ pokemon, opponent = false }: {
       <div className="flex items-center gap-2">
         <span className="text-[10px] font-black text-slate-400">HP</span>
         <div className="h-3 flex-1 overflow-hidden rounded-full bg-slate-200 ring-1 ring-slate-300">
-          <div className={`h-full rounded-full ${barColor}`} style={{ width: `${percentage}%` }} />
+          <div
+            className={`battle-health-fill h-full w-full origin-left rounded-full ${barColor}`}
+            style={{ transform: `scaleX(${percentage / 100})` }}
+          />
         </div>
       </div>
       <div className="mt-2 flex items-center justify-between text-[11px] font-bold text-slate-500">
         <span className={pokemon.status ? 'rounded bg-amber-100 px-1.5 py-0.5 text-amber-800' : ''}>{pokemon.status ? pokemon.status.toUpperCase() : 'READY'}</span>
-        <span>{displayedHp}/{pokemon.maxhp}</span>
+        <span>{pokemon.hp}/{pokemon.maxhp}</span>
       </div>
     </div>
   );
@@ -212,7 +185,7 @@ function BattleEffect({ event }: { event: BattleVisualEvent | null }) {
   const targetPosition = event.target === 'player' ? 'left-[19%]' : 'right-[19%]';
 
   return (
-    <div className="pointer-events-none absolute inset-0 z-20 overflow-hidden" aria-live="polite">
+    <div className="battle-effects-layer pointer-events-none absolute inset-0 z-20 overflow-hidden" aria-live="polite">
       {event.kind === 'move' && (
         <>
           <MoveBattleEffect event={event} />
@@ -289,7 +262,7 @@ function BattleArena() {
 
   return (
     <div className="mx-auto grid w-full max-w-7xl gap-5 xl:grid-cols-[minmax(0,1fr)_340px]">
-      <section className="overflow-hidden rounded-[2rem] border border-white/70 bg-white/80 shadow-2xl backdrop-blur">
+      <section className="overflow-hidden rounded-[2rem] border border-white/70 bg-white/90 shadow-2xl">
         <div className="relative min-h-[450px] overflow-hidden bg-gradient-to-b from-sky-300 via-sky-100 to-emerald-300 p-4 sm:p-7">
           <div className="pointer-events-none absolute left-[12%] top-12 h-8 w-28 rounded-full bg-white/70 blur-[1px]" />
           <div className="pointer-events-none absolute right-[20%] top-24 h-5 w-20 rounded-full bg-white/60 blur-[1px]" />
@@ -298,8 +271,8 @@ function BattleArena() {
           <div className="pointer-events-none absolute bottom-40 right-[5%] h-20 w-[38%] rounded-[50%] bg-emerald-900/20 blur-sm" />
 
           <div className="relative z-10 grid grid-cols-2 gap-3 sm:gap-6">
-            <HealthPanel pokemon={displaySnapshot?.player ?? null} />
-            <HealthPanel pokemon={displaySnapshot?.opponent ?? null} opponent />
+            <HealthPanel key={`player-${displaySnapshot?.player?.species ?? 'empty'}`} pokemon={displaySnapshot?.player ?? null} />
+            <HealthPanel key={`opponent-${displaySnapshot?.opponent?.species ?? 'empty'}`} pokemon={displaySnapshot?.opponent ?? null} opponent />
           </div>
 
           <div className="relative z-[5] mt-14 grid grid-cols-2 items-end gap-4 sm:mt-10">
@@ -540,6 +513,7 @@ export default function BattleRunGame() {
   useEffect(() => {
     if (phase === 'starter-draft' || phase === 'reward-draft') {
       prewarmShowdownBattleWorker();
+      preloadMoveAnimationAssets();
     }
   }, [phase]);
 
