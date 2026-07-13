@@ -4,6 +4,7 @@ import type {
   ShowdownBattleCallbacks,
 } from '../types/battle-worker';
 import type { RunPokemon } from '../types/battle-run';
+import { compactBattleWorkerEvents } from '../utils/battle-worker-events';
 
 let prewarmedWorker: Worker | null = null;
 
@@ -100,7 +101,7 @@ export class ShowdownBattleWorkerSession {
 
   private flushEvents(): void {
     this.flushFrame = null;
-    const events = this.pendingEvents;
+    const events = compactBattleWorkerEvents(this.pendingEvents);
     this.pendingEvents = [];
 
     for (const event of events) {

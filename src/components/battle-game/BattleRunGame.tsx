@@ -199,8 +199,8 @@ function BattleEffect({ event }: { event: BattleVisualEvent | null }) {
           <span className="absolute inset-3 rounded-full border-4 border-white/80" />
         </div>
       )}
-      {event.label && event.kind !== 'move' && event.kind !== 'damage' && event.kind !== 'heal' && (
-        <div className={`battle-event-label absolute top-[42%] -translate-x-1/2 rounded-lg px-4 py-2 text-sm font-black shadow-xl ${event.target === 'player' || event.actor === 'player' ? 'left-[27%]' : 'left-[73%]'} ${event.tone === 'positive' ? 'bg-emerald-600 text-white' : event.tone === 'negative' ? 'bg-red-600 text-white' : 'bg-slate-950 text-white'}`}>
+      {event.label && event.kind !== 'move' && (
+        <div className={`battle-event-label absolute top-[42%] -translate-x-1/2 rounded-lg px-4 py-2 text-sm font-black shadow-xl ${event.kind === 'damage' || event.kind === 'heal' ? 'battle-event-label-fast' : ''} ${event.target === 'player' || event.actor === 'player' ? 'left-[27%]' : 'left-[73%]'} ${event.tone === 'positive' ? 'bg-emerald-600 text-white' : event.tone === 'negative' ? 'bg-red-600 text-white' : 'bg-slate-950 text-white'}`}>
           {event.label}
         </div>
       )}

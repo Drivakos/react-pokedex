@@ -285,6 +285,7 @@
 .battle-enter { animation: battle-enter 440ms cubic-bezier(.2,.9,.25,1); will-change: filter, opacity, transform; }
 .battle-impact { animation: battle-impact 540ms ease-out forwards; will-change: opacity, transform; }
 .battle-event-label { animation: battle-event-label 780ms ease-out forwards; will-change: opacity, transform; }
+.battle-event-label-fast { animation-duration: 540ms; }
 
 @media (prefers-reduced-motion: reduce) {
   .battle-lunge-right,
