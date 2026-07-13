@@ -50,16 +50,70 @@
   100% { transform: translateY(0) scale(1); filter: brightness(1); }
 }
 
-@keyframes battle-projectile-right {
-  0% { transform: translate(0, 20px) scale(.25); opacity: 0; }
-  20% { opacity: 1; }
-  100% { transform: translate(380px, -50px) scale(1.35); opacity: 0; }
+@keyframes move-fx-travel-right {
+  0% { left: 27%; top: 66%; transform: translate(-50%, -50%) scale(.2) rotate(-18deg); opacity: 0; }
+  16% { opacity: 1; }
+  78% { left: 72%; top: 55%; transform: translate(-50%, -50%) scale(1.05) rotate(12deg); opacity: 1; }
+  100% { left: 74%; top: 55%; transform: translate(-50%, -50%) scale(1.5) rotate(18deg); opacity: 0; }
 }
 
-@keyframes battle-projectile-left {
-  0% { transform: translate(0, -20px) scale(.25); opacity: 0; }
-  20% { opacity: 1; }
-  100% { transform: translate(-380px, 50px) scale(1.35); opacity: 0; }
+@keyframes move-fx-travel-left {
+  0% { left: 73%; top: 54%; transform: translate(-50%, -50%) scale(.2) rotate(18deg); opacity: 0; }
+  16% { opacity: 1; }
+  78% { left: 28%; top: 65%; transform: translate(-50%, -50%) scale(1.05) rotate(-12deg); opacity: 1; }
+  100% { left: 26%; top: 65%; transform: translate(-50%, -50%) scale(1.5) rotate(-18deg); opacity: 0; }
+}
+
+@keyframes move-fx-strike {
+  0% { transform: translate(-50%, -50%) scale(2.2) rotate(-22deg); opacity: 0; }
+  24% { transform: translate(-50%, -50%) scale(1) rotate(4deg); opacity: 1; }
+  70% { transform: translate(-50%, -50%) scale(1.12) rotate(-4deg); opacity: .95; }
+  100% { transform: translate(-50%, -50%) scale(1.5) rotate(8deg); opacity: 0; }
+}
+
+@keyframes move-fx-lightning {
+  0% { transform: translate(-50%, -85%) scaleY(.15); opacity: 0; }
+  18% { transform: translate(-50%, -46%) scaleY(1); opacity: 1; }
+  30%, 48% { filter: brightness(2.2) drop-shadow(0 0 16px var(--move-fx-accent)); opacity: .65; }
+  40%, 62% { filter: brightness(1); opacity: 1; }
+  100% { transform: translate(-50%, -42%) scaleY(1.08); opacity: 0; }
+}
+
+@keyframes move-fx-bite-top {
+  0% { transform: translate(-50%, -150%) scale(1.35); opacity: 0; }
+  28%, 62% { transform: translate(-50%, -68%) scale(1); opacity: 1; }
+  100% { transform: translate(-50%, -42%) scale(.9); opacity: 0; }
+}
+
+@keyframes move-fx-bite-bottom {
+  0% { transform: translate(-50%, 55%) scale(1.35); opacity: 0; }
+  28%, 62% { transform: translate(-50%, -22%) scale(1); opacity: 1; }
+  100% { transform: translate(-50%, -48%) scale(.9); opacity: 0; }
+}
+
+@keyframes move-fx-scatter {
+  0% { transform: translate(-50%, -50%) translate(var(--scatter-from-x), var(--scatter-from-y)) scale(.25) rotate(0); opacity: 0; }
+  22% { opacity: 1; }
+  72% { transform: translate(-50%, -50%) translate(var(--scatter-to-x), var(--scatter-to-y)) scale(1.2) rotate(260deg); opacity: 1; }
+  100% { transform: translate(-50%, -50%) translate(var(--scatter-to-x), calc(var(--scatter-to-y) + 24px)) scale(.85) rotate(340deg); opacity: 0; }
+}
+
+@keyframes move-fx-sound {
+  0% { transform: translate(-50%, -50%) scale(.15); opacity: 0; }
+  28% { opacity: .9; }
+  100% { transform: translate(-50%, -50%) scale(2.15); opacity: 0; }
+}
+
+@keyframes move-fx-glow {
+  0% { transform: translate(-50%, -50%) scale(.1); opacity: 0; }
+  45% { transform: translate(-50%, -50%) scale(1); opacity: .7; }
+  100% { transform: translate(-50%, -50%) scale(1.8); opacity: 0; }
+}
+
+@keyframes move-fx-particle {
+  0% { transform: translate(-50%, -50%) scale(.2); opacity: 0; }
+  42% { opacity: 1; }
+  100% { transform: translate(calc(-50% + var(--particle-x)), calc(-50% + var(--particle-y))) scale(.1); opacity: 0; }
 }
 
 @keyframes battle-impact {
@@ -74,82 +128,156 @@
   100% { transform: translate(-50%, -8px) scale(.96); opacity: 0; }
 }
 
-@keyframes battle-effect-particle {
-  0% { transform: translate(0, 0) scale(.2); opacity: 0; }
-  30% { opacity: .95; }
-  100% { transform: translate(var(--particle-x), var(--particle-y)) scale(1); opacity: 0; }
+.move-fx {
+  --move-fx-target-x: 74%;
+  position: absolute;
+  inset: 0;
+  filter: drop-shadow(0 0 9px color-mix(in srgb, var(--move-fx-accent), transparent 20%));
 }
 
-.battle-effect-core {
+.move-fx-target-player { --move-fx-target-x: 26%; }
+.move-fx-target-opponent { --move-fx-target-x: 74%; }
+
+.move-fx-sprite {
   position: absolute;
-  left: 50%;
-  top: 50%;
+  z-index: 2;
   display: block;
-  background: var(--battle-effect-color);
-  box-shadow: 0 0 12px white, 0 0 30px var(--battle-effect-color);
+  width: 92px;
+  height: 92px;
+  object-fit: contain;
+  image-rendering: auto;
+  user-select: none;
 }
 
-.battle-effect-orb {
-  width: 42px;
-  height: 42px;
-  border: 4px solid rgb(255 255 255 / 75%);
-  border-radius: 999px;
-  transform: translate(-50%, -50%);
+.move-fx-projectile .move-fx-sprite-1 {
+  animation: move-fx-travel-right 760ms cubic-bezier(.2,.75,.3,1) forwards;
 }
 
-.battle-effect-beam {
+.move-fx-projectile.move-fx-left .move-fx-sprite-1 {
+  animation-name: move-fx-travel-left;
+}
+
+.move-fx-impact .move-fx-sprite,
+.move-fx-slash .move-fx-sprite,
+.move-fx-web .move-fx-sprite {
+  left: var(--move-fx-target-x);
+  top: 57%;
+  width: 128px;
+  height: 128px;
+  animation: move-fx-strike 720ms cubic-bezier(.18,.8,.25,1) forwards;
+}
+
+.move-fx-impact .move-fx-sprite-2,
+.move-fx-slash .move-fx-sprite-2 {
+  animation-delay: 110ms;
+  transform: scaleX(-1);
+}
+
+.move-fx-lightning .move-fx-sprite {
+  left: var(--move-fx-target-x);
+  top: 51%;
+  width: 120px;
+  height: 260px;
+  transform-origin: center bottom;
+  animation: move-fx-lightning 740ms ease-out forwards;
+}
+
+.move-fx-lightning .move-fx-sprite-1:not(:last-of-type) {
+  top: 58%;
+  width: 112px;
+  height: 112px;
+  animation: move-fx-strike 700ms ease-out forwards;
+}
+
+.move-fx-lightning .move-fx-sprite-2 { animation-delay: 60ms; }
+
+.move-fx-bite .move-fx-sprite {
+  left: var(--move-fx-target-x);
+  top: 57%;
+  width: 132px;
+  height: 78px;
+}
+
+.move-fx-bite .move-fx-sprite-1 { animation: move-fx-bite-top 720ms ease-in-out forwards; }
+.move-fx-bite .move-fx-sprite-2 { animation: move-fx-bite-bottom 720ms ease-in-out forwards; }
+
+.move-fx-scatter .move-fx-sprite {
+  --scatter-from-x: -90px;
+  --scatter-from-y: -70px;
+  --scatter-to-x: 14px;
+  --scatter-to-y: 0px;
+  left: var(--move-fx-target-x);
+  top: 58%;
   width: 66px;
-  height: 14px;
-  border: 3px solid rgb(255 255 255 / 85%);
-  border-radius: 999px;
-  transform: translate(-50%, -50%) rotate(-12deg);
+  height: 66px;
+  animation: move-fx-scatter 760ms ease-out forwards;
 }
 
-.battle-effect-slash {
-  width: 70px;
-  height: 10px;
-  border-radius: 999px 0 999px 0;
-  transform: translate(-50%, -50%) rotate(-32deg);
-  box-shadow: 0 0 8px white, 0 0 24px var(--battle-effect-color), 0 14px 0 -3px rgb(255 255 255 / 70%);
+.move-fx-scatter .move-fx-sprite-2 {
+  --scatter-from-x: 75px;
+  --scatter-from-y: -100px;
+  --scatter-to-x: -22px;
+  --scatter-to-y: 8px;
+  animation-delay: 80ms;
 }
 
-.battle-effect-aura {
-  width: 50px;
-  height: 50px;
-  border: 7px double var(--battle-effect-color);
-  border-radius: 45% 55% 48% 52%;
-  background: rgb(255 255 255 / 18%);
-  transform: translate(-50%, -50%) rotate(18deg);
+.move-fx-scatter .move-fx-sprite-3 {
+  --scatter-from-x: -30px;
+  --scatter-from-y: -130px;
+  --scatter-to-x: 34px;
+  --scatter-to-y: 15px;
+  animation-delay: 145ms;
 }
 
-.battle-effect-particle {
-  --particle-x: 24px;
-  --particle-y: -20px;
+.move-fx-sound .move-fx-sprite {
+  left: var(--move-fx-target-x);
+  top: 57%;
+  width: 148px;
+  height: 148px;
+  animation: move-fx-sound 760ms ease-out forwards;
+}
+
+.move-fx-glow {
   position: absolute;
-  left: 50%;
-  top: 50%;
-  width: 8px;
-  height: 8px;
+  left: var(--move-fx-target-x);
+  top: 57%;
+  z-index: 1;
+  width: 110px;
+  height: 110px;
+  border: 5px solid rgb(255 255 255 / 70%);
   border-radius: 999px;
-  background: var(--battle-effect-color);
-  box-shadow: 0 0 8px var(--battle-effect-color);
-  animation: battle-effect-particle 480ms ease-out forwards;
+  background: color-mix(in srgb, var(--move-fx-accent), transparent 55%);
+  box-shadow: 0 0 35px var(--move-fx-accent), inset 0 0 24px white;
+  animation: move-fx-glow 760ms ease-out forwards;
 }
 
-.battle-effect-particle:nth-child(3) { --particle-x: -24px; --particle-y: -15px; }
-.battle-effect-particle:nth-child(4) { --particle-x: 18px; --particle-y: 25px; }
-.battle-effect-particle:nth-child(5) { --particle-x: -20px; --particle-y: 22px; }
+.move-fx-particle {
+  --particle-x: 70px;
+  --particle-y: -55px;
+  position: absolute;
+  left: var(--move-fx-target-x);
+  top: 57%;
+  z-index: 3;
+  width: 10px;
+  height: 10px;
+  border: 2px solid white;
+  border-radius: 999px;
+  background: var(--move-fx-accent);
+  box-shadow: 0 0 12px var(--move-fx-accent);
+  animation: move-fx-particle 650ms 170ms ease-out forwards;
+}
 
-.battle-lunge-right { animation: battle-lunge-right 620ms cubic-bezier(.2,.8,.2,1); }
-.battle-lunge-left { animation: battle-lunge-left 620ms cubic-bezier(.2,.8,.2,1); }
+.move-fx-particle-2 { --particle-x: -62px; --particle-y: -38px; animation-delay: 210ms; }
+.move-fx-particle-3 { --particle-x: 32px; --particle-y: 64px; animation-delay: 250ms; }
+
+.battle-lunge-right { animation: battle-lunge-right 760ms cubic-bezier(.2,.8,.2,1); }
+.battle-lunge-left { animation: battle-lunge-left 760ms cubic-bezier(.2,.8,.2,1); }
 .battle-hit { animation: battle-hit 540ms ease-out; }
 .battle-heal { animation: battle-heal 540ms ease-out; }
 .battle-faint { animation: battle-faint 720ms ease-in forwards; }
 .battle-enter { animation: battle-enter 440ms cubic-bezier(.2,.9,.25,1); }
-.battle-projectile-right { animation: battle-projectile-right 620ms ease-in forwards; }
-.battle-projectile-left { animation: battle-projectile-left 620ms ease-in forwards; }
 .battle-impact { animation: battle-impact 540ms ease-out forwards; }
-.battle-event-label { animation: battle-event-label 620ms ease-out forwards; }
+.battle-event-label { animation: battle-event-label 780ms ease-out forwards; }
 
 @media (prefers-reduced-motion: reduce) {
   .battle-lunge-right,
@@ -158,11 +286,11 @@
   .battle-heal,
   .battle-faint,
   .battle-enter,
-  .battle-projectile-right,
-  .battle-projectile-left,
   .battle-impact,
   .battle-event-label,
-  .battle-effect-particle {
+  .move-fx-sprite,
+  .move-fx-glow,
+  .move-fx-particle {
     animation-duration: 1ms;
   }
 }

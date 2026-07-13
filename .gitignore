@@ -92,6 +92,8 @@ public/*
 public/images/*
 !public/images/trainers/
 !public/images/trainers/**
+!public/images/battle-fx/
+!public/images/battle-fx/**
 
 
 

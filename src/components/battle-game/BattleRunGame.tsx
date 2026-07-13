@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type CSSProperties } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   ArrowLeftRight,
   Bot,
@@ -17,6 +17,7 @@ import {
 import { useBattleRunStore } from '../../store/battleRunStore';
 import type { ActiveBattlePokemon, BattleSide, BattleVisualEvent, OpponentTrainer, RunPokemon } from '../../types/battle-run';
 import { BattlePokemonImage } from './BattlePokemonImage';
+import { MoveBattleEffect } from './MoveBattleEffect';
 import { TrainerImage } from './TrainerImage';
 
 const typeClasses: Record<string, string> = {
@@ -25,13 +26,6 @@ const typeClasses: Record<string, string> = {
   Ghost: 'bg-purple-700', Grass: 'bg-green-600', Ground: 'bg-amber-700', Ice: 'bg-cyan-500',
   Normal: 'bg-stone-400', Poison: 'bg-violet-600', Psychic: 'bg-pink-600', Rock: 'bg-yellow-800',
   Steel: 'bg-slate-500', Water: 'bg-blue-600',
-};
-
-const typeColors: Record<string, string> = {
-  Bug: '#84cc16', Dark: '#334155', Dragon: '#6366f1', Electric: '#facc15', Fairy: '#f472b6',
-  Fighting: '#b91c1c', Fire: '#f97316', Flying: '#38bdf8', Ghost: '#7e22ce', Grass: '#16a34a',
-  Ground: '#a16207', Ice: '#22d3ee', Normal: '#a8a29e', Poison: '#9333ea', Psychic: '#db2777',
-  Rock: '#854d0e', Steel: '#64748b', Water: '#2563eb',
 };
 
 function TypeBadges({ types, compact = false }: { types: string[]; compact?: boolean }) {
@@ -212,26 +206,12 @@ function HealthPanel({ pokemon, opponent = false }: {
 function BattleEffect({ event }: { event: BattleVisualEvent | null }) {
   if (!event) return null;
   const targetPosition = event.target === 'player' ? 'left-[19%]' : 'right-[19%]';
-  const effectColor = typeColors[event.moveType ?? ''] ?? '#ffffff';
-  const effectMode = event.moveCategory === 'Physical'
-    ? 'slash'
-    : ['Electric', 'Psychic', 'Ice', 'Dragon'].includes(event.moveType ?? '')
-      ? 'beam'
-      : ['Ghost', 'Dark', 'Fairy', 'Poison'].includes(event.moveType ?? '')
-        ? 'aura'
-        : 'orb';
-  const effectStyle = { '--battle-effect-color': effectColor } as CSSProperties;
 
   return (
     <div className="pointer-events-none absolute inset-0 z-20 overflow-hidden" aria-live="polite">
       {event.kind === 'move' && (
         <>
-          <div className={`battle-projectile absolute top-[56%] h-12 w-12 ${event.actor === 'player' ? 'battle-projectile-right left-[28%]' : 'battle-projectile-left right-[28%]'}`} style={effectStyle}>
-            <span className={`battle-effect-core battle-effect-${effectMode}`} />
-            {Array.from({ length: 4 }, (_, index) => (
-              <span key={index} className="battle-effect-particle" style={{ animationDelay: `${index * 70}ms` }} />
-            ))}
-          </div>
+          <MoveBattleEffect event={event} />
           <div className="battle-event-label absolute left-1/2 top-[42%] -translate-x-1/2 rounded-lg bg-slate-950/90 px-4 py-2 text-sm font-black text-white shadow-xl">
             {event.label}
           </div>
@@ -286,7 +266,7 @@ function BattleArena() {
     setActiveVisual(event);
     setDisplaySnapshot(event.snapshot);
     const duration = event.kind === 'move'
-      ? 620
+      ? 780
       : event.kind === 'faint'
         ? 720
         : event.kind === 'damage' || event.kind === 'heal'
