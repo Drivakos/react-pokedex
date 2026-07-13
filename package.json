@@ -4,6 +4,7 @@
   "version": "1.4.0",
   "type": "module",
   "scripts": {
+    "generate:battle-catalog": "node scripts/generate-battle-catalog.mjs",
     "dev": "vite",
     "build": "tsc && vite build",
     "build:prod": "node scripts/build-prod.js",

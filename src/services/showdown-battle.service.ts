@@ -12,15 +12,7 @@ import type {
   BattleVisualEvent,
   RunPokemon,
 } from '../types/battle-run';
-
-interface ShowdownBattleCallbacks {
-  onSnapshot: (snapshot: BattleSnapshot) => void;
-  onDecision: (decision: BattleDecision) => void;
-  onLog: (message: string) => void;
-  onVisual: (event: BattleVisualEvent) => void;
-  onEnd: (result: BattleResult) => void;
-  onError: (message: string) => void;
-}
+import type { ShowdownBattleCallbacks } from '../types/battle-worker';
 
 const statTable = (value: number) => ({
   hp: value,

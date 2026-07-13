@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { createDraftChoices, createEnemyParty } from '../services/battle-content.service';
-import { ShowdownBattleSession } from '../services/showdown-battle.service';
+import { ShowdownBattleWorkerSession } from '../services/showdown-battle-worker.service';
 import { pickOpponentTrainer } from '../components/battle-game/trainer-profiles';
 import type {
   BattleDecision,
@@ -19,7 +19,14 @@ import {
 } from '../utils/battle-run-rules';
 
 const emptyDecision: BattleDecision = { kind: 'wait', moves: [], switches: [] };
-let session: ShowdownBattleSession | null = null;
+interface BattleSession {
+  start: () => void;
+  chooseMove: (slot: number) => void;
+  chooseSwitch: (slot: number) => void;
+  dispose: () => void;
+}
+
+let session: BattleSession | null = null;
 let random: (() => number) | null = null;
 let pendingBattleResult: BattleResult | null = null;
 
@@ -98,7 +105,8 @@ export const useBattleRunStore = create<BattleRunStore>((set, get) => {
       error: null,
     });
 
-    const battleSession = new ShowdownBattleSession(state.party, enemyParty, {
+    session?.dispose();
+    const battleSession = new ShowdownBattleWorkerSession(state.party, enemyParty, {
       onSnapshot: snapshot => set({ snapshot, phase: 'battle' }),
       onDecision: decision => set({ decision, phase: 'battle' }),
       onLog: message => set(current => ({
@@ -109,7 +117,7 @@ export const useBattleRunStore = create<BattleRunStore>((set, get) => {
       })),
       onError: message => set({ error: message, phase: 'battle' }),
       onEnd: result => {
-        session = null;
+        if (session === battleSession) session = null;
         pendingBattleResult = result;
         if (get().visualEvents.length === 0) finishBattle(result);
       },
@@ -148,6 +156,7 @@ export const useBattleRunStore = create<BattleRunStore>((set, get) => {
     startRun: () => {
       const seed = newSeed();
       random = createSeededRandom(seed);
+      session?.dispose();
       session = null;
       pendingBattleResult = null;
       set({

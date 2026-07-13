@@ -477,7 +477,7 @@ function VersusScreen() {
           ))}
         </div>
         <div className="mt-6 flex items-center justify-center gap-2 text-sm font-black text-slate-400">
-          <Loader2 className="h-5 w-5 animate-spin text-red-500" /> Entering the arena…
+          <Loader2 className="h-5 w-5 animate-spin text-red-500" /> Loading the battle engine…
         </div>
       </div>
     </section>
