@@ -15,6 +15,10 @@ import {
   Zap,
 } from 'lucide-react';
 import { useBattleRunStore } from '../../store/battleRunStore';
+import {
+  disposePrewarmedShowdownBattleWorker,
+  prewarmShowdownBattleWorker,
+} from '../../services/showdown-battle-worker.service';
 import type { ActiveBattlePokemon, BattleSide, BattleVisualEvent, OpponentTrainer, RunPokemon } from '../../types/battle-run';
 import { BattlePokemonImage } from './BattlePokemonImage';
 import { MoveBattleEffect } from './MoveBattleEffect';
@@ -532,6 +536,16 @@ export default function BattleRunGame() {
   useEffect(() => {
     if (!seed) startRun();
   }, [seed, startRun]);
+
+  useEffect(() => {
+    if (phase === 'starter-draft' || phase === 'reward-draft') {
+      prewarmShowdownBattleWorker();
+    }
+  }, [phase]);
+
+  useEffect(() => () => {
+    disposePrewarmedShowdownBattleWorker();
+  }, []);
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'auto' });

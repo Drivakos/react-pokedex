@@ -5,6 +5,38 @@ import type {
 } from '../types/battle-worker';
 import type { RunPokemon } from '../types/battle-run';
 
+let prewarmedWorker: Worker | null = null;
+
+function createBattleWorker(): Worker {
+  return new Worker(new URL('../workers/showdown-battle.worker.ts', import.meta.url), {
+    type: 'module',
+    name: 'battle-run-simulator',
+  });
+}
+
+function acquireBattleWorker(): Worker {
+  const worker = prewarmedWorker ?? createBattleWorker();
+  prewarmedWorker = null;
+  return worker;
+}
+
+export function prewarmShowdownBattleWorker(): void {
+  if (typeof Worker === 'undefined' || prewarmedWorker) return;
+
+  const worker = createBattleWorker();
+  prewarmedWorker = worker;
+  worker.onerror = () => {
+    if (prewarmedWorker !== worker) return;
+    worker.terminate();
+    prewarmedWorker = null;
+  };
+}
+
+export function disposePrewarmedShowdownBattleWorker(): void {
+  prewarmedWorker?.terminate();
+  prewarmedWorker = null;
+}
+
 export class ShowdownBattleWorkerSession {
   private readonly worker: Worker;
   private readonly callbacks: ShowdownBattleCallbacks;
@@ -18,10 +50,7 @@ export class ShowdownBattleWorkerSession {
     callbacks: ShowdownBattleCallbacks,
   ) {
     this.callbacks = callbacks;
-    this.worker = new Worker(new URL('../workers/showdown-battle.worker.ts', import.meta.url), {
-      type: 'module',
-      name: 'battle-run-simulator',
-    });
+    this.worker = acquireBattleWorker();
     this.worker.onmessage = ({ data }: MessageEvent<BattleWorkerEvent>) => this.handleEvent(data);
     this.worker.onerror = event => {
       this.callbacks.onError(event.message || 'The battle engine failed to load.');
