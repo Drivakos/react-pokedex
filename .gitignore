@@ -88,6 +88,11 @@ public/*
 
 !public/data/pokemon-to-tcg-cards.json
 
+!public/images/
+public/images/*
+!public/images/trainers/
+!public/images/trainers/**
+
 
 
 

@@ -108,6 +108,13 @@ const Navigation: React.FC = () => {
                   >
                     Pokemon Grid Challenge
                   </Link>
+                  <Link
+                    to="/battle-run"
+                    className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center"
+                    onClick={() => setGamesMenuOpen(false)}
+                  >
+                    Battle Run
+                  </Link>
                   <div className="border-t border-gray-200 my-1"></div>
                   <span className="block px-4 py-2 text-xs text-gray-500 italic">
                     More games coming soon!
@@ -176,6 +183,13 @@ const Navigation: React.FC = () => {
                     onClick={() => setGamesMenuOpen(false)}
                   >
                     Pokemon Grid Challenge
+                  </Link>
+                  <Link
+                    to="/battle-run"
+                    className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center"
+                    onClick={() => setGamesMenuOpen(false)}
+                  >
+                    Battle Run
                   </Link>
                   <div className="border-t border-gray-200 my-1"></div>
                   <span className="block px-4 py-2 text-xs text-gray-500 italic">
