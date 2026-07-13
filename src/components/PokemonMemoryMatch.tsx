@@ -3,6 +3,7 @@ import { Pokemon } from '../types/pokemon';
 import { MemoryCard } from './PokemonCard';
 import { GAME_CONSTANTS } from './game-constants';
 import '../styles/card-animations.css';
+import { Trophy, X } from 'lucide-react';
 
 interface GameCard {
   id: string;
@@ -517,13 +518,15 @@ export const PokemonMemoryMatch: React.FC<PokemonMemoryMatchProps> = ({
                 className="absolute top-2 right-2 sm:top-4 sm:right-4 text-green-600 hover:text-green-800 hover:bg-green-100 rounded-full p-1.5 sm:p-2 transition-colors duration-200"
                 aria-label="Close notification"
               >
-                <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
+                <X className="h-4 w-4 sm:h-5 sm:w-5" aria-hidden="true" />
               </button>
 
               <div className="text-center">
-                <div className="text-4xl sm:text-6xl mb-3 sm:mb-4">🏆</div>
+                <div className="mb-3 flex justify-center sm:mb-4">
+                  <span className="flex h-16 w-16 items-center justify-center rounded-full bg-green-100 text-green-700 sm:h-20 sm:w-20">
+                    <Trophy className="h-9 w-9 sm:h-11 sm:w-11" aria-hidden="true" />
+                  </span>
+                </div>
                 <h2 className="text-xl sm:text-2xl font-bold text-green-800 mb-3">
                   Congratulations!
                 </h2>

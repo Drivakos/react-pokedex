@@ -3,6 +3,7 @@ import { PokemonMemoryMatch } from './PokemonMemoryMatch';
 import { usePokemon } from '../hooks/usePokemon';
 import { Pokemon } from '../types/pokemon';
 import { fetchPokemonData } from '../services/api';
+import { Gamepad2 } from 'lucide-react';
 
 interface GameStats {
   moves: number;
@@ -71,8 +72,9 @@ const PokemonMemoryGame: React.FC = () => {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
-          <h1 className="text-2xl font-bold text-gray-800 mb-4">
-            🎮 Pokemon Memory Match
+          <h1 className="mb-4 flex items-center justify-center gap-2 text-2xl font-bold text-gray-800">
+            <Gamepad2 className="h-7 w-7 text-blue-600" aria-hidden="true" />
+            Pokemon Memory Match
           </h1>
           <p className="text-gray-600">
             No Pokemon data available. Please check your connection and try again.

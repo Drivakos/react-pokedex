@@ -1,7 +1,7 @@
 import React from 'react';
 import { Pokemon } from '../../types/pokemon';
-import { formatName } from '../../utils/helpers';
 import PokemonImage from '../PokemonImage';
+import { CheckCircle2, XCircle } from 'lucide-react';
 
 export interface GridCellData {
   id: string;
@@ -64,10 +64,10 @@ export const GridCell: React.FC<GridCellProps> = ({ cell, totalGuesses, maxTotal
               className="w-50 h-50 object-contain mb-1"
             />
             {cell.isCorrect && (
-              <div className="absolute top-1 right-1 text-green-600 text-sm">✓</div>
+              <CheckCircle2 className="absolute right-1 top-1 h-4 w-4 text-green-600" aria-label="Correct" />
             )}
             {!cell.isCorrect && cell.pokemon && (
-              <div className="absolute top-1 right-1 text-red-600 text-sm">✗</div>
+              <XCircle className="absolute right-1 top-1 h-4 w-4 text-red-600" aria-label="Incorrect" />
             )}
           </>
         ) : (

@@ -2,12 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthProvider';
 import { pokegridService } from '../../services/pokegrid.service';
 import toast from 'react-hot-toast';
+import { Award, LockKeyhole, Medal, Target, Trophy, X, type LucideIcon } from 'lucide-react';
 
 interface Achievement {
   id: string;
   name: string;
   description: string;
-  icon: string;
   unlocked: boolean;
   progress?: number;
   maxProgress?: number;
@@ -17,6 +17,20 @@ interface Achievement {
 interface AchievementsModalProps {
   isOpen: boolean;
   onClose: () => void;
+}
+
+const achievementIcons: Array<{ terms: string[]; icon: LucideIcon }> = [
+  { terms: ['perfect', 'accuracy'], icon: Target },
+  { terms: ['streak', 'series'], icon: Medal },
+  { terms: ['win', 'victory', 'champion'], icon: Trophy },
+];
+
+function AchievementIcon({ achievement }: { achievement: Achievement }) {
+  if (!achievement.unlocked) return <LockKeyhole className="h-6 w-6" aria-hidden="true" />;
+  const text = `${achievement.id} ${achievement.name}`.toLowerCase();
+  const match = achievementIcons.find(entry => entry.terms.some(term => text.includes(term)));
+  const Icon = match?.icon ?? Award;
+  return <Icon className="h-6 w-6" aria-hidden="true" />;
 }
 
 export const AchievementsModal: React.FC<AchievementsModalProps> = ({
@@ -72,10 +86,9 @@ export const AchievementsModal: React.FC<AchievementsModalProps> = ({
             <button
               onClick={onClose}
               className="text-gray-400 hover:text-gray-600"
+              aria-label="Close achievements"
             >
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
+              <X className="h-6 w-6" aria-hidden="true" />
             </button>
           </div>
 
@@ -112,12 +125,12 @@ export const AchievementsModal: React.FC<AchievementsModalProps> = ({
                     }`}
                   >
                     {/* Icon */}
-                    <div className={`flex-shrink-0 w-12 h-12 rounded-full flex items-center justify-center text-2xl ${
+                    <div className={`flex-shrink-0 w-12 h-12 rounded-full flex items-center justify-center ${
                       achievement.unlocked
-                        ? 'bg-green-100'
-                        : 'bg-gray-200 grayscale'
+                        ? 'bg-green-100 text-green-700'
+                        : 'bg-gray-200 text-gray-500'
                     }`}>
-                      {achievement.icon}
+                      <AchievementIcon achievement={achievement} />
                     </div>
 
                     {/* Content */}
