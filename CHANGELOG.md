@@ -1,3 +1,10 @@
+## [1.4.1](https://github.com/Drivakos/react-pokedex/compare/v1.4.0...v1.4.1) (2026-07-13)
+
+
+### Bug Fixes
+
+* use service role for daily PokeGrid ([f641ad2](https://github.com/Drivakos/react-pokedex/commit/f641ad294c6277cce3f996d22d480dbf386a6467))
+
 # [1.4.0](https://github.com/Drivakos/react-pokedex/compare/v1.3.0...v1.4.0) (2026-02-27)
 
 
