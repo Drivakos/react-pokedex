@@ -9,6 +9,7 @@ on:
 jobs:
   generate-daily-grid:
     runs-on: ubuntu-latest
+    environment: .env
 
     steps:
     - name: Checkout repository
@@ -25,27 +26,22 @@ jobs:
 
     - name: Generate today's PokéGrid
       env:
-        VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
-        VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+        SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+        SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
       run: |
         echo "Generating daily PokéGrid for $(date +%Y-%m-%d)"
 
-        # Generate today's grid using the local script
         node scripts/generate-daily-grids.mjs
-
-        # Alternative: Use the Supabase Edge Function
-        # curl -X POST "${{ secrets.SUPABASE_URL }}/functions/v1/pokegrid-scheduler?action=generate_daily" \
-        #   -H "Authorization: Bearer ${{ secrets.SUPABASE_ANON_KEY }}" \
-        #   -H "Content-Type: application/json"
 
     - name: Verify grid was generated
       env:
-        VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
-        VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+        SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+        SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
       run: |
         node -e "
         const { createClient } = require('@supabase/supabase-js');
-        const supabase = createClient(process.env.VITE_SUPABASE_URL, process.env.VITE_SUPABASE_ANON_KEY);
+        const supabaseUrl = \`https://\${process.env.SUPABASE_PROJECT_REF}.supabase.co\`;
+        const supabase = createClient(supabaseUrl, process.env.SUPABASE_SERVICE_ROLE_KEY);
 
         async function verify() {
           const today = new Date().toISOString().split('T')[0];
