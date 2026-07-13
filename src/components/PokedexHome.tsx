@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
 import { PokemonList } from './PokemonList';
 import { HomeSEO } from './HomeSEO';
 import { HomeHeader } from './HomeHeader';
@@ -20,7 +20,7 @@ const PokedexHome: React.FC = () => {
     isSearching,
   } = usePokemon();
 
-  const { searchTerm, setSearchTerm, filters } = useFilterStore();
+  const { searchTerm, setSearchTerm } = useFilterStore();
 
   const { lastPokemonElementRef } = useUI();
   const [showMobileFilters, setShowMobileFilters] = useState(false);
@@ -39,18 +39,6 @@ const PokedexHome: React.FC = () => {
     }
   }, [hasMore, loadMorePokemon, lastPokemonElementRef]);
 
-  // Calculate total active filters
-  const totalFiltersCount = useMemo(() => {
-    let count = 0;
-    count += filters.types.length;
-    count += filters.moves.length;
-    if (filters.generation) count++;
-    if (filters.weight.min > 0 || (filters.weight.max > 0 && filters.weight.max < 1000)) count++;
-    if (filters.height.min > 0 || (filters.height.max > 0 && filters.height.max < 100)) count++;
-    if (filters.hasEvolutions !== null) count++;
-    return count;
-  }, [filters]);
-
   return (
     <div className="min-h-screen bg-gray-200 md:p-8">
       <HomeSEO />
@@ -59,13 +47,12 @@ const PokedexHome: React.FC = () => {
         searchTerm={searchTerm}
         setSearchTerm={setSearchTerm}
         isSearching={isSearching}
-        totalFiltersCount={totalFiltersCount}
-        onToggleFilters={() => setShowDesktopFilters(!showDesktopFilters)}
       />
 
       <main className="flex flex-col gap-6">
         <FilterManager 
           showDesktopFilters={showDesktopFilters}
+          setShowDesktopFilters={setShowDesktopFilters}
           showMobileFilters={showMobileFilters}
           setShowMobileFilters={setShowMobileFilters}
         />

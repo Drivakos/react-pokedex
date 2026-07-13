@@ -64,6 +64,7 @@ src/schema/schema-summary.json
 # Build info and stats
 dist/build-info.json
 dist/stats.html
+*.tsbuildinfo
 
 # AI tracking files
 tech_stack.md

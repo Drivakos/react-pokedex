@@ -17,7 +17,7 @@ export const OtherFilters: React.FC<OtherFiltersProps> = memo(({
   onHeightChange
 }) => {
   return (
-    <div className="space-y-6 md:space-y-0 md:grid md:grid-cols-3 md:gap-4" data-component-name="_c">
+    <div className="space-y-6" data-component-name="_c">
       {/* Generation */}
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-2">

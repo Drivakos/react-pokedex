@@ -4,8 +4,8 @@ import { Search, SlidersHorizontal } from 'lucide-react';
 interface SearchBarProps {
   value: string;
   onChange: (value: string) => void;
-  onToggleFilters: () => void;
-  filterCount: number;
+  onToggleFilters?: () => void;
+  filterCount?: number;
   isSearching: boolean;
   showFilterButton?: boolean;
 }
@@ -14,7 +14,7 @@ export const SearchBar: React.FC<SearchBarProps> = memo(({
   value,
   onChange,
   onToggleFilters,
-  filterCount,
+  filterCount = 0,
   isSearching,
   showFilterButton = true,
 }) => {

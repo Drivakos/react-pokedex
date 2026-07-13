@@ -130,7 +130,7 @@ export const TypesFilter: React.FC<TypesFilterProps> = memo(({
         <Search className="absolute left-3 top-2.5 text-gray-400" size={18} />
       </div>
 
-      <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2 overflow-x-hidden">
+      <div className="grid grid-cols-3 gap-2 overflow-x-hidden">
         {filteredTypes.map(type => (
           <button
             key={type}
