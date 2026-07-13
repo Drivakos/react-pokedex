@@ -5,12 +5,12 @@
  * It ensures all users see the same constraints for a given date.
  * 
  * Usage:
- *   node scripts/generate-daily-grids.js [days]
+ *   node scripts/generate-daily-grids.mjs [days]
  * 
  * Examples:
- *   node scripts/generate-daily-grids.js        // Generate for today
- *   node scripts/generate-daily-grids.js 7      // Generate for next 7 days
- *   node scripts/generate-daily-grids.js -1     // Generate for yesterday (backfill)
+ *   node scripts/generate-daily-grids.mjs        // Generate for today
+ *   node scripts/generate-daily-grids.mjs 7      // Generate for next 7 days
+ *   node scripts/generate-daily-grids.mjs -1     // Generate for yesterday (backfill)
  */
 
 import { createClient } from '@supabase/supabase-js';
@@ -19,11 +19,24 @@ import dotenv from 'dotenv';
 // Load environment variables
 dotenv.config();
 
-// Use anon key for database operations
-const supabase = createClient(
-  process.env.VITE_SUPABASE_URL || '',
-  process.env.VITE_SUPABASE_ANON_KEY || ''
-);
+const projectRef = process.env.SUPABASE_PROJECT_REF?.trim();
+const supabaseUrl =
+  process.env.SUPABASE_URL?.trim() ||
+  process.env.VITE_SUPABASE_URL?.trim() ||
+  (projectRef ? `https://${projectRef}.supabase.co` : '');
+const supabaseKey =
+  process.env.SUPABASE_SERVICE_ROLE_KEY?.trim() ||
+  process.env.VITE_SUPABASE_ANON_KEY?.trim() ||
+  '';
+
+if (!supabaseUrl || !supabaseKey) {
+  console.error(
+    '❌ Error: Set SUPABASE_PROJECT_REF (or SUPABASE_URL) and SUPABASE_SERVICE_ROLE_KEY.'
+  );
+  process.exit(1);
+}
+
+const supabase = createClient(supabaseUrl, supabaseKey);
 
 // --- POKEMON DATA LOADING ---
 
@@ -603,11 +616,6 @@ export async function saveGridConfiguration(date, constraints) {
 // Main function
 async function generateDailyGrids(days = 0) {
   console.log('🎮 Pokémon Grid Challenge - Daily Grid Generator\n');
-  
-  if (!process.env.VITE_SUPABASE_URL || (!process.env.SUPABASE_SERVICE_ROLE_KEY && !process.env.VITE_SUPABASE_ANON_KEY)) {
-    console.error('❌ Error: VITE_SUPABASE_URL and either SUPABASE_SERVICE_ROLE_KEY or VITE_SUPABASE_ANON_KEY must be set in .env');
-    process.exit(1);
-  }
 
   await loadPokemonFromSupabase();
   
@@ -676,11 +684,11 @@ const args = process.argv.slice(2);
 const days = args.length > 0 ? parseInt(args[0], 10) : 0;
 
 if (isNaN(days)) {
-  console.error('❌ Invalid argument. Usage: node generate-daily-grids.js [days]');
+  console.error('❌ Invalid argument. Usage: node generate-daily-grids.mjs [days]');
   console.error('   Examples:');
-  console.error('     node generate-daily-grids.js        // Generate for today');
-  console.error('     node generate-daily-grids.js 7      // Generate for next 7 days');
-  console.error('     node generate-daily-grids.js -1     // Generate for yesterday');
+  console.error('     node generate-daily-grids.mjs        // Generate for today');
+  console.error('     node generate-daily-grids.mjs 7      // Generate for next 7 days');
+  console.error('     node generate-daily-grids.mjs -1     // Generate for yesterday');
   process.exit(1);
 }
 
