@@ -43,6 +43,8 @@ export class ShowdownBattleWorkerSession {
   private ready = false;
   private startRequested = false;
   private disposed = false;
+  private pendingEvents: BattleWorkerEvent[] = [];
+  private flushFrame: number | null = null;
 
   constructor(
     playerParty: RunPokemon[],
@@ -51,7 +53,7 @@ export class ShowdownBattleWorkerSession {
   ) {
     this.callbacks = callbacks;
     this.worker = acquireBattleWorker();
-    this.worker.onmessage = ({ data }: MessageEvent<BattleWorkerEvent>) => this.handleEvent(data);
+    this.worker.onmessage = ({ data }: MessageEvent<BattleWorkerEvent>) => this.enqueueEvent(data);
     this.worker.onerror = event => {
       this.callbacks.onError(event.message || 'The battle engine failed to load.');
       this.dispose();
@@ -78,11 +80,33 @@ export class ShowdownBattleWorkerSession {
   dispose(): void {
     if (this.disposed) return;
     this.disposed = true;
+    if (this.flushFrame !== null) window.cancelAnimationFrame(this.flushFrame);
+    this.flushFrame = null;
+    this.pendingEvents = [];
     this.worker.terminate();
   }
 
   private send(message: BattleWorkerRequest): void {
     if (!this.disposed) this.worker.postMessage(message);
+  }
+
+  private enqueueEvent(event: BattleWorkerEvent): void {
+    if (this.disposed) return;
+
+    this.pendingEvents.push(event);
+    if (this.flushFrame !== null) return;
+    this.flushFrame = window.requestAnimationFrame(() => this.flushEvents());
+  }
+
+  private flushEvents(): void {
+    this.flushFrame = null;
+    const events = this.pendingEvents;
+    this.pendingEvents = [];
+
+    for (const event of events) {
+      if (this.disposed) break;
+      this.handleEvent(event);
+    }
   }
 
   private handleEvent(event: BattleWorkerEvent): void {
