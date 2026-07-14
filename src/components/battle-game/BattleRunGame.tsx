@@ -4,11 +4,15 @@ import {
   Bot,
   ChevronRight,
   Crown,
+  Flag,
+  Flame,
+  Gauge,
   Heart,
   Loader2,
   LockKeyhole,
   RotateCcw,
   Shield,
+  ShieldCheck,
   Swords,
   Trophy,
   Users,
@@ -19,7 +23,8 @@ import {
   disposePrewarmedShowdownBattleWorker,
   prewarmShowdownBattleWorker,
 } from '../../services/showdown-battle-worker.service';
-import type { ActiveBattlePokemon, BattleSide, BattleVisualEvent, OpponentTrainer, RunPokemon } from '../../types/battle-run';
+import type { ActiveBattlePokemon, BattleSide, BattleVisualEvent, OpponentTrainer, RunPokemon, RunRewardSummary } from '../../types/battle-run';
+import { isCheckpointStage } from '../../utils/battle-run-rules';
 import { BattlePokemonImage } from './BattlePokemonImage';
 import { MoveBattleEffect } from './MoveBattleEffect';
 import { TrainerImage } from './TrainerImage';
@@ -122,6 +127,56 @@ function PartyStrip({ party }: { party: RunPokemon[] }) {
           <span className="text-[11px] font-black text-slate-700">{pokemon.species} <span className="text-slate-400">L{pokemon.level}</span></span>
         </div>
       ))}
+    </div>
+  );
+}
+
+function RewardSummary({ reward, score, streak }: {
+  reward: RunRewardSummary;
+  score: number;
+  streak: number;
+}) {
+  const bonuses = [
+    { label: 'Stage clear', value: reward.stageScore, icon: Trophy },
+    { label: `${reward.survivors} survived`, value: reward.survivalBonus, icon: ShieldCheck },
+    { label: `${reward.turns} turns`, value: reward.tempoBonus, icon: Gauge },
+    ...(reward.flawlessBonus > 0 ? [{ label: 'Flawless team', value: reward.flawlessBonus, icon: Heart }] : []),
+    ...(reward.checkpointBonus > 0 ? [{ label: 'Checkpoint', value: reward.checkpointBonus, icon: Flag }] : []),
+  ];
+
+  return (
+    <div className="mb-6 overflow-hidden rounded-2xl border border-slate-800 bg-slate-950 text-white shadow-xl">
+      <div className="flex flex-col justify-between gap-3 border-b border-white/10 px-5 py-4 sm:flex-row sm:items-center">
+        <div>
+          <p className="text-[10px] font-black uppercase tracking-[0.2em] text-emerald-300">Stage {reward.stage} cleared</p>
+          <p className="mt-1 text-xl font-black">Performance reward</p>
+        </div>
+        <div className="flex items-end gap-5">
+          <div className="text-right">
+            <p className="text-[9px] font-black uppercase tracking-wider text-slate-400">Earned</p>
+            <p className="text-2xl font-black text-amber-300">+{reward.totalScore.toLocaleString()}</p>
+          </div>
+          <div className="text-right">
+            <p className="text-[9px] font-black uppercase tracking-wider text-slate-400">Run score</p>
+            <p className="text-lg font-black">{score.toLocaleString()}</p>
+          </div>
+          <div className="text-right">
+            <p className="text-[9px] font-black uppercase tracking-wider text-slate-400">Streak</p>
+            <p className="flex items-center justify-end gap-1 text-lg font-black"><Flame className="h-4 w-4 text-orange-400" /> {streak}</p>
+          </div>
+        </div>
+      </div>
+      <div className="grid gap-px bg-white/10 [grid-template-columns:repeat(auto-fit,minmax(150px,1fr))]">
+        {bonuses.map(({ label, value, icon: Icon }) => (
+          <div key={label} className="flex items-center justify-between gap-3 bg-slate-950 px-4 py-3">
+            <span className="flex items-center gap-2 text-xs font-bold text-slate-300"><Icon className="h-3.5 w-3.5 text-slate-500" /> {label}</span>
+            <strong className="text-sm text-white">+{value}</strong>
+          </div>
+        ))}
+      </div>
+      <div className="bg-emerald-950/50 px-5 py-2.5 text-xs font-bold text-emerald-200">
+        Surviving Pokémon gained {reward.levelsGained} levels.
+      </div>
     </div>
   );
 }
@@ -499,6 +554,7 @@ function VersusScreen() {
   const trainer = useBattleRunStore(state => state.opponentTrainer);
   const enemyParty = useBattleRunStore(state => state.enemyParty);
   const stage = useBattleRunStore(state => state.stage);
+  const checkpoint = isCheckpointStage(stage);
   if (!trainer) return null;
 
   return (
@@ -519,10 +575,16 @@ function VersusScreen() {
         </div>
       </div>
       <div className="p-6 text-center sm:p-8">
-        <div className="flex items-center justify-center gap-2 text-xs font-black uppercase tracking-[0.18em] text-red-600">
-          <Swords className="h-4 w-4" /> Stage {stage} encounter
+        <div className={`flex items-center justify-center gap-2 text-xs font-black uppercase tracking-[0.18em] ${checkpoint ? 'text-amber-700' : 'text-red-600'}`}>
+          {checkpoint ? <Flag className="h-4 w-4" /> : <Swords className="h-4 w-4" />}
+          {checkpoint ? `Stage ${stage} checkpoint` : `Stage ${stage} encounter`}
         </div>
         <p className="mt-3 text-lg font-bold italic text-slate-700">“{trainer.intro}”</p>
+        {checkpoint && (
+          <div className="mx-auto mt-4 max-w-lg rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-bold text-amber-900">
+            Stronger roster. Clear it for a 1,000 point bonus and an extra team level.
+          </div>
+        )}
         <div className="mt-5 flex justify-center gap-2">
           {enemyParty.map(pokemon => (
             <div key={pokemon.species} className="h-14 w-14 rounded-full border border-slate-200 bg-slate-50 p-1 shadow-sm" title={pokemon.species}>
@@ -576,6 +638,9 @@ function ReplacementScreen() {
 export default function BattleRunGame() {
   const phase = useBattleRunStore(state => state.phase);
   const stage = useBattleRunStore(state => state.stage);
+  const score = useBattleRunStore(state => state.score);
+  const winStreak = useBattleRunStore(state => state.winStreak);
+  const lastReward = useBattleRunStore(state => state.lastReward);
   const party = useBattleRunStore(state => state.party);
   const draftChoices = useBattleRunStore(state => state.draftChoices);
   const seed = useBattleRunStore(state => state.seed);
@@ -619,12 +684,16 @@ export default function BattleRunGame() {
               <div className="text-[8px] font-black uppercase tracking-[0.2em] text-red-600">Roguelite challenge</div>
               <div className="flex items-center gap-2">
                 <h1 className="text-xl font-black leading-none text-slate-950 sm:text-2xl">Battle Run</h1>
-                <span className="rounded-full bg-slate-950 px-2 py-0.5 text-[9px] font-black text-white">STAGE {stage}</span>
+                <span className={`rounded-full px-2 py-0.5 text-[9px] font-black text-white ${isCheckpointStage(stage) ? 'bg-amber-600' : 'bg-slate-950'}`}>
+                  {isCheckpointStage(stage) ? `CHECKPOINT ${stage}` : `STAGE ${stage}`}
+                </span>
               </div>
             </div>
           </div>
           <div className="flex min-w-0 flex-col gap-1.5 lg:items-end">
             <div className="flex items-center justify-between gap-4 lg:justify-end">
+              <span className="flex items-center gap-1 text-[11px] font-black text-slate-600"><Trophy className="h-3.5 w-3.5 text-amber-500" /> {score.toLocaleString()}</span>
+              <span className="flex items-center gap-1 text-[11px] font-black text-slate-600"><Flame className="h-3.5 w-3.5 text-orange-500" /> {winStreak}</span>
               <StageMeter stage={stage} />
               <div className="flex items-center gap-1 text-[11px] font-black text-slate-500"><Users className="h-3.5 w-3.5" /> {party.length}/6</div>
             </div>
@@ -643,10 +712,14 @@ export default function BattleRunGame() {
               {phase === 'starter-draft'
                 ? 'Pick one of three random Pokémon, then adapt your team after every increasingly difficult battle.'
                 : party.length < 6
-                  ? 'Your survivors gained two levels and recovered. Add one of these Pokémon to your party.'
-                  : 'Your survivors gained two levels. Pick a recruit, then choose which party member it replaces.'}
+                  ? `Your survivors gained ${lastReward?.levelsGained ?? 2} levels. Add one of these Pokémon to your party.`
+                  : `Your survivors gained ${lastReward?.levelsGained ?? 2} levels. Pick a recruit, then choose which party member it replaces.`}
             </p>
           </div>
+
+          {phase === 'reward-draft' && lastReward && (
+            <RewardSummary reward={lastReward} score={score} streak={winStreak} />
+          )}
 
           {draftChoices.length === 0 ? (
             <div className="flex items-center justify-center gap-3 py-20 font-bold text-slate-500"><Loader2 className="animate-spin" /> Scouting Pokémon…</div>
@@ -683,6 +756,16 @@ export default function BattleRunGame() {
           <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-slate-100"><Shield className="h-10 w-10 text-slate-400" /></div>
           <h2 className="mt-5 text-4xl font-black text-slate-950">Run over</h2>
           <p className="mt-3 text-lg text-slate-600">You reached <strong>stage {stage}</strong>. No usable Pokémon remain.</p>
+          <div className="mx-auto mt-6 grid max-w-sm grid-cols-2 gap-3">
+            <div className="rounded-xl bg-slate-100 p-3">
+              <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">Final score</p>
+              <p className="mt-1 text-xl font-black text-slate-900">{score.toLocaleString()}</p>
+            </div>
+            <div className="rounded-xl bg-slate-100 p-3">
+              <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">Win streak</p>
+              <p className="mt-1 flex items-center justify-center gap-1 text-xl font-black text-slate-900"><Flame className="h-5 w-5 text-orange-500" /> {winStreak}</p>
+            </div>
+          </div>
           <div className="mx-auto mt-6 flex max-w-sm items-center justify-center gap-2 rounded-xl bg-red-50 p-3 text-sm font-bold text-red-700">
             <Heart className="h-4 w-4" /> Fainted Pokémon do not return during a run.
           </div>

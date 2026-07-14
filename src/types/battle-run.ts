@@ -89,3 +89,16 @@ export interface BattleResult {
   winner: 'player' | 'opponent' | 'tie';
   faintedPlayerSpecies: string[];
 }
+
+export interface RunRewardSummary {
+  stage: number;
+  turns: number;
+  survivors: number;
+  stageScore: number;
+  survivalBonus: number;
+  tempoBonus: number;
+  flawlessBonus: number;
+  checkpointBonus: number;
+  totalScore: number;
+  levelsGained: number;
+}

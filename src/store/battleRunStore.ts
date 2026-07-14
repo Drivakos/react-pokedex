@@ -9,11 +9,13 @@ import type {
   BattleSnapshot,
   BattleVisualEvent,
   OpponentTrainer,
+  RunRewardSummary,
   RunPokemon,
 } from '../types/battle-run';
 import {
   PARTY_LIMIT,
   addOrReplacePartyMember,
+  calculateBattleReward,
   createSeededRandom,
   levelUpSurvivors,
 } from '../utils/battle-run-rules';
@@ -34,6 +36,8 @@ let pendingBattleResult: BattleResult | null = null;
 interface BattleRunStore {
   phase: BattleRunPhase;
   stage: number;
+  score: number;
+  winStreak: number;
   seed: string;
   party: RunPokemon[];
   enemyParty: RunPokemon[];
@@ -45,6 +49,7 @@ interface BattleRunStore {
   battleLog: string[];
   visualEvents: BattleVisualEvent[];
   error: string | null;
+  lastReward: RunRewardSummary | null;
   startRun: () => void;
   chooseStarter: (pokemon: RunPokemon) => void;
   chooseMove: (slot: number) => void;
@@ -63,28 +68,38 @@ export const useBattleRunStore = create<BattleRunStore>((set, get) => {
     const current = get();
     const rng = random ?? Math.random;
     const fainted = new Set(result.faintedPlayerSpecies);
-    const survivors = levelUpSurvivors(
-      current.party.filter(pokemon => !fainted.has(pokemon.species)),
-    );
+    const survivingParty = current.party.filter(pokemon => !fainted.has(pokemon.species));
 
     pendingBattleResult = null;
-    if (result.winner !== 'player' || survivors.length === 0) {
+    if (result.winner !== 'player' || survivingParty.length === 0) {
       set({
         phase: 'game-over',
-        party: survivors,
+        party: survivingParty,
         decision: emptyDecision,
         visualEvents: [],
+        lastReward: null,
       });
       return;
     }
 
+    const reward = calculateBattleReward(
+      current.stage,
+      current.snapshot?.turn ?? 1,
+      current.party.length,
+      fainted.size,
+    );
+    const survivors = levelUpSurvivors(survivingParty, reward.levelsGained);
+
     set({
       phase: 'reward-draft',
       party: survivors,
+      score: current.score + reward.totalScore,
+      winStreak: current.winStreak + 1,
       draftChoices: createDraftChoices(current.stage + 1, survivors, rng),
       decision: emptyDecision,
       pendingRecruit: null,
       visualEvents: [],
+      lastReward: reward,
     });
   };
 
@@ -135,6 +150,7 @@ export const useBattleRunStore = create<BattleRunStore>((set, get) => {
       party,
       pendingRecruit: null,
       draftChoices: [],
+      lastReward: null,
     }));
     beginBattle();
   };
@@ -142,6 +158,8 @@ export const useBattleRunStore = create<BattleRunStore>((set, get) => {
   return {
     phase: 'starter-draft',
     stage: 1,
+    score: 0,
+    winStreak: 0,
     seed: '',
     party: [],
     enemyParty: [],
@@ -153,6 +171,7 @@ export const useBattleRunStore = create<BattleRunStore>((set, get) => {
     battleLog: [],
     visualEvents: [],
     error: null,
+    lastReward: null,
 
     startRun: () => {
       const seed = newSeed();
@@ -163,6 +182,8 @@ export const useBattleRunStore = create<BattleRunStore>((set, get) => {
       set({
         phase: 'starter-draft',
         stage: 1,
+        score: 0,
+        winStreak: 0,
         seed,
         party: [],
         enemyParty: [],
@@ -174,6 +195,7 @@ export const useBattleRunStore = create<BattleRunStore>((set, get) => {
         battleLog: [],
         visualEvents: [],
         error: null,
+        lastReward: null,
       });
     },
 

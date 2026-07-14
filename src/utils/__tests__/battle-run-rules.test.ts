@@ -1,8 +1,10 @@
 import {
   PARTY_LIMIT,
   addOrReplacePartyMember,
+  calculateBattleReward,
   createSeededRandom,
   enemyPartySize,
+  isCheckpointStage,
   levelForStage,
   levelUpSurvivors,
   targetBstForStage,
@@ -24,9 +26,29 @@ describe('battle run rules', () => {
     expect(levelForStage(1)).toBe(5);
     expect(levelForStage(5)).toBe(13);
     expect(enemyPartySize(1)).toBe(1);
-    expect(enemyPartySize(5)).toBe(2);
+    expect(enemyPartySize(4)).toBe(1);
+    expect(enemyPartySize(5)).toBe(3);
     expect(enemyPartySize(9)).toBe(3);
     expect(targetBstForStage(10)).toBeGreaterThan(targetBstForStage(2));
+    expect(targetBstForStage(5)).toBeGreaterThan(targetBstForStage(6));
+    expect(isCheckpointStage(5)).toBe(true);
+    expect(isCheckpointStage(6)).toBe(false);
+  });
+
+  it('rewards survival, speed, flawless clears, and checkpoints', () => {
+    const standard = calculateBattleReward(4, 8, 3, 1);
+    expect(standard.survivors).toBe(2);
+    expect(standard.survivalBonus).toBe(300);
+    expect(standard.tempoBonus).toBe(200);
+    expect(standard.flawlessBonus).toBe(0);
+    expect(standard.checkpointBonus).toBe(0);
+    expect(standard.levelsGained).toBe(2);
+
+    const checkpoint = calculateBattleReward(5, 5, 3, 0);
+    expect(checkpoint.flawlessBonus).toBe(400);
+    expect(checkpoint.checkpointBonus).toBe(1000);
+    expect(checkpoint.levelsGained).toBe(3);
+    expect(checkpoint.totalScore).toBeGreaterThan(standard.totalScore);
   });
 
   it('adds recruits until the party limit', () => {
