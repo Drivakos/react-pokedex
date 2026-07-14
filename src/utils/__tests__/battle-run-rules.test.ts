@@ -2,9 +2,11 @@ import {
   PARTY_LIMIT,
   addOrReplacePartyMember,
   calculateBattleReward,
+  createStageChallenge,
   createSeededRandom,
   enemyPartySize,
   isCheckpointStage,
+  isStageChallengeComplete,
   levelForStage,
   levelUpSurvivors,
   targetBstForStage,
@@ -49,6 +51,33 @@ describe('battle run rules', () => {
     expect(checkpoint.checkpointBonus).toBe(1000);
     expect(checkpoint.levelsGained).toBe(3);
     expect(checkpoint.totalScore).toBeGreaterThan(standard.totalScore);
+  });
+
+  it('creates stage contracts that match the current encounter', () => {
+    const rapid = createStageChallenge(2, 1, () => 0);
+    expect(rapid.kind).toBe('tempo');
+    expect(rapid.maxTurns).toBeDefined();
+
+    const formation = createStageChallenge(3, 4, () => 0.99);
+    expect(formation.kind).toBe('formation');
+    expect(formation.minSurvivors).toBe(3);
+
+    const checkpoint = createStageChallenge(5, 4, () => 0);
+    expect(checkpoint.kind).toBe('checkpoint');
+    expect(checkpoint.maxFaints).toBe(1);
+  });
+
+  it('awards a contract bounty only when every objective is met', () => {
+    const challenge = createStageChallenge(2, 2, () => 0);
+    expect(isStageChallengeComplete(challenge, challenge.maxTurns ?? 1, 2, 0)).toBe(true);
+    expect(isStageChallengeComplete(challenge, (challenge.maxTurns ?? 1) + 1, 2, 0)).toBe(false);
+
+    const cleared = calculateBattleReward(2, challenge.maxTurns ?? 1, 2, 0, challenge);
+    const missed = calculateBattleReward(2, (challenge.maxTurns ?? 1) + 1, 2, 0, challenge);
+    expect(cleared.challengeCompleted).toBe(true);
+    expect(cleared.challengeBonus).toBe(challenge.bounty);
+    expect(missed.challengeCompleted).toBe(false);
+    expect(missed.challengeBonus).toBe(0);
   });
 
   it('adds recruits until the party limit', () => {

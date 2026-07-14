@@ -2,6 +2,7 @@ import { memo, useEffect, useRef, useState } from 'react';
 import {
   ArrowLeftRight,
   Bot,
+  CheckCircle2,
   ChevronRight,
   Crown,
   Flag,
@@ -15,7 +16,9 @@ import {
   ShieldCheck,
   Swords,
   Trophy,
+  Target,
   Users,
+  XCircle,
   Zap,
 } from 'lucide-react';
 import { useBattleRunStore } from '../../store/battleRunStore';
@@ -23,7 +26,7 @@ import {
   disposePrewarmedShowdownBattleWorker,
   prewarmShowdownBattleWorker,
 } from '../../services/showdown-battle-worker.service';
-import type { ActiveBattlePokemon, BattleSide, BattleVisualEvent, OpponentTrainer, RunPokemon, RunRewardSummary } from '../../types/battle-run';
+import type { ActiveBattlePokemon, BattleSide, BattleVisualEvent, OpponentTrainer, RunChallenge, RunPokemon, RunRewardSummary } from '../../types/battle-run';
 import { isCheckpointStage } from '../../utils/battle-run-rules';
 import { BattlePokemonImage } from './BattlePokemonImage';
 import { MoveBattleEffect } from './MoveBattleEffect';
@@ -131,6 +134,31 @@ function PartyStrip({ party }: { party: RunPokemon[] }) {
   );
 }
 
+function ChallengeCard({ challenge, compact = false }: {
+  challenge: RunChallenge;
+  compact?: boolean;
+}) {
+  return (
+    <div className={`rounded-2xl border border-white/10 bg-slate-950 text-white shadow-lg ${compact ? 'p-3' : 'p-4'}`}>
+      <div className="flex items-start justify-between gap-4">
+        <div className="flex min-w-0 gap-3">
+          <span className={`flex shrink-0 items-center justify-center rounded-xl bg-red-500/15 text-red-300 ${compact ? 'h-8 w-8' : 'h-10 w-10'}`}>
+            <Target className={compact ? 'h-4 w-4' : 'h-5 w-5'} />
+          </span>
+          <span className="min-w-0">
+            <span className="block text-[9px] font-black uppercase tracking-[0.2em] text-red-300">Stage contract</span>
+            <strong className={`block truncate ${compact ? 'text-sm' : 'text-lg'}`}>{challenge.title}</strong>
+            <span className={`mt-0.5 block leading-relaxed text-slate-300 ${compact ? 'text-[11px]' : 'text-sm'}`}>{challenge.description}</span>
+          </span>
+        </div>
+        <span className="shrink-0 rounded-full bg-amber-400/15 px-2.5 py-1 text-xs font-black text-amber-300">
+          +{challenge.bounty.toLocaleString()}
+        </span>
+      </div>
+    </div>
+  );
+}
+
 function RewardSummary({ reward, score, streak }: {
   reward: RunRewardSummary;
   score: number;
@@ -174,6 +202,24 @@ function RewardSummary({ reward, score, streak }: {
           </div>
         ))}
       </div>
+      {reward.challenge && (
+        <div className={`flex items-center justify-between gap-4 border-t border-white/10 px-5 py-3 ${reward.challengeCompleted ? 'bg-emerald-950/60' : 'bg-slate-900'}`}>
+          <div className="flex items-center gap-3">
+            {reward.challengeCompleted
+              ? <CheckCircle2 className="h-5 w-5 shrink-0 text-emerald-400" />
+              : <XCircle className="h-5 w-5 shrink-0 text-slate-500" />}
+            <div>
+              <p className={`text-xs font-black uppercase tracking-wider ${reward.challengeCompleted ? 'text-emerald-300' : 'text-slate-400'}`}>
+                Contract {reward.challengeCompleted ? 'cleared' : 'missed'}
+              </p>
+              <p className="text-sm font-bold text-white">{reward.challenge.title}</p>
+            </div>
+          </div>
+          <strong className={reward.challengeCompleted ? 'text-emerald-300' : 'text-slate-500'}>
+            {reward.challengeCompleted ? `+${reward.challengeBonus.toLocaleString()}` : 'No bonus'}
+          </strong>
+        </div>
+      )}
       <div className="bg-emerald-950/50 px-5 py-2.5 text-xs font-bold text-emerald-200">
         Surviving Pokémon gained {reward.levelsGained} levels.
       </div>
@@ -342,6 +388,7 @@ const BattleLogPanel = memo(function BattleLogPanel() {
 const BattleSidebar = memo(function BattleSidebar() {
   const trainer = useBattleRunStore(state => state.opponentTrainer);
   const stage = useBattleRunStore(state => state.stage);
+  const activeChallenge = useBattleRunStore(state => state.activeChallenge);
 
   return (
     <aside className="flex h-full min-h-0 flex-col overflow-hidden rounded-[2rem] border border-white/80 bg-white/75 text-slate-900 shadow-2xl backdrop-blur-xl">
@@ -349,6 +396,11 @@ const BattleSidebar = memo(function BattleSidebar() {
         <div className="shrink-0 border-b border-slate-200/80 bg-gradient-to-br from-red-50 via-white/80 to-sky-50 p-5">
           <TrainerCard trainer={trainer} stage={stage} />
           <p className="mt-3 text-sm italic leading-relaxed text-slate-600">“{trainer.intro}”</p>
+        </div>
+      )}
+      {activeChallenge && (
+        <div className="shrink-0 border-b border-slate-200/80 bg-white/55 p-3">
+          <ChallengeCard challenge={activeChallenge} compact />
         </div>
       )}
       <BattleLogPanel />
@@ -554,6 +606,7 @@ function VersusScreen() {
   const trainer = useBattleRunStore(state => state.opponentTrainer);
   const enemyParty = useBattleRunStore(state => state.enemyParty);
   const stage = useBattleRunStore(state => state.stage);
+  const activeChallenge = useBattleRunStore(state => state.activeChallenge);
   const checkpoint = isCheckpointStage(stage);
   if (!trainer) return null;
 
@@ -580,6 +633,11 @@ function VersusScreen() {
           {checkpoint ? `Stage ${stage} checkpoint` : `Stage ${stage} encounter`}
         </div>
         <p className="mt-3 text-lg font-bold italic text-slate-700">“{trainer.intro}”</p>
+        {activeChallenge && (
+          <div className="mx-auto mt-4 max-w-xl text-left">
+            <ChallengeCard challenge={activeChallenge} />
+          </div>
+        )}
         {checkpoint && (
           <div className="mx-auto mt-4 max-w-lg rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-bold text-amber-900">
             Stronger roster. Clear it for a 1,000 point bonus and an extra team level.

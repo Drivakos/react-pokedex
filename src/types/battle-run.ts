@@ -90,6 +90,18 @@ export interface BattleResult {
   faintedPlayerSpecies: string[];
 }
 
+export type RunChallengeKind = 'tempo' | 'flawless' | 'formation' | 'checkpoint';
+
+export interface RunChallenge {
+  kind: RunChallengeKind;
+  title: string;
+  description: string;
+  bounty: number;
+  maxTurns?: number;
+  maxFaints?: number;
+  minSurvivors?: number;
+}
+
 export interface RunRewardSummary {
   stage: number;
   turns: number;
@@ -99,6 +111,9 @@ export interface RunRewardSummary {
   tempoBonus: number;
   flawlessBonus: number;
   checkpointBonus: number;
+  challenge: RunChallenge | null;
+  challengeCompleted: boolean;
+  challengeBonus: number;
   totalScore: number;
   levelsGained: number;
 }

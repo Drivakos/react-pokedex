@@ -1,4 +1,4 @@
-import type { RunPokemon, RunRewardSummary } from '../types/battle-run';
+import type { RunChallenge, RunPokemon, RunRewardSummary } from '../types/battle-run';
 
 export const PARTY_LIMIT = 6;
 export const LEVELS_PER_STAGE = 2;
@@ -30,11 +30,76 @@ export function levelUpSurvivors(party: RunPokemon[], levels = LEVELS_PER_STAGE)
   }));
 }
 
+export function createStageChallenge(
+  stage: number,
+  partySize: number,
+  random: () => number = Math.random,
+): RunChallenge {
+  const normalizedStage = Math.max(1, stage);
+  const normalizedPartySize = Math.max(1, partySize);
+
+  if (isCheckpointStage(normalizedStage)) {
+    const maxTurns = 10 + enemyPartySize(normalizedStage);
+    return {
+      kind: 'checkpoint',
+      title: 'Checkpoint mastery',
+      description: `Win within ${maxTurns} turns with no more than one fainted Pokémon.`,
+      bounty: 1500 + normalizedStage * 100,
+      maxTurns,
+      maxFaints: 1,
+    };
+  }
+
+  const tempoTurns = 7 + enemyPartySize(normalizedStage) * 2;
+  const challenges: RunChallenge[] = [
+    {
+      kind: 'tempo',
+      title: 'Rapid clear',
+      description: `Defeat the trainer within ${tempoTurns} turns.`,
+      bounty: 500 + normalizedStage * 75,
+      maxTurns: tempoTurns,
+    },
+    {
+      kind: 'flawless',
+      title: 'Perfect formation',
+      description: 'Win without losing a Pokémon.',
+      bounty: 650 + normalizedStage * 75,
+      maxFaints: 0,
+    },
+  ];
+
+  if (normalizedPartySize > 1) {
+    const minSurvivors = Math.max(1, Math.ceil(normalizedPartySize * 0.75));
+    challenges.push({
+      kind: 'formation',
+      title: 'Hold the line',
+      description: `Finish with at least ${minSurvivors} Pokémon still standing.`,
+      bounty: 450 + normalizedStage * 60,
+      minSurvivors,
+    });
+  }
+
+  return challenges[Math.floor(random() * challenges.length)] ?? challenges[0];
+}
+
+export function isStageChallengeComplete(
+  challenge: RunChallenge,
+  turns: number,
+  survivors: number,
+  faintedCount: number,
+): boolean {
+  if (challenge.maxTurns !== undefined && turns > challenge.maxTurns) return false;
+  if (challenge.maxFaints !== undefined && faintedCount > challenge.maxFaints) return false;
+  if (challenge.minSurvivors !== undefined && survivors < challenge.minSurvivors) return false;
+  return true;
+}
+
 export function calculateBattleReward(
   stage: number,
   turns: number,
   partySize: number,
   faintedCount: number,
+  challenge: RunChallenge | null = null,
 ): RunRewardSummary {
   const normalizedStage = Math.max(1, stage);
   const normalizedTurns = Math.max(1, turns);
@@ -44,6 +109,10 @@ export function calculateBattleReward(
   const tempoBonus = Math.max(0, 12 - normalizedTurns) * 50;
   const flawlessBonus = faintedCount === 0 ? 400 : 0;
   const checkpointBonus = isCheckpointStage(normalizedStage) ? 1000 : 0;
+  const challengeCompleted = challenge
+    ? isStageChallengeComplete(challenge, normalizedTurns, survivors, faintedCount)
+    : false;
+  const challengeBonus = challengeCompleted && challenge ? challenge.bounty : 0;
   const levelsGained = LEVELS_PER_STAGE + (isCheckpointStage(normalizedStage) ? 1 : 0);
 
   return {
@@ -55,7 +124,10 @@ export function calculateBattleReward(
     tempoBonus,
     flawlessBonus,
     checkpointBonus,
-    totalScore: stageScore + survivalBonus + tempoBonus + flawlessBonus + checkpointBonus,
+    challenge,
+    challengeCompleted,
+    challengeBonus,
+    totalScore: stageScore + survivalBonus + tempoBonus + flawlessBonus + checkpointBonus + challengeBonus,
     levelsGained,
   };
 }

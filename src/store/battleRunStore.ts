@@ -9,6 +9,7 @@ import type {
   BattleSnapshot,
   BattleVisualEvent,
   OpponentTrainer,
+  RunChallenge,
   RunRewardSummary,
   RunPokemon,
 } from '../types/battle-run';
@@ -16,6 +17,7 @@ import {
   PARTY_LIMIT,
   addOrReplacePartyMember,
   calculateBattleReward,
+  createStageChallenge,
   createSeededRandom,
   levelUpSurvivors,
 } from '../utils/battle-run-rules';
@@ -42,6 +44,7 @@ interface BattleRunStore {
   party: RunPokemon[];
   enemyParty: RunPokemon[];
   opponentTrainer: OpponentTrainer | null;
+  activeChallenge: RunChallenge | null;
   draftChoices: RunPokemon[];
   pendingRecruit: RunPokemon | null;
   snapshot: BattleSnapshot | null;
@@ -78,6 +81,7 @@ export const useBattleRunStore = create<BattleRunStore>((set, get) => {
         decision: emptyDecision,
         visualEvents: [],
         lastReward: null,
+        activeChallenge: null,
       });
       return;
     }
@@ -87,6 +91,7 @@ export const useBattleRunStore = create<BattleRunStore>((set, get) => {
       current.snapshot?.turn ?? 1,
       current.party.length,
       fainted.size,
+      current.activeChallenge,
     );
     const survivors = levelUpSurvivors(survivingParty, reward.levelsGained);
 
@@ -100,6 +105,7 @@ export const useBattleRunStore = create<BattleRunStore>((set, get) => {
       pendingRecruit: null,
       visualEvents: [],
       lastReward: reward,
+      activeChallenge: null,
     });
   };
 
@@ -109,11 +115,13 @@ export const useBattleRunStore = create<BattleRunStore>((set, get) => {
     pendingBattleResult = null;
     const opponentTrainer = pickOpponentTrainer(state.stage, rng);
     const enemyParty = createEnemyParty(state.stage, state.party, rng);
+    const activeChallenge = createStageChallenge(state.stage, state.party.length, rng);
 
     set({
       phase: 'preparing-battle',
       enemyParty,
       opponentTrainer,
+      activeChallenge,
       snapshot: null,
       decision: emptyDecision,
       battleLog: [`${opponentTrainer.title} ${opponentTrainer.name} challenges you!`],
@@ -164,6 +172,7 @@ export const useBattleRunStore = create<BattleRunStore>((set, get) => {
     party: [],
     enemyParty: [],
     opponentTrainer: null,
+    activeChallenge: null,
     draftChoices: [],
     pendingRecruit: null,
     snapshot: null,
@@ -188,6 +197,7 @@ export const useBattleRunStore = create<BattleRunStore>((set, get) => {
         party: [],
         enemyParty: [],
         opponentTrainer: null,
+        activeChallenge: null,
         draftChoices: createDraftChoices(1, [], random, true),
         pendingRecruit: null,
         snapshot: null,
