@@ -17,6 +17,7 @@ import {
   createSeededRandom,
   levelUpSurvivors,
 } from '../utils/battle-run-rules';
+import { canSubmitMove, canSubmitSwitch } from '../utils/battle-request-rules';
 
 const emptyDecision: BattleDecision = { kind: 'wait', moves: [], switches: [], switchingBlocked: false };
 interface BattleSession {
@@ -182,11 +183,17 @@ export const useBattleRunStore = create<BattleRunStore>((set, get) => {
     },
 
     chooseMove: slot => {
-      session?.chooseMove(slot);
+      const decision = get().decision;
+      if (!session || !canSubmitMove(decision, slot)) return;
+      set({ decision: emptyDecision, error: null });
+      session.chooseMove(slot);
     },
 
     chooseSwitch: slot => {
-      session?.chooseSwitch(slot);
+      const decision = get().decision;
+      if (!session || !canSubmitSwitch(decision, slot)) return;
+      set({ decision: emptyDecision, error: null });
+      session.chooseSwitch(slot);
     },
 
     chooseReward: pokemon => {
