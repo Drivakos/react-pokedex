@@ -12,7 +12,7 @@ import type {
   RunPokemon,
 } from '../types/battle-run';
 import type { ShowdownBattleCallbacks } from '../types/battle-worker';
-import { isSwitchingBlocked } from '../utils/battle-request-rules';
+import { isSwitchingBlocked, isTrappedSwitchError } from '../utils/battle-request-rules';
 
 const statTable = (value: number) => ({
   hp: value,
@@ -143,7 +143,7 @@ export class ShowdownBattleSession {
           } else if (args[0] === 'tie') {
             this.finish('tie');
           } else if (args[0] === 'error') {
-            if (!this.restorePendingRequest()) this.callbacks.onError(args[1]);
+            if (!this.restorePendingRequest(isTrappedSwitchError(args[1]))) this.callbacks.onError(args[1]);
           }
         }
         this.emitSnapshot();
@@ -153,7 +153,7 @@ export class ShowdownBattleSession {
     }
   }
 
-  private handleRequest(request: Protocol.Request): void {
+  private handleRequest(request: Protocol.Request, switchingBlockedOverride = false): void {
     if (request.requestType === 'team') {
       void Promise.resolve(this.streams.p1.write('default')).catch(error => this.fail(error));
       return;
@@ -162,7 +162,7 @@ export class ShowdownBattleSession {
     this.currentRequest = request;
     if (request.requestType === 'move') {
       const active = request.active[0];
-      const switchingBlocked = isSwitchingBlocked(active);
+      const switchingBlocked = switchingBlockedOverride || isSwitchingBlocked(active);
       const moves = (active?.moves ?? []).map((move, index) => {
         const moveData = Dex.moves.get(move.id);
         return {
@@ -200,11 +200,11 @@ export class ShowdownBattleSession {
     this.callbacks.onDecision({ kind: 'wait', moves: [], switches: [], switchingBlocked: false });
   }
 
-  private restorePendingRequest(): boolean {
+  private restorePendingRequest(switchingBlockedOverride = false): boolean {
     if (!this.pendingRequest || this.ended) return false;
     const request = this.pendingRequest;
     this.pendingRequest = null;
-    this.handleRequest(request);
+    this.handleRequest(request, switchingBlockedOverride);
     return true;
   }
 

@@ -1,5 +1,10 @@
 import type { BattleDecision } from '../../types/battle-run';
-import { canSubmitMove, canSubmitSwitch, isSwitchingBlocked } from '../battle-request-rules';
+import {
+  canSubmitMove,
+  canSubmitSwitch,
+  isSwitchingBlocked,
+  isTrappedSwitchError,
+} from '../battle-request-rules';
 
 const moveDecision: BattleDecision = {
   kind: 'move',
@@ -24,6 +29,11 @@ describe('battle request rules', () => {
     expect(isSwitchingBlocked(undefined)).toBe(false);
     expect(isSwitchingBlocked({ trapped: false })).toBe(false);
     expect(isSwitchingBlocked({ maybeTrapped: true })).toBe(false);
+  });
+
+  it('recognizes a trapped rejection after an uncertain switch attempt', () => {
+    expect(isTrappedSwitchError("[Invalid choice] Can't switch: The active Pokémon is trapped")).toBe(true);
+    expect(isTrappedSwitchError("[Invalid choice] Can't move: The selected move is disabled")).toBe(false);
   });
 
   it('accepts only enabled moves from the current move request', () => {
