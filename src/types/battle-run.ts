@@ -1,5 +1,6 @@
 export type BattleRunPhase =
   | 'starter-draft'
+  | 'route-select'
   | 'preparing-battle'
   | 'battle'
   | 'reward-draft'
@@ -102,6 +103,18 @@ export interface RunChallenge {
   minSurvivors?: number;
 }
 
+export type RunRouteId = 'trail' | 'rival' | 'apex';
+
+export interface RunRoute {
+  id: RunRouteId;
+  title: string;
+  label: string;
+  description: string;
+  levelBonus: number;
+  partySizeBonus: number;
+  scoreMultiplier: number;
+}
+
 export interface RunRewardSummary {
   stage: number;
   turns: number;
@@ -114,6 +127,8 @@ export interface RunRewardSummary {
   challenge: RunChallenge | null;
   challengeCompleted: boolean;
   challengeBonus: number;
+  route: RunRoute | null;
+  routeBonus: number;
   totalScore: number;
   levelsGained: number;
 }

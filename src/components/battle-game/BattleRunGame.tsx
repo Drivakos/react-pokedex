@@ -3,6 +3,7 @@ import {
   ArrowLeftRight,
   Bot,
   CheckCircle2,
+  Compass,
   ChevronRight,
   Crown,
   Flag,
@@ -27,7 +28,7 @@ import {
   prewarmShowdownBattleWorker,
 } from '../../services/showdown-battle-worker.service';
 import type { ActiveBattlePokemon, BattleSide, BattleVisualEvent, OpponentTrainer, RunChallenge, RunPokemon, RunRewardSummary } from '../../types/battle-run';
-import { isCheckpointStage } from '../../utils/battle-run-rules';
+import { RUN_ROUTES, isCheckpointStage } from '../../utils/battle-run-rules';
 import { BattlePokemonImage } from './BattlePokemonImage';
 import { MoveBattleEffect } from './MoveBattleEffect';
 import { TrainerImage } from './TrainerImage';
@@ -170,6 +171,7 @@ function RewardSummary({ reward, score, streak }: {
     { label: `${reward.turns} turns`, value: reward.tempoBonus, icon: Gauge },
     ...(reward.flawlessBonus > 0 ? [{ label: 'Flawless team', value: reward.flawlessBonus, icon: Heart }] : []),
     ...(reward.checkpointBonus > 0 ? [{ label: 'Checkpoint', value: reward.checkpointBonus, icon: Flag }] : []),
+    ...(reward.routeBonus > 0 && reward.route ? [{ label: reward.route.title, value: reward.routeBonus, icon: Compass }] : []),
   ];
 
   return (
@@ -389,6 +391,7 @@ const BattleSidebar = memo(function BattleSidebar() {
   const trainer = useBattleRunStore(state => state.opponentTrainer);
   const stage = useBattleRunStore(state => state.stage);
   const activeChallenge = useBattleRunStore(state => state.activeChallenge);
+  const activeRoute = useBattleRunStore(state => state.activeRoute);
 
   return (
     <aside className="flex h-full min-h-0 flex-col overflow-hidden rounded-[2rem] border border-white/80 bg-white/75 text-slate-900 shadow-2xl backdrop-blur-xl">
@@ -396,6 +399,12 @@ const BattleSidebar = memo(function BattleSidebar() {
         <div className="shrink-0 border-b border-slate-200/80 bg-gradient-to-br from-red-50 via-white/80 to-sky-50 p-5">
           <TrainerCard trainer={trainer} stage={stage} />
           <p className="mt-3 text-sm italic leading-relaxed text-slate-600">“{trainer.intro}”</p>
+          {activeRoute && (
+            <div className="mt-3 flex items-center justify-between rounded-xl border border-slate-200 bg-white/70 px-3 py-2 text-xs font-black text-slate-600">
+              <span className="flex items-center gap-1.5"><Compass className="h-3.5 w-3.5" /> {activeRoute.title}</span>
+              <span className="text-red-600">Score x{activeRoute.scoreMultiplier}</span>
+            </div>
+          )}
         </div>
       )}
       {activeChallenge && (
@@ -607,6 +616,7 @@ function VersusScreen() {
   const enemyParty = useBattleRunStore(state => state.enemyParty);
   const stage = useBattleRunStore(state => state.stage);
   const activeChallenge = useBattleRunStore(state => state.activeChallenge);
+  const activeRoute = useBattleRunStore(state => state.activeRoute);
   const checkpoint = isCheckpointStage(stage);
   if (!trainer) return null;
 
@@ -632,6 +642,11 @@ function VersusScreen() {
           {checkpoint ? <Flag className="h-4 w-4" /> : <Swords className="h-4 w-4" />}
           {checkpoint ? `Stage ${stage} checkpoint` : `Stage ${stage} encounter`}
         </div>
+        {activeRoute && (
+          <div className="mt-2 flex items-center justify-center gap-2 text-xs font-black text-slate-500">
+            <Compass className="h-3.5 w-3.5" /> {activeRoute.title} · Score x{activeRoute.scoreMultiplier}
+          </div>
+        )}
         <p className="mt-3 text-lg font-bold italic text-slate-700">“{trainer.intro}”</p>
         {activeChallenge && (
           <div className="mx-auto mt-4 max-w-xl text-left">
@@ -653,6 +668,81 @@ function VersusScreen() {
         <div className="mt-6 flex items-center justify-center gap-2 text-sm font-black text-slate-400">
           <Loader2 className="h-5 w-5 animate-spin text-red-500" /> Loading the battle engine…
         </div>
+      </div>
+    </section>
+  );
+}
+
+function RouteSelectionScreen() {
+  const stage = useBattleRunStore(state => state.stage);
+  const selectRoute = useBattleRunStore(state => state.selectRoute);
+  const checkpoint = isCheckpointStage(stage);
+
+  return (
+    <section className="relative mx-auto max-w-6xl">
+      <div className="mb-6 text-center">
+        <p className="text-[10px] font-black uppercase tracking-[0.22em] text-red-600">Choose your route</p>
+        <h2 className="mt-1 text-3xl font-black text-slate-950 sm:text-4xl">Set the stakes for stage {stage}</h2>
+        <p className="mx-auto mt-2 max-w-2xl text-slate-600">
+          Higher-risk routes strengthen the opposing team, but multiply every point earned from the battle and its contract.
+        </p>
+      </div>
+
+      {checkpoint && (
+        <div className="mb-4 flex items-center justify-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-black text-amber-900">
+          <Flag className="h-4 w-4" /> Checkpoint modifiers stack with the route you choose.
+        </div>
+      )}
+
+      <div className="grid gap-4 lg:grid-cols-3">
+        {RUN_ROUTES.map((route, index) => {
+          const Icon = route.id === 'trail' ? Shield : route.id === 'rival' ? Swords : Crown;
+          const accent = route.id === 'trail'
+            ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
+            : route.id === 'rival'
+              ? 'border-blue-200 bg-blue-50 text-blue-700'
+              : 'border-red-200 bg-red-50 text-red-700';
+          return (
+            <button
+              key={route.id}
+              type="button"
+              onClick={() => selectRoute(route.id)}
+              className="group overflow-hidden rounded-2xl border border-slate-200 bg-white text-left shadow-lg transition duration-200 hover:-translate-y-1 hover:border-slate-400 hover:shadow-xl focus:outline-none focus:ring-4 focus:ring-red-200"
+            >
+              <div className={`flex items-center justify-between border-b p-4 ${accent}`}>
+                <span className="flex items-center gap-3">
+                  <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/80"><Icon className="h-5 w-5" /></span>
+                  <span>
+                    <span className="block text-[9px] font-black uppercase tracking-[0.2em]">Route {index + 1}</span>
+                    <strong className="block text-lg text-slate-950">{route.title}</strong>
+                  </span>
+                </span>
+                <span className="rounded-full bg-slate-950 px-3 py-1 text-sm font-black text-white">x{route.scoreMultiplier}</span>
+              </div>
+              <div className="p-5">
+                <p className="text-xs font-black uppercase tracking-[0.16em] text-slate-400">{route.label}</p>
+                <p className="mt-2 min-h-10 text-sm leading-relaxed text-slate-600">{route.description}</p>
+                <div className="mt-5 grid grid-cols-3 gap-2 text-center">
+                  <div className="rounded-xl bg-slate-50 p-2">
+                    <span className="block text-[9px] font-black uppercase text-slate-400">Levels</span>
+                    <strong className="text-sm text-slate-800">{route.levelBonus ? `+${route.levelBonus}` : 'Base'}</strong>
+                  </div>
+                  <div className="rounded-xl bg-slate-50 p-2">
+                    <span className="block text-[9px] font-black uppercase text-slate-400">Roster</span>
+                    <strong className="text-sm text-slate-800">{route.partySizeBonus ? `+${route.partySizeBonus}` : 'Base'}</strong>
+                  </div>
+                  <div className="rounded-xl bg-slate-50 p-2">
+                    <span className="block text-[9px] font-black uppercase text-slate-400">Score</span>
+                    <strong className="text-sm text-slate-800">x{route.scoreMultiplier}</strong>
+                  </div>
+                </div>
+                <div className="mt-4 flex items-center justify-between rounded-xl bg-slate-950 px-4 py-3 text-sm font-black text-white">
+                  Take this route <ChevronRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+                </div>
+              </div>
+            </button>
+          );
+        })}
       </div>
     </section>
   );
@@ -711,7 +801,7 @@ export default function BattleRunGame() {
   }, [seed, startRun]);
 
   useEffect(() => {
-    if (phase === 'starter-draft' || phase === 'reward-draft') {
+    if (phase === 'starter-draft' || phase === 'reward-draft' || phase === 'route-select') {
       prewarmShowdownBattleWorker();
       preloadMoveAnimationAssets();
     }
@@ -804,6 +894,7 @@ export default function BattleRunGame() {
         </section>
       )}
 
+      {phase === 'route-select' && <RouteSelectionScreen />}
       {phase === 'preparing-battle' && <VersusScreen />}
       {phase === 'battle' && <BattleArena />}
       {phase === 'replacement' && <ReplacementScreen />}

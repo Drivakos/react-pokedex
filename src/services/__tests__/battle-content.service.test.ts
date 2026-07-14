@@ -1,5 +1,5 @@
 import { createDraftChoices, createEnemyParty, createRunPokemon } from '../battle-content.service';
-import { createSeededRandom, enemyPartySize } from '../../utils/battle-run-rules';
+import { RUN_ROUTES, createSeededRandom, enemyPartySize } from '../../utils/battle-run-rules';
 
 describe('battle content catalog', () => {
   it('creates battle-ready Pokémon without loading the simulator', () => {
@@ -28,5 +28,13 @@ describe('battle content catalog', () => {
     const stage = 7;
     const enemies = createEnemyParty(stage, [], createSeededRandom('enemy-seed'));
     expect(enemies).toHaveLength(enemyPartySize(stage));
+  });
+
+  it('applies the selected route to opponent levels and roster size', () => {
+    const apex = RUN_ROUTES.find(route => route.id === 'apex');
+    expect(apex).toBeDefined();
+    const enemies = createEnemyParty(1, [], createSeededRandom('apex-seed'), apex);
+    expect(enemies).toHaveLength(2);
+    expect(enemies.every(pokemon => pokemon.level === 9)).toBe(true);
   });
 });

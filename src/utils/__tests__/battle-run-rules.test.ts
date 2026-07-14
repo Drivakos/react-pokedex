@@ -1,5 +1,6 @@
 import {
   PARTY_LIMIT,
+  RUN_ROUTES,
   addOrReplacePartyMember,
   calculateBattleReward,
   createStageChallenge,
@@ -51,6 +52,16 @@ describe('battle run rules', () => {
     expect(checkpoint.checkpointBonus).toBe(1000);
     expect(checkpoint.levelsGained).toBe(3);
     expect(checkpoint.totalScore).toBeGreaterThan(standard.totalScore);
+  });
+
+  it('multiplies the complete reward when a riskier route is cleared', () => {
+    const apex = RUN_ROUTES.find(route => route.id === 'apex');
+    expect(apex).toBeDefined();
+    const base = calculateBattleReward(3, 7, 2, 0);
+    const boosted = calculateBattleReward(3, 7, 2, 0, null, apex);
+    expect(boosted.route).toEqual(apex);
+    expect(boosted.routeBonus).toBe(Math.round(base.totalScore * 0.6));
+    expect(boosted.totalScore).toBe(base.totalScore + boosted.routeBonus);
   });
 
   it('creates stage contracts that match the current encounter', () => {

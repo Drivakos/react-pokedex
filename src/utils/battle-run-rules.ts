@@ -1,8 +1,38 @@
-import type { RunChallenge, RunPokemon, RunRewardSummary } from '../types/battle-run';
+import type { RunChallenge, RunPokemon, RunRewardSummary, RunRoute } from '../types/battle-run';
 
 export const PARTY_LIMIT = 6;
 export const LEVELS_PER_STAGE = 2;
 export const CHECKPOINT_INTERVAL = 5;
+
+export const RUN_ROUTES: RunRoute[] = [
+  {
+    id: 'trail',
+    title: 'Trail route',
+    label: 'Measured risk',
+    description: 'Face the stage at its normal strength.',
+    levelBonus: 0,
+    partySizeBonus: 0,
+    scoreMultiplier: 1,
+  },
+  {
+    id: 'rival',
+    title: 'Rival route',
+    label: 'High pressure',
+    description: 'Opponents gain two levels. Earn 25% more score.',
+    levelBonus: 2,
+    partySizeBonus: 0,
+    scoreMultiplier: 1.25,
+  },
+  {
+    id: 'apex',
+    title: 'Apex route',
+    label: 'Maximum danger',
+    description: 'Opponents gain four levels and may add one team member. Earn 60% more score.',
+    levelBonus: 4,
+    partySizeBonus: 1,
+    scoreMultiplier: 1.6,
+  },
+];
 
 export function isCheckpointStage(stage: number): boolean {
   return Math.max(1, stage) % CHECKPOINT_INTERVAL === 0;
@@ -100,6 +130,7 @@ export function calculateBattleReward(
   partySize: number,
   faintedCount: number,
   challenge: RunChallenge | null = null,
+  route: RunRoute | null = null,
 ): RunRewardSummary {
   const normalizedStage = Math.max(1, stage);
   const normalizedTurns = Math.max(1, turns);
@@ -113,6 +144,8 @@ export function calculateBattleReward(
     ? isStageChallengeComplete(challenge, normalizedTurns, survivors, faintedCount)
     : false;
   const challengeBonus = challengeCompleted && challenge ? challenge.bounty : 0;
+  const scoreBeforeRoute = stageScore + survivalBonus + tempoBonus + flawlessBonus + checkpointBonus + challengeBonus;
+  const routeBonus = route ? Math.round(scoreBeforeRoute * (route.scoreMultiplier - 1)) : 0;
   const levelsGained = LEVELS_PER_STAGE + (isCheckpointStage(normalizedStage) ? 1 : 0);
 
   return {
@@ -127,7 +160,9 @@ export function calculateBattleReward(
     challenge,
     challengeCompleted,
     challengeBonus,
-    totalScore: stageScore + survivalBonus + tempoBonus + flawlessBonus + checkpointBonus + challengeBonus,
+    route,
+    routeBonus,
+    totalScore: scoreBeforeRoute + routeBonus,
     levelsGained,
   };
 }

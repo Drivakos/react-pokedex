@@ -1,5 +1,5 @@
 import catalogData from '../data/battle-pokemon-catalog.json';
-import type { RunPokemon } from '../types/battle-run';
+import type { RunPokemon, RunRoute } from '../types/battle-run';
 import { enemyPartySize, levelForStage, targetBstForStage } from '../utils/battle-run-rules';
 
 interface BattleCatalogPokemon {
@@ -68,12 +68,19 @@ export function createEnemyParty(
   stage: number,
   playerParty: RunPokemon[],
   random: () => number = Math.random,
+  route: RunRoute | null = null,
 ): RunPokemon[] {
-  return sampleSpecies(
+  const party = sampleSpecies(
     stage,
-    enemyPartySize(stage),
+    Math.min(3, enemyPartySize(stage) + (route?.partySizeBonus ?? 0)),
     new Set(playerParty.map(pokemon => pokemon.species)),
     random,
     false,
   );
+
+  if (!route?.levelBonus) return party;
+  return party.map(pokemon => ({
+    ...pokemon,
+    level: Math.min(100, pokemon.level + route.levelBonus),
+  }));
 }
