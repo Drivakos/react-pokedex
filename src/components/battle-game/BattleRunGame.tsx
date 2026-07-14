@@ -1,4 +1,4 @@
-import { memo, useEffect, useState } from 'react';
+import { memo, useEffect, useRef, useState } from 'react';
 import {
   ArrowLeftRight,
   Bot,
@@ -251,9 +251,15 @@ const BattleOpponentBadge = memo(function BattleOpponentBadge() {
 
 const BattleLogPanel = memo(function BattleLogPanel() {
   const battleLog = useBattleRunStore(state => state.battleLog);
+  const logRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const log = logRef.current;
+    if (log) log.scrollTo({ top: log.scrollHeight, behavior: 'smooth' });
+  }, [battleLog.length]);
 
   return (
-    <div className="p-5">
+    <div className="flex min-h-0 flex-1 flex-col p-5">
       <div className="mb-4 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Swords className="h-5 w-5 text-red-600" />
@@ -263,9 +269,12 @@ const BattleLogPanel = memo(function BattleLogPanel() {
           <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-500" /> LIVE
         </span>
       </div>
-      <div className="max-h-[420px] space-y-3 overflow-y-auto pr-1 text-sm leading-relaxed text-slate-600" aria-live="polite">
+      <div ref={logRef} className="max-h-[420px] min-h-0 flex-1 space-y-3 overflow-y-auto pr-1 text-sm leading-relaxed text-slate-600 xl:max-h-none" aria-live="polite">
         {battleLog.map((message, index) => (
-          <div key={`${index}-${message}`} className="flex gap-3 border-b border-slate-200/80 pb-3 last:border-0">
+          <div
+            key={`${index}-${message}`}
+            className={`flex gap-3 rounded-lg border-b border-slate-200/80 px-1 py-2 transition-colors last:border-0 ${index === battleLog.length - 1 ? 'bg-white/70 text-slate-900' : ''}`}
+          >
             <span className="mt-0.5 text-[10px] font-black text-slate-400">{String(index + 1).padStart(2, '0')}</span>
             <p>{message}</p>
           </div>
@@ -280,9 +289,9 @@ const BattleSidebar = memo(function BattleSidebar() {
   const stage = useBattleRunStore(state => state.stage);
 
   return (
-    <aside className="overflow-hidden rounded-[2rem] border border-white/80 bg-white/75 text-slate-900 shadow-2xl backdrop-blur-xl">
+    <aside className="flex h-full min-h-0 flex-col overflow-hidden rounded-[2rem] border border-white/80 bg-white/75 text-slate-900 shadow-2xl backdrop-blur-xl">
       {trainer && (
-        <div className="border-b border-slate-200/80 bg-gradient-to-br from-red-50 via-white/80 to-sky-50 p-5">
+        <div className="shrink-0 border-b border-slate-200/80 bg-gradient-to-br from-red-50 via-white/80 to-sky-50 p-5">
           <TrainerCard trainer={trainer} stage={stage} />
           <p className="mt-3 text-sm italic leading-relaxed text-slate-600">“{trainer.intro}”</p>
         </div>
@@ -332,7 +341,7 @@ function BattleArena() {
   return (
     <div className="mx-auto grid w-full max-w-7xl gap-5 xl:grid-cols-[minmax(0,1fr)_340px]">
       <section className="overflow-hidden rounded-[2rem] border border-slate-200/80 bg-white shadow-2xl">
-        <div className="battle-stage relative h-[470px] overflow-hidden bg-slate-900 sm:h-[480px] xl:h-[500px]">
+        <div className="battle-stage relative h-[clamp(430px,52svh,500px)] overflow-hidden bg-slate-900">
           <div className="pointer-events-none absolute inset-x-0 top-0 h-[47%] bg-gradient-to-b from-sky-400 via-sky-200 to-cyan-100" />
           <div className="pointer-events-none absolute inset-x-0 top-[39%] h-16 bg-slate-900/80 shadow-[0_10px_30px_rgba(15,23,42,0.35)]" />
           <div className="pointer-events-none absolute inset-x-0 top-[40%] flex h-12 items-center justify-around opacity-60">
@@ -395,20 +404,20 @@ function BattleArena() {
                 </div>
                 <span className="hidden text-xs font-bold text-slate-400 sm:inline">Switch options below</span>
               </div>
-              <div className="grid gap-2 sm:grid-cols-2">
+              <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
                 {decision.moves.map(move => (
                   <button
                     key={move.slot}
                     type="button"
                     disabled={move.disabled || controlsLocked}
                     onClick={() => chooseMove(move.slot)}
-                    className="group relative min-h-20 overflow-hidden rounded-2xl border border-slate-200 bg-slate-50 p-3 text-left transition hover:-translate-y-0.5 hover:border-red-300 hover:bg-white hover:shadow-lg disabled:cursor-not-allowed disabled:opacity-40"
+                    className="group relative min-h-20 overflow-hidden rounded-2xl border border-slate-200 bg-slate-50 p-3 text-left transition hover:-translate-y-0.5 hover:border-red-300 hover:bg-white hover:shadow-lg disabled:cursor-not-allowed disabled:opacity-40 xl:min-h-[96px]"
                   >
                     <span className={`absolute inset-y-0 left-0 w-1.5 ${typeClasses[move.type] ?? 'bg-slate-400'}`} />
                     <span className="flex items-start justify-between gap-3 pl-2">
                       <span>
                         <span className="block font-black text-slate-900">{move.name}</span>
-                        <span className="mt-1 flex items-center gap-1.5 text-[11px] font-bold text-slate-500">
+                        <span className="mt-1 flex flex-wrap items-center gap-1 text-[11px] font-bold text-slate-500">
                           <span className={`${typeClasses[move.type] ?? 'bg-slate-400'} rounded px-1.5 py-0.5 text-[9px] uppercase text-white`}>{move.type}</span>
                           {move.category} · {move.power || '—'} power
                         </span>
