@@ -17,6 +17,7 @@ import {
   RotateCcw,
   Shield,
   ShieldCheck,
+  Star,
   Swords,
   Trophy,
   Target,
@@ -45,6 +46,8 @@ import { BattlePokemonImage } from './BattlePokemonImage';
 import { MoveBattleEffect } from './MoveBattleEffect';
 import { TrainerImage } from './TrainerImage';
 import { preloadMoveAnimationAssets } from './move-animation-recipes';
+import { analyzeDraftFit, analyzeReplacementImpact, getRecommendedDraftChoice } from '../../utils/battle-run-draft';
+import type { DraftFitAnalysis } from '../../utils/battle-run-draft';
 
 const typeClasses: Record<string, string> = {
   Bug: 'bg-lime-600', Dark: 'bg-slate-700', Dragon: 'bg-indigo-600', Electric: 'bg-yellow-500',
@@ -96,10 +99,12 @@ function StageMeter({ stage, complete = false }: { stage: number; complete?: boo
   );
 }
 
-function DraftCard({ pokemon, onChoose, label }: {
+function DraftCard({ pokemon, onChoose, label, fit, recommended = false }: {
   pokemon: RunPokemon;
   onChoose: () => void;
   label: string;
+  fit?: DraftFitAnalysis;
+  recommended?: boolean;
 }) {
   return (
     <button
@@ -119,6 +124,11 @@ function DraftCard({ pokemon, onChoose, label }: {
         <span className="absolute left-4 top-4 rounded-full bg-slate-950/80 px-3 py-1.5 text-xs font-black text-white backdrop-blur">
           LV. {pokemon.level}
         </span>
+        {recommended && (
+          <span className="absolute right-4 top-4 flex items-center gap-1 rounded-full bg-amber-400 px-3 py-1.5 text-[10px] font-black uppercase tracking-wider text-amber-950 shadow-md">
+            <Star className="h-3.5 w-3.5 fill-current" /> Best team fit
+          </span>
+        )}
       </div>
       <div className="p-5">
         <div className="flex items-start justify-between gap-3">
@@ -137,6 +147,25 @@ function DraftCard({ pokemon, onChoose, label }: {
             ))}
           </div>
         </div>
+        {fit && (
+          <div className={`mt-3 rounded-xl border px-3 py-2.5 ${recommended ? 'border-amber-200 bg-amber-50' : 'border-sky-100 bg-sky-50/70'}`}>
+            <div className="flex items-center justify-between gap-3">
+              <span>
+                <span className={`block text-[9px] font-black uppercase tracking-[0.16em] ${recommended ? 'text-amber-700' : 'text-sky-700'}`}>Team fit</span>
+                <strong className="block text-sm text-slate-900">{fit.label}</strong>
+              </span>
+              <span className={`text-xs font-black ${fit.powerDelta >= 0 ? 'text-emerald-700' : 'text-red-600'}`}>
+                {fit.powerDelta === 0 ? 'Team average' : `${fit.powerDelta > 0 ? '+' : ''}${fit.powerDelta} BST`}
+              </span>
+            </div>
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              <span className={`rounded-full px-2 py-1 text-[9px] font-black ${fit.newTypes.length > 0 ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-200 text-slate-500'}`}>
+                {fit.newTypes.length > 0 ? `Adds ${fit.newTypes.join(' / ')}` : 'Typing represented'}
+              </span>
+              {fit.uniqueAbility && <span className="rounded-full bg-violet-100 px-2 py-1 text-[9px] font-black text-violet-700">New ability</span>}
+            </div>
+          </div>
+        )}
         <div className="mt-4 flex items-center justify-between rounded-xl bg-red-600 px-4 py-3 text-sm font-black text-white transition group-hover:bg-red-700">
           {label} <ChevronRight className="h-4 w-4 transition group-hover:translate-x-1" />
         </div>
@@ -987,26 +1016,38 @@ function ReplacementScreen() {
     <section className="mx-auto max-w-6xl text-center">
       <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-blue-100 text-blue-700"><ArrowLeftRight className="h-8 w-8" /></div>
       <h2 className="mt-4 text-3xl font-black text-slate-950">Your party is full</h2>
-      <p className="mx-auto mt-2 max-w-xl text-slate-600">Choose a team member for <strong>{recruit.species}</strong> to replace. The replaced Pokémon permanently leaves this run.</p>
+      <p className="mx-auto mt-2 max-w-xl text-slate-600">Choose a team member for <strong>{recruit.species}</strong> to replace. Each card shows the exact power and type coverage change; the replaced Pokémon permanently leaves this run.</p>
 
       <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {party.map((pokemon, index) => (
-          <button
-            key={pokemon.species}
-            type="button"
-            onClick={() => replace(index)}
-            className="group flex items-center gap-4 rounded-2xl border border-slate-200 bg-white p-4 text-left shadow-lg transition hover:-translate-y-1 hover:border-red-400 hover:bg-red-50"
-          >
-            <div className="h-24 w-24 shrink-0 rounded-2xl bg-sky-50 p-1">
-              <BattlePokemonImage id={pokemon.id} species={pokemon.species} variant="artwork" className="h-full w-full" />
-            </div>
-            <span>
-              <strong className="block text-lg text-slate-900">{pokemon.species}</strong>
-              <span className="text-sm font-semibold text-slate-500">Level {pokemon.level} · BST {pokemon.bst}</span>
-              <span className="mt-2 block text-xs font-black text-red-600">REPLACE WITH {recruit.species.toUpperCase()}</span>
-            </span>
-          </button>
-        ))}
+        {party.map((pokemon, index) => {
+          const impact = analyzeReplacementImpact(party, recruit, index);
+          const coveragePreserved = impact.gainedTypes.length === 0 && impact.lostTypes.length === 0;
+          return (
+            <button
+              key={pokemon.species}
+              type="button"
+              onClick={() => replace(index)}
+              className="group flex items-center gap-4 rounded-2xl border border-slate-200 bg-white p-4 text-left shadow-lg transition hover:-translate-y-1 hover:border-red-400 hover:bg-red-50"
+            >
+              <div className="h-24 w-24 shrink-0 rounded-2xl bg-sky-50 p-1">
+                <BattlePokemonImage id={pokemon.id} species={pokemon.species} variant="artwork" className="h-full w-full" />
+              </div>
+              <span className="min-w-0 flex-1">
+                <strong className="block text-lg text-slate-900">{pokemon.species}</strong>
+                <span className="text-sm font-semibold text-slate-500">Level {pokemon.level} · BST {pokemon.bst}</span>
+                <span className="mt-2 flex flex-wrap gap-1">
+                  <span className={`rounded-full px-2 py-1 text-[9px] font-black ${impact.powerDelta > 0 ? 'bg-emerald-100 text-emerald-700' : impact.powerDelta < 0 ? 'bg-red-100 text-red-700' : 'bg-slate-100 text-slate-600'}`}>
+                    {impact.powerDelta === 0 ? 'BST unchanged' : `${impact.powerDelta > 0 ? '+' : ''}${impact.powerDelta} BST`}
+                  </span>
+                  {impact.gainedTypes.map(type => <span key={`gain-${type}`} className="rounded-full bg-sky-100 px-2 py-1 text-[9px] font-black text-sky-700">Adds {type}</span>)}
+                  {impact.lostTypes.map(type => <span key={`loss-${type}`} className="rounded-full bg-amber-100 px-2 py-1 text-[9px] font-black text-amber-800">Loses {type}</span>)}
+                  {coveragePreserved && <span className="rounded-full bg-slate-100 px-2 py-1 text-[9px] font-black text-slate-600">Coverage preserved</span>}
+                </span>
+                <span className="mt-2 block text-xs font-black text-red-600">REPLACE WITH {recruit.species.toUpperCase()}</span>
+              </span>
+            </button>
+          );
+        })}
       </div>
     </section>
   );
@@ -1158,6 +1199,9 @@ export default function BattleRunGame() {
   const isDraft = phase === 'starter-draft' || phase === 'reward-draft';
   const runGrade = getRunGrade(score, winStreak);
   const sector = getRunSector(stage);
+  const recommendedDraft = phase === 'reward-draft'
+    ? getRecommendedDraftChoice(draftChoices, party)
+    : null;
 
   return (
     <main className="relative min-h-[calc(100vh-4rem)] overflow-hidden bg-gradient-to-br from-red-50 via-sky-50 to-emerald-50 px-4 py-4 sm:px-6">
@@ -1205,8 +1249,8 @@ export default function BattleRunGame() {
               {phase === 'starter-draft'
                 ? 'Build a team capable of clearing 15 stages, three checkpoint bosses, and the final Run Champion.'
                 : party.length < 6
-                  ? `Your survivors gained ${lastReward?.levelsGained ?? 2} levels. Add one of these Pokémon to your party.`
-                  : `Your survivors gained ${lastReward?.levelsGained ?? 2} levels. Pick a recruit, then choose which party member it replaces.`}
+                  ? `Your survivors gained ${lastReward?.levelsGained ?? 2} levels. Team fit compares new typing, BST, and abilities.`
+                  : `Your survivors gained ${lastReward?.levelsGained ?? 2} levels. Pick a recruit, then use the impact report to choose its replacement.`}
             </p>
           </div>
 
@@ -1247,6 +1291,8 @@ export default function BattleRunGame() {
                   key={pokemon.species}
                   pokemon={pokemon}
                   label={phase === 'starter-draft' ? 'Choose partner' : 'Recruit to party'}
+                  fit={phase === 'reward-draft' ? analyzeDraftFit(pokemon, party) : undefined}
+                  recommended={recommendedDraft?.species === pokemon.species}
                   onChoose={() => phase === 'starter-draft' ? chooseStarter(pokemon) : chooseReward(pokemon)}
                 />
               ))}
