@@ -51,11 +51,11 @@ function TypeBadges({ types, compact = false }: { types: string[]; compact?: boo
 function StageMeter({ stage }: { stage: number }) {
   const position = ((stage - 1) % 5) + 1;
   return (
-    <div className="flex items-center gap-1.5" aria-label={`Stage ${stage}, checkpoint progress ${position} of 5`}>
+    <div className="flex items-center gap-1" aria-label={`Stage ${stage}, checkpoint progress ${position} of 5`}>
       {Array.from({ length: 5 }, (_, index) => (
         <div
           key={index}
-          className={`h-2 rounded-full transition-all ${index < position ? 'w-7 bg-red-500' : 'w-3 bg-slate-200'}`}
+          className={`h-1.5 rounded-full transition-all ${index < position ? 'w-6 bg-red-500' : 'w-2.5 bg-slate-200'}`}
         />
       ))}
     </div>
@@ -113,13 +113,13 @@ function DraftCard({ pokemon, onChoose, label }: {
 
 function PartyStrip({ party }: { party: RunPokemon[] }) {
   return (
-    <div className="flex max-w-full gap-2 overflow-x-auto pb-1">
+    <div className="flex max-w-full gap-1.5 overflow-x-auto">
       {party.map(pokemon => (
-        <div key={pokemon.species} className="flex shrink-0 items-center gap-2 rounded-full border border-white bg-white/90 py-1 pl-1 pr-3 shadow-sm backdrop-blur">
-          <div className="h-9 w-9 overflow-hidden rounded-full bg-sky-50">
+        <div key={pokemon.species} className="flex shrink-0 items-center gap-1.5 rounded-full border border-white bg-white/90 py-0.5 pl-0.5 pr-2.5 shadow-sm backdrop-blur">
+          <div className="h-7 w-7 overflow-hidden rounded-full bg-sky-50">
             <BattlePokemonImage id={pokemon.id} species={pokemon.species} variant="icon" className="h-full w-full" />
           </div>
-          <span className="text-xs font-black text-slate-700">{pokemon.species} <span className="text-slate-400">L{pokemon.level}</span></span>
+          <span className="text-[11px] font-black text-slate-700">{pokemon.species} <span className="text-slate-400">L{pokemon.level}</span></span>
         </div>
       ))}
     </div>
@@ -256,17 +256,17 @@ const BattleLogPanel = memo(function BattleLogPanel() {
     <div className="p-5">
       <div className="mb-4 flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <Swords className="h-5 w-5 text-red-400" />
-          <h2 className="font-black">Battle feed</h2>
+          <Swords className="h-5 w-5 text-red-600" />
+          <h2 className="font-black text-slate-950">Battle feed</h2>
         </div>
-        <span className="flex items-center gap-1 rounded-full bg-emerald-500/10 px-2 py-1 text-[10px] font-black text-emerald-400">
-          <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-400" /> LIVE
+        <span className="flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-1 text-[10px] font-black text-emerald-700">
+          <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-500" /> LIVE
         </span>
       </div>
-      <div className="max-h-[420px] space-y-3 overflow-y-auto pr-1 text-sm leading-relaxed text-slate-300" aria-live="polite">
+      <div className="max-h-[420px] space-y-3 overflow-y-auto pr-1 text-sm leading-relaxed text-slate-600" aria-live="polite">
         {battleLog.map((message, index) => (
-          <div key={`${index}-${message}`} className="flex gap-3 border-b border-white/10 pb-3 last:border-0">
-            <span className="mt-0.5 text-[10px] font-black text-slate-600">{String(index + 1).padStart(2, '0')}</span>
+          <div key={`${index}-${message}`} className="flex gap-3 border-b border-slate-200/80 pb-3 last:border-0">
+            <span className="mt-0.5 text-[10px] font-black text-slate-400">{String(index + 1).padStart(2, '0')}</span>
             <p>{message}</p>
           </div>
         ))}
@@ -280,11 +280,11 @@ const BattleSidebar = memo(function BattleSidebar() {
   const stage = useBattleRunStore(state => state.stage);
 
   return (
-    <aside className="overflow-hidden rounded-[2rem] bg-slate-950 text-white shadow-2xl">
+    <aside className="overflow-hidden rounded-[2rem] border border-white/80 bg-white/75 text-slate-900 shadow-2xl backdrop-blur-xl">
       {trainer && (
-        <div className="border-b border-white/10 bg-gradient-to-br from-red-600/30 to-transparent p-5">
+        <div className="border-b border-slate-200/80 bg-gradient-to-br from-red-50 via-white/80 to-sky-50 p-5">
           <TrainerCard trainer={trainer} stage={stage} />
-          <p className="mt-3 text-sm italic leading-relaxed text-slate-300">“{trainer.intro}”</p>
+          <p className="mt-3 text-sm italic leading-relaxed text-slate-600">“{trainer.intro}”</p>
         </div>
       )}
       <BattleLogPanel />
@@ -332,7 +332,7 @@ function BattleArena() {
   return (
     <div className="mx-auto grid w-full max-w-7xl gap-5 xl:grid-cols-[minmax(0,1fr)_340px]">
       <section className="overflow-hidden rounded-[2rem] border border-slate-200/80 bg-white shadow-2xl">
-        <div className="battle-stage relative min-h-[500px] overflow-hidden bg-slate-900 sm:min-h-[540px]">
+        <div className="battle-stage relative h-[470px] overflow-hidden bg-slate-900 sm:h-[480px] xl:h-[500px]">
           <div className="pointer-events-none absolute inset-x-0 top-0 h-[47%] bg-gradient-to-b from-sky-400 via-sky-200 to-cyan-100" />
           <div className="pointer-events-none absolute inset-x-0 top-[39%] h-16 bg-slate-900/80 shadow-[0_10px_30px_rgba(15,23,42,0.35)]" />
           <div className="pointer-events-none absolute inset-x-0 top-[40%] flex h-12 items-center justify-around opacity-60">
@@ -585,28 +585,28 @@ export default function BattleRunGame() {
   const isDraft = phase === 'starter-draft' || phase === 'reward-draft';
 
   return (
-    <main className="relative min-h-[calc(100vh-4rem)] overflow-hidden bg-gradient-to-br from-red-50 via-sky-50 to-emerald-50 px-4 py-7 sm:px-6">
+    <main className="relative min-h-[calc(100vh-4rem)] overflow-hidden bg-gradient-to-br from-red-50 via-sky-50 to-emerald-50 px-4 py-4 sm:px-6">
       <div className="pointer-events-none absolute -left-32 top-20 h-96 w-96 rounded-full bg-red-200/30 blur-3xl" />
       <div className="pointer-events-none absolute -right-32 top-64 h-96 w-96 rounded-full bg-blue-200/30 blur-3xl" />
 
-      <header className="relative mx-auto mb-7 max-w-7xl rounded-2xl border border-white/80 bg-white/70 p-4 shadow-sm backdrop-blur sm:p-5">
-        <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-center">
-          <div className="flex items-center gap-4">
-            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-red-600 text-white shadow-lg shadow-red-200">
-              <Trophy className="h-6 w-6" />
+      <header className="relative mx-auto mb-4 max-w-7xl rounded-2xl border border-white/80 bg-white/75 px-3 py-2.5 shadow-sm backdrop-blur sm:px-4">
+        <div className="flex flex-col justify-between gap-2 lg:flex-row lg:items-center">
+          <div className="flex items-center gap-3">
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-red-600 text-white shadow-md shadow-red-200">
+              <Trophy className="h-4 w-4" />
             </div>
             <div>
-              <div className="text-[10px] font-black uppercase tracking-[0.22em] text-red-600">Roguelite challenge</div>
-              <div className="flex items-end gap-3">
-                <h1 className="text-2xl font-black text-slate-950 sm:text-3xl">Battle Run</h1>
-                <span className="mb-1 rounded-full bg-slate-950 px-2.5 py-1 text-[10px] font-black text-white">STAGE {stage}</span>
+              <div className="text-[8px] font-black uppercase tracking-[0.2em] text-red-600">Roguelite challenge</div>
+              <div className="flex items-center gap-2">
+                <h1 className="text-xl font-black leading-none text-slate-950 sm:text-2xl">Battle Run</h1>
+                <span className="rounded-full bg-slate-950 px-2 py-0.5 text-[9px] font-black text-white">STAGE {stage}</span>
               </div>
             </div>
           </div>
-          <div className="flex min-w-0 flex-col gap-3 lg:items-end">
+          <div className="flex min-w-0 flex-col gap-1.5 lg:items-end">
             <div className="flex items-center justify-between gap-4 lg:justify-end">
               <StageMeter stage={stage} />
-              <div className="flex items-center gap-1.5 text-xs font-black text-slate-500"><Users className="h-4 w-4" /> {party.length}/6</div>
+              <div className="flex items-center gap-1 text-[11px] font-black text-slate-500"><Users className="h-3.5 w-3.5" /> {party.length}/6</div>
             </div>
             {party.length > 0 && <PartyStrip party={party} />}
           </div>
