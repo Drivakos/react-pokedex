@@ -1,8 +1,36 @@
-import type { RunChallenge, RunChallengeProgress, RunGrade, RunPokemon, RunRewardSummary, RunRoute, RunUpgrade, RunUpgradeId } from '../types/battle-run';
+import type { BattleRunPhase, RunChallenge, RunChallengeProgress, RunGrade, RunPokemon, RunRewardSummary, RunRoute, RunSector, RunUpgrade, RunUpgradeId } from '../types/battle-run';
 
 export const PARTY_LIMIT = 6;
 export const LEVELS_PER_STAGE = 2;
 export const CHECKPOINT_INTERVAL = 5;
+export const RUN_STAGE_LIMIT = 15;
+
+export const RUN_SECTORS: RunSector[] = [
+  {
+    number: 1,
+    title: 'Opening Circuit',
+    objective: 'Build a team and secure the first gate.',
+    startStage: 1,
+    endStage: 5,
+    bossTitle: 'Gatekeeper',
+  },
+  {
+    number: 2,
+    title: 'Pressure Circuit',
+    objective: 'Take harder routes and protect the roster.',
+    startStage: 6,
+    endStage: 10,
+    bossTitle: 'Elite Trial',
+  },
+  {
+    number: 3,
+    title: 'Summit Circuit',
+    objective: 'Survive the final ascent and defeat the champion.',
+    startStage: 11,
+    endStage: RUN_STAGE_LIMIT,
+    bossTitle: 'Run Champion',
+  },
+];
 
 export const RUN_ROUTES: RunRoute[] = [
   {
@@ -120,6 +148,20 @@ export function getRunGrade(score: number, wins: number): RunGrade {
 
 export function isCheckpointStage(stage: number): boolean {
   return Math.max(1, stage) % CHECKPOINT_INTERVAL === 0;
+}
+
+export function isFinalStage(stage: number): boolean {
+  return Math.max(1, stage) >= RUN_STAGE_LIMIT;
+}
+
+export function getRunSector(stage: number): RunSector {
+  const normalizedStage = Math.min(RUN_STAGE_LIMIT, Math.max(1, stage));
+  return RUN_SECTORS.find(sector => normalizedStage <= sector.endStage) ?? RUN_SECTORS[RUN_SECTORS.length - 1];
+}
+
+export function getPostBattlePhase(stage: number, hasUpgradeChoice: boolean): BattleRunPhase {
+  if (isFinalStage(stage)) return 'run-complete';
+  return hasUpgradeChoice ? 'upgrade-draft' : 'reward-draft';
 }
 
 export function levelForStage(stage: number): number {

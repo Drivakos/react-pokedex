@@ -6,6 +6,7 @@ export type BattleRunPhase =
   | 'upgrade-draft'
   | 'reward-draft'
   | 'replacement'
+  | 'run-complete'
   | 'game-over';
 
 export interface RunPokemon {
@@ -148,6 +149,15 @@ export interface RunGrade {
   rank: RunGradeRank;
   title: string;
   description: string;
+}
+
+export interface RunSector {
+  number: 1 | 2 | 3;
+  title: string;
+  objective: string;
+  startStage: number;
+  endStage: number;
+  bossTitle: string;
 }
 
 export interface RunRewardSummary {

@@ -26,7 +26,9 @@ import {
   createRunUpgradeChoices,
   createStageChallenge,
   createSeededRandom,
+  getPostBattlePhase,
   isCheckpointStage,
+  isFinalStage,
   levelUpSurvivors,
   recruitmentChoiceCount,
 } from '../utils/battle-run-rules';
@@ -133,7 +135,8 @@ export const useBattleRunStore = create<BattleRunStore>((set, get) => {
       current.upgrades,
     );
     const survivors = levelUpSurvivors(survivingParty, reward.levelsGained);
-    const upgradeChoices = isCheckpointStage(current.stage)
+    const runComplete = isFinalStage(current.stage);
+    const upgradeChoices = !runComplete && isCheckpointStage(current.stage)
       ? createRunUpgradeChoices(current.upgrades, rng)
       : [];
     const needsUpgradeChoice = upgradeChoices.length > 0;
@@ -143,13 +146,13 @@ export const useBattleRunStore = create<BattleRunStore>((set, get) => {
     if (bestScore > current.bestScore) persistBestScore(bestScore);
 
     set({
-      phase: needsUpgradeChoice ? 'upgrade-draft' : 'reward-draft',
+      phase: getPostBattlePhase(current.stage, needsUpgradeChoice),
       party: survivors,
       score,
       bestScore,
       personalBestReached,
       winStreak: current.winStreak + 1,
-      draftChoices: needsUpgradeChoice
+      draftChoices: runComplete || needsUpgradeChoice
         ? []
         : createDraftChoices(current.stage + 1, survivors, rng, false, recruitmentChoiceCount(current.upgrades)),
       upgradeChoices,

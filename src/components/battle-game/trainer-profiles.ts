@@ -14,6 +14,18 @@ const profiles: OpponentTrainer[] = [
 export function pickOpponentTrainer(stage: number, random: () => number): OpponentTrainer {
   const index = Math.floor(random() * profiles.length) % profiles.length;
   const profile = profiles[index];
-  const rank = stage >= 13 ? 'Master' : stage >= 9 ? 'Elite' : stage >= 5 ? 'Veteran' : profile.title;
+  const rank = stage >= 15
+    ? 'Run Champion'
+    : stage === 10
+      ? 'Elite Gatekeeper'
+      : stage === 5
+        ? 'Gatekeeper'
+        : stage >= 13
+          ? 'Master'
+          : stage >= 9
+            ? 'Elite'
+            : stage >= 5
+              ? 'Veteran'
+              : profile.title;
   return { ...profile, title: rank };
 }

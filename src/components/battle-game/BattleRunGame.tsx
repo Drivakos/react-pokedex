@@ -12,6 +12,7 @@ import {
   Heart,
   Loader2,
   LockKeyhole,
+  Medal,
   RotateCcw,
   Shield,
   ShieldCheck,
@@ -27,8 +28,17 @@ import {
   disposePrewarmedShowdownBattleWorker,
   prewarmShowdownBattleWorker,
 } from '../../services/showdown-battle-worker.service';
-import type { ActiveBattlePokemon, BattleSide, BattleVisualEvent, OpponentTrainer, RunChallenge, RunChallengeProgress, RunPokemon, RunRewardSummary } from '../../types/battle-run';
-import { RUN_ROUTES, getRunGrade, getStageChallengeProgress, isCheckpointStage } from '../../utils/battle-run-rules';
+import type { ActiveBattlePokemon, BattleSide, BattleVisualEvent, OpponentTrainer, RunChallenge, RunChallengeProgress, RunPokemon, RunRewardSummary, RunUpgrade } from '../../types/battle-run';
+import {
+  RUN_ROUTES,
+  RUN_SECTORS,
+  RUN_STAGE_LIMIT,
+  getRunGrade,
+  getRunSector,
+  getStageChallengeProgress,
+  isCheckpointStage,
+  isFinalStage,
+} from '../../utils/battle-run-rules';
 import { BattlePokemonImage } from './BattlePokemonImage';
 import { MoveBattleEffect } from './MoveBattleEffect';
 import { TrainerImage } from './TrainerImage';
@@ -57,16 +67,29 @@ function TypeBadges({ types, compact = false }: { types: string[]; compact?: boo
   );
 }
 
-function StageMeter({ stage }: { stage: number }) {
-  const position = ((stage - 1) % 5) + 1;
+function StageMeter({ stage, complete = false }: { stage: number; complete?: boolean }) {
+  const sector = getRunSector(stage);
   return (
-    <div className="flex items-center gap-1" aria-label={`Stage ${stage}, checkpoint progress ${position} of 5`}>
-      {Array.from({ length: 5 }, (_, index) => (
-        <div
-          key={index}
-          className={`h-1.5 rounded-full transition-all ${index < position ? 'w-6 bg-red-500' : 'w-2.5 bg-slate-200'}`}
-        />
-      ))}
+    <div className="flex items-center gap-2" aria-label={`${sector.title}, stage ${Math.min(stage, RUN_STAGE_LIMIT)} of ${RUN_STAGE_LIMIT}`}>
+      <span className="hidden text-[9px] font-black uppercase tracking-wider text-slate-400 xl:inline">{sector.title}</span>
+      <div className="flex items-center gap-1">
+        {RUN_SECTORS.map(runSector => (
+          <div key={runSector.number} className="flex items-center gap-0.5">
+            {Array.from({ length: runSector.endStage - runSector.startStage + 1 }, (_, index) => {
+              const candidateStage = runSector.startStage + index;
+              const cleared = candidateStage < stage || (complete && candidateStage <= stage);
+              const current = candidateStage === stage && !complete;
+              return (
+                <span
+                  key={candidateStage}
+                  className={`h-1.5 rounded-full transition-all ${cleared ? 'w-2 bg-red-500' : current ? 'w-3 bg-amber-400' : 'w-1.5 bg-slate-200'}`}
+                />
+              );
+            })}
+          </div>
+        ))}
+      </div>
+      <span className="text-[10px] font-black text-slate-500">{Math.min(stage, RUN_STAGE_LIMIT)}/{RUN_STAGE_LIMIT}</span>
     </div>
   );
 }
@@ -178,12 +201,13 @@ function ChallengeCard({ challenge, compact = false, progress }: {
   );
 }
 
-function RewardSummary({ reward, score, streak, bestScore, personalBestReached }: {
+function RewardSummary({ reward, score, streak, bestScore, personalBestReached, final = false }: {
   reward: RunRewardSummary;
   score: number;
   streak: number;
   bestScore?: number;
   personalBestReached?: boolean;
+  final?: boolean;
 }) {
   const bonuses = [
     { label: 'Stage clear', value: reward.stageScore, icon: Trophy },
@@ -218,7 +242,7 @@ function RewardSummary({ reward, score, streak, bestScore, personalBestReached }
       </div>
       {personalBestReached && score === bestScore && (
         <div className="flex items-center justify-between gap-3 border-b border-amber-300/20 bg-amber-400/10 px-5 py-2.5 text-xs font-black text-amber-200">
-          <span className="flex items-center gap-2"><Crown className="h-4 w-4" /> Personal best in progress</span>
+          <span className="flex items-center gap-2"><Crown className="h-4 w-4" /> {final ? 'New personal best secured' : 'Personal best in progress'}</span>
           <span>{bestScore.toLocaleString()} points</span>
         </div>
       )}
@@ -249,7 +273,7 @@ function RewardSummary({ reward, score, streak, bestScore, personalBestReached }
         </div>
       )}
       <div className="bg-emerald-950/50 px-5 py-2.5 text-xs font-bold text-emerald-200">
-        Surviving Pokémon gained {reward.levelsGained} levels.
+        {final ? 'Final checkpoint secured. The challenge is complete.' : `Surviving Pokémon gained ${reward.levelsGained} levels.`}
       </div>
     </div>
   );
@@ -665,6 +689,8 @@ function VersusScreen() {
   const activeChallenge = useBattleRunStore(state => state.activeChallenge);
   const activeRoute = useBattleRunStore(state => state.activeRoute);
   const checkpoint = isCheckpointStage(stage);
+  const sector = getRunSector(stage);
+  const finalStage = isFinalStage(stage);
   if (!trainer) return null;
 
   return (
@@ -687,7 +713,7 @@ function VersusScreen() {
       <div className="p-6 text-center sm:p-8">
         <div className={`flex items-center justify-center gap-2 text-xs font-black uppercase tracking-[0.18em] ${checkpoint ? 'text-amber-700' : 'text-red-600'}`}>
           {checkpoint ? <Flag className="h-4 w-4" /> : <Swords className="h-4 w-4" />}
-          {checkpoint ? `Stage ${stage} checkpoint` : `Stage ${stage} encounter`}
+          {finalStage ? `Final boss · ${sector.bossTitle}` : checkpoint ? `${sector.bossTitle} · Stage ${stage}` : `${sector.title} · Stage ${stage}`}
         </div>
         {activeRoute && (
           <div className="mt-2 flex items-center justify-center gap-2 text-xs font-black text-slate-500">
@@ -702,7 +728,9 @@ function VersusScreen() {
         )}
         {checkpoint && (
           <div className="mx-auto mt-4 max-w-lg rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-bold text-amber-900">
-            Stronger roster. Clear it for a 1,000 point bonus and an extra team level.
+            {finalStage
+              ? 'The entire run is on the line. Defeat this roster to conquer all three circuits.'
+              : 'Stronger roster. Clear it for a 1,000 point bonus, an extra team level, and a permanent upgrade.'}
           </div>
         )}
         <div className="mt-5 flex justify-center gap-2">
@@ -725,20 +753,22 @@ function RouteSelectionScreen() {
   const selectRoute = useBattleRunStore(state => state.selectRoute);
   const upgrades = useBattleRunStore(state => state.upgrades);
   const checkpoint = isCheckpointStage(stage);
+  const sector = getRunSector(stage);
+  const finalStage = isFinalStage(stage);
 
   return (
     <section className="relative mx-auto max-w-6xl">
       <div className="mb-6 text-center">
-        <p className="text-[10px] font-black uppercase tracking-[0.22em] text-red-600">Choose your route</p>
-        <h2 className="mt-1 text-3xl font-black text-slate-950 sm:text-4xl">Set the stakes for stage {stage}</h2>
+        <p className="text-[10px] font-black uppercase tracking-[0.22em] text-red-600">Sector {sector.number} of {RUN_SECTORS.length} · {sector.title}</p>
+        <h2 className="mt-1 text-3xl font-black text-slate-950 sm:text-4xl">{finalStage ? 'Choose the stakes for the final boss' : `Set the stakes for stage ${stage}`}</h2>
         <p className="mx-auto mt-2 max-w-2xl text-slate-600">
-          Higher-risk routes strengthen the opposing team, but multiply every point earned from the battle and its contract.
+          {sector.objective} Higher-risk routes strengthen the opposing team, but multiply every point earned from the battle and its contract.
         </p>
       </div>
 
       {checkpoint && (
         <div className="mb-4 flex items-center justify-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-black text-amber-900">
-          <Flag className="h-4 w-4" /> Checkpoint modifiers stack with the route you choose.
+          <Flag className="h-4 w-4" /> {finalStage ? `${sector.bossTitle}: win this battle to complete the challenge.` : `${sector.bossTitle}: checkpoint modifiers stack with your route.`}
         </div>
       )}
 
@@ -901,6 +931,111 @@ function ReplacementScreen() {
   );
 }
 
+function RunCompleteScreen({
+  party,
+  score,
+  bestScore,
+  personalBestReached,
+  winStreak,
+  upgrades,
+  reward,
+  onRestart,
+}: {
+  party: RunPokemon[];
+  score: number;
+  bestScore: number;
+  personalBestReached: boolean;
+  winStreak: number;
+  upgrades: RunUpgrade[];
+  reward: RunRewardSummary | null;
+  onRestart: () => void;
+}) {
+  const grade = getRunGrade(score, winStreak);
+
+  return (
+    <section className="relative mx-auto max-w-5xl overflow-hidden rounded-[2rem] border border-white bg-white/90 shadow-2xl">
+      <div className="relative overflow-hidden bg-gradient-to-br from-slate-950 via-red-950 to-slate-900 px-6 py-9 text-center text-white sm:px-10 sm:py-12">
+        <div className="pointer-events-none absolute inset-x-24 top-0 h-40 rounded-full bg-amber-300/10 blur-3xl" />
+        <div className="relative mx-auto flex h-16 w-16 items-center justify-center rounded-2xl border border-amber-300/30 bg-amber-300/10 text-amber-300">
+          <Medal className="h-8 w-8" />
+        </div>
+        <p className="relative mt-5 text-[10px] font-black uppercase tracking-[0.28em] text-amber-300">15-stage challenge complete</p>
+        <h2 className="relative mt-2 text-4xl font-black sm:text-5xl">Battle Run conquered</h2>
+        <p className="relative mx-auto mt-3 max-w-2xl text-sm leading-relaxed text-slate-300 sm:text-base">
+          You cleared every circuit, survived all three checkpoint bosses, and defeated the Run Champion.
+        </p>
+
+        <div className="relative mx-auto mt-7 grid max-w-3xl gap-2 sm:grid-cols-3">
+          {RUN_SECTORS.map(sector => (
+            <div key={sector.number} className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-left">
+              <CheckCircle2 className="h-5 w-5 shrink-0 text-emerald-400" />
+              <span>
+                <span className="block text-[9px] font-black uppercase tracking-wider text-slate-400">Sector {sector.number}</span>
+                <strong className="block text-sm text-white">{sector.title}</strong>
+              </span>
+            </div>
+          ))}
+        </div>
+
+        <div className="relative mx-auto mt-7 grid max-w-xl grid-cols-3 gap-2">
+          <div className="rounded-xl bg-white/5 p-3">
+            <p className="text-[9px] font-black uppercase tracking-wider text-slate-400">Final score</p>
+            <p className="mt-1 text-xl font-black text-white">{score.toLocaleString()}</p>
+          </div>
+          <div className="rounded-xl bg-white/5 p-3">
+            <p className="text-[9px] font-black uppercase tracking-wider text-slate-400">Survivors</p>
+            <p className="mt-1 text-xl font-black text-white">{party.length}/6</p>
+          </div>
+          <div className="rounded-xl border border-amber-300/20 bg-amber-300/10 p-3">
+            <p className="text-[9px] font-black uppercase tracking-wider text-amber-200">Run grade</p>
+            <p className="mt-1 text-xl font-black text-amber-300">{grade.rank}</p>
+          </div>
+        </div>
+        <p className="relative mt-3 text-xs font-bold text-slate-400">{grade.title} · {grade.description}</p>
+      </div>
+
+      <div className="p-5 sm:p-8">
+        {reward && (
+          <RewardSummary
+            reward={reward}
+            score={score}
+            streak={winStreak}
+            bestScore={bestScore}
+            personalBestReached={personalBestReached}
+            final
+          />
+        )}
+
+        <div className="grid gap-5 lg:grid-cols-[1fr_auto] lg:items-end">
+          <div>
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Final roster</p>
+                <h3 className="mt-1 text-xl font-black text-slate-950">The team that reached the summit</h3>
+              </div>
+              <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-black text-slate-600">{upgrades.length} upgrades</span>
+            </div>
+            <div className="mt-4 flex flex-wrap gap-2">
+              {party.map(pokemon => (
+                <div key={pokemon.species} className="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 py-1.5 pl-1.5 pr-3">
+                  <BattlePokemonImage id={pokemon.id} species={pokemon.species} variant="icon" className="h-10 w-10" />
+                  <span className="text-left">
+                    <strong className="block text-xs text-slate-900">{pokemon.species}</strong>
+                    <span className="block text-[10px] font-bold text-slate-400">Level {pokemon.level}</span>
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+          <button type="button" onClick={onRestart} className="inline-flex items-center justify-center gap-2 rounded-xl bg-red-600 px-6 py-3 font-black text-white shadow-lg shadow-red-200 transition hover:-translate-y-0.5 hover:bg-red-700">
+            <RotateCcw className="h-5 w-5" /> Start another run
+          </button>
+        </div>
+      </div>
+    </section>
+  );
+}
+
 export default function BattleRunGame() {
   const phase = useBattleRunStore(state => state.phase);
   const stage = useBattleRunStore(state => state.stage);
@@ -938,6 +1073,7 @@ export default function BattleRunGame() {
 
   const isDraft = phase === 'starter-draft' || phase === 'reward-draft';
   const runGrade = getRunGrade(score, winStreak);
+  const sector = getRunSector(stage);
 
   return (
     <main className="relative min-h-[calc(100vh-4rem)] overflow-hidden bg-gradient-to-br from-red-50 via-sky-50 to-emerald-50 px-4 py-4 sm:px-6">
@@ -951,11 +1087,11 @@ export default function BattleRunGame() {
               <Trophy className="h-4 w-4" />
             </div>
             <div>
-              <div className="text-[8px] font-black uppercase tracking-[0.2em] text-red-600">Roguelite challenge</div>
+              <div className="text-[8px] font-black uppercase tracking-[0.2em] text-red-600">Sector {sector.number} · {sector.title}</div>
               <div className="flex items-center gap-2">
                 <h1 className="text-xl font-black leading-none text-slate-950 sm:text-2xl">Battle Run</h1>
-                <span className={`rounded-full px-2 py-0.5 text-[9px] font-black text-white ${isCheckpointStage(stage) ? 'bg-amber-600' : 'bg-slate-950'}`}>
-                  {isCheckpointStage(stage) ? `CHECKPOINT ${stage}` : `STAGE ${stage}`}
+                <span className={`rounded-full px-2 py-0.5 text-[9px] font-black text-white ${phase === 'run-complete' ? 'bg-emerald-600' : isCheckpointStage(stage) ? 'bg-amber-600' : 'bg-slate-950'}`}>
+                  {phase === 'run-complete' ? 'COMPLETE' : isFinalStage(stage) ? 'FINAL BOSS' : isCheckpointStage(stage) ? `BOSS ${stage}` : `STAGE ${stage}`}
                 </span>
               </div>
             </div>
@@ -966,7 +1102,7 @@ export default function BattleRunGame() {
               <span className="hidden items-center gap-1 text-[11px] font-black text-slate-600 sm:flex" title="Personal best"><Crown className="h-3.5 w-3.5 text-violet-500" /> {bestScore.toLocaleString()}</span>
               <span className="flex items-center gap-1 text-[11px] font-black text-slate-600"><Flame className="h-3.5 w-3.5 text-orange-500" /> {winStreak}</span>
               <span className="flex items-center gap-1 text-[11px] font-black text-slate-600"><ShieldCheck className="h-3.5 w-3.5 text-emerald-600" /> {upgrades.length}</span>
-              <StageMeter stage={stage} />
+              <StageMeter stage={stage} complete={phase === 'run-complete'} />
               <div className="flex items-center gap-1 text-[11px] font-black text-slate-500"><Users className="h-3.5 w-3.5" /> {party.length}/6</div>
             </div>
             {party.length > 0 && <PartyStrip party={party} />}
@@ -1029,6 +1165,19 @@ export default function BattleRunGame() {
       {phase === 'preparing-battle' && <VersusScreen />}
       {phase === 'battle' && <BattleArena />}
       {phase === 'replacement' && <ReplacementScreen />}
+
+      {phase === 'run-complete' && (
+        <RunCompleteScreen
+          party={party}
+          score={score}
+          bestScore={bestScore}
+          personalBestReached={personalBestReached}
+          winStreak={winStreak}
+          upgrades={upgrades}
+          reward={lastReward}
+          onRestart={startRun}
+        />
+      )}
 
       {phase === 'game-over' && (
         <section className="relative mx-auto max-w-xl overflow-hidden rounded-[2rem] border border-white bg-white/90 p-8 text-center shadow-2xl sm:p-12">

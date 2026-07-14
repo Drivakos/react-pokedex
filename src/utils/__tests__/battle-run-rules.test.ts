@@ -1,6 +1,8 @@
 import {
   PARTY_LIMIT,
   RUN_ROUTES,
+  RUN_SECTORS,
+  RUN_STAGE_LIMIT,
   RUN_UPGRADES,
   addOrReplacePartyMember,
   applyRunUpgradesToChallenge,
@@ -9,9 +11,12 @@ import {
   createStageChallenge,
   createSeededRandom,
   enemyPartySize,
+  getPostBattlePhase,
   getRunGrade,
+  getRunSector,
   getStageChallengeProgress,
   isCheckpointStage,
+  isFinalStage,
   isStageChallengeComplete,
   levelForStage,
   levelUpSurvivors,
@@ -31,6 +36,22 @@ const pokemon = (species: string, level = 5): RunPokemon => ({
 });
 
 describe('battle run rules', () => {
+  it('structures the challenge as three sectors with a final stage', () => {
+    expect(RUN_STAGE_LIMIT).toBe(15);
+    expect(RUN_SECTORS).toHaveLength(3);
+    expect(getRunSector(1)).toMatchObject({ number: 1, title: 'Opening Circuit' });
+    expect(getRunSector(6)).toMatchObject({ number: 2, title: 'Pressure Circuit' });
+    expect(getRunSector(15)).toMatchObject({ number: 3, bossTitle: 'Run Champion' });
+    expect(isFinalStage(14)).toBe(false);
+    expect(isFinalStage(15)).toBe(true);
+  });
+
+  it('ends the run after the final boss instead of opening another reward draft', () => {
+    expect(getPostBattlePhase(4, false)).toBe('reward-draft');
+    expect(getPostBattlePhase(5, true)).toBe('upgrade-draft');
+    expect(getPostBattlePhase(RUN_STAGE_LIMIT, true)).toBe('run-complete');
+  });
+
   it('scales levels, enemy party size, and target strength by stage', () => {
     expect(levelForStage(1)).toBe(5);
     expect(levelForStage(5)).toBe(13);
