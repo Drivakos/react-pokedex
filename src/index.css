@@ -287,6 +287,16 @@
 .battle-event-label { animation: battle-event-label 780ms ease-out forwards; will-change: opacity, transform; }
 .battle-event-label-fast { animation-duration: 540ms; }
 
+.battle-field-grid {
+  background-image:
+    linear-gradient(90deg, transparent 49.5%, rgb(255 255 255 / 30%) 50%, transparent 50.5%),
+    repeating-linear-gradient(90deg, transparent 0 70px, rgb(255 255 255 / 22%) 71px 73px),
+    repeating-linear-gradient(0deg, transparent 0 45px, rgb(255 255 255 / 18%) 46px 48px);
+  mask-image: linear-gradient(to bottom, transparent, black 25%);
+  transform: perspective(420px) rotateX(58deg) scale(1.35);
+  transform-origin: center bottom;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .battle-lunge-right,
   .battle-lunge-left,

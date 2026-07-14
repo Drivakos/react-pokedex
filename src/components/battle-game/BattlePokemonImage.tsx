@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type CSSProperties, type SyntheticEvent } from 'react';
+import { memo, useLayoutEffect, useMemo, useState, type CSSProperties, type SyntheticEvent } from 'react';
 import { Sprites } from '@pkmn/img';
 
 const spriteRoot = 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon';
@@ -18,7 +18,7 @@ interface SpriteLayout {
   bottom: number;
 }
 
-export function BattlePokemonImage({
+export const BattlePokemonImage = memo(function BattlePokemonImage({
   id,
   species,
   side = 'p2',
@@ -43,7 +43,7 @@ export function BattlePokemonImage({
   const [sourceIndex, setSourceIndex] = useState(0);
   const [layout, setLayout] = useState<SpriteLayout | null>(null);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     setSourceIndex(0);
     setLayout(null);
   }, [sources]);
@@ -53,8 +53,8 @@ export function BattlePokemonImage({
     naturalHeight: number,
     bounds: { x: number; y: number; width: number; height: number },
   ): SpriteLayout => {
-    const maxVisibleWidth = side === 'p1' ? 168 : 148;
-    const maxVisibleHeight = side === 'p1' ? 158 : 142;
+    const maxVisibleWidth = side === 'p1' ? 136 : 120;
+    const maxVisibleHeight = side === 'p1' ? 128 : 114;
     const scale = Math.min(maxVisibleWidth / bounds.width, maxVisibleHeight / bounds.height);
     const visibleCenter = (bounds.x + bounds.width / 2) * scale;
     const transparentBottom = naturalHeight - bounds.y - bounds.height;
@@ -173,4 +173,4 @@ export function BattlePokemonImage({
       } as CSSProperties}
     />
   );
-}
+});

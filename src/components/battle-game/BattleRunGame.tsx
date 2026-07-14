@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { memo, useEffect, useState } from 'react';
 import {
   ArrowLeftRight,
   Bot,
@@ -149,7 +149,19 @@ function TrainerCard({ trainer, stage, compact = false }: {
   );
 }
 
-function HealthPanel({ pokemon, opponent = false }: {
+function sameActivePokemon(previous: ActiveBattlePokemon | null, next: ActiveBattlePokemon | null): boolean {
+  if (previous === next) return true;
+  if (!previous || !next) return false;
+  return previous.id === next.id
+    && previous.species === next.species
+    && previous.level === next.level
+    && previous.hp === next.hp
+    && previous.maxhp === next.maxhp
+    && previous.status === next.status
+    && previous.fainted === next.fainted;
+}
+
+const HealthPanel = memo(function HealthPanel({ pokemon, opponent = false }: {
   pokemon: ActiveBattlePokemon | null;
   opponent?: boolean;
 }) {
@@ -158,9 +170,14 @@ function HealthPanel({ pokemon, opponent = false }: {
   const barColor = percentage > 50 ? 'bg-emerald-500' : percentage > 20 ? 'bg-amber-500' : 'bg-red-500';
 
   return (
-    <div className={`rounded-2xl border border-white/80 bg-white/95 p-3 shadow-lg sm:p-4 ${opponent ? 'sm:ml-10' : 'sm:mr-10'}`}>
+    <div className={`rounded-2xl border bg-white/95 p-3 shadow-xl backdrop-blur-sm ${opponent ? 'border-red-200/80' : 'border-blue-200/80'}`}>
       <div className="mb-2 flex items-center justify-between gap-3">
-        <strong className="truncate text-base text-slate-900 sm:text-lg">{pokemon.species}</strong>
+        <span className="min-w-0">
+          <span className={`block text-[9px] font-black uppercase tracking-[0.18em] ${opponent ? 'text-red-500' : 'text-blue-500'}`}>
+            {opponent ? 'Opponent' : 'Active'}
+          </span>
+          <strong className="block truncate text-base text-slate-900 sm:text-lg">{pokemon.species}</strong>
+        </span>
         <span className="shrink-0 rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-black text-slate-600">LV. {pokemon.level}</span>
       </div>
       <div className="flex items-center gap-2">
@@ -178,7 +195,7 @@ function HealthPanel({ pokemon, opponent = false }: {
       </div>
     </div>
   );
-}
+}, (previous, next) => previous.opponent === next.opponent && sameActivePokemon(previous.pokemon, next.pokemon));
 
 function BattleEffect({ event }: { event: BattleVisualEvent | null }) {
   if (!event) return null;
@@ -220,13 +237,65 @@ function pokemonMotion(event: BattleVisualEvent | null, side: BattleSide): strin
   return '';
 }
 
+const BattleOpponentBadge = memo(function BattleOpponentBadge() {
+  const trainer = useBattleRunStore(state => state.opponentTrainer);
+  const stage = useBattleRunStore(state => state.stage);
+  if (!trainer) return null;
+
+  return (
+    <div className="absolute right-4 top-4 z-20 hidden sm:block">
+      <TrainerCard trainer={trainer} stage={stage} compact />
+    </div>
+  );
+});
+
+const BattleLogPanel = memo(function BattleLogPanel() {
+  const battleLog = useBattleRunStore(state => state.battleLog);
+
+  return (
+    <div className="p-5">
+      <div className="mb-4 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Swords className="h-5 w-5 text-red-400" />
+          <h2 className="font-black">Battle feed</h2>
+        </div>
+        <span className="flex items-center gap-1 rounded-full bg-emerald-500/10 px-2 py-1 text-[10px] font-black text-emerald-400">
+          <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-400" /> LIVE
+        </span>
+      </div>
+      <div className="max-h-[420px] space-y-3 overflow-y-auto pr-1 text-sm leading-relaxed text-slate-300" aria-live="polite">
+        {battleLog.map((message, index) => (
+          <div key={`${index}-${message}`} className="flex gap-3 border-b border-white/10 pb-3 last:border-0">
+            <span className="mt-0.5 text-[10px] font-black text-slate-600">{String(index + 1).padStart(2, '0')}</span>
+            <p>{message}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+});
+
+const BattleSidebar = memo(function BattleSidebar() {
+  const trainer = useBattleRunStore(state => state.opponentTrainer);
+  const stage = useBattleRunStore(state => state.stage);
+
+  return (
+    <aside className="overflow-hidden rounded-[2rem] bg-slate-950 text-white shadow-2xl">
+      {trainer && (
+        <div className="border-b border-white/10 bg-gradient-to-br from-red-600/30 to-transparent p-5">
+          <TrainerCard trainer={trainer} stage={stage} />
+          <p className="mt-3 text-sm italic leading-relaxed text-slate-300">“{trainer.intro}”</p>
+        </div>
+      )}
+      <BattleLogPanel />
+    </aside>
+  );
+});
+
 function BattleArena() {
   const snapshot = useBattleRunStore(state => state.snapshot);
   const decision = useBattleRunStore(state => state.decision);
-  const battleLog = useBattleRunStore(state => state.battleLog);
   const error = useBattleRunStore(state => state.error);
-  const trainer = useBattleRunStore(state => state.opponentTrainer);
-  const stage = useBattleRunStore(state => state.stage);
   const visualEvents = useBattleRunStore(state => state.visualEvents);
   const consumeVisualEvent = useBattleRunStore(state => state.consumeVisualEvent);
   const chooseMove = useBattleRunStore(state => state.chooseMove);
@@ -262,39 +331,47 @@ function BattleArena() {
 
   return (
     <div className="mx-auto grid w-full max-w-7xl gap-5 xl:grid-cols-[minmax(0,1fr)_340px]">
-      <section className="overflow-hidden rounded-[2rem] border border-white/70 bg-white/90 shadow-2xl">
-        <div className="relative min-h-[450px] overflow-hidden bg-gradient-to-b from-sky-300 via-sky-100 to-emerald-300 p-4 sm:p-7">
-          <div className="pointer-events-none absolute left-[12%] top-12 h-8 w-28 rounded-full bg-white/70 blur-[1px]" />
-          <div className="pointer-events-none absolute right-[20%] top-24 h-5 w-20 rounded-full bg-white/60 blur-[1px]" />
-          <div className="pointer-events-none absolute inset-x-0 bottom-0 h-48 bg-gradient-to-t from-emerald-800/30 to-transparent" />
-          <div className="pointer-events-none absolute -bottom-12 left-[4%] h-32 w-[46%] rounded-[50%] bg-emerald-900/20 blur-sm" />
-          <div className="pointer-events-none absolute bottom-40 right-[5%] h-20 w-[38%] rounded-[50%] bg-emerald-900/20 blur-sm" />
+      <section className="overflow-hidden rounded-[2rem] border border-slate-200/80 bg-white shadow-2xl">
+        <div className="battle-stage relative min-h-[500px] overflow-hidden bg-slate-900 sm:min-h-[540px]">
+          <div className="pointer-events-none absolute inset-x-0 top-0 h-[47%] bg-gradient-to-b from-sky-400 via-sky-200 to-cyan-100" />
+          <div className="pointer-events-none absolute inset-x-0 top-[39%] h-16 bg-slate-900/80 shadow-[0_10px_30px_rgba(15,23,42,0.35)]" />
+          <div className="pointer-events-none absolute inset-x-0 top-[40%] flex h-12 items-center justify-around opacity-60">
+            {Array.from({ length: 14 }, (_, index) => <span key={index} className="h-2 w-2 rounded-full bg-white" />)}
+          </div>
+          <div className="pointer-events-none absolute inset-x-0 bottom-0 h-[56%] bg-gradient-to-b from-emerald-400 via-emerald-500 to-emerald-800" />
+          <div className="battle-field-grid pointer-events-none absolute inset-x-0 bottom-0 h-[54%] opacity-30" />
 
-          <div className="relative z-10 grid grid-cols-2 gap-3 sm:gap-6">
-            <HealthPanel key={`player-${displaySnapshot?.player?.species ?? 'empty'}`} pokemon={displaySnapshot?.player ?? null} />
+          <div className="pointer-events-none absolute right-[7%] top-[48%] h-16 w-[38%] rounded-[50%] border-2 border-white/30 bg-emerald-950/20 shadow-[inset_0_10px_22px_rgba(6,78,59,0.24)]" />
+          <div className="pointer-events-none absolute bottom-[8%] left-[3%] h-24 w-[48%] rounded-[50%] border-2 border-white/25 bg-emerald-950/30 shadow-[inset_0_14px_28px_rgba(6,78,59,0.3)]" />
+
+          <div className="absolute left-3 top-3 z-20 w-[min(64%,320px)] sm:left-5 sm:top-5">
             <HealthPanel key={`opponent-${displaySnapshot?.opponent?.species ?? 'empty'}`} pokemon={displaySnapshot?.opponent ?? null} opponent />
           </div>
+          <BattleOpponentBadge />
 
-          <div className="relative z-[5] mt-14 grid grid-cols-2 items-end gap-4 sm:mt-10">
-            <div className="flex min-h-52 items-end justify-center">
-              {displaySnapshot?.player && (
-                <div className={`relative h-44 w-full sm:h-52 ${pokemonMotion(activeVisual, 'player')}`}>
-                  <BattlePokemonImage id={displaySnapshot.player.id} species={displaySnapshot.player.species} side="p1" className="h-full w-full drop-shadow-2xl" />
-                </div>
-              )}
-            </div>
-            <div className="flex min-h-52 items-end justify-center">
-              {displaySnapshot?.opponent && (
-                <div className={`relative h-44 w-full sm:h-52 ${pokemonMotion(activeVisual, 'opponent')}`}>
-                  <BattlePokemonImage id={displaySnapshot.opponent.id} species={displaySnapshot.opponent.species} side="p2" className="h-full w-full drop-shadow-2xl" />
-                </div>
-              )}
-            </div>
+          <div className="absolute right-[8%] top-[31%] z-10 flex h-36 w-[38%] items-end justify-center sm:right-[10%] sm:h-44 sm:w-[34%]">
+            {displaySnapshot?.opponent && (
+              <div className={`relative h-full w-full ${pokemonMotion(activeVisual, 'opponent')}`}>
+                <BattlePokemonImage id={displaySnapshot.opponent.id} species={displaySnapshot.opponent.species} side="p2" className="h-full w-full drop-shadow-2xl" />
+              </div>
+            )}
+          </div>
+
+          <div className="absolute bottom-[7%] left-[2%] z-10 flex h-40 w-[36%] items-end justify-center sm:bottom-[5%] sm:left-[8%] sm:h-48 sm:w-[38%]">
+            {displaySnapshot?.player && (
+              <div className={`relative h-full w-full ${pokemonMotion(activeVisual, 'player')}`}>
+                <BattlePokemonImage id={displaySnapshot.player.id} species={displaySnapshot.player.species} side="p1" className="h-full w-full drop-shadow-2xl" />
+              </div>
+            )}
+          </div>
+
+          <div className="absolute bottom-3 right-3 z-20 w-[56%] max-w-[320px] sm:bottom-5 sm:right-5">
+            <HealthPanel key={`player-${displaySnapshot?.player?.species ?? 'empty'}`} pokemon={displaySnapshot?.player ?? null} />
           </div>
 
           <BattleEffect event={activeVisual} />
 
-          <div className="absolute bottom-4 left-4 z-10 flex items-center gap-3 rounded-full bg-slate-950/80 px-4 py-2 text-[11px] font-black text-white shadow-lg backdrop-blur sm:left-7 sm:text-xs">
+          <div className="absolute left-3 top-[43%] z-20 flex items-center gap-2 whitespace-nowrap rounded-full border border-white/15 bg-slate-950/90 px-3 py-2 text-[9px] font-black text-white shadow-xl backdrop-blur sm:left-1/2 sm:-translate-x-1/2 sm:gap-3 sm:px-4 sm:text-xs">
             <span>TURN {displaySnapshot?.turn ?? 0}</span>
             <span className="h-4 w-px bg-white/30" />
             <span>YOU {displaySnapshot?.playerRemaining ?? 0}</span>
@@ -303,14 +380,20 @@ function BattleArena() {
           </div>
         </div>
 
-        <div className="border-t border-slate-200 bg-white p-4 sm:p-6">
+        <div className="border-t border-slate-200 bg-slate-50 p-4 sm:p-6">
           {error && <div className="mb-4 rounded-xl border border-red-200 bg-red-50 p-3 text-sm font-semibold text-red-700">{error}</div>}
 
           {decision.kind === 'move' && !controlsLocked && (
             <div>
               <div className="mb-3 flex items-center justify-between">
-                <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-500">Choose your move</p>
-                <span className="text-xs font-bold text-slate-400">or switch below</span>
+                <div className="flex items-center gap-2">
+                  <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-slate-950 text-white"><Swords className="h-4 w-4" /></span>
+                  <span>
+                    <span className="block text-[10px] font-black uppercase tracking-[0.18em] text-red-500">Command phase</span>
+                    <span className="block text-sm font-black text-slate-800">Choose your move</span>
+                  </span>
+                </div>
+                <span className="hidden text-xs font-bold text-slate-400 sm:inline">Switch options below</span>
               </div>
               <div className="grid gap-2 sm:grid-cols-2">
                 {decision.moves.map(move => (
@@ -363,33 +446,7 @@ function BattleArena() {
         </div>
       </section>
 
-      <aside className="overflow-hidden rounded-[2rem] bg-slate-950 text-white shadow-2xl">
-        {trainer && (
-          <div className="border-b border-white/10 bg-gradient-to-br from-red-600/30 to-transparent p-5">
-            <TrainerCard trainer={trainer} stage={stage} />
-            <p className="mt-3 text-sm italic leading-relaxed text-slate-300">“{trainer.intro}”</p>
-          </div>
-        )}
-        <div className="p-5">
-          <div className="mb-4 flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Swords className="h-5 w-5 text-red-400" />
-              <h2 className="font-black">Battle feed</h2>
-            </div>
-            <span className="flex items-center gap-1 rounded-full bg-emerald-500/10 px-2 py-1 text-[10px] font-black text-emerald-400">
-              <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-400" /> LIVE
-            </span>
-          </div>
-          <div className="max-h-[420px] space-y-3 overflow-y-auto pr-1 text-sm leading-relaxed text-slate-300" aria-live="polite">
-            {battleLog.map((message, index) => (
-              <div key={`${index}-${message}`} className="flex gap-3 border-b border-white/10 pb-3 last:border-0">
-                <span className="mt-0.5 text-[10px] font-black text-slate-600">{String(index + 1).padStart(2, '0')}</span>
-                <p>{message}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </aside>
+      <BattleSidebar />
     </div>
   );
 }
