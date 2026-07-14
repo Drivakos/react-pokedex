@@ -5,7 +5,6 @@ import { BattleStreams, Dex, RandomPlayerAI, Teams } from '@pkmn/sim';
 import { ChoiceBuilder, LogFormatter } from '@pkmn/view';
 import type {
   ActiveBattlePokemon,
-  BattleDecision,
   BattleResult,
   BattleSnapshot,
   BattleSide,
@@ -13,6 +12,7 @@ import type {
   RunPokemon,
 } from '../types/battle-run';
 import type { ShowdownBattleCallbacks } from '../types/battle-worker';
+import { isSwitchingBlocked } from '../utils/battle-request-rules';
 
 const statTable = (value: number) => ({
   hp: value,
@@ -68,6 +68,7 @@ export class ShowdownBattleSession {
   private readonly formatter: LogFormatter;
   private readonly streams: ReturnType<typeof BattleStreams.getPlayerStreams>;
   private currentRequest: Protocol.Request | null = null;
+  private pendingRequest: Protocol.Request | null = null;
   private ended = false;
   private visualId = 0;
 
@@ -111,9 +112,13 @@ export class ShowdownBattleSession {
       const error = builder.addChoice(choice);
       if (error) throw new Error(error);
       const command = builder.toString();
+      this.pendingRequest = this.currentRequest;
       this.currentRequest = null;
-      this.callbacks.onDecision({ kind: 'wait', moves: [], switches: [] });
-      void Promise.resolve(this.streams.p1.write(command)).catch(errorValue => this.fail(errorValue));
+      this.callbacks.onDecision({ kind: 'wait', moves: [], switches: [], switchingBlocked: false });
+      void Promise.resolve(this.streams.p1.write(command)).catch(errorValue => {
+        this.restorePendingRequest();
+        this.fail(errorValue);
+      });
     } catch (error) {
       this.fail(error);
     }
@@ -125,19 +130,20 @@ export class ShowdownBattleSession {
         for (const message of Protocol.parse(chunk)) {
           const { args, kwArgs } = message;
           const formatted = cleanLogMessage(this.formatter.formatText(args, kwArgs));
-          if (formatted) this.callbacks.onLog(formatted);
+          if (formatted && args[0] !== 'error') this.callbacks.onLog(formatted);
 
           this.client.add(args, kwArgs);
           this.emitVisual(args);
 
           if (args[0] === 'request') {
+            this.pendingRequest = null;
             this.handleRequest(Protocol.parseRequest(args[1]));
           } else if (args[0] === 'win') {
             this.finish(args[1] === 'Player' ? 'player' : 'opponent');
           } else if (args[0] === 'tie') {
             this.finish('tie');
           } else if (args[0] === 'error') {
-            this.callbacks.onError(args[1]);
+            if (!this.restorePendingRequest()) this.callbacks.onError(args[1]);
           }
         }
         this.emitSnapshot();
@@ -156,6 +162,7 @@ export class ShowdownBattleSession {
     this.currentRequest = request;
     if (request.requestType === 'move') {
       const active = request.active[0];
+      const switchingBlocked = isSwitchingBlocked(active);
       const moves = (active?.moves ?? []).map((move, index) => {
         const moveData = Dex.moves.get(move.id);
         return {
@@ -174,7 +181,8 @@ export class ShowdownBattleSession {
       this.callbacks.onDecision({
         kind: 'move',
         moves,
-        switches: this.getSwitches(request.side.pokemon),
+        switches: switchingBlocked ? [] : this.getSwitches(request.side.pokemon),
+        switchingBlocked,
       });
       return;
     }
@@ -184,11 +192,20 @@ export class ShowdownBattleSession {
         kind: 'switch',
         moves: [],
         switches: this.getSwitches(request.side.pokemon),
+        switchingBlocked: false,
       });
       return;
     }
 
-    this.callbacks.onDecision({ kind: 'wait', moves: [], switches: [] });
+    this.callbacks.onDecision({ kind: 'wait', moves: [], switches: [], switchingBlocked: false });
+  }
+
+  private restorePendingRequest(): boolean {
+    if (!this.pendingRequest || this.ended) return false;
+    const request = this.pendingRequest;
+    this.pendingRequest = null;
+    this.handleRequest(request);
+    return true;
   }
 
   private getSwitches(pokemon: Protocol.Request.Pokemon[]) {

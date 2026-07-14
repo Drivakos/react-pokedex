@@ -6,6 +6,7 @@ import {
   Crown,
   Heart,
   Loader2,
+  LockKeyhole,
   RotateCcw,
   Shield,
   Swords,
@@ -401,7 +402,13 @@ function BattleArena() {
                     <span className="block text-sm font-black text-slate-800">Choose your move</span>
                   </span>
                 </div>
-                <span className="hidden text-xs font-bold text-slate-400 sm:inline">Switch options below</span>
+                {decision.switchingBlocked ? (
+                  <span className="hidden items-center gap-1.5 rounded-full bg-amber-100 px-2.5 py-1 text-xs font-black text-amber-800 sm:flex">
+                    <LockKeyhole className="h-3.5 w-3.5" /> Active Pokémon is trapped
+                  </span>
+                ) : (
+                  <span className="hidden text-xs font-bold text-slate-400 sm:inline">Switch options below</span>
+                )}
               </div>
               <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
                 {decision.moves.map(move => (
@@ -429,6 +436,11 @@ function BattleArena() {
                   </button>
                 ))}
               </div>
+              {decision.switchingBlocked && (
+                <div className="mt-2 flex items-center gap-2 rounded-xl bg-amber-100 px-3 py-2 text-xs font-black text-amber-800 sm:hidden">
+                  <LockKeyhole className="h-3.5 w-3.5" /> Active Pokémon is trapped and cannot switch
+                </div>
+              )}
             </div>
           )}
 

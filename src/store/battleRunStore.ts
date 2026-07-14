@@ -18,7 +18,7 @@ import {
   levelUpSurvivors,
 } from '../utils/battle-run-rules';
 
-const emptyDecision: BattleDecision = { kind: 'wait', moves: [], switches: [] };
+const emptyDecision: BattleDecision = { kind: 'wait', moves: [], switches: [], switchingBlocked: false };
 interface BattleSession {
   start: () => void;
   chooseMove: (slot: number) => void;
@@ -108,7 +108,7 @@ export const useBattleRunStore = create<BattleRunStore>((set, get) => {
     session?.dispose();
     const battleSession = new ShowdownBattleWorkerSession(state.party, enemyParty, {
       onSnapshot: snapshot => set({ snapshot, phase: 'battle' }),
-      onDecision: decision => set({ decision, phase: 'battle' }),
+      onDecision: decision => set({ decision, phase: 'battle', error: null }),
       onLog: message => set(current => ({
         battleLog: [...current.battleLog, message].slice(-12),
       })),

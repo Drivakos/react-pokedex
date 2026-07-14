@@ -41,6 +41,7 @@ export interface BattleDecision {
   kind: 'move' | 'switch' | 'wait';
   moves: BattleMoveChoice[];
   switches: BattleSwitchChoice[];
+  switchingBlocked: boolean;
 }
 
 export interface ActiveBattlePokemon {
