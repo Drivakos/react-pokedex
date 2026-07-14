@@ -27,8 +27,8 @@ import {
   disposePrewarmedShowdownBattleWorker,
   prewarmShowdownBattleWorker,
 } from '../../services/showdown-battle-worker.service';
-import type { ActiveBattlePokemon, BattleSide, BattleVisualEvent, OpponentTrainer, RunChallenge, RunPokemon, RunRewardSummary } from '../../types/battle-run';
-import { RUN_ROUTES, getRunGrade, isCheckpointStage } from '../../utils/battle-run-rules';
+import type { ActiveBattlePokemon, BattleSide, BattleVisualEvent, OpponentTrainer, RunChallenge, RunChallengeProgress, RunPokemon, RunRewardSummary } from '../../types/battle-run';
+import { RUN_ROUTES, getRunGrade, getStageChallengeProgress, isCheckpointStage } from '../../utils/battle-run-rules';
 import { BattlePokemonImage } from './BattlePokemonImage';
 import { MoveBattleEffect } from './MoveBattleEffect';
 import { TrainerImage } from './TrainerImage';
@@ -135,9 +135,10 @@ function PartyStrip({ party }: { party: RunPokemon[] }) {
   );
 }
 
-function ChallengeCard({ challenge, compact = false }: {
+function ChallengeCard({ challenge, compact = false, progress }: {
   challenge: RunChallenge;
   compact?: boolean;
+  progress?: RunChallengeProgress | null;
 }) {
   return (
     <div className={`rounded-2xl border border-white/10 bg-slate-950 text-white shadow-lg ${compact ? 'p-3' : 'p-4'}`}>
@@ -156,6 +157,23 @@ function ChallengeCard({ challenge, compact = false }: {
           +{challenge.bounty.toLocaleString()}
         </span>
       </div>
+      {progress && (
+        <div className={`mt-3 rounded-xl border px-3 py-2 ${progress.status === 'failed' ? 'border-red-400/30 bg-red-500/15' : progress.status === 'at-risk' ? 'border-amber-400/30 bg-amber-400/10' : 'border-emerald-400/30 bg-emerald-400/10'}`}>
+          <div className="flex items-center justify-between gap-3">
+            <span className={`text-[10px] font-black uppercase tracking-wider ${progress.status === 'failed' ? 'text-red-300' : progress.status === 'at-risk' ? 'text-amber-300' : 'text-emerald-300'}`}>
+              {progress.label}
+            </span>
+            <span className="flex items-center gap-3">
+              {progress.metrics.map(metric => (
+                <span key={metric.label} className="text-right">
+                  <span className="block text-[8px] font-black uppercase text-slate-500">{metric.label}</span>
+                  <strong className="block text-xs text-white">{metric.value}</strong>
+                </span>
+              ))}
+            </span>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -400,6 +418,11 @@ const BattleSidebar = memo(function BattleSidebar() {
   const stage = useBattleRunStore(state => state.stage);
   const activeChallenge = useBattleRunStore(state => state.activeChallenge);
   const activeRoute = useBattleRunStore(state => state.activeRoute);
+  const snapshot = useBattleRunStore(state => state.snapshot);
+  const partySize = useBattleRunStore(state => state.party.length);
+  const challengeProgress = activeChallenge && snapshot
+    ? getStageChallengeProgress(activeChallenge, snapshot.turn, partySize, snapshot.playerRemaining)
+    : null;
 
   return (
     <aside className="flex h-full min-h-0 flex-col overflow-hidden rounded-[2rem] border border-white/80 bg-white/75 text-slate-900 shadow-2xl backdrop-blur-xl">
@@ -417,7 +440,7 @@ const BattleSidebar = memo(function BattleSidebar() {
       )}
       {activeChallenge && (
         <div className="shrink-0 border-b border-slate-200/80 bg-white/55 p-3">
-          <ChallengeCard challenge={activeChallenge} compact />
+          <ChallengeCard challenge={activeChallenge} compact progress={challengeProgress} />
         </div>
       )}
       <BattleLogPanel />
@@ -427,6 +450,8 @@ const BattleSidebar = memo(function BattleSidebar() {
 
 function BattleArena() {
   const snapshot = useBattleRunStore(state => state.snapshot);
+  const activeChallenge = useBattleRunStore(state => state.activeChallenge);
+  const partySize = useBattleRunStore(state => state.party.length);
   const decision = useBattleRunStore(state => state.decision);
   const error = useBattleRunStore(state => state.error);
   const visualEvents = useBattleRunStore(state => state.visualEvents);
@@ -462,6 +487,10 @@ function BattleArena() {
     if (!activeVisual && visualEvents.length === 0) setDisplaySnapshot(snapshot);
   }, [activeVisual, snapshot, visualEvents.length]);
 
+  const challengeProgress = activeChallenge && displaySnapshot
+    ? getStageChallengeProgress(activeChallenge, displaySnapshot.turn, partySize, displaySnapshot.playerRemaining)
+    : null;
+
   return (
     <div className="mx-auto grid w-full max-w-7xl gap-5 xl:grid-cols-[minmax(0,1fr)_340px]">
       <section className="overflow-hidden rounded-[2rem] border border-slate-200/80 bg-white shadow-2xl">
@@ -480,6 +509,12 @@ function BattleArena() {
           <div className="absolute left-3 top-3 z-20 w-[min(64%,320px)] sm:left-5 sm:top-5">
             <HealthPanel key={`opponent-${displaySnapshot?.opponent?.species ?? 'empty'}`} pokemon={displaySnapshot?.opponent ?? null} opponent />
           </div>
+          {challengeProgress && (
+            <div className={`absolute right-3 top-3 z-20 w-[30%] rounded-xl border px-2 py-2 text-right shadow-lg backdrop-blur sm:hidden ${challengeProgress.status === 'failed' ? 'border-red-300/50 bg-red-950/85 text-red-200' : challengeProgress.status === 'at-risk' ? 'border-amber-300/50 bg-amber-950/85 text-amber-200' : 'border-emerald-300/50 bg-emerald-950/85 text-emerald-200'}`}>
+              <span className="block text-[8px] font-black uppercase tracking-wider">{challengeProgress.label}</span>
+              <strong className="mt-0.5 block text-xs text-white">{challengeProgress.metrics.map(metric => metric.value).join(' · ')}</strong>
+            </div>
+          )}
           <BattleOpponentBadge />
 
           <div className="absolute right-[8%] top-[31%] z-10 flex h-36 w-[38%] items-end justify-center sm:right-[10%] sm:h-44 sm:w-[34%]">
@@ -529,6 +564,10 @@ function BattleArena() {
                 {decision.switchingBlocked ? (
                   <span className="hidden items-center gap-1.5 rounded-full bg-amber-100 px-2.5 py-1 text-xs font-black text-amber-800 sm:flex">
                     <LockKeyhole className="h-3.5 w-3.5" /> Active Pokémon is trapped
+                  </span>
+                ) : challengeProgress ? (
+                  <span className={`hidden items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-black sm:flex ${challengeProgress.status === 'failed' ? 'bg-red-100 text-red-800' : challengeProgress.status === 'at-risk' ? 'bg-amber-100 text-amber-800' : 'bg-emerald-100 text-emerald-800'}`}>
+                    <Target className="h-3.5 w-3.5" /> {challengeProgress.label} · {challengeProgress.metrics.map(metric => metric.value).join(' / ')}
                   </span>
                 ) : (
                   <span className="hidden text-xs font-bold text-slate-400 sm:inline">Switch options below</span>

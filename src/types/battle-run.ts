@@ -104,6 +104,17 @@ export interface RunChallenge {
   minSurvivors?: number;
 }
 
+export interface RunChallengeProgressMetric {
+  label: string;
+  value: string;
+}
+
+export interface RunChallengeProgress {
+  status: 'on-track' | 'at-risk' | 'failed';
+  label: string;
+  metrics: RunChallengeProgressMetric[];
+}
+
 export type RunRouteId = 'trail' | 'rival' | 'apex';
 
 export interface RunRoute {

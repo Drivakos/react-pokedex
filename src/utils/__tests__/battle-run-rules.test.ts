@@ -10,6 +10,7 @@ import {
   createSeededRandom,
   enemyPartySize,
   getRunGrade,
+  getStageChallengeProgress,
   isCheckpointStage,
   isStageChallengeComplete,
   levelForStage,
@@ -125,6 +126,21 @@ describe('battle run rules', () => {
     expect(cleared.challengeBonus).toBe(challenge.bounty);
     expect(missed.challengeCompleted).toBe(false);
     expect(missed.challengeBonus).toBe(0);
+  });
+
+  it('reports live contract progress as on track, at risk, or failed', () => {
+    const rapid = createStageChallenge(2, 1, () => 0);
+    expect(getStageChallengeProgress(rapid, (rapid.maxTurns ?? 3) - 2, 1, 1))
+      .toMatchObject({ status: 'on-track', metrics: [{ label: 'Turns left', value: '3' }] });
+    expect(getStageChallengeProgress(rapid, (rapid.maxTurns ?? 2) - 1, 1, 1).status).toBe('at-risk');
+    expect(getStageChallengeProgress(rapid, (rapid.maxTurns ?? 1) + 1, 1, 1).status).toBe('failed');
+
+    const flawless = createStageChallenge(2, 1, () => 0.99);
+    expect(getStageChallengeProgress(flawless, 1, 3, 3).status).toBe('on-track');
+    expect(getStageChallengeProgress(flawless, 1, 3, 2).status).toBe('failed');
+
+    const checkpoint = createStageChallenge(5, 3, () => 0);
+    expect(getStageChallengeProgress(checkpoint, 2, 3, 2).status).toBe('at-risk');
   });
 
   it('adds recruits until the party limit', () => {

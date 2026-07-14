@@ -1,4 +1,4 @@
-import type { RunChallenge, RunGrade, RunPokemon, RunRewardSummary, RunRoute, RunUpgrade, RunUpgradeId } from '../types/battle-run';
+import type { RunChallenge, RunChallengeProgress, RunGrade, RunPokemon, RunRewardSummary, RunRoute, RunUpgrade, RunUpgradeId } from '../types/battle-run';
 
 export const PARTY_LIMIT = 6;
 export const LEVELS_PER_STAGE = 2;
@@ -206,6 +206,45 @@ export function isStageChallengeComplete(
   if (challenge.maxFaints !== undefined && faintedCount > challenge.maxFaints) return false;
   if (challenge.minSurvivors !== undefined && survivors < challenge.minSurvivors) return false;
   return true;
+}
+
+export function getStageChallengeProgress(
+  challenge: RunChallenge,
+  turns: number,
+  partySize: number,
+  survivors: number,
+): RunChallengeProgress {
+  const normalizedTurns = Math.max(0, turns);
+  const normalizedPartySize = Math.max(1, partySize);
+  const normalizedSurvivors = Math.max(0, survivors);
+  const faintedCount = Math.max(0, normalizedPartySize - normalizedSurvivors);
+  const metrics: RunChallengeProgress['metrics'] = [];
+  let failed = false;
+  let atRisk = false;
+
+  if (challenge.maxTurns !== undefined) {
+    const currentTurn = Math.max(1, normalizedTurns);
+    const remaining = Math.max(0, challenge.maxTurns - currentTurn + 1);
+    metrics.push({ label: 'Turns left', value: String(remaining) });
+    if (normalizedTurns > challenge.maxTurns) failed = true;
+    else if (remaining <= 2) atRisk = true;
+  }
+
+  if (challenge.maxFaints !== undefined) {
+    metrics.push({ label: 'Faints', value: `${faintedCount}/${challenge.maxFaints}` });
+    if (faintedCount > challenge.maxFaints) failed = true;
+    else if (challenge.maxFaints > 0 && faintedCount === challenge.maxFaints) atRisk = true;
+  }
+
+  if (challenge.minSurvivors !== undefined) {
+    metrics.push({ label: 'Standing', value: `${normalizedSurvivors}/${challenge.minSurvivors}` });
+    if (normalizedSurvivors < challenge.minSurvivors) failed = true;
+    else if (normalizedSurvivors === challenge.minSurvivors) atRisk = true;
+  }
+
+  if (failed) return { status: 'failed', label: 'Contract missed', metrics };
+  if (atRisk) return { status: 'at-risk', label: 'Contract at risk', metrics };
+  return { status: 'on-track', label: 'Contract on track', metrics };
 }
 
 export function calculateBattleReward(
