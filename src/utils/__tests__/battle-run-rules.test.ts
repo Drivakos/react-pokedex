@@ -165,6 +165,21 @@ describe('battle run rules', () => {
     expect(getContractChainMultiplier(100)).toBe(1.75);
   });
 
+  it('turns cleared contracts into Scout Passes with an Apex bonus', () => {
+    const challenge = createStageChallenge(2, 2, () => 0);
+    const turns = challenge.maxTurns ?? 1;
+    const apex = RUN_ROUTES.find(route => route.id === 'apex');
+    const trailClear = calculateBattleReward(2, turns, 2, 0, challenge);
+    const apexClear = calculateBattleReward(2, turns, 2, 0, challenge, apex);
+    const missed = calculateBattleReward(2, turns + 1, 2, 0, challenge, apex);
+    const finalClear = calculateBattleReward(RUN_STAGE_LIMIT, turns, 2, 0, challenge, apex);
+
+    expect(trailClear.scoutPassesEarned).toBe(1);
+    expect(apexClear.scoutPassesEarned).toBe(2);
+    expect(missed.scoutPassesEarned).toBe(0);
+    expect(finalClear.scoutPassesEarned).toBe(0);
+  });
+
   it('reports live contract progress as on track, at risk, or failed', () => {
     const rapid = createStageChallenge(2, 1, () => 0);
     expect(getStageChallengeProgress(rapid, (rapid.maxTurns ?? 3) - 2, 1, 1))

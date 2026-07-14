@@ -176,6 +176,7 @@ export interface RunRewardSummary {
   contractStreak: number;
   challengeMultiplier: number;
   challengeBonus: number;
+  scoutPassesEarned: number;
   route: RunRoute | null;
   routeBonus: number;
   totalScore: number;

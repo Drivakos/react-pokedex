@@ -13,6 +13,7 @@ import {
   Loader2,
   LockKeyhole,
   Medal,
+  RefreshCw,
   RotateCcw,
   Shield,
   ShieldCheck,
@@ -277,6 +278,11 @@ function RewardSummary({ reward, score, streak, bestScore, personalBestReached, 
             </strong>
             {reward.challengeCompleted && reward.challengeMultiplier > 1 && (
               <span className="block text-[9px] font-black uppercase tracking-wider text-emerald-400/70">Chain x{reward.challengeMultiplier.toFixed(2)}</span>
+            )}
+            {reward.scoutPassesEarned > 0 && (
+              <span className="mt-1 flex items-center justify-end gap-1 text-[9px] font-black uppercase tracking-wider text-sky-300">
+                <RefreshCw className="h-3 w-3" /> +{reward.scoutPassesEarned} Scout {reward.scoutPassesEarned === 1 ? 'Pass' : 'Passes'}
+              </span>
             )}
           </span>
         </div>
@@ -812,7 +818,9 @@ function RouteSelectionScreen() {
               <span className="block text-[9px] font-black uppercase tracking-[0.18em] text-amber-700">Contract chain</span>
               <strong className="block text-lg">{contractStreak} cleared in a row</strong>
               <span className="mt-1 block text-xs font-semibold leading-relaxed text-amber-800">
-                Clear this objective for x{chainMultiplier.toFixed(2)} contract score. A miss resets the chain.
+                {finalStage
+                  ? `Clear this final objective for x${chainMultiplier.toFixed(2)} contract score and secure the completed chain.`
+                  : `Clear this objective for x${chainMultiplier.toFixed(2)} contract score and a Scout Pass. Apex awards two; a miss resets the chain.`}
               </span>
             </span>
           </div>
@@ -1117,6 +1125,7 @@ export default function BattleRunGame() {
   const personalBestReached = useBattleRunStore(state => state.personalBestReached);
   const winStreak = useBattleRunStore(state => state.winStreak);
   const contractStreak = useBattleRunStore(state => state.contractStreak);
+  const scoutPasses = useBattleRunStore(state => state.scoutPasses);
   const lastReward = useBattleRunStore(state => state.lastReward);
   const upgrades = useBattleRunStore(state => state.upgrades);
   const party = useBattleRunStore(state => state.party);
@@ -1125,6 +1134,7 @@ export default function BattleRunGame() {
   const startRun = useBattleRunStore(state => state.startRun);
   const chooseStarter = useBattleRunStore(state => state.chooseStarter);
   const chooseReward = useBattleRunStore(state => state.chooseReward);
+  const rerollDraft = useBattleRunStore(state => state.rerollDraft);
 
   useEffect(() => {
     if (!seed) startRun();
@@ -1171,11 +1181,12 @@ export default function BattleRunGame() {
             </div>
           </div>
           <div className="flex min-w-0 flex-col gap-1.5 lg:items-end">
-            <div className="flex items-center justify-between gap-4 lg:justify-end">
+            <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1.5 lg:justify-end">
               <span className="flex items-center gap-1 text-[11px] font-black text-slate-600"><Trophy className="h-3.5 w-3.5 text-amber-500" /> {score.toLocaleString()}</span>
               <span className="hidden items-center gap-1 text-[11px] font-black text-slate-600 sm:flex" title="Personal best"><Crown className="h-3.5 w-3.5 text-violet-500" /> {bestScore.toLocaleString()}</span>
               <span className="flex items-center gap-1 text-[11px] font-black text-slate-600" title="Contract chain"><Target className="h-3.5 w-3.5 text-red-500" /> x{contractStreak}</span>
-              <span className="flex items-center gap-1 text-[11px] font-black text-slate-600"><ShieldCheck className="h-3.5 w-3.5 text-emerald-600" /> {upgrades.length}</span>
+              <span className="flex items-center gap-1 text-[11px] font-black text-slate-600" title="Scout Passes"><RefreshCw className="h-3.5 w-3.5 text-sky-600" /> {scoutPasses}</span>
+              <span className="hidden items-center gap-1 text-[11px] font-black text-slate-600 md:flex"><ShieldCheck className="h-3.5 w-3.5 text-emerald-600" /> {upgrades.length}</span>
               <StageMeter stage={stage} complete={phase === 'run-complete'} />
               <div className="flex items-center gap-1 text-[11px] font-black text-slate-500"><Users className="h-3.5 w-3.5" /> {party.length}/6</div>
             </div>
@@ -1209,6 +1220,24 @@ export default function BattleRunGame() {
             />
           )}
 
+          {phase === 'reward-draft' && (
+            <div className="-mt-3 mb-5 flex flex-col items-center justify-between gap-3 rounded-2xl border border-sky-200 bg-sky-50/90 px-4 py-3 sm:flex-row">
+              <div className="text-center sm:text-left">
+                <p className="text-[9px] font-black uppercase tracking-[0.18em] text-sky-700">Recruitment control</p>
+                <p className="mt-0.5 text-sm font-bold text-slate-700">Spend one Scout Pass to replace every option on this board.</p>
+              </div>
+              <button
+                type="button"
+                onClick={rerollDraft}
+                disabled={scoutPasses < 1}
+                className="group inline-flex min-w-48 items-center justify-center gap-2 rounded-xl bg-sky-700 px-4 py-2.5 text-sm font-black text-white shadow-md transition hover:-translate-y-0.5 hover:bg-sky-800 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-500 disabled:shadow-none disabled:hover:translate-y-0"
+              >
+                <RefreshCw className="h-4 w-4 transition duration-500 group-hover:rotate-180 group-disabled:rotate-0" />
+                {scoutPasses > 0 ? `Reroll · ${scoutPasses} available` : 'No Scout Passes'}
+              </button>
+            </div>
+          )}
+
           {draftChoices.length === 0 ? (
             <div className="flex items-center justify-center gap-3 py-20 font-bold text-slate-500"><Loader2 className="animate-spin" /> Scouting Pokémon…</div>
           ) : (
@@ -1227,7 +1256,7 @@ export default function BattleRunGame() {
           {phase === 'starter-draft' && (
             <div className="mt-7 grid gap-3 text-sm sm:grid-cols-3">
               <div className="rounded-2xl bg-white/70 p-4 text-slate-600"><Compass className="mb-2 h-5 w-5 text-red-500" /><strong className="block text-slate-900">Choose the stakes</strong>Riskier routes strengthen opponents and multiply every reward.</div>
-              <div className="rounded-2xl bg-white/70 p-4 text-slate-600"><Target className="mb-2 h-5 w-5 text-amber-600" /><strong className="block text-slate-900">Chain contracts</strong>Clear consecutive objectives to build a larger score multiplier.</div>
+              <div className="rounded-2xl bg-white/70 p-4 text-slate-600"><Target className="mb-2 h-5 w-5 text-amber-600" /><strong className="block text-slate-900">Chain contracts</strong>Build a score multiplier and earn Scout Passes to redraw recruits.</div>
               <div className="rounded-2xl bg-white/70 p-4 text-slate-600"><Heart className="mb-2 h-5 w-5 text-pink-500" /><strong className="block text-slate-900">Faints are permanent</strong>Lose the whole party and the run ends.</div>
             </div>
           )}

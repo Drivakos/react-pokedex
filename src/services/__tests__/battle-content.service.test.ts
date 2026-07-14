@@ -1,4 +1,4 @@
-import { createDraftChoices, createEnemyParty, createRoutePreviews, createRunPokemon } from '../battle-content.service';
+import { createDraftChoices, createEnemyParty, createRerolledDraftChoices, createRoutePreviews, createRunPokemon } from '../battle-content.service';
 import { RUN_ROUTES, createSeededRandom, enemyPartySize } from '../../utils/battle-run-rules';
 
 describe('battle content catalog', () => {
@@ -28,6 +28,16 @@ describe('battle content catalog', () => {
     const choices = createDraftChoices(3, [], createSeededRandom('expanded-draft'), false, 4);
     expect(choices).toHaveLength(4);
     expect(new Set(choices.map(pokemon => pokemon.species)).size).toBe(4);
+  });
+
+  it('rerolls recruitment without repeating the party or discarded board', () => {
+    const party = [createRunPokemon('Pikachu', 1)];
+    const current = createDraftChoices(3, party, createSeededRandom('current-board'));
+    const rerolled = createRerolledDraftChoices(3, party, current, createSeededRandom('new-board'));
+    const excluded = new Set([...party, ...current].map(pokemon => pokemon.species));
+
+    expect(rerolled).toHaveLength(3);
+    expect(rerolled.every(pokemon => !excluded.has(pokemon.species))).toBe(true);
   });
 
   it('creates the stage-scaled number of opponents', () => {

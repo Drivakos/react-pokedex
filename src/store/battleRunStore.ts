@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { createDraftChoices, createEnemyParty, createRoutePreviews } from '../services/battle-content.service';
+import { createDraftChoices, createEnemyParty, createRerolledDraftChoices, createRoutePreviews } from '../services/battle-content.service';
 import { ShowdownBattleWorkerSession } from '../services/showdown-battle-worker.service';
 import { pickOpponentTrainer } from '../components/battle-game/trainer-profiles';
 import type {
@@ -75,6 +75,7 @@ interface BattleRunStore {
   personalBestReached: boolean;
   winStreak: number;
   contractStreak: number;
+  scoutPasses: number;
   seed: string;
   party: RunPokemon[];
   enemyParty: RunPokemon[];
@@ -99,6 +100,7 @@ interface BattleRunStore {
   chooseMove: (slot: number) => void;
   chooseSwitch: (slot: number) => void;
   chooseReward: (pokemon: RunPokemon) => void;
+  rerollDraft: () => void;
   replacePartyMember: (index: number) => void;
   consumeVisualEvent: (id: number) => void;
 }
@@ -184,6 +186,7 @@ export const useBattleRunStore = create<BattleRunStore>((set, get) => {
       personalBestReached,
       winStreak: current.winStreak + 1,
       contractStreak: reward.contractStreak,
+      scoutPasses: current.scoutPasses + reward.scoutPassesEarned,
       draftChoices: runComplete || needsUpgradeChoice
         ? []
         : createDraftChoices(current.stage + 1, survivors, rng, false, recruitmentChoiceCount(current.upgrades)),
@@ -276,6 +279,7 @@ export const useBattleRunStore = create<BattleRunStore>((set, get) => {
     personalBestReached: false,
     winStreak: 0,
     contractStreak: 0,
+    scoutPasses: 0,
     seed: '',
     party: [],
     enemyParty: [],
@@ -309,6 +313,7 @@ export const useBattleRunStore = create<BattleRunStore>((set, get) => {
         personalBestReached: false,
         winStreak: 0,
         contractStreak: 0,
+        scoutPasses: 0,
         seed,
         party: [],
         enemyParty: [],
@@ -389,6 +394,23 @@ export const useBattleRunStore = create<BattleRunStore>((set, get) => {
         return;
       }
       advanceStage(addOrReplacePartyMember(party, pokemon));
+    },
+
+    rerollDraft: () => {
+      const current = get();
+      if (current.phase !== 'reward-draft' || current.scoutPasses < 1) return;
+      const draftChoices = createRerolledDraftChoices(
+        current.stage + 1,
+        current.party,
+        current.draftChoices,
+        random ?? Math.random,
+        recruitmentChoiceCount(current.upgrades),
+      );
+      if (draftChoices.length === 0) return;
+      set({
+        draftChoices,
+        scoutPasses: current.scoutPasses - 1,
+      });
     },
 
     replacePartyMember: index => {

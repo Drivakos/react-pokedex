@@ -325,6 +325,9 @@ export function calculateBattleReward(
   const challengeMultiplier = challengeCompleted ? getContractChainMultiplier(currentContractStreak) : 1;
   const contractStreak = challengeCompleted ? Math.max(0, Math.floor(currentContractStreak)) + 1 : 0;
   const challengeBonus = challengeCompleted && challenge ? Math.round(challenge.bounty * challengeMultiplier) : 0;
+  const scoutPassesEarned = challengeCompleted && !isFinalStage(normalizedStage)
+    ? (route?.id === 'apex' ? 2 : 1)
+    : 0;
   const scoreBeforeRoute = stageScore + survivalBonus + tempoBonus + flawlessBonus + checkpointBonus + challengeBonus;
   const routeBonusBase = route ? Math.round(scoreBeforeRoute * (route.scoreMultiplier - 1)) : 0;
   const routeBonus = hasRunUpgrade(upgrades, 'route-dividend')
@@ -348,6 +351,7 @@ export function calculateBattleReward(
     contractStreak,
     challengeMultiplier,
     challengeBonus,
+    scoutPassesEarned,
     route,
     routeBonus,
     totalScore: scoreBeforeRoute + routeBonus,

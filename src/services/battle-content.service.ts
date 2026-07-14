@@ -65,6 +65,16 @@ export function createDraftChoices(
   return sampleSpecies(stage, count, new Set(party.map(pokemon => pokemon.species)), random, starter);
 }
 
+export function createRerolledDraftChoices(
+  stage: number,
+  party: RunPokemon[],
+  currentChoices: RunPokemon[],
+  random: () => number = Math.random,
+  count = 3,
+): RunPokemon[] {
+  return createDraftChoices(stage, [...party, ...currentChoices], random, false, count);
+}
+
 export function createEnemyParty(
   stage: number,
   playerParty: RunPokemon[],
