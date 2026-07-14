@@ -37,6 +37,7 @@ import {
   RUN_STAGE_LIMIT,
   getBossModifier,
   getContractChainMultiplier,
+  getRecruitmentRewardProfile,
   getRunGrade,
   getRunSector,
   getStageChallengeProgress,
@@ -238,14 +239,16 @@ function ChallengeCard({ challenge, compact = false, progress, chainMultiplier =
   );
 }
 
-function RewardSummary({ reward, score, streak, bestScore, personalBestReached, final = false }: {
+function RewardSummary({ reward, score, streak, upgrades, bestScore, personalBestReached, final = false }: {
   reward: RunRewardSummary;
   score: number;
   streak: number;
+  upgrades: RunUpgrade[];
   bestScore?: number;
   personalBestReached?: boolean;
   final?: boolean;
 }) {
+  const recruitmentReward = getRecruitmentRewardProfile(reward.stage + 1, reward.route, upgrades);
   const bonuses = [
     { label: 'Stage clear', value: reward.stageScore, icon: Trophy },
     { label: `${reward.survivors} survived`, value: reward.survivalBonus, icon: ShieldCheck },
@@ -316,6 +319,21 @@ function RewardSummary({ reward, score, streak, bestScore, personalBestReached, 
                 <RefreshCw className="h-3 w-3" /> +{reward.scoutPassesEarned} Scout {reward.scoutPassesEarned === 1 ? 'Pass' : 'Passes'}
               </span>
             )}
+          </span>
+        </div>
+      )}
+      {!final && reward.route && (
+        <div className="flex items-center justify-between gap-4 border-t border-indigo-300/20 bg-indigo-400/10 px-5 py-3">
+          <span className="flex items-center gap-3">
+            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-300/15 text-indigo-200"><Medal className="h-4 w-4" /></span>
+            <span>
+              <span className="block text-[9px] font-black uppercase tracking-[0.18em] text-indigo-300">{reward.route.title} spoils secured</span>
+              <strong className="block text-sm text-white">Level {recruitmentReward.level} recruitment pool</strong>
+            </span>
+          </span>
+          <span className="text-right text-xs font-black text-indigo-200">
+            {recruitmentReward.choiceCount} choices
+            {reward.route.recruitmentChoiceBonus > 0 && <span className="block text-[9px] uppercase tracking-wider text-indigo-300">+{reward.route.recruitmentChoiceBonus} route bonus</span>}
           </span>
         </div>
       )}
@@ -934,6 +952,14 @@ function RouteSelectionScreen() {
       <div className="grid gap-4 lg:grid-cols-3">
         {RUN_ROUTES.map((route, index) => {
           const preview = routePreviews[route.id];
+          const recruitmentReward = getRecruitmentRewardProfile(stage + 1, route, upgrades);
+          const routeDescription = finalStage
+            ? route.id === 'trail'
+              ? 'Face the Run Champion at normal strength and protect the score already secured.'
+              : route.id === 'rival'
+                ? 'The Run Champion gains two levels. Win the final battle for 25% more score.'
+                : 'The Run Champion gains four levels and may add one team member. Win for 60% more score.'
+            : route.description;
           const Icon = route.id === 'trail' ? Shield : route.id === 'rival' ? Swords : Crown;
           const accent = route.id === 'trail'
             ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
@@ -959,7 +985,31 @@ function RouteSelectionScreen() {
               </div>
               <div className="p-5">
                 <p className="text-xs font-black uppercase tracking-[0.16em] text-slate-400">{route.label}</p>
-                <p className="mt-2 min-h-10 text-sm leading-relaxed text-slate-600">{route.description}</p>
+                <p className="mt-2 min-h-10 text-sm leading-relaxed text-slate-600">{routeDescription}</p>
+
+                {finalStage ? (
+                  <div className="mt-4 flex items-center justify-between gap-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5 text-amber-950">
+                    <span className="flex items-center gap-2">
+                      <Flag className="h-4 w-4 text-amber-700" />
+                      <span>
+                        <span className="block text-[9px] font-black uppercase tracking-[0.16em] text-amber-600">Final wager</span>
+                        <strong className="block text-xs">Route score decides the final grade</strong>
+                      </span>
+                    </span>
+                    <span className="shrink-0 rounded-full bg-white px-2.5 py-1 text-[10px] font-black text-amber-800 shadow-sm">No draft</span>
+                  </div>
+                ) : (
+                  <div className="mt-4 flex items-center justify-between gap-3 rounded-xl border border-indigo-200 bg-indigo-50 px-3 py-2.5 text-indigo-950">
+                    <span className="flex items-center gap-2">
+                      <Medal className="h-4 w-4 text-indigo-600" />
+                      <span>
+                        <span className="block text-[9px] font-black uppercase tracking-[0.16em] text-indigo-500">Victory spoils</span>
+                        <strong className="block text-xs">Level {recruitmentReward.level} recruit pool</strong>
+                      </span>
+                    </span>
+                    <span className="shrink-0 rounded-full bg-white px-2.5 py-1 text-[10px] font-black text-indigo-700 shadow-sm">{recruitmentReward.choiceCount} choices</span>
+                  </div>
+                )}
 
                 <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-3">
                   <div className="mb-2 flex items-center justify-between gap-2">
@@ -1181,6 +1231,7 @@ function RunCompleteScreen({
             reward={reward}
             score={score}
             streak={winStreak}
+            upgrades={upgrades}
             bestScore={bestScore}
             personalBestReached={personalBestReached}
             final
@@ -1318,6 +1369,7 @@ export default function BattleRunGame() {
               reward={lastReward}
               score={score}
               streak={winStreak}
+              upgrades={upgrades}
               bestScore={bestScore}
               personalBestReached={personalBestReached}
             />

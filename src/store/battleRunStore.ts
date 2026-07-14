@@ -28,11 +28,11 @@ import {
   createStageChallenge,
   createSeededRandom,
   getBossModifier,
+  getRecruitmentRewardProfile,
   getPostBattlePhase,
   isCheckpointStage,
   isFinalStage,
   levelUpSurvivors,
-  recruitmentChoiceCount,
 } from '../utils/battle-run-rules';
 import { canSubmitMove, canSubmitSwitch } from '../utils/battle-request-rules';
 import { getBattleAiProfile } from '../utils/battle-ai-profile';
@@ -175,6 +175,11 @@ export const useBattleRunStore = create<BattleRunStore>((set, get) => {
       ? createRunUpgradeChoices(current.upgrades, rng)
       : [];
     const needsUpgradeChoice = upgradeChoices.length > 0;
+    const recruitmentReward = getRecruitmentRewardProfile(
+      current.stage + 1,
+      current.activeRoute,
+      current.upgrades,
+    );
     const score = current.score + reward.totalScore;
     const personalBestReached = current.personalBestReached || score > current.bestScore;
     const bestScore = Math.max(current.bestScore, score);
@@ -191,7 +196,13 @@ export const useBattleRunStore = create<BattleRunStore>((set, get) => {
       scoutPasses: current.scoutPasses + reward.scoutPassesEarned,
       draftChoices: runComplete || needsUpgradeChoice
         ? []
-        : createDraftChoices(current.stage + 1, survivors, rng, false, recruitmentChoiceCount(current.upgrades)),
+        : createDraftChoices(
+          recruitmentReward.stage,
+          survivors,
+          rng,
+          false,
+          recruitmentReward.choiceCount,
+        ),
       upgradeChoices,
       decision: emptyDecision,
       pendingRecruit: null,
@@ -367,16 +378,21 @@ export const useBattleRunStore = create<BattleRunStore>((set, get) => {
       const upgrade = current.upgradeChoices.find(choice => choice.id === upgradeId);
       if (!upgrade) return;
       const upgrades = [...current.upgrades, upgrade];
+      const recruitmentReward = getRecruitmentRewardProfile(
+        current.stage + 1,
+        current.lastReward?.route,
+        upgrades,
+      );
       set({
         phase: 'reward-draft',
         upgrades,
         upgradeChoices: [],
         draftChoices: createDraftChoices(
-          current.stage + 1,
+          recruitmentReward.stage,
           current.party,
           random ?? Math.random,
           false,
-          recruitmentChoiceCount(upgrades),
+          recruitmentReward.choiceCount,
         ),
       });
     },
@@ -407,12 +423,17 @@ export const useBattleRunStore = create<BattleRunStore>((set, get) => {
     rerollDraft: () => {
       const current = get();
       if (current.phase !== 'reward-draft' || current.scoutPasses < 1) return;
-      const draftChoices = createRerolledDraftChoices(
+      const recruitmentReward = getRecruitmentRewardProfile(
         current.stage + 1,
+        current.lastReward?.route,
+        current.upgrades,
+      );
+      const draftChoices = createRerolledDraftChoices(
+        recruitmentReward.stage,
         current.party,
         current.draftChoices,
         random ?? Math.random,
-        recruitmentChoiceCount(current.upgrades),
+        recruitmentReward.choiceCount,
       );
       if (draftChoices.length === 0) return;
       set({

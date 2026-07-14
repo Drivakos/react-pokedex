@@ -1,5 +1,5 @@
 import { createDraftChoices, createEnemyParty, createRerolledDraftChoices, createRoutePreviews, createRunPokemon } from '../battle-content.service';
-import { RUN_ROUTES, createSeededRandom, enemyPartySize } from '../../utils/battle-run-rules';
+import { RUN_ROUTES, createSeededRandom, enemyPartySize, getRecruitmentRewardProfile } from '../../utils/battle-run-rules';
 
 describe('battle content catalog', () => {
   it('creates battle-ready Pokémon without loading the simulator', () => {
@@ -28,6 +28,21 @@ describe('battle content catalog', () => {
     const choices = createDraftChoices(3, [], createSeededRandom('expanded-draft'), false, 4);
     expect(choices).toHaveLength(4);
     expect(new Set(choices.map(pokemon => pokemon.species)).size).toBe(4);
+  });
+
+  it('materializes Apex spoils as a larger, higher-level recruitment board', () => {
+    const apex = RUN_ROUTES.find(route => route.id === 'apex') ?? null;
+    const reward = getRecruitmentRewardProfile(4, apex);
+    const choices = createDraftChoices(
+      reward.stage,
+      [],
+      createSeededRandom('apex-reward'),
+      false,
+      reward.choiceCount,
+    );
+
+    expect(choices).toHaveLength(4);
+    expect(choices.every(pokemon => pokemon.level === 15)).toBe(true);
   });
 
   it('rerolls recruitment without repeating the party or discarded board', () => {

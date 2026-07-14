@@ -67,24 +67,30 @@ export const RUN_ROUTES: RunRoute[] = [
     levelBonus: 0,
     partySizeBonus: 0,
     scoreMultiplier: 1,
+    recruitmentStageBonus: 0,
+    recruitmentChoiceBonus: 0,
   },
   {
     id: 'rival',
     title: 'Rival route',
     label: 'High pressure',
-    description: 'Opponents gain two levels. Earn 25% more score.',
+    description: 'Opponents gain two levels. Earn 25% more score and a recruitment pool scaled one stage ahead.',
     levelBonus: 2,
     partySizeBonus: 0,
     scoreMultiplier: 1.25,
+    recruitmentStageBonus: 1,
+    recruitmentChoiceBonus: 0,
   },
   {
     id: 'apex',
     title: 'Apex route',
     label: 'Maximum danger',
-    description: 'Opponents gain four levels and may add one team member. Earn 60% more score.',
+    description: 'Opponents gain four levels and may add one team member. Earn 60% more score, a two-stage recruitment boost, and one extra choice.',
     levelBonus: 4,
     partySizeBonus: 1,
     scoreMultiplier: 1.6,
+    recruitmentStageBonus: 2,
+    recruitmentChoiceBonus: 1,
   },
 ];
 
@@ -156,8 +162,22 @@ export function getContractChainMultiplier(contractStreak: number): number {
   return Math.min(CONTRACT_CHAIN_MAX_MULTIPLIER, 1 + normalizedStreak * CONTRACT_CHAIN_STEP);
 }
 
-export function recruitmentChoiceCount(upgrades: RunUpgrade[]): number {
-  return hasRunUpgrade(upgrades, 'expanded-scouting') ? 4 : 3;
+export function recruitmentChoiceCount(upgrades: RunUpgrade[], route: RunRoute | null = null): number {
+  const baseChoices = hasRunUpgrade(upgrades, 'expanded-scouting') ? 4 : 3;
+  return baseChoices + (route?.recruitmentChoiceBonus ?? 0);
+}
+
+export function getRecruitmentRewardProfile(
+  nextStage: number,
+  route: RunRoute | null = null,
+  upgrades: RunUpgrade[] = [],
+): { stage: number; level: number; choiceCount: number } {
+  const stage = Math.max(1, Math.floor(nextStage)) + (route?.recruitmentStageBonus ?? 0);
+  return {
+    stage,
+    level: levelForStage(stage),
+    choiceCount: recruitmentChoiceCount(upgrades, route),
+  };
 }
 
 export function getRunGrade(score: number, wins: number): RunGrade {

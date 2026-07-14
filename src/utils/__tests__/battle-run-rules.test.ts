@@ -12,6 +12,7 @@ import {
   createSeededRandom,
   enemyPartySize,
   getPostBattlePhase,
+  getRecruitmentRewardProfile,
   getContractChainMultiplier,
   getBossModifier,
   getRunGrade,
@@ -98,6 +99,18 @@ describe('battle run rules', () => {
     expect(boosted.route).toEqual(apex);
     expect(boosted.routeBonus).toBe(Math.round(base.totalScore * 0.6));
     expect(boosted.totalScore).toBe(base.totalScore + boosted.routeBonus);
+  });
+
+  it('turns dangerous routes into stronger and broader recruitment rewards', () => {
+    const trail = RUN_ROUTES.find(route => route.id === 'trail') ?? null;
+    const rival = RUN_ROUTES.find(route => route.id === 'rival') ?? null;
+    const apex = RUN_ROUTES.find(route => route.id === 'apex') ?? null;
+    const scouting = RUN_UPGRADES.filter(upgrade => upgrade.id === 'expanded-scouting');
+
+    expect(getRecruitmentRewardProfile(4, trail)).toEqual({ stage: 4, level: 11, choiceCount: 3 });
+    expect(getRecruitmentRewardProfile(4, rival)).toEqual({ stage: 5, level: 13, choiceCount: 3 });
+    expect(getRecruitmentRewardProfile(4, apex)).toEqual({ stage: 6, level: 15, choiceCount: 4 });
+    expect(getRecruitmentRewardProfile(4, apex, scouting).choiceCount).toBe(5);
   });
 
   it('applies permanent run upgrades to future rewards', () => {

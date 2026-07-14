@@ -129,6 +129,8 @@ export interface RunRoute {
   levelBonus: number;
   partySizeBonus: number;
   scoreMultiplier: number;
+  recruitmentStageBonus: number;
+  recruitmentChoiceBonus: number;
 }
 
 export type RunUpgradeId =
