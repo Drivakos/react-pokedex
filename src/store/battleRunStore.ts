@@ -13,16 +13,22 @@ import type {
   RunRewardSummary,
   RunRoute,
   RunRouteId,
+  RunUpgrade,
+  RunUpgradeId,
   RunPokemon,
 } from '../types/battle-run';
 import {
   PARTY_LIMIT,
   RUN_ROUTES,
   addOrReplacePartyMember,
+  applyRunUpgradesToChallenge,
   calculateBattleReward,
+  createRunUpgradeChoices,
   createStageChallenge,
   createSeededRandom,
+  isCheckpointStage,
   levelUpSurvivors,
+  recruitmentChoiceCount,
 } from '../utils/battle-run-rules';
 import { canSubmitMove, canSubmitSwitch } from '../utils/battle-request-rules';
 
@@ -49,6 +55,8 @@ interface BattleRunStore {
   opponentTrainer: OpponentTrainer | null;
   activeChallenge: RunChallenge | null;
   activeRoute: RunRoute | null;
+  upgrades: RunUpgrade[];
+  upgradeChoices: RunUpgrade[];
   draftChoices: RunPokemon[];
   pendingRecruit: RunPokemon | null;
   snapshot: BattleSnapshot | null;
@@ -60,6 +68,7 @@ interface BattleRunStore {
   startRun: () => void;
   chooseStarter: (pokemon: RunPokemon) => void;
   selectRoute: (routeId: RunRouteId) => void;
+  chooseUpgrade: (upgradeId: RunUpgradeId) => void;
   chooseMove: (slot: number) => void;
   chooseSwitch: (slot: number) => void;
   chooseReward: (pokemon: RunPokemon) => void;
@@ -99,15 +108,23 @@ export const useBattleRunStore = create<BattleRunStore>((set, get) => {
       fainted.size,
       current.activeChallenge,
       current.activeRoute,
+      current.upgrades,
     );
     const survivors = levelUpSurvivors(survivingParty, reward.levelsGained);
+    const upgradeChoices = isCheckpointStage(current.stage)
+      ? createRunUpgradeChoices(current.upgrades, rng)
+      : [];
+    const needsUpgradeChoice = upgradeChoices.length > 0;
 
     set({
-      phase: 'reward-draft',
+      phase: needsUpgradeChoice ? 'upgrade-draft' : 'reward-draft',
       party: survivors,
       score: current.score + reward.totalScore,
       winStreak: current.winStreak + 1,
-      draftChoices: createDraftChoices(current.stage + 1, survivors, rng),
+      draftChoices: needsUpgradeChoice
+        ? []
+        : createDraftChoices(current.stage + 1, survivors, rng, false, recruitmentChoiceCount(current.upgrades)),
+      upgradeChoices,
       decision: emptyDecision,
       pendingRecruit: null,
       visualEvents: [],
@@ -123,7 +140,10 @@ export const useBattleRunStore = create<BattleRunStore>((set, get) => {
     pendingBattleResult = null;
     const opponentTrainer = pickOpponentTrainer(state.stage, rng);
     const enemyParty = createEnemyParty(state.stage, state.party, rng, route);
-    const activeChallenge = createStageChallenge(state.stage, state.party.length, rng);
+    const activeChallenge = applyRunUpgradesToChallenge(
+      createStageChallenge(state.stage, state.party.length, rng),
+      state.upgrades,
+    );
 
     set({
       phase: 'preparing-battle',
@@ -172,6 +192,7 @@ export const useBattleRunStore = create<BattleRunStore>((set, get) => {
       opponentTrainer: null,
       activeChallenge: null,
       activeRoute: null,
+      upgradeChoices: [],
       snapshot: null,
       battleLog: [],
       phase: 'route-select',
@@ -189,6 +210,8 @@ export const useBattleRunStore = create<BattleRunStore>((set, get) => {
     opponentTrainer: null,
     activeChallenge: null,
     activeRoute: null,
+    upgrades: [],
+    upgradeChoices: [],
     draftChoices: [],
     pendingRecruit: null,
     snapshot: null,
@@ -215,6 +238,8 @@ export const useBattleRunStore = create<BattleRunStore>((set, get) => {
         opponentTrainer: null,
         activeChallenge: null,
         activeRoute: null,
+        upgrades: [],
+        upgradeChoices: [],
         draftChoices: createDraftChoices(1, [], random, true),
         pendingRecruit: null,
         snapshot: null,
@@ -235,6 +260,26 @@ export const useBattleRunStore = create<BattleRunStore>((set, get) => {
       const route = RUN_ROUTES.find(option => option.id === routeId);
       if (!route) return;
       beginBattle(route);
+    },
+
+    chooseUpgrade: upgradeId => {
+      const current = get();
+      if (current.phase !== 'upgrade-draft') return;
+      const upgrade = current.upgradeChoices.find(choice => choice.id === upgradeId);
+      if (!upgrade) return;
+      const upgrades = [...current.upgrades, upgrade];
+      set({
+        phase: 'reward-draft',
+        upgrades,
+        upgradeChoices: [],
+        draftChoices: createDraftChoices(
+          current.stage + 1,
+          current.party,
+          random ?? Math.random,
+          false,
+          recruitmentChoiceCount(upgrades),
+        ),
+      });
     },
 
     chooseMove: slot => {

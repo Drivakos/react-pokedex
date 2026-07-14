@@ -60,8 +60,9 @@ export function createDraftChoices(
   party: RunPokemon[],
   random: () => number = Math.random,
   starter = false,
+  count = 3,
 ): RunPokemon[] {
-  return sampleSpecies(stage, 3, new Set(party.map(pokemon => pokemon.species)), random, starter);
+  return sampleSpecies(stage, count, new Set(party.map(pokemon => pokemon.species)), random, starter);
 }
 
 export function createEnemyParty(

@@ -676,6 +676,7 @@ function VersusScreen() {
 function RouteSelectionScreen() {
   const stage = useBattleRunStore(state => state.stage);
   const selectRoute = useBattleRunStore(state => state.selectRoute);
+  const upgrades = useBattleRunStore(state => state.upgrades);
   const checkpoint = isCheckpointStage(stage);
 
   return (
@@ -691,6 +692,17 @@ function RouteSelectionScreen() {
       {checkpoint && (
         <div className="mb-4 flex items-center justify-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-black text-amber-900">
           <Flag className="h-4 w-4" /> Checkpoint modifiers stack with the route you choose.
+        </div>
+      )}
+
+      {upgrades.length > 0 && (
+        <div className="mb-4 flex flex-wrap items-center justify-center gap-2">
+          <span className="mr-1 text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">Run upgrades</span>
+          {upgrades.map(upgrade => (
+            <span key={upgrade.id} className="rounded-full border border-white bg-white/80 px-3 py-1 text-xs font-black text-slate-600 shadow-sm">
+              {upgrade.title}
+            </span>
+          ))}
         </div>
       )}
 
@@ -748,6 +760,65 @@ function RouteSelectionScreen() {
   );
 }
 
+function UpgradeDraftScreen() {
+  const stage = useBattleRunStore(state => state.stage);
+  const score = useBattleRunStore(state => state.score);
+  const upgradeChoices = useBattleRunStore(state => state.upgradeChoices);
+  const chooseUpgrade = useBattleRunStore(state => state.chooseUpgrade);
+
+  return (
+    <section className="relative mx-auto max-w-6xl">
+      <div className="mb-6 text-center">
+        <p className="text-[10px] font-black uppercase tracking-[0.22em] text-amber-700">Checkpoint cleared</p>
+        <h2 className="mt-1 text-3xl font-black text-slate-950 sm:text-4xl">Choose a permanent run upgrade</h2>
+        <p className="mx-auto mt-2 max-w-2xl text-slate-600">
+          Stage {stage} secured. This upgrade remains active until the run ends and changes every future encounter or reward.
+        </p>
+        <div className="mt-3 inline-flex items-center gap-2 rounded-full bg-slate-950 px-4 py-2 text-xs font-black text-white">
+          <Trophy className="h-3.5 w-3.5 text-amber-300" /> Current score {score.toLocaleString()}
+        </div>
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-3">
+        {upgradeChoices.map(upgrade => {
+          const Icon = upgrade.id === 'veteran-training'
+            ? Crown
+            : upgrade.id === 'expanded-scouting'
+              ? Users
+              : upgrade.id === 'contract-ledger'
+                ? Target
+                : upgrade.id === 'route-dividend'
+                  ? Compass
+                  : upgrade.id === 'flawless-standard'
+                    ? ShieldCheck
+                    : Heart;
+          return (
+            <button
+              key={upgrade.id}
+              type="button"
+              onClick={() => chooseUpgrade(upgrade.id)}
+              className="group flex min-h-64 flex-col rounded-2xl border border-slate-200 bg-white p-5 text-left shadow-lg transition duration-200 hover:-translate-y-1 hover:border-amber-400 hover:shadow-xl focus:outline-none focus:ring-4 focus:ring-amber-200"
+            >
+              <div className="flex items-start justify-between gap-4">
+                <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-100 text-amber-700">
+                  <Icon className="h-6 w-6" />
+                </span>
+                <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[9px] font-black uppercase tracking-wider text-slate-500">Permanent</span>
+              </div>
+              <p className="mt-5 text-[10px] font-black uppercase tracking-[0.18em] text-amber-700">{upgrade.label}</p>
+              <h3 className="mt-1 text-xl font-black text-slate-950">{upgrade.title}</h3>
+              <p className="mt-2 flex-1 text-sm leading-relaxed text-slate-600">{upgrade.description}</p>
+              <div className="mt-5 flex items-center justify-between rounded-xl bg-slate-950 px-4 py-3 text-sm font-black text-white">
+                Claim upgrade <ChevronRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+              </div>
+            </button>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
 function ReplacementScreen() {
   const party = useBattleRunStore(state => state.party);
   const recruit = useBattleRunStore(state => state.pendingRecruit);
@@ -789,6 +860,7 @@ export default function BattleRunGame() {
   const score = useBattleRunStore(state => state.score);
   const winStreak = useBattleRunStore(state => state.winStreak);
   const lastReward = useBattleRunStore(state => state.lastReward);
+  const upgrades = useBattleRunStore(state => state.upgrades);
   const party = useBattleRunStore(state => state.party);
   const draftChoices = useBattleRunStore(state => state.draftChoices);
   const seed = useBattleRunStore(state => state.seed);
@@ -842,6 +914,7 @@ export default function BattleRunGame() {
             <div className="flex items-center justify-between gap-4 lg:justify-end">
               <span className="flex items-center gap-1 text-[11px] font-black text-slate-600"><Trophy className="h-3.5 w-3.5 text-amber-500" /> {score.toLocaleString()}</span>
               <span className="flex items-center gap-1 text-[11px] font-black text-slate-600"><Flame className="h-3.5 w-3.5 text-orange-500" /> {winStreak}</span>
+              <span className="flex items-center gap-1 text-[11px] font-black text-slate-600"><ShieldCheck className="h-3.5 w-3.5 text-emerald-600" /> {upgrades.length}</span>
               <StageMeter stage={stage} />
               <div className="flex items-center gap-1 text-[11px] font-black text-slate-500"><Users className="h-3.5 w-3.5" /> {party.length}/6</div>
             </div>
@@ -872,7 +945,7 @@ export default function BattleRunGame() {
           {draftChoices.length === 0 ? (
             <div className="flex items-center justify-center gap-3 py-20 font-bold text-slate-500"><Loader2 className="animate-spin" /> Scouting Pokémon…</div>
           ) : (
-            <div className="grid gap-5 md:grid-cols-3">
+            <div className={`grid gap-5 md:grid-cols-2 ${draftChoices.length >= 4 ? 'xl:grid-cols-4' : 'lg:grid-cols-3'}`}>
               {draftChoices.map(pokemon => (
                 <DraftCard
                   key={pokemon.species}
@@ -894,6 +967,7 @@ export default function BattleRunGame() {
         </section>
       )}
 
+      {phase === 'upgrade-draft' && <UpgradeDraftScreen />}
       {phase === 'route-select' && <RouteSelectionScreen />}
       {phase === 'preparing-battle' && <VersusScreen />}
       {phase === 'battle' && <BattleArena />}

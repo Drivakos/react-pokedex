@@ -1,4 +1,4 @@
-import type { RunChallenge, RunPokemon, RunRewardSummary, RunRoute } from '../types/battle-run';
+import type { RunChallenge, RunPokemon, RunRewardSummary, RunRoute, RunUpgrade, RunUpgradeId } from '../types/battle-run';
 
 export const PARTY_LIMIT = 6;
 export const LEVELS_PER_STAGE = 2;
@@ -33,6 +33,73 @@ export const RUN_ROUTES: RunRoute[] = [
     scoreMultiplier: 1.6,
   },
 ];
+
+export const RUN_UPGRADES: RunUpgrade[] = [
+  {
+    id: 'veteran-training',
+    title: 'Veteran training',
+    label: 'Team growth',
+    description: 'Surviving Pokémon gain one additional level after every victory.',
+  },
+  {
+    id: 'expanded-scouting',
+    title: 'Expanded scouting',
+    label: 'Recruitment',
+    description: 'Every recruitment draft offers one additional Pokémon.',
+  },
+  {
+    id: 'contract-ledger',
+    title: 'Contract ledger',
+    label: 'Objectives',
+    description: 'Future stage contract bounties are increased by 30%.',
+  },
+  {
+    id: 'route-dividend',
+    title: 'Route dividend',
+    label: 'Risk reward',
+    description: 'Rival and Apex route bonuses are increased by 25%.',
+  },
+  {
+    id: 'flawless-standard',
+    title: 'Flawless standard',
+    label: 'Precision',
+    description: 'The score bonus for a victory without faints is doubled.',
+  },
+  {
+    id: 'survivor-mark',
+    title: 'Survivor mark',
+    label: 'Endurance',
+    description: 'Score earned from each surviving Pokémon is increased by 50%.',
+  },
+];
+
+export function hasRunUpgrade(upgrades: RunUpgrade[], id: RunUpgradeId): boolean {
+  return upgrades.some(upgrade => upgrade.id === id);
+}
+
+export function createRunUpgradeChoices(
+  owned: RunUpgrade[],
+  random: () => number = Math.random,
+  count = 3,
+): RunUpgrade[] {
+  const available = RUN_UPGRADES.filter(upgrade => !hasRunUpgrade(owned, upgrade.id));
+  const choices: RunUpgrade[] = [];
+  while (choices.length < count && available.length > 0) {
+    const index = Math.floor(random() * available.length);
+    const [upgrade] = available.splice(index, 1);
+    choices.push(upgrade);
+  }
+  return choices;
+}
+
+export function applyRunUpgradesToChallenge(challenge: RunChallenge, upgrades: RunUpgrade[]): RunChallenge {
+  if (!hasRunUpgrade(upgrades, 'contract-ledger')) return challenge;
+  return { ...challenge, bounty: Math.round(challenge.bounty * 1.3) };
+}
+
+export function recruitmentChoiceCount(upgrades: RunUpgrade[]): number {
+  return hasRunUpgrade(upgrades, 'expanded-scouting') ? 4 : 3;
+}
 
 export function isCheckpointStage(stage: number): boolean {
   return Math.max(1, stage) % CHECKPOINT_INTERVAL === 0;
@@ -131,22 +198,33 @@ export function calculateBattleReward(
   faintedCount: number,
   challenge: RunChallenge | null = null,
   route: RunRoute | null = null,
+  upgrades: RunUpgrade[] = [],
 ): RunRewardSummary {
   const normalizedStage = Math.max(1, stage);
   const normalizedTurns = Math.max(1, turns);
   const survivors = Math.max(0, partySize - faintedCount);
   const stageScore = normalizedStage * 400;
-  const survivalBonus = survivors * 150;
+  const survivalBonusBase = survivors * 150;
+  const survivalBonus = hasRunUpgrade(upgrades, 'survivor-mark')
+    ? Math.round(survivalBonusBase * 1.5)
+    : survivalBonusBase;
   const tempoBonus = Math.max(0, 12 - normalizedTurns) * 50;
-  const flawlessBonus = faintedCount === 0 ? 400 : 0;
+  const flawlessBonus = faintedCount === 0
+    ? (hasRunUpgrade(upgrades, 'flawless-standard') ? 800 : 400)
+    : 0;
   const checkpointBonus = isCheckpointStage(normalizedStage) ? 1000 : 0;
   const challengeCompleted = challenge
     ? isStageChallengeComplete(challenge, normalizedTurns, survivors, faintedCount)
     : false;
   const challengeBonus = challengeCompleted && challenge ? challenge.bounty : 0;
   const scoreBeforeRoute = stageScore + survivalBonus + tempoBonus + flawlessBonus + checkpointBonus + challengeBonus;
-  const routeBonus = route ? Math.round(scoreBeforeRoute * (route.scoreMultiplier - 1)) : 0;
-  const levelsGained = LEVELS_PER_STAGE + (isCheckpointStage(normalizedStage) ? 1 : 0);
+  const routeBonusBase = route ? Math.round(scoreBeforeRoute * (route.scoreMultiplier - 1)) : 0;
+  const routeBonus = hasRunUpgrade(upgrades, 'route-dividend')
+    ? Math.round(routeBonusBase * 1.25)
+    : routeBonusBase;
+  const levelsGained = LEVELS_PER_STAGE
+    + (isCheckpointStage(normalizedStage) ? 1 : 0)
+    + (hasRunUpgrade(upgrades, 'veteran-training') ? 1 : 0);
 
   return {
     stage: normalizedStage,

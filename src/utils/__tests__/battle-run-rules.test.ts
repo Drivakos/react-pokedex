@@ -1,8 +1,11 @@
 import {
   PARTY_LIMIT,
   RUN_ROUTES,
+  RUN_UPGRADES,
   addOrReplacePartyMember,
+  applyRunUpgradesToChallenge,
   calculateBattleReward,
+  createRunUpgradeChoices,
   createStageChallenge,
   createSeededRandom,
   enemyPartySize,
@@ -10,6 +13,7 @@ import {
   isStageChallengeComplete,
   levelForStage,
   levelUpSurvivors,
+  recruitmentChoiceCount,
   targetBstForStage,
 } from '../battle-run-rules';
 import type { RunPokemon } from '../../types/battle-run';
@@ -62,6 +66,37 @@ describe('battle run rules', () => {
     expect(boosted.route).toEqual(apex);
     expect(boosted.routeBonus).toBe(Math.round(base.totalScore * 0.6));
     expect(boosted.totalScore).toBe(base.totalScore + boosted.routeBonus);
+  });
+
+  it('applies permanent run upgrades to future rewards', () => {
+    const apex = RUN_ROUTES.find(route => route.id === 'apex');
+    const selected = RUN_UPGRADES.filter(upgrade => (
+      upgrade.id === 'veteran-training'
+      || upgrade.id === 'route-dividend'
+      || upgrade.id === 'flawless-standard'
+      || upgrade.id === 'survivor-mark'
+    ));
+    const base = calculateBattleReward(3, 7, 2, 0, null, apex);
+    const upgraded = calculateBattleReward(3, 7, 2, 0, null, apex, selected);
+    expect(upgraded.levelsGained).toBe(base.levelsGained + 1);
+    expect(upgraded.survivalBonus).toBe(450);
+    expect(upgraded.flawlessBonus).toBe(800);
+    expect(upgraded.routeBonus).toBeGreaterThan(base.routeBonus);
+  });
+
+  it('offers unowned checkpoint upgrades and improves scouting and contracts', () => {
+    const owned = RUN_UPGRADES.filter(upgrade => upgrade.id === 'veteran-training');
+    const choices = createRunUpgradeChoices(owned, () => 0, 3);
+    expect(choices).toHaveLength(3);
+    expect(choices.map(choice => choice.id)).not.toContain('veteran-training');
+
+    const scouting = RUN_UPGRADES.filter(upgrade => upgrade.id === 'expanded-scouting');
+    expect(recruitmentChoiceCount([])).toBe(3);
+    expect(recruitmentChoiceCount(scouting)).toBe(4);
+
+    const ledger = RUN_UPGRADES.filter(upgrade => upgrade.id === 'contract-ledger');
+    const challenge = createStageChallenge(3, 2, () => 0);
+    expect(applyRunUpgradesToChallenge(challenge, ledger).bounty).toBe(Math.round(challenge.bounty * 1.3));
   });
 
   it('creates stage contracts that match the current encounter', () => {

@@ -24,6 +24,12 @@ describe('battle content catalog', () => {
     expect(first.map(pokemon => pokemon.species)).not.toContain('Pikachu');
   });
 
+  it('supports expanded recruitment drafts from run upgrades', () => {
+    const choices = createDraftChoices(3, [], createSeededRandom('expanded-draft'), false, 4);
+    expect(choices).toHaveLength(4);
+    expect(new Set(choices.map(pokemon => pokemon.species)).size).toBe(4);
+  });
+
   it('creates the stage-scaled number of opponents', () => {
     const stage = 7;
     const enemies = createEnemyParty(stage, [], createSeededRandom('enemy-seed'));

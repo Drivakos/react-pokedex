@@ -3,6 +3,7 @@ export type BattleRunPhase =
   | 'route-select'
   | 'preparing-battle'
   | 'battle'
+  | 'upgrade-draft'
   | 'reward-draft'
   | 'replacement'
   | 'game-over';
@@ -113,6 +114,21 @@ export interface RunRoute {
   levelBonus: number;
   partySizeBonus: number;
   scoreMultiplier: number;
+}
+
+export type RunUpgradeId =
+  | 'veteran-training'
+  | 'expanded-scouting'
+  | 'contract-ledger'
+  | 'route-dividend'
+  | 'flawless-standard'
+  | 'survivor-mark';
+
+export interface RunUpgrade {
+  id: RunUpgradeId;
+  title: string;
+  label: string;
+  description: string;
 }
 
 export interface RunRewardSummary {
