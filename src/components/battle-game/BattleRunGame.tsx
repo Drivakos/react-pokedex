@@ -45,6 +45,7 @@ import {
 import { BattlePokemonImage } from './BattlePokemonImage';
 import { MoveBattleEffect } from './MoveBattleEffect';
 import { TrainerImage } from './TrainerImage';
+import { getRunArenaTheme } from './arena-themes';
 import { preloadMoveAnimationAssets } from './move-animation-recipes';
 import { analyzeDraftFit, analyzeReplacementImpact, getRecommendedDraftChoice } from '../../utils/battle-run-draft';
 import type { DraftFitAnalysis } from '../../utils/battle-run-draft';
@@ -524,7 +525,9 @@ const BattleSidebar = memo(function BattleSidebar() {
 
 function BattleArena() {
   const snapshot = useBattleRunStore(state => state.snapshot);
+  const stage = useBattleRunStore(state => state.stage);
   const activeChallenge = useBattleRunStore(state => state.activeChallenge);
+  const activeRoute = useBattleRunStore(state => state.activeRoute);
   const partySize = useBattleRunStore(state => state.party.length);
   const decision = useBattleRunStore(state => state.decision);
   const error = useBattleRunStore(state => state.error);
@@ -564,21 +567,47 @@ function BattleArena() {
   const challengeProgress = activeChallenge && displaySnapshot
     ? getStageChallengeProgress(activeChallenge, displaySnapshot.turn, partySize, displaySnapshot.playerRemaining)
     : null;
+  const sector = getRunSector(stage);
+  const arenaTheme = getRunArenaTheme(stage, activeRoute?.id);
+  const gatePosition = ((Math.max(1, stage) - 1) % 5) + 1;
+  const checkpoint = isCheckpointStage(stage);
+  const finalStage = isFinalStage(stage);
 
   return (
     <div className="mx-auto grid w-full max-w-7xl gap-5 xl:grid-cols-[minmax(0,1fr)_340px]">
       <section className="overflow-hidden rounded-[2rem] border border-slate-200/80 bg-white shadow-2xl">
-        <div className="battle-stage relative h-[clamp(430px,52svh,500px)] overflow-hidden bg-slate-900">
-          <div className="pointer-events-none absolute inset-x-0 top-0 h-[47%] bg-gradient-to-b from-sky-400 via-sky-200 to-cyan-100" />
-          <div className="pointer-events-none absolute inset-x-0 top-[39%] h-16 bg-slate-900/80 shadow-[0_10px_30px_rgba(15,23,42,0.35)]" />
+        <div className="battle-stage relative h-[clamp(430px,52svh,500px)] overflow-hidden bg-slate-950">
+          <div className={`pointer-events-none absolute inset-x-0 top-0 h-[47%] bg-gradient-to-b ${arenaTheme.skyClass}`} />
+          <div className={`pointer-events-none absolute left-[24%] -top-[12%] h-[56%] w-16 -rotate-12 blur-xl ${arenaTheme.beamClass}`} />
+          <div className={`pointer-events-none absolute right-[22%] -top-[12%] h-[56%] w-16 rotate-12 blur-xl ${arenaTheme.beamClass}`} />
+          <div className={`pointer-events-none absolute inset-x-0 top-[39%] h-16 shadow-[0_10px_30px_rgba(15,23,42,0.35)] ${arenaTheme.horizonClass}`} />
           <div className="pointer-events-none absolute inset-x-0 top-[40%] flex h-12 items-center justify-around opacity-60">
-            {Array.from({ length: 14 }, (_, index) => <span key={index} className="h-2 w-2 rounded-full bg-white" />)}
+            {Array.from({ length: 14 }, (_, index) => <span key={index} className={`h-2 w-2 rounded-full ${arenaTheme.lightClass}`} />)}
           </div>
-          <div className="pointer-events-none absolute inset-x-0 bottom-0 h-[56%] bg-gradient-to-b from-emerald-400 via-emerald-500 to-emerald-800" />
+          <div className={`pointer-events-none absolute inset-x-0 bottom-0 h-[56%] bg-gradient-to-b ${arenaTheme.fieldClass}`} />
           <div className="battle-field-grid pointer-events-none absolute inset-x-0 bottom-0 h-[54%] opacity-30" />
 
-          <div className="pointer-events-none absolute right-[7%] top-[48%] h-16 w-[38%] rounded-[50%] border-2 border-white/30 bg-emerald-950/20 shadow-[inset_0_10px_22px_rgba(6,78,59,0.24)]" />
-          <div className="pointer-events-none absolute bottom-[8%] left-[3%] h-24 w-[48%] rounded-[50%] border-2 border-white/25 bg-emerald-950/30 shadow-[inset_0_14px_28px_rgba(6,78,59,0.3)]" />
+          <div className={`pointer-events-none absolute right-[7%] top-[48%] h-16 w-[38%] rounded-[50%] border-2 ${arenaTheme.platformClass}`} />
+          <div className={`pointer-events-none absolute bottom-[8%] left-[3%] h-24 w-[48%] rounded-[50%] border-2 ${arenaTheme.platformClass}`} />
+          <div className={`pointer-events-none absolute inset-0 z-[2] border-[3px] ${arenaTheme.routeFrameClass}`} />
+
+          <div
+            className={`absolute left-1/2 top-4 z-20 hidden min-w-44 -translate-x-1/2 rounded-xl border px-3 py-2 text-center shadow-xl backdrop-blur lg:block ${arenaTheme.badgeClass}`}
+            aria-label={`${sector.title}, gate ${gatePosition} of 5`}
+          >
+            <div className="flex items-center justify-center gap-2 text-[8px] font-black uppercase tracking-[0.18em]">
+              <span className={`rounded-full px-2 py-0.5 ${arenaTheme.routeAccentClass}`}>{activeRoute?.label ?? 'Challenge route'}</span>
+              <span>Stage {stage}</span>
+            </div>
+            <strong className="mt-1 block text-xs text-white">
+              {finalStage ? 'Final champion gate' : checkpoint ? sector.bossTitle : sector.title}
+            </strong>
+            <div className="mt-1.5 flex justify-center gap-1">
+              {Array.from({ length: 5 }, (_, index) => (
+                <span key={index} className={`h-1 rounded-full ${index < gatePosition ? `w-4 ${arenaTheme.lightClass}` : 'w-2 bg-white/15'}`} />
+              ))}
+            </div>
+          </div>
 
           <div className="absolute left-3 top-3 z-20 w-[min(64%,320px)] sm:left-5 sm:top-5">
             <HealthPanel key={`opponent-${displaySnapshot?.opponent?.species ?? 'empty'}`} pokemon={displaySnapshot?.opponent ?? null} opponent />
