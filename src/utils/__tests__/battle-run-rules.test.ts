@@ -12,6 +12,7 @@ import {
   createSeededRandom,
   enemyPartySize,
   getPostBattlePhase,
+  getContractChainMultiplier,
   getRunGrade,
   getRunSector,
   getStageChallengeProgress,
@@ -147,6 +148,21 @@ describe('battle run rules', () => {
     expect(cleared.challengeBonus).toBe(challenge.bounty);
     expect(missed.challengeCompleted).toBe(false);
     expect(missed.challengeBonus).toBe(0);
+  });
+
+  it('builds a capped contract chain multiplier and resets it on a miss', () => {
+    const challenge = createStageChallenge(2, 2, () => 0);
+    const turns = challenge.maxTurns ?? 1;
+    const firstClear = calculateBattleReward(2, turns, 2, 0, challenge, null, [], 0);
+    const chainedClear = calculateBattleReward(2, turns, 2, 0, challenge, null, [], 3);
+    const missed = calculateBattleReward(2, turns + 1, 2, 0, challenge, null, [], 4);
+
+    expect(firstClear).toMatchObject({ contractStreak: 1, challengeMultiplier: 1 });
+    expect(chainedClear.contractStreak).toBe(4);
+    expect(chainedClear.challengeMultiplier).toBe(1.45);
+    expect(chainedClear.challengeBonus).toBe(Math.round(challenge.bounty * 1.45));
+    expect(missed).toMatchObject({ contractStreak: 0, challengeMultiplier: 1, challengeBonus: 0 });
+    expect(getContractChainMultiplier(100)).toBe(1.75);
   });
 
   it('reports live contract progress as on track, at risk, or failed', () => {

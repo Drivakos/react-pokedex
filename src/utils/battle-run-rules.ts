@@ -4,6 +4,8 @@ export const PARTY_LIMIT = 6;
 export const LEVELS_PER_STAGE = 2;
 export const CHECKPOINT_INTERVAL = 5;
 export const RUN_STAGE_LIMIT = 15;
+export const CONTRACT_CHAIN_STEP = 0.15;
+export const CONTRACT_CHAIN_MAX_MULTIPLIER = 1.75;
 
 export const RUN_SECTORS: RunSector[] = [
   {
@@ -123,6 +125,11 @@ export function createRunUpgradeChoices(
 export function applyRunUpgradesToChallenge(challenge: RunChallenge, upgrades: RunUpgrade[]): RunChallenge {
   if (!hasRunUpgrade(upgrades, 'contract-ledger')) return challenge;
   return { ...challenge, bounty: Math.round(challenge.bounty * 1.3) };
+}
+
+export function getContractChainMultiplier(contractStreak: number): number {
+  const normalizedStreak = Math.max(0, Math.floor(contractStreak));
+  return Math.min(CONTRACT_CHAIN_MAX_MULTIPLIER, 1 + normalizedStreak * CONTRACT_CHAIN_STEP);
 }
 
 export function recruitmentChoiceCount(upgrades: RunUpgrade[]): number {
@@ -297,6 +304,7 @@ export function calculateBattleReward(
   challenge: RunChallenge | null = null,
   route: RunRoute | null = null,
   upgrades: RunUpgrade[] = [],
+  currentContractStreak = 0,
 ): RunRewardSummary {
   const normalizedStage = Math.max(1, stage);
   const normalizedTurns = Math.max(1, turns);
@@ -314,7 +322,9 @@ export function calculateBattleReward(
   const challengeCompleted = challenge
     ? isStageChallengeComplete(challenge, normalizedTurns, survivors, faintedCount)
     : false;
-  const challengeBonus = challengeCompleted && challenge ? challenge.bounty : 0;
+  const challengeMultiplier = challengeCompleted ? getContractChainMultiplier(currentContractStreak) : 1;
+  const contractStreak = challengeCompleted ? Math.max(0, Math.floor(currentContractStreak)) + 1 : 0;
+  const challengeBonus = challengeCompleted && challenge ? Math.round(challenge.bounty * challengeMultiplier) : 0;
   const scoreBeforeRoute = stageScore + survivalBonus + tempoBonus + flawlessBonus + checkpointBonus + challengeBonus;
   const routeBonusBase = route ? Math.round(scoreBeforeRoute * (route.scoreMultiplier - 1)) : 0;
   const routeBonus = hasRunUpgrade(upgrades, 'route-dividend')
@@ -335,6 +345,8 @@ export function calculateBattleReward(
     checkpointBonus,
     challenge,
     challengeCompleted,
+    contractStreak,
+    challengeMultiplier,
     challengeBonus,
     route,
     routeBonus,

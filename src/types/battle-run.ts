@@ -171,6 +171,8 @@ export interface RunRewardSummary {
   checkpointBonus: number;
   challenge: RunChallenge | null;
   challengeCompleted: boolean;
+  contractStreak: number;
+  challengeMultiplier: number;
   challengeBonus: number;
   route: RunRoute | null;
   routeBonus: number;

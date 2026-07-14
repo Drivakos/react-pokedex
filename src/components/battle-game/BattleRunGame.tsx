@@ -33,6 +33,7 @@ import {
   RUN_ROUTES,
   RUN_SECTORS,
   RUN_STAGE_LIMIT,
+  getContractChainMultiplier,
   getRunGrade,
   getRunSector,
   getStageChallengeProgress,
@@ -158,11 +159,13 @@ function PartyStrip({ party }: { party: RunPokemon[] }) {
   );
 }
 
-function ChallengeCard({ challenge, compact = false, progress }: {
+function ChallengeCard({ challenge, compact = false, progress, chainMultiplier = 1 }: {
   challenge: RunChallenge;
   compact?: boolean;
   progress?: RunChallengeProgress | null;
+  chainMultiplier?: number;
 }) {
+  const payout = Math.round(challenge.bounty * chainMultiplier);
   return (
     <div className={`rounded-2xl border border-white/10 bg-slate-950 text-white shadow-lg ${compact ? 'p-3' : 'p-4'}`}>
       <div className="flex items-start justify-between gap-4">
@@ -176,8 +179,9 @@ function ChallengeCard({ challenge, compact = false, progress }: {
             <span className={`mt-0.5 block leading-relaxed text-slate-300 ${compact ? 'text-[11px]' : 'text-sm'}`}>{challenge.description}</span>
           </span>
         </div>
-        <span className="shrink-0 rounded-full bg-amber-400/15 px-2.5 py-1 text-xs font-black text-amber-300">
-          +{challenge.bounty.toLocaleString()}
+        <span className="shrink-0 rounded-full bg-amber-400/15 px-2.5 py-1 text-right text-xs font-black text-amber-300">
+          <span className="block">+{payout.toLocaleString()}</span>
+          {chainMultiplier > 1 && <span className="block text-[8px] uppercase tracking-wider text-amber-200/70">Chain x{chainMultiplier.toFixed(2)}</span>}
         </span>
       </div>
       {progress && (
@@ -235,7 +239,7 @@ function RewardSummary({ reward, score, streak, bestScore, personalBestReached, 
             <p className="text-lg font-black">{score.toLocaleString()}</p>
           </div>
           <div className="text-right">
-            <p className="text-[9px] font-black uppercase tracking-wider text-slate-400">Streak</p>
+            <p className="text-[9px] font-black uppercase tracking-wider text-slate-400">Wins</p>
             <p className="flex items-center justify-end gap-1 text-lg font-black"><Flame className="h-4 w-4 text-orange-400" /> {streak}</p>
           </div>
         </div>
@@ -262,14 +266,19 @@ function RewardSummary({ reward, score, streak, bestScore, personalBestReached, 
               : <XCircle className="h-5 w-5 shrink-0 text-slate-500" />}
             <div>
               <p className={`text-xs font-black uppercase tracking-wider ${reward.challengeCompleted ? 'text-emerald-300' : 'text-slate-400'}`}>
-                Contract {reward.challengeCompleted ? 'cleared' : 'missed'}
+                {reward.challengeCompleted ? `Contract cleared · ${reward.contractStreak} chain` : 'Contract missed · chain reset'}
               </p>
               <p className="text-sm font-bold text-white">{reward.challenge.title}</p>
             </div>
           </div>
-          <strong className={reward.challengeCompleted ? 'text-emerald-300' : 'text-slate-500'}>
-            {reward.challengeCompleted ? `+${reward.challengeBonus.toLocaleString()}` : 'No bonus'}
-          </strong>
+          <span className="text-right">
+            <strong className={`block ${reward.challengeCompleted ? 'text-emerald-300' : 'text-slate-500'}`}>
+              {reward.challengeCompleted ? `+${reward.challengeBonus.toLocaleString()}` : 'No bonus'}
+            </strong>
+            {reward.challengeCompleted && reward.challengeMultiplier > 1 && (
+              <span className="block text-[9px] font-black uppercase tracking-wider text-emerald-400/70">Chain x{reward.challengeMultiplier.toFixed(2)}</span>
+            )}
+          </span>
         </div>
       )}
       <div className="bg-emerald-950/50 px-5 py-2.5 text-xs font-bold text-emerald-200">
@@ -442,6 +451,7 @@ const BattleSidebar = memo(function BattleSidebar() {
   const stage = useBattleRunStore(state => state.stage);
   const activeChallenge = useBattleRunStore(state => state.activeChallenge);
   const activeRoute = useBattleRunStore(state => state.activeRoute);
+  const contractStreak = useBattleRunStore(state => state.contractStreak);
   const snapshot = useBattleRunStore(state => state.snapshot);
   const partySize = useBattleRunStore(state => state.party.length);
   const challengeProgress = activeChallenge && snapshot
@@ -464,7 +474,12 @@ const BattleSidebar = memo(function BattleSidebar() {
       )}
       {activeChallenge && (
         <div className="shrink-0 border-b border-slate-200/80 bg-white/55 p-3">
-          <ChallengeCard challenge={activeChallenge} compact progress={challengeProgress} />
+          <ChallengeCard
+            challenge={activeChallenge}
+            compact
+            progress={challengeProgress}
+            chainMultiplier={getContractChainMultiplier(contractStreak)}
+          />
         </div>
       )}
       <BattleLogPanel />
@@ -688,6 +703,7 @@ function VersusScreen() {
   const stage = useBattleRunStore(state => state.stage);
   const activeChallenge = useBattleRunStore(state => state.activeChallenge);
   const activeRoute = useBattleRunStore(state => state.activeRoute);
+  const contractStreak = useBattleRunStore(state => state.contractStreak);
   const checkpoint = isCheckpointStage(stage);
   const sector = getRunSector(stage);
   const finalStage = isFinalStage(stage);
@@ -723,7 +739,7 @@ function VersusScreen() {
         <p className="mt-3 text-lg font-bold italic text-slate-700">“{trainer.intro}”</p>
         {activeChallenge && (
           <div className="mx-auto mt-4 max-w-xl text-left">
-            <ChallengeCard challenge={activeChallenge} />
+            <ChallengeCard challenge={activeChallenge} chainMultiplier={getContractChainMultiplier(contractStreak)} />
           </div>
         )}
         {checkpoint && (
@@ -752,9 +768,12 @@ function RouteSelectionScreen() {
   const stage = useBattleRunStore(state => state.stage);
   const selectRoute = useBattleRunStore(state => state.selectRoute);
   const upgrades = useBattleRunStore(state => state.upgrades);
+  const activeChallenge = useBattleRunStore(state => state.activeChallenge);
+  const contractStreak = useBattleRunStore(state => state.contractStreak);
   const checkpoint = isCheckpointStage(stage);
   const sector = getRunSector(stage);
   const finalStage = isFinalStage(stage);
+  const chainMultiplier = getContractChainMultiplier(contractStreak);
 
   return (
     <section className="relative mx-auto max-w-6xl">
@@ -765,6 +784,24 @@ function RouteSelectionScreen() {
           {sector.objective} Higher-risk routes strengthen the opposing team, but multiply every point earned from the battle and its contract.
         </p>
       </div>
+
+      {activeChallenge && (
+        <div className="mx-auto mb-4 grid max-w-4xl gap-3 lg:grid-cols-[1fr_220px]">
+          <ChallengeCard challenge={activeChallenge} chainMultiplier={chainMultiplier} />
+          <div className="flex items-center gap-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-amber-950 shadow-sm lg:flex-col lg:items-start lg:justify-center">
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-200/60 text-amber-800">
+              <Target className="h-5 w-5" />
+            </span>
+            <span>
+              <span className="block text-[9px] font-black uppercase tracking-[0.18em] text-amber-700">Contract chain</span>
+              <strong className="block text-lg">{contractStreak} cleared in a row</strong>
+              <span className="mt-1 block text-xs font-semibold leading-relaxed text-amber-800">
+                Clear this objective for x{chainMultiplier.toFixed(2)} contract score. A miss resets the chain.
+              </span>
+            </span>
+          </div>
+        </div>
+      )}
 
       {checkpoint && (
         <div className="mb-4 flex items-center justify-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-black text-amber-900">
@@ -1043,6 +1080,7 @@ export default function BattleRunGame() {
   const bestScore = useBattleRunStore(state => state.bestScore);
   const personalBestReached = useBattleRunStore(state => state.personalBestReached);
   const winStreak = useBattleRunStore(state => state.winStreak);
+  const contractStreak = useBattleRunStore(state => state.contractStreak);
   const lastReward = useBattleRunStore(state => state.lastReward);
   const upgrades = useBattleRunStore(state => state.upgrades);
   const party = useBattleRunStore(state => state.party);
@@ -1100,7 +1138,7 @@ export default function BattleRunGame() {
             <div className="flex items-center justify-between gap-4 lg:justify-end">
               <span className="flex items-center gap-1 text-[11px] font-black text-slate-600"><Trophy className="h-3.5 w-3.5 text-amber-500" /> {score.toLocaleString()}</span>
               <span className="hidden items-center gap-1 text-[11px] font-black text-slate-600 sm:flex" title="Personal best"><Crown className="h-3.5 w-3.5 text-violet-500" /> {bestScore.toLocaleString()}</span>
-              <span className="flex items-center gap-1 text-[11px] font-black text-slate-600"><Flame className="h-3.5 w-3.5 text-orange-500" /> {winStreak}</span>
+              <span className="flex items-center gap-1 text-[11px] font-black text-slate-600" title="Contract chain"><Target className="h-3.5 w-3.5 text-red-500" /> x{contractStreak}</span>
               <span className="flex items-center gap-1 text-[11px] font-black text-slate-600"><ShieldCheck className="h-3.5 w-3.5 text-emerald-600" /> {upgrades.length}</span>
               <StageMeter stage={stage} complete={phase === 'run-complete'} />
               <div className="flex items-center gap-1 text-[11px] font-black text-slate-500"><Users className="h-3.5 w-3.5" /> {party.length}/6</div>
@@ -1118,7 +1156,7 @@ export default function BattleRunGame() {
             </h2>
             <p className="mx-auto mt-2 max-w-2xl text-slate-600">
               {phase === 'starter-draft'
-                ? 'Pick one of three random Pokémon, then adapt your team after every increasingly difficult battle.'
+                ? 'Build a team capable of clearing 15 stages, three checkpoint bosses, and the final Run Champion.'
                 : party.length < 6
                   ? `Your survivors gained ${lastReward?.levelsGained ?? 2} levels. Add one of these Pokémon to your party.`
                   : `Your survivors gained ${lastReward?.levelsGained ?? 2} levels. Pick a recruit, then choose which party member it replaces.`}
@@ -1152,8 +1190,8 @@ export default function BattleRunGame() {
 
           {phase === 'starter-draft' && (
             <div className="mt-7 grid gap-3 text-sm sm:grid-cols-3">
-              <div className="rounded-2xl bg-white/70 p-4 text-slate-600"><Swords className="mb-2 h-5 w-5 text-red-500" /><strong className="block text-slate-900">Real battle rules</strong>Types, accuracy, PP, status and switching all matter.</div>
-              <div className="rounded-2xl bg-white/70 p-4 text-slate-600"><Crown className="mb-2 h-5 w-5 text-amber-500" /><strong className="block text-slate-900">Grow every stage</strong>Survivors level up and new choices become stronger.</div>
+              <div className="rounded-2xl bg-white/70 p-4 text-slate-600"><Compass className="mb-2 h-5 w-5 text-red-500" /><strong className="block text-slate-900">Choose the stakes</strong>Riskier routes strengthen opponents and multiply every reward.</div>
+              <div className="rounded-2xl bg-white/70 p-4 text-slate-600"><Target className="mb-2 h-5 w-5 text-amber-600" /><strong className="block text-slate-900">Chain contracts</strong>Clear consecutive objectives to build a larger score multiplier.</div>
               <div className="rounded-2xl bg-white/70 p-4 text-slate-600"><Heart className="mb-2 h-5 w-5 text-pink-500" /><strong className="block text-slate-900">Faints are permanent</strong>Lose the whole party and the run ends.</div>
             </div>
           )}
@@ -1191,8 +1229,8 @@ export default function BattleRunGame() {
               <p className="mt-1 text-xl font-black text-slate-900">{score.toLocaleString()}</p>
             </div>
             <div className="rounded-xl bg-slate-100 p-3">
-              <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">Win streak</p>
-              <p className="mt-1 flex items-center justify-center gap-1 text-xl font-black text-slate-900"><Flame className="h-5 w-5 text-orange-500" /> {winStreak}</p>
+              <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">Contract chain</p>
+              <p className="mt-1 flex items-center justify-center gap-1 text-xl font-black text-slate-900"><Target className="h-5 w-5 text-red-500" /> x{contractStreak}</p>
             </div>
             <div className="rounded-xl bg-slate-950 p-3 text-white">
               <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">Run grade</p>

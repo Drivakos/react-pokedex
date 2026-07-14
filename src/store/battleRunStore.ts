@@ -73,6 +73,7 @@ interface BattleRunStore {
   bestScore: number;
   personalBestReached: boolean;
   winStreak: number;
+  contractStreak: number;
   seed: string;
   party: RunPokemon[];
   enemyParty: RunPokemon[];
@@ -104,6 +105,15 @@ function newSeed(): string {
   return `${Date.now()}-${Math.random().toString(36).slice(2)}`;
 }
 
+function prepareStageChallenge(
+  stage: number,
+  partySize: number,
+  upgrades: RunUpgrade[],
+  rng: () => number,
+): RunChallenge {
+  return applyRunUpgradesToChallenge(createStageChallenge(stage, partySize, rng), upgrades);
+}
+
 export const useBattleRunStore = create<BattleRunStore>((set, get) => {
   const finishBattle = (result: BattleResult) => {
     const current = get();
@@ -133,6 +143,7 @@ export const useBattleRunStore = create<BattleRunStore>((set, get) => {
       current.activeChallenge,
       current.activeRoute,
       current.upgrades,
+      current.contractStreak,
     );
     const survivors = levelUpSurvivors(survivingParty, reward.levelsGained);
     const runComplete = isFinalStage(current.stage);
@@ -152,6 +163,7 @@ export const useBattleRunStore = create<BattleRunStore>((set, get) => {
       bestScore,
       personalBestReached,
       winStreak: current.winStreak + 1,
+      contractStreak: reward.contractStreak,
       draftChoices: runComplete || needsUpgradeChoice
         ? []
         : createDraftChoices(current.stage + 1, survivors, rng, false, recruitmentChoiceCount(current.upgrades)),
@@ -171,10 +183,8 @@ export const useBattleRunStore = create<BattleRunStore>((set, get) => {
     pendingBattleResult = null;
     const opponentTrainer = pickOpponentTrainer(state.stage, rng);
     const enemyParty = createEnemyParty(state.stage, state.party, rng, route);
-    const activeChallenge = applyRunUpgradesToChallenge(
-      createStageChallenge(state.stage, state.party.length, rng),
-      state.upgrades,
-    );
+    const activeChallenge = state.activeChallenge
+      ?? prepareStageChallenge(state.stage, state.party.length, state.upgrades, rng);
 
     set({
       phase: 'preparing-battle',
@@ -213,21 +223,25 @@ export const useBattleRunStore = create<BattleRunStore>((set, get) => {
   };
 
   const advanceStage = (party: RunPokemon[]) => {
-    set(current => ({
-      stage: current.stage + 1,
-      party,
-      pendingRecruit: null,
-      draftChoices: [],
-      lastReward: null,
-      enemyParty: [],
-      opponentTrainer: null,
-      activeChallenge: null,
-      activeRoute: null,
-      upgradeChoices: [],
-      snapshot: null,
-      battleLog: [],
-      phase: 'route-select',
-    }));
+    const rng = random ?? Math.random;
+    set(current => {
+      const stage = current.stage + 1;
+      return {
+        stage,
+        party,
+        pendingRecruit: null,
+        draftChoices: [],
+        lastReward: null,
+        enemyParty: [],
+        opponentTrainer: null,
+        activeChallenge: prepareStageChallenge(stage, party.length, current.upgrades, rng),
+        activeRoute: null,
+        upgradeChoices: [],
+        snapshot: null,
+        battleLog: [],
+        phase: 'route-select',
+      };
+    });
   };
 
   return {
@@ -237,6 +251,7 @@ export const useBattleRunStore = create<BattleRunStore>((set, get) => {
     bestScore: readBestScore(),
     personalBestReached: false,
     winStreak: 0,
+    contractStreak: 0,
     seed: '',
     party: [],
     enemyParty: [],
@@ -268,6 +283,7 @@ export const useBattleRunStore = create<BattleRunStore>((set, get) => {
         bestScore,
         personalBestReached: false,
         winStreak: 0,
+        contractStreak: 0,
         seed,
         party: [],
         enemyParty: [],
@@ -288,7 +304,14 @@ export const useBattleRunStore = create<BattleRunStore>((set, get) => {
     },
 
     chooseStarter: pokemon => {
-      set({ party: [pokemon], draftChoices: [], phase: 'route-select' });
+      const current = get();
+      const party = [pokemon];
+      set({
+        party,
+        draftChoices: [],
+        activeChallenge: prepareStageChallenge(current.stage, party.length, current.upgrades, random ?? Math.random),
+        phase: 'route-select',
+      });
     },
 
     selectRoute: routeId => {
