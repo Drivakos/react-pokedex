@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { createDraftChoices, createEnemyParty } from '../services/battle-content.service';
+import { createDraftChoices, createEnemyParty, createRoutePreviews } from '../services/battle-content.service';
 import { ShowdownBattleWorkerSession } from '../services/showdown-battle-worker.service';
 import { pickOpponentTrainer } from '../components/battle-game/trainer-profiles';
 import type {
@@ -13,6 +13,7 @@ import type {
   RunRewardSummary,
   RunRoute,
   RunRouteId,
+  RunRoutePreviewMap,
   RunUpgrade,
   RunUpgradeId,
   RunPokemon,
@@ -77,6 +78,7 @@ interface BattleRunStore {
   seed: string;
   party: RunPokemon[];
   enemyParty: RunPokemon[];
+  routePreviews: RunRoutePreviewMap;
   opponentTrainer: OpponentTrainer | null;
   activeChallenge: RunChallenge | null;
   activeRoute: RunRoute | null;
@@ -114,6 +116,23 @@ function prepareStageChallenge(
   return applyRunUpgradesToChallenge(createStageChallenge(stage, partySize, rng), upgrades);
 }
 
+function emptyRoutePreviews(): RunRoutePreviewMap {
+  return { trail: [], rival: [], apex: [] };
+}
+
+function prepareStageEncounter(
+  stage: number,
+  party: RunPokemon[],
+  upgrades: RunUpgrade[],
+  rng: () => number,
+): Pick<BattleRunStore, 'activeChallenge' | 'opponentTrainer' | 'routePreviews'> {
+  return {
+    activeChallenge: prepareStageChallenge(stage, party.length, upgrades, rng),
+    opponentTrainer: pickOpponentTrainer(stage, rng),
+    routePreviews: createRoutePreviews(stage, party, rng),
+  };
+}
+
 export const useBattleRunStore = create<BattleRunStore>((set, get) => {
   const finishBattle = (result: BattleResult) => {
     const current = get();
@@ -126,6 +145,7 @@ export const useBattleRunStore = create<BattleRunStore>((set, get) => {
       set({
         phase: 'game-over',
         party: survivingParty,
+        routePreviews: emptyRoutePreviews(),
         decision: emptyDecision,
         visualEvents: [],
         lastReward: null,
@@ -174,6 +194,7 @@ export const useBattleRunStore = create<BattleRunStore>((set, get) => {
       lastReward: reward,
       activeChallenge: null,
       activeRoute: null,
+      routePreviews: emptyRoutePreviews(),
     });
   };
 
@@ -181,8 +202,11 @@ export const useBattleRunStore = create<BattleRunStore>((set, get) => {
     const state = get();
     const rng = random ?? Math.random;
     pendingBattleResult = null;
-    const opponentTrainer = pickOpponentTrainer(state.stage, rng);
-    const enemyParty = createEnemyParty(state.stage, state.party, rng, route);
+    const opponentTrainer = state.opponentTrainer ?? pickOpponentTrainer(state.stage, rng);
+    const previewedParty = state.routePreviews[route.id];
+    const enemyParty = previewedParty.length > 0
+      ? previewedParty
+      : createEnemyParty(state.stage, state.party, rng, route);
     const activeChallenge = state.activeChallenge
       ?? prepareStageChallenge(state.stage, state.party.length, state.upgrades, rng);
 
@@ -226,6 +250,7 @@ export const useBattleRunStore = create<BattleRunStore>((set, get) => {
     const rng = random ?? Math.random;
     set(current => {
       const stage = current.stage + 1;
+      const encounter = prepareStageEncounter(stage, party, current.upgrades, rng);
       return {
         stage,
         party,
@@ -233,8 +258,7 @@ export const useBattleRunStore = create<BattleRunStore>((set, get) => {
         draftChoices: [],
         lastReward: null,
         enemyParty: [],
-        opponentTrainer: null,
-        activeChallenge: prepareStageChallenge(stage, party.length, current.upgrades, rng),
+        ...encounter,
         activeRoute: null,
         upgradeChoices: [],
         snapshot: null,
@@ -255,6 +279,7 @@ export const useBattleRunStore = create<BattleRunStore>((set, get) => {
     seed: '',
     party: [],
     enemyParty: [],
+    routePreviews: emptyRoutePreviews(),
     opponentTrainer: null,
     activeChallenge: null,
     activeRoute: null,
@@ -287,6 +312,7 @@ export const useBattleRunStore = create<BattleRunStore>((set, get) => {
         seed,
         party: [],
         enemyParty: [],
+        routePreviews: emptyRoutePreviews(),
         opponentTrainer: null,
         activeChallenge: null,
         activeRoute: null,
@@ -306,10 +332,11 @@ export const useBattleRunStore = create<BattleRunStore>((set, get) => {
     chooseStarter: pokemon => {
       const current = get();
       const party = [pokemon];
+      const encounter = prepareStageEncounter(current.stage, party, current.upgrades, random ?? Math.random);
       set({
         party,
         draftChoices: [],
-        activeChallenge: prepareStageChallenge(current.stage, party.length, current.upgrades, random ?? Math.random),
+        ...encounter,
         phase: 'route-select',
       });
     },

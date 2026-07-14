@@ -1,6 +1,6 @@
 import catalogData from '../data/battle-pokemon-catalog.json';
-import type { RunPokemon, RunRoute } from '../types/battle-run';
-import { enemyPartySize, levelForStage, targetBstForStage } from '../utils/battle-run-rules';
+import type { RunPokemon, RunRoute, RunRoutePreviewMap } from '../types/battle-run';
+import { RUN_ROUTES, enemyPartySize, levelForStage, targetBstForStage } from '../utils/battle-run-rules';
 
 interface BattleCatalogPokemon {
   id: number;
@@ -84,4 +84,15 @@ export function createEnemyParty(
     ...pokemon,
     level: Math.min(100, pokemon.level + route.levelBonus),
   }));
+}
+
+export function createRoutePreviews(
+  stage: number,
+  playerParty: RunPokemon[],
+  random: () => number = Math.random,
+): RunRoutePreviewMap {
+  return RUN_ROUTES.reduce<RunRoutePreviewMap>((previews, route) => {
+    previews[route.id] = createEnemyParty(stage, playerParty, random, route);
+    return previews;
+  }, { trail: [], rival: [], apex: [] });
 }

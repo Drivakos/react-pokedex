@@ -1,4 +1,4 @@
-import { createDraftChoices, createEnemyParty, createRunPokemon } from '../battle-content.service';
+import { createDraftChoices, createEnemyParty, createRoutePreviews, createRunPokemon } from '../battle-content.service';
 import { RUN_ROUTES, createSeededRandom, enemyPartySize } from '../../utils/battle-run-rules';
 
 describe('battle content catalog', () => {
@@ -42,5 +42,18 @@ describe('battle content catalog', () => {
     const enemies = createEnemyParty(1, [], createSeededRandom('apex-seed'), apex);
     expect(enemies).toHaveLength(2);
     expect(enemies.every(pokemon => pokemon.level === 9)).toBe(true);
+  });
+
+  it('prepares deterministic, route-specific rosters for scouting', () => {
+    const first = createRoutePreviews(1, [], createSeededRandom('route-scouting'));
+    const second = createRoutePreviews(1, [], createSeededRandom('route-scouting'));
+
+    expect(first).toEqual(second);
+    expect(first.trail).toHaveLength(1);
+    expect(first.rival).toHaveLength(1);
+    expect(first.apex).toHaveLength(2);
+    expect(first.trail.every(pokemon => pokemon.level === 5)).toBe(true);
+    expect(first.rival.every(pokemon => pokemon.level === 7)).toBe(true);
+    expect(first.apex.every(pokemon => pokemon.level === 9)).toBe(true);
   });
 });

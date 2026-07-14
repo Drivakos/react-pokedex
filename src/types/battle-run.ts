@@ -118,6 +118,8 @@ export interface RunChallengeProgress {
 
 export type RunRouteId = 'trail' | 'rival' | 'apex';
 
+export type RunRoutePreviewMap = Record<RunRouteId, RunPokemon[]>;
+
 export interface RunRoute {
   id: RunRouteId;
   title: string;

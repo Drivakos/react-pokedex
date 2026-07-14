@@ -770,6 +770,8 @@ function RouteSelectionScreen() {
   const upgrades = useBattleRunStore(state => state.upgrades);
   const activeChallenge = useBattleRunStore(state => state.activeChallenge);
   const contractStreak = useBattleRunStore(state => state.contractStreak);
+  const trainer = useBattleRunStore(state => state.opponentTrainer);
+  const routePreviews = useBattleRunStore(state => state.routePreviews);
   const checkpoint = isCheckpointStage(stage);
   const sector = getRunSector(stage);
   const finalStage = isFinalStage(stage);
@@ -784,6 +786,20 @@ function RouteSelectionScreen() {
           {sector.objective} Higher-risk routes strengthen the opposing team, but multiply every point earned from the battle and its contract.
         </p>
       </div>
+
+      {trainer && (
+        <div className="mx-auto mb-4 flex max-w-4xl items-center gap-4 overflow-hidden rounded-2xl border border-slate-800 bg-slate-950 px-4 text-white shadow-lg">
+          <TrainerImage src={trainer.image} name={trainer.name} className="h-20 w-20 self-end sm:h-24 sm:w-24" />
+          <div className="min-w-0 flex-1 py-3">
+            <p className="text-[9px] font-black uppercase tracking-[0.2em] text-red-300">Scouted challenger · {trainer.title}</p>
+            <p className="mt-0.5 text-xl font-black">{trainer.name}</p>
+            <p className="mt-1 truncate text-xs font-semibold italic text-slate-400">“{trainer.intro}”</p>
+          </div>
+          <div className="hidden shrink-0 items-center gap-2 rounded-xl border border-emerald-300/20 bg-emerald-300/10 px-3 py-2 text-xs font-black text-emerald-300 sm:flex">
+            <ShieldCheck className="h-4 w-4" /> Three routes verified
+          </div>
+        </div>
+      )}
 
       {activeChallenge && (
         <div className="mx-auto mb-4 grid max-w-4xl gap-3 lg:grid-cols-[1fr_220px]">
@@ -822,6 +838,7 @@ function RouteSelectionScreen() {
 
       <div className="grid gap-4 lg:grid-cols-3">
         {RUN_ROUTES.map((route, index) => {
+          const preview = routePreviews[route.id];
           const Icon = route.id === 'trail' ? Shield : route.id === 'rival' ? Swords : Crown;
           const accent = route.id === 'trail'
             ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
@@ -848,14 +865,33 @@ function RouteSelectionScreen() {
               <div className="p-5">
                 <p className="text-xs font-black uppercase tracking-[0.16em] text-slate-400">{route.label}</p>
                 <p className="mt-2 min-h-10 text-sm leading-relaxed text-slate-600">{route.description}</p>
+
+                <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-3">
+                  <div className="mb-2 flex items-center justify-between gap-2">
+                    <span className="flex items-center gap-1.5 text-[9px] font-black uppercase tracking-[0.16em] text-slate-500">
+                      <Bot className="h-3.5 w-3.5" /> Scouted roster
+                    </span>
+                    <span className="text-[9px] font-black uppercase text-emerald-600">Exact match</span>
+                  </div>
+                  <div className="grid gap-1.5 [grid-template-columns:repeat(auto-fit,minmax(72px,1fr))]">
+                    {preview.map(pokemon => (
+                      <div key={pokemon.species} className="min-w-0 rounded-lg bg-white px-1.5 py-2 text-center shadow-sm">
+                        <BattlePokemonImage id={pokemon.id} species={pokemon.species} variant="icon" className="mx-auto h-11 w-11" />
+                        <strong className="mt-0.5 block truncate text-[10px] text-slate-800">{pokemon.species}</strong>
+                        <span className="block text-[9px] font-black text-slate-400">LV. {pokemon.level}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
                 <div className="mt-5 grid grid-cols-3 gap-2 text-center">
                   <div className="rounded-xl bg-slate-50 p-2">
-                    <span className="block text-[9px] font-black uppercase text-slate-400">Levels</span>
-                    <strong className="text-sm text-slate-800">{route.levelBonus ? `+${route.levelBonus}` : 'Base'}</strong>
+                    <span className="block text-[9px] font-black uppercase text-slate-400">Level</span>
+                    <strong className="text-sm text-slate-800">{preview[0] ? `L${preview[0].level}` : '—'}</strong>
                   </div>
                   <div className="rounded-xl bg-slate-50 p-2">
                     <span className="block text-[9px] font-black uppercase text-slate-400">Roster</span>
-                    <strong className="text-sm text-slate-800">{route.partySizeBonus ? `+${route.partySizeBonus}` : 'Base'}</strong>
+                    <strong className="text-sm text-slate-800">{preview.length}</strong>
                   </div>
                   <div className="rounded-xl bg-slate-50 p-2">
                     <span className="block text-[9px] font-black uppercase text-slate-400">Score</span>
