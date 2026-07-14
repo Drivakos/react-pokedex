@@ -19,7 +19,7 @@ workerScope.onmessage = ({ data }: MessageEvent<BattleWorkerRequest>) => {
           onVisual: event => send({ type: 'visual', event }),
           onEnd: result => send({ type: 'end', result }),
           onError: message => send({ type: 'error', message }),
-        });
+        }, data.stage);
         send({ type: 'ready' });
         break;
       case 'start':

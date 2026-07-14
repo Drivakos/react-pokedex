@@ -50,6 +50,7 @@ import { getRunArenaTheme } from './arena-themes';
 import { preloadMoveAnimationAssets } from './move-animation-recipes';
 import { analyzeDraftFit, analyzeReplacementImpact, getRecommendedDraftChoice } from '../../utils/battle-run-draft';
 import type { DraftFitAnalysis } from '../../utils/battle-run-draft';
+import { getBattleAiProfile } from '../../utils/battle-ai-profile';
 
 const typeClasses: Record<string, string> = {
   Bug: 'bg-lime-600', Dark: 'bg-slate-700', Dragon: 'bg-indigo-600', Electric: 'bg-yellow-500',
@@ -495,6 +496,7 @@ const BattleSidebar = memo(function BattleSidebar() {
     ? getStageChallengeProgress(activeChallenge, snapshot.turn, partySize, snapshot.playerRemaining)
     : null;
   const bossModifier = getBossModifier(stage);
+  const aiProfile = getBattleAiProfile(stage);
 
   return (
     <aside className="flex h-full min-h-0 flex-col overflow-hidden rounded-[2rem] border border-white/80 bg-white/75 text-slate-900 shadow-2xl backdrop-blur-xl">
@@ -508,6 +510,10 @@ const BattleSidebar = memo(function BattleSidebar() {
               <span className="text-red-600">Score x{activeRoute.scoreMultiplier}</span>
             </div>
           )}
+          <div className="mt-2 flex items-center justify-between gap-3 rounded-xl border border-indigo-200 bg-indigo-50/80 px-3 py-2 text-xs text-indigo-950">
+            <span className="flex items-center gap-1.5 font-black"><Bot className="h-3.5 w-3.5" /> {aiProfile.title}</span>
+            <span className="font-bold text-indigo-600">{aiProfile.label}</span>
+          </div>
           {bossModifier && (
             <div className="mt-2 flex items-center justify-between gap-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-950">
               <span className="flex items-center gap-1.5 font-black"><ShieldCheck className="h-3.5 w-3.5" /> {bossModifier.title}</span>
@@ -780,6 +786,7 @@ function VersusScreen() {
   const sector = getRunSector(stage);
   const finalStage = isFinalStage(stage);
   const bossModifier = getBossModifier(stage);
+  const aiProfile = getBattleAiProfile(stage);
   if (!trainer) return null;
 
   return (
@@ -809,6 +816,9 @@ function VersusScreen() {
             <Compass className="h-3.5 w-3.5" /> {activeRoute.title} · Score x{activeRoute.scoreMultiplier}
           </div>
         )}
+        <div className="mt-2 flex items-center justify-center gap-2 text-xs font-black text-indigo-600">
+          <Bot className="h-3.5 w-3.5" /> {aiProfile.title} strategy · {aiProfile.label}
+        </div>
         <p className="mt-3 text-lg font-bold italic text-slate-700">“{trainer.intro}”</p>
         {activeChallenge && (
           <div className="mx-auto mt-4 max-w-xl text-left">
@@ -854,6 +864,7 @@ function RouteSelectionScreen() {
   const finalStage = isFinalStage(stage);
   const bossModifier = getBossModifier(stage);
   const chainMultiplier = getContractChainMultiplier(contractStreak);
+  const aiProfile = getBattleAiProfile(stage);
 
   return (
     <section className="relative mx-auto max-w-6xl">
@@ -873,8 +884,8 @@ function RouteSelectionScreen() {
             <p className="mt-0.5 text-xl font-black">{trainer.name}</p>
             <p className="mt-1 truncate text-xs font-semibold italic text-slate-400">“{trainer.intro}”</p>
           </div>
-          <div className="hidden shrink-0 items-center gap-2 rounded-xl border border-emerald-300/20 bg-emerald-300/10 px-3 py-2 text-xs font-black text-emerald-300 sm:flex">
-            <ShieldCheck className="h-4 w-4" /> Three routes verified
+          <div className="hidden shrink-0 items-center gap-2 rounded-xl border border-indigo-300/20 bg-indigo-300/10 px-3 py-2 text-xs font-black text-indigo-200 sm:flex">
+            <Bot className="h-4 w-4" /> {aiProfile.title} · {aiProfile.label}
           </div>
         </div>
       )}

@@ -16,7 +16,7 @@ export interface ShowdownBattleCallbacks {
 }
 
 export type BattleWorkerRequest =
-  | { type: 'init'; playerParty: RunPokemon[]; opponentParty: RunPokemon[] }
+  | { type: 'init'; playerParty: RunPokemon[]; opponentParty: RunPokemon[]; stage: number }
   | { type: 'start' }
   | { type: 'choose-move'; slot: number }
   | { type: 'choose-switch'; slot: number };

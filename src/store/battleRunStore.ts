@@ -35,6 +35,7 @@ import {
   recruitmentChoiceCount,
 } from '../utils/battle-run-rules';
 import { canSubmitMove, canSubmitSwitch } from '../utils/battle-request-rules';
+import { getBattleAiProfile } from '../utils/battle-ai-profile';
 
 const emptyDecision: BattleDecision = { kind: 'wait', moves: [], switches: [], switchingBlocked: false };
 interface BattleSession {
@@ -214,6 +215,7 @@ export const useBattleRunStore = create<BattleRunStore>((set, get) => {
     const activeChallenge = state.activeChallenge
       ?? prepareStageChallenge(state.stage, state.party.length, state.upgrades, rng);
     const bossModifier = getBossModifier(state.stage);
+    const aiProfile = getBattleAiProfile(state.stage);
 
     set({
       phase: 'preparing-battle',
@@ -225,6 +227,7 @@ export const useBattleRunStore = create<BattleRunStore>((set, get) => {
       decision: emptyDecision,
       battleLog: [
         `${opponentTrainer.title} ${opponentTrainer.name} challenges you!`,
+        `Opponent strategy: ${aiProfile.title}. ${aiProfile.description}`,
         ...(bossModifier ? [`Boss rule: ${bossModifier.title}. ${bossModifier.description}`] : []),
       ],
       visualEvents: [],
@@ -232,7 +235,7 @@ export const useBattleRunStore = create<BattleRunStore>((set, get) => {
     });
 
     session?.dispose();
-    const battleSession = new ShowdownBattleWorkerSession(state.party, enemyParty, {
+    const battleSession = new ShowdownBattleWorkerSession(state.party, enemyParty, state.stage, {
       onSnapshot: snapshot => set({ snapshot, phase: 'battle' }),
       onDecision: decision => set({ decision, phase: 'battle', error: null }),
       onLog: message => set(current => ({

@@ -1,7 +1,7 @@
 import { Battle as ClientBattle } from '@pkmn/client';
 import { Generations, type PokemonSet } from '@pkmn/data';
 import { Protocol } from '@pkmn/protocol';
-import { BattleStreams, Dex, RandomPlayerAI, Teams } from '@pkmn/sim';
+import { BattleStreams, Dex, Teams } from '@pkmn/sim';
 import { ChoiceBuilder, LogFormatter } from '@pkmn/view';
 import type {
   ActiveBattlePokemon,
@@ -14,6 +14,7 @@ import type {
 import type { ShowdownBattleCallbacks } from '../types/battle-worker';
 import { toPokemonSet } from '../utils/battle-pokemon-set';
 import { isSwitchingBlocked, isTrappedSwitchError } from '../utils/battle-request-rules';
+import { ChallengePlayerAI } from './challenge-player-ai';
 
 function toActivePokemon(pokemon: ClientBattle['p1']['active'][number]): ActiveBattlePokemon | null {
   if (!pokemon) return null;
@@ -48,9 +49,16 @@ export class ShowdownBattleSession {
   private pendingRequest: Protocol.Request | null = null;
   private ended = false;
   private visualId = 0;
+  private readonly stage: number;
 
-  constructor(playerParty: RunPokemon[], opponentParty: RunPokemon[], callbacks: ShowdownBattleCallbacks) {
+  constructor(
+    playerParty: RunPokemon[],
+    opponentParty: RunPokemon[],
+    callbacks: ShowdownBattleCallbacks,
+    stage = 1,
+  ) {
     this.callbacks = callbacks;
+    this.stage = stage;
     this.playerSets = playerParty.map(toPokemonSet);
     this.opponentSets = opponentParty.map(toPokemonSet);
 
@@ -61,7 +69,7 @@ export class ShowdownBattleSession {
   }
 
   start(): void {
-    const ai = new RandomPlayerAI(this.streams.p2, { move: 0.9 });
+    const ai = new ChallengePlayerAI(this.streams.p2, this.stage);
     void ai.start().catch(error => this.fail(error));
     void this.consumePlayerStream();
 

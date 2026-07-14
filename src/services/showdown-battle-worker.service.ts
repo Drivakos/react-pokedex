@@ -50,6 +50,7 @@ export class ShowdownBattleWorkerSession {
   constructor(
     playerParty: RunPokemon[],
     opponentParty: RunPokemon[],
+    stage: number,
     callbacks: ShowdownBattleCallbacks,
   ) {
     this.callbacks = callbacks;
@@ -59,7 +60,7 @@ export class ShowdownBattleWorkerSession {
       this.callbacks.onError(event.message || 'The battle engine failed to load.');
       this.dispose();
     };
-    this.send({ type: 'init', playerParty, opponentParty });
+    this.send({ type: 'init', playerParty, opponentParty, stage });
   }
 
   start(): void {
