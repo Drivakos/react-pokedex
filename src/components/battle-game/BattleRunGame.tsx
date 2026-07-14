@@ -8,7 +8,6 @@ import {
   Loader2,
   RotateCcw,
   Shield,
-  Sparkles,
   Swords,
   Trophy,
   Users,
@@ -625,10 +624,7 @@ export default function BattleRunGame() {
       {isDraft && (
         <section className="relative mx-auto max-w-6xl">
           <div className="mb-7 text-center">
-            <div className={`mx-auto flex h-14 w-14 items-center justify-center rounded-2xl ${phase === 'starter-draft' ? 'bg-yellow-100 text-yellow-600' : 'bg-amber-100 text-amber-600'}`}>
-              {phase === 'starter-draft' ? <Sparkles className="h-7 w-7" /> : <Crown className="h-7 w-7" />}
-            </div>
-            <h2 className="mt-4 text-3xl font-black text-slate-950 sm:text-4xl">
+            <h2 className="text-3xl font-black text-slate-950 sm:text-4xl">
               {phase === 'starter-draft' ? 'Choose your first partner' : 'Victory reward'}
             </h2>
             <p className="mx-auto mt-2 max-w-2xl text-slate-600">
