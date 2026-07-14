@@ -107,8 +107,9 @@ export class ShowdownBattleSession {
 
   private submitChoice(choice: string): void {
     if (!this.currentRequest || this.ended) return;
+    const request = this.currentRequest;
     try {
-      const builder = new ChoiceBuilder(this.currentRequest);
+      const builder = new ChoiceBuilder(request);
       const error = builder.addChoice(choice);
       if (error) throw new Error(error);
       const command = builder.toString();
@@ -121,6 +122,7 @@ export class ShowdownBattleSession {
       });
     } catch (error) {
       this.fail(error);
+      if (!this.restorePendingRequest()) this.handleRequest(request);
     }
   }
 
