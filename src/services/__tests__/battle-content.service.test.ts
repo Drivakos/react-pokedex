@@ -66,4 +66,12 @@ describe('battle content catalog', () => {
     expect(first.rival.every(pokemon => pokemon.level === 7)).toBe(true);
     expect(first.apex.every(pokemon => pokemon.level === 9)).toBe(true);
   });
+
+  it('equips checkpoint rosters with their boss mechanic item', () => {
+    const stageFive = createEnemyParty(5, [], createSeededRandom('first-boss'));
+    const stageTen = createEnemyParty(10, [], createSeededRandom('second-boss'));
+
+    expect(stageFive.every(pokemon => pokemon.item === 'Sitrus Berry')).toBe(true);
+    expect(stageTen.every(pokemon => pokemon.item === 'Life Orb')).toBe(true);
+  });
 });

@@ -1,4 +1,4 @@
-import type { BattleRunPhase, RunChallenge, RunChallengeProgress, RunGrade, RunPokemon, RunRewardSummary, RunRoute, RunSector, RunUpgrade, RunUpgradeId } from '../types/battle-run';
+import type { BattleRunPhase, RunBossModifier, RunChallenge, RunChallengeProgress, RunGrade, RunPokemon, RunRewardSummary, RunRoute, RunSector, RunUpgrade, RunUpgradeId } from '../types/battle-run';
 
 export const PARTY_LIMIT = 6;
 export const LEVELS_PER_STAGE = 2;
@@ -31,6 +31,30 @@ export const RUN_SECTORS: RunSector[] = [
     startStage: 11,
     endStage: RUN_STAGE_LIMIT,
     bossTitle: 'Run Champion',
+  },
+];
+
+export const RUN_BOSS_MODIFIERS: RunBossModifier[] = [
+  {
+    stage: 5,
+    title: 'Reserve protocol',
+    label: 'One-time recovery',
+    description: 'Every opposing Pokémon carries a Sitrus Berry and restores health once at or below half HP.',
+    item: 'Sitrus Berry',
+  },
+  {
+    stage: 10,
+    title: 'Overdrive protocol',
+    label: 'Damage with recoil',
+    description: 'Every opposing Pokémon carries a Life Orb, increasing attack damage while taking recoil after damaging moves.',
+    item: 'Life Orb',
+  },
+  {
+    stage: 15,
+    title: 'Champion endurance',
+    label: 'Sustained recovery',
+    description: 'Every opposing Pokémon carries Leftovers and restores health at the end of each turn.',
+    item: 'Leftovers',
   },
 ];
 
@@ -155,6 +179,11 @@ export function getRunGrade(score: number, wins: number): RunGrade {
 
 export function isCheckpointStage(stage: number): boolean {
   return Math.max(1, stage) % CHECKPOINT_INTERVAL === 0;
+}
+
+export function getBossModifier(stage: number): RunBossModifier | null {
+  const normalizedStage = Math.max(1, Math.floor(stage));
+  return RUN_BOSS_MODIFIERS.find(modifier => modifier.stage === normalizedStage) ?? null;
 }
 
 export function isFinalStage(stage: number): boolean {

@@ -27,6 +27,7 @@ import {
   createRunUpgradeChoices,
   createStageChallenge,
   createSeededRandom,
+  getBossModifier,
   getPostBattlePhase,
   isCheckpointStage,
   isFinalStage,
@@ -212,6 +213,7 @@ export const useBattleRunStore = create<BattleRunStore>((set, get) => {
       : createEnemyParty(state.stage, state.party, rng, route);
     const activeChallenge = state.activeChallenge
       ?? prepareStageChallenge(state.stage, state.party.length, state.upgrades, rng);
+    const bossModifier = getBossModifier(state.stage);
 
     set({
       phase: 'preparing-battle',
@@ -221,7 +223,10 @@ export const useBattleRunStore = create<BattleRunStore>((set, get) => {
       activeRoute: route,
       snapshot: null,
       decision: emptyDecision,
-      battleLog: [`${opponentTrainer.title} ${opponentTrainer.name} challenges you!`],
+      battleLog: [
+        `${opponentTrainer.title} ${opponentTrainer.name} challenges you!`,
+        ...(bossModifier ? [`Boss rule: ${bossModifier.title}. ${bossModifier.description}`] : []),
+      ],
       visualEvents: [],
       error: null,
     });

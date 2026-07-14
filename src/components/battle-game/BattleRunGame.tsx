@@ -35,6 +35,7 @@ import {
   RUN_ROUTES,
   RUN_SECTORS,
   RUN_STAGE_LIMIT,
+  getBossModifier,
   getContractChainMultiplier,
   getRunGrade,
   getRunSector,
@@ -493,6 +494,7 @@ const BattleSidebar = memo(function BattleSidebar() {
   const challengeProgress = activeChallenge && snapshot
     ? getStageChallengeProgress(activeChallenge, snapshot.turn, partySize, snapshot.playerRemaining)
     : null;
+  const bossModifier = getBossModifier(stage);
 
   return (
     <aside className="flex h-full min-h-0 flex-col overflow-hidden rounded-[2rem] border border-white/80 bg-white/75 text-slate-900 shadow-2xl backdrop-blur-xl">
@@ -504,6 +506,12 @@ const BattleSidebar = memo(function BattleSidebar() {
             <div className="mt-3 flex items-center justify-between rounded-xl border border-slate-200 bg-white/70 px-3 py-2 text-xs font-black text-slate-600">
               <span className="flex items-center gap-1.5"><Compass className="h-3.5 w-3.5" /> {activeRoute.title}</span>
               <span className="text-red-600">Score x{activeRoute.scoreMultiplier}</span>
+            </div>
+          )}
+          {bossModifier && (
+            <div className="mt-2 flex items-center justify-between gap-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-950">
+              <span className="flex items-center gap-1.5 font-black"><ShieldCheck className="h-3.5 w-3.5" /> {bossModifier.title}</span>
+              <span className="font-bold text-amber-700">{bossModifier.item}</span>
             </div>
           )}
         </div>
@@ -570,8 +578,8 @@ function BattleArena() {
   const sector = getRunSector(stage);
   const arenaTheme = getRunArenaTheme(stage, activeRoute?.id);
   const gatePosition = ((Math.max(1, stage) - 1) % 5) + 1;
-  const checkpoint = isCheckpointStage(stage);
   const finalStage = isFinalStage(stage);
+  const bossModifier = getBossModifier(stage);
 
   return (
     <div className="mx-auto grid w-full max-w-7xl gap-5 xl:grid-cols-[minmax(0,1fr)_340px]">
@@ -600,7 +608,7 @@ function BattleArena() {
               <span>Stage {stage}</span>
             </div>
             <strong className="mt-1 block text-xs text-white">
-              {finalStage ? 'Final champion gate' : checkpoint ? sector.bossTitle : sector.title}
+              {bossModifier ? `${finalStage ? 'Final gate' : sector.bossTitle} · ${bossModifier.title}` : sector.title}
             </strong>
             <div className="mt-1.5 flex justify-center gap-1">
               {Array.from({ length: 5 }, (_, index) => (
@@ -771,6 +779,7 @@ function VersusScreen() {
   const checkpoint = isCheckpointStage(stage);
   const sector = getRunSector(stage);
   const finalStage = isFinalStage(stage);
+  const bossModifier = getBossModifier(stage);
   if (!trainer) return null;
 
   return (
@@ -806,11 +815,15 @@ function VersusScreen() {
             <ChallengeCard challenge={activeChallenge} chainMultiplier={getContractChainMultiplier(contractStreak)} />
           </div>
         )}
-        {checkpoint && (
-          <div className="mx-auto mt-4 max-w-lg rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-bold text-amber-900">
-            {finalStage
-              ? 'The entire run is on the line. Defeat this roster to conquer all three circuits.'
-              : 'Stronger roster. Clear it for a 1,000 point bonus, an extra team level, and a permanent upgrade.'}
+        {bossModifier && (
+          <div className="mx-auto mt-4 flex max-w-xl items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-left text-amber-950">
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-amber-200/70"><ShieldCheck className="h-4 w-4" /></span>
+            <span className="min-w-0 flex-1">
+              <span className="block text-[9px] font-black uppercase tracking-[0.18em] text-amber-700">Boss mechanic · {bossModifier.label}</span>
+              <strong className="block text-sm">{bossModifier.title}</strong>
+              <span className="mt-0.5 block text-xs font-semibold leading-relaxed text-amber-800">{bossModifier.description}</span>
+            </span>
+            <span className="shrink-0 rounded-full bg-white px-2.5 py-1 text-[10px] font-black text-amber-800 shadow-sm">{bossModifier.item}</span>
           </div>
         )}
         <div className="mt-5 flex justify-center gap-2">
@@ -839,6 +852,7 @@ function RouteSelectionScreen() {
   const checkpoint = isCheckpointStage(stage);
   const sector = getRunSector(stage);
   const finalStage = isFinalStage(stage);
+  const bossModifier = getBossModifier(stage);
   const chainMultiplier = getContractChainMultiplier(contractStreak);
 
   return (
@@ -887,7 +901,11 @@ function RouteSelectionScreen() {
 
       {checkpoint && (
         <div className="mb-4 flex items-center justify-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-black text-amber-900">
-          <Flag className="h-4 w-4" /> {finalStage ? `${sector.bossTitle}: win this battle to complete the challenge.` : `${sector.bossTitle}: checkpoint modifiers stack with your route.`}
+          <Flag className="h-4 w-4" /> {bossModifier
+            ? `${sector.bossTitle}: ${bossModifier.title} equips every scouted opponent with ${bossModifier.item}.`
+            : finalStage
+              ? `${sector.bossTitle}: win this battle to complete the challenge.`
+              : `${sector.bossTitle}: checkpoint modifiers stack with your route.`}
         </div>
       )}
 
@@ -945,6 +963,7 @@ function RouteSelectionScreen() {
                         <BattlePokemonImage id={pokemon.id} species={pokemon.species} variant="icon" className="mx-auto h-11 w-11" />
                         <strong className="mt-0.5 block truncate text-[10px] text-slate-800">{pokemon.species}</strong>
                         <span className="block text-[9px] font-black text-slate-400">LV. {pokemon.level}</span>
+                        {pokemon.item && <span className="mt-1 block truncate rounded bg-amber-100 px-1 py-0.5 text-[8px] font-black text-amber-800">{pokemon.item}</span>}
                       </div>
                     ))}
                   </div>

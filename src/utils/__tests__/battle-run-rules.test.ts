@@ -13,6 +13,7 @@ import {
   enemyPartySize,
   getPostBattlePhase,
   getContractChainMultiplier,
+  getBossModifier,
   getRunGrade,
   getRunSector,
   getStageChallengeProgress,
@@ -45,6 +46,13 @@ describe('battle run rules', () => {
     expect(getRunSector(15)).toMatchObject({ number: 3, bossTitle: 'Run Champion' });
     expect(isFinalStage(14)).toBe(false);
     expect(isFinalStage(15)).toBe(true);
+  });
+
+  it('gives every checkpoint a distinct simulator-backed boss trait', () => {
+    expect(getBossModifier(5)).toMatchObject({ title: 'Reserve protocol', item: 'Sitrus Berry' });
+    expect(getBossModifier(10)).toMatchObject({ title: 'Overdrive protocol', item: 'Life Orb' });
+    expect(getBossModifier(15)).toMatchObject({ title: 'Champion endurance', item: 'Leftovers' });
+    expect(getBossModifier(6)).toBeNull();
   });
 
   it('ends the run after the final boss instead of opening another reward draft', () => {

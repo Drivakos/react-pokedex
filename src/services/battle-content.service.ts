@@ -1,6 +1,6 @@
 import catalogData from '../data/battle-pokemon-catalog.json';
 import type { RunPokemon, RunRoute, RunRoutePreviewMap } from '../types/battle-run';
-import { RUN_ROUTES, enemyPartySize, levelForStage, targetBstForStage } from '../utils/battle-run-rules';
+import { RUN_ROUTES, enemyPartySize, getBossModifier, levelForStage, targetBstForStage } from '../utils/battle-run-rules';
 
 interface BattleCatalogPokemon {
   id: number;
@@ -89,10 +89,12 @@ export function createEnemyParty(
     false,
   );
 
-  if (!route?.levelBonus) return party;
+  const bossModifier = getBossModifier(stage);
+  if (!route?.levelBonus && !bossModifier) return party;
   return party.map(pokemon => ({
     ...pokemon,
-    level: Math.min(100, pokemon.level + route.levelBonus),
+    level: Math.min(100, pokemon.level + (route?.levelBonus ?? 0)),
+    ...(bossModifier ? { item: bossModifier.item } : {}),
   }));
 }
 

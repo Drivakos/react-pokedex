@@ -12,31 +12,8 @@ import type {
   RunPokemon,
 } from '../types/battle-run';
 import type { ShowdownBattleCallbacks } from '../types/battle-worker';
+import { toPokemonSet } from '../utils/battle-pokemon-set';
 import { isSwitchingBlocked, isTrappedSwitchError } from '../utils/battle-request-rules';
-
-const statTable = (value: number) => ({
-  hp: value,
-  atk: value,
-  def: value,
-  spa: value,
-  spd: value,
-  spe: value,
-});
-
-function toPokemonSet(pokemon: RunPokemon): PokemonSet {
-  return {
-    name: pokemon.species,
-    species: pokemon.species,
-    item: '',
-    ability: pokemon.ability,
-    moves: pokemon.moves,
-    nature: 'Hardy',
-    gender: '',
-    evs: statTable(85),
-    ivs: statTable(31),
-    level: pokemon.level,
-  };
-}
 
 function toActivePokemon(pokemon: ClientBattle['p1']['active'][number]): ActiveBattlePokemon | null {
   if (!pokemon) return null;

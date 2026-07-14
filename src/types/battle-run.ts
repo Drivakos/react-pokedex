@@ -17,6 +17,7 @@ export interface RunPokemon {
   ability: string;
   moves: string[];
   bst: number;
+  item?: string;
 }
 
 export interface BattleMoveChoice {
@@ -160,6 +161,14 @@ export interface RunSector {
   startStage: number;
   endStage: number;
   bossTitle: string;
+}
+
+export interface RunBossModifier {
+  stage: 5 | 10 | 15;
+  title: string;
+  label: string;
+  description: string;
+  item: 'Sitrus Berry' | 'Life Orb' | 'Leftovers';
 }
 
 export interface RunRewardSummary {
