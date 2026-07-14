@@ -9,6 +9,7 @@ import {
   createStageChallenge,
   createSeededRandom,
   enemyPartySize,
+  getRunGrade,
   isCheckpointStage,
   isStageChallengeComplete,
   levelForStage,
@@ -151,5 +152,13 @@ describe('battle run rules', () => {
     const first = createSeededRandom('same-run');
     const second = createSeededRandom('same-run');
     expect([first(), first(), first()]).toEqual([second(), second(), second()]);
+  });
+
+  it('grades runs by average score per cleared stage', () => {
+    expect(getRunGrade(0, 0).rank).toBe('D');
+    expect(getRunGrade(4000, 2).rank).toBe('C');
+    expect(getRunGrade(6000, 2).rank).toBe('B');
+    expect(getRunGrade(8000, 2).rank).toBe('A');
+    expect(getRunGrade(15000, 3)).toEqual(expect.objectContaining({ rank: 'S', title: 'Master' }));
   });
 });

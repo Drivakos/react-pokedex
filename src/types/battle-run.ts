@@ -131,6 +131,14 @@ export interface RunUpgrade {
   description: string;
 }
 
+export type RunGradeRank = 'S' | 'A' | 'B' | 'C' | 'D';
+
+export interface RunGrade {
+  rank: RunGradeRank;
+  title: string;
+  description: string;
+}
+
 export interface RunRewardSummary {
   stage: number;
   turns: number;

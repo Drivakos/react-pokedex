@@ -1,4 +1,4 @@
-import type { RunChallenge, RunPokemon, RunRewardSummary, RunRoute, RunUpgrade, RunUpgradeId } from '../types/battle-run';
+import type { RunChallenge, RunGrade, RunPokemon, RunRewardSummary, RunRoute, RunUpgrade, RunUpgradeId } from '../types/battle-run';
 
 export const PARTY_LIMIT = 6;
 export const LEVELS_PER_STAGE = 2;
@@ -99,6 +99,23 @@ export function applyRunUpgradesToChallenge(challenge: RunChallenge, upgrades: R
 
 export function recruitmentChoiceCount(upgrades: RunUpgrade[]): number {
   return hasRunUpgrade(upgrades, 'expanded-scouting') ? 4 : 3;
+}
+
+export function getRunGrade(score: number, wins: number): RunGrade {
+  const averageScore = wins > 0 ? score / wins : 0;
+  if (averageScore >= 5000) {
+    return { rank: 'S', title: 'Master', description: 'Exceptional risk control and objective execution.' };
+  }
+  if (averageScore >= 3800) {
+    return { rank: 'A', title: 'Elite', description: 'A high-scoring run built on difficult routes.' };
+  }
+  if (averageScore >= 2800) {
+    return { rank: 'B', title: 'Contender', description: 'Strong decisions with room for larger bounties.' };
+  }
+  if (averageScore >= 1800) {
+    return { rank: 'C', title: 'Challenger', description: 'A solid run with several rewards secured.' };
+  }
+  return { rank: 'D', title: 'Rookie', description: 'Build the team, clear contracts, and raise the stakes.' };
 }
 
 export function isCheckpointStage(stage: number): boolean {

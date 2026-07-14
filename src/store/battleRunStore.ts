@@ -43,11 +43,33 @@ interface BattleSession {
 let session: BattleSession | null = null;
 let random: (() => number) | null = null;
 let pendingBattleResult: BattleResult | null = null;
+const BEST_SCORE_KEY = 'battle-run-best-score';
+
+function readBestScore(): number {
+  if (typeof window === 'undefined') return 0;
+  try {
+    const value = Number(window.localStorage.getItem(BEST_SCORE_KEY));
+    return Number.isFinite(value) && value > 0 ? Math.floor(value) : 0;
+  } catch {
+    return 0;
+  }
+}
+
+function persistBestScore(score: number): void {
+  if (typeof window === 'undefined') return;
+  try {
+    window.localStorage.setItem(BEST_SCORE_KEY, String(score));
+  } catch {
+    // A private or restricted browser session can still play without persistence.
+  }
+}
 
 interface BattleRunStore {
   phase: BattleRunPhase;
   stage: number;
   score: number;
+  bestScore: number;
+  personalBestReached: boolean;
   winStreak: number;
   seed: string;
   party: RunPokemon[];
@@ -115,11 +137,17 @@ export const useBattleRunStore = create<BattleRunStore>((set, get) => {
       ? createRunUpgradeChoices(current.upgrades, rng)
       : [];
     const needsUpgradeChoice = upgradeChoices.length > 0;
+    const score = current.score + reward.totalScore;
+    const personalBestReached = current.personalBestReached || score > current.bestScore;
+    const bestScore = Math.max(current.bestScore, score);
+    if (bestScore > current.bestScore) persistBestScore(bestScore);
 
     set({
       phase: needsUpgradeChoice ? 'upgrade-draft' : 'reward-draft',
       party: survivors,
-      score: current.score + reward.totalScore,
+      score,
+      bestScore,
+      personalBestReached,
       winStreak: current.winStreak + 1,
       draftChoices: needsUpgradeChoice
         ? []
@@ -203,6 +231,8 @@ export const useBattleRunStore = create<BattleRunStore>((set, get) => {
     phase: 'starter-draft',
     stage: 1,
     score: 0,
+    bestScore: readBestScore(),
+    personalBestReached: false,
     winStreak: 0,
     seed: '',
     party: [],
@@ -223,6 +253,7 @@ export const useBattleRunStore = create<BattleRunStore>((set, get) => {
 
     startRun: () => {
       const seed = newSeed();
+      const bestScore = Math.max(get().bestScore, readBestScore());
       random = createSeededRandom(seed);
       session?.dispose();
       session = null;
@@ -231,6 +262,8 @@ export const useBattleRunStore = create<BattleRunStore>((set, get) => {
         phase: 'starter-draft',
         stage: 1,
         score: 0,
+        bestScore,
+        personalBestReached: false,
         winStreak: 0,
         seed,
         party: [],

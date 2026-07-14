@@ -28,7 +28,7 @@ import {
   prewarmShowdownBattleWorker,
 } from '../../services/showdown-battle-worker.service';
 import type { ActiveBattlePokemon, BattleSide, BattleVisualEvent, OpponentTrainer, RunChallenge, RunPokemon, RunRewardSummary } from '../../types/battle-run';
-import { RUN_ROUTES, isCheckpointStage } from '../../utils/battle-run-rules';
+import { RUN_ROUTES, getRunGrade, isCheckpointStage } from '../../utils/battle-run-rules';
 import { BattlePokemonImage } from './BattlePokemonImage';
 import { MoveBattleEffect } from './MoveBattleEffect';
 import { TrainerImage } from './TrainerImage';
@@ -160,10 +160,12 @@ function ChallengeCard({ challenge, compact = false }: {
   );
 }
 
-function RewardSummary({ reward, score, streak }: {
+function RewardSummary({ reward, score, streak, bestScore, personalBestReached }: {
   reward: RunRewardSummary;
   score: number;
   streak: number;
+  bestScore?: number;
+  personalBestReached?: boolean;
 }) {
   const bonuses = [
     { label: 'Stage clear', value: reward.stageScore, icon: Trophy },
@@ -196,6 +198,12 @@ function RewardSummary({ reward, score, streak }: {
           </div>
         </div>
       </div>
+      {personalBestReached && score === bestScore && (
+        <div className="flex items-center justify-between gap-3 border-b border-amber-300/20 bg-amber-400/10 px-5 py-2.5 text-xs font-black text-amber-200">
+          <span className="flex items-center gap-2"><Crown className="h-4 w-4" /> Personal best in progress</span>
+          <span>{bestScore.toLocaleString()} points</span>
+        </div>
+      )}
       <div className="grid gap-px bg-white/10 [grid-template-columns:repeat(auto-fit,minmax(150px,1fr))]">
         {bonuses.map(({ label, value, icon: Icon }) => (
           <div key={label} className="flex items-center justify-between gap-3 bg-slate-950 px-4 py-3">
@@ -858,6 +866,8 @@ export default function BattleRunGame() {
   const phase = useBattleRunStore(state => state.phase);
   const stage = useBattleRunStore(state => state.stage);
   const score = useBattleRunStore(state => state.score);
+  const bestScore = useBattleRunStore(state => state.bestScore);
+  const personalBestReached = useBattleRunStore(state => state.personalBestReached);
   const winStreak = useBattleRunStore(state => state.winStreak);
   const lastReward = useBattleRunStore(state => state.lastReward);
   const upgrades = useBattleRunStore(state => state.upgrades);
@@ -888,6 +898,7 @@ export default function BattleRunGame() {
   }, [phase]);
 
   const isDraft = phase === 'starter-draft' || phase === 'reward-draft';
+  const runGrade = getRunGrade(score, winStreak);
 
   return (
     <main className="relative min-h-[calc(100vh-4rem)] overflow-hidden bg-gradient-to-br from-red-50 via-sky-50 to-emerald-50 px-4 py-4 sm:px-6">
@@ -913,6 +924,7 @@ export default function BattleRunGame() {
           <div className="flex min-w-0 flex-col gap-1.5 lg:items-end">
             <div className="flex items-center justify-between gap-4 lg:justify-end">
               <span className="flex items-center gap-1 text-[11px] font-black text-slate-600"><Trophy className="h-3.5 w-3.5 text-amber-500" /> {score.toLocaleString()}</span>
+              <span className="hidden items-center gap-1 text-[11px] font-black text-slate-600 sm:flex" title="Personal best"><Crown className="h-3.5 w-3.5 text-violet-500" /> {bestScore.toLocaleString()}</span>
               <span className="flex items-center gap-1 text-[11px] font-black text-slate-600"><Flame className="h-3.5 w-3.5 text-orange-500" /> {winStreak}</span>
               <span className="flex items-center gap-1 text-[11px] font-black text-slate-600"><ShieldCheck className="h-3.5 w-3.5 text-emerald-600" /> {upgrades.length}</span>
               <StageMeter stage={stage} />
@@ -939,7 +951,13 @@ export default function BattleRunGame() {
           </div>
 
           {phase === 'reward-draft' && lastReward && (
-            <RewardSummary reward={lastReward} score={score} streak={winStreak} />
+            <RewardSummary
+              reward={lastReward}
+              score={score}
+              streak={winStreak}
+              bestScore={bestScore}
+              personalBestReached={personalBestReached}
+            />
           )}
 
           {draftChoices.length === 0 ? (
@@ -979,7 +997,7 @@ export default function BattleRunGame() {
           <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-slate-100"><Shield className="h-10 w-10 text-slate-400" /></div>
           <h2 className="mt-5 text-4xl font-black text-slate-950">Run over</h2>
           <p className="mt-3 text-lg text-slate-600">You reached <strong>stage {stage}</strong>. No usable Pokémon remain.</p>
-          <div className="mx-auto mt-6 grid max-w-sm grid-cols-2 gap-3">
+          <div className="mx-auto mt-6 grid max-w-lg grid-cols-3 gap-3">
             <div className="rounded-xl bg-slate-100 p-3">
               <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">Final score</p>
               <p className="mt-1 text-xl font-black text-slate-900">{score.toLocaleString()}</p>
@@ -988,6 +1006,16 @@ export default function BattleRunGame() {
               <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">Win streak</p>
               <p className="mt-1 flex items-center justify-center gap-1 text-xl font-black text-slate-900"><Flame className="h-5 w-5 text-orange-500" /> {winStreak}</p>
             </div>
+            <div className="rounded-xl bg-slate-950 p-3 text-white">
+              <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">Run grade</p>
+              <p className="mt-1 text-xl font-black text-amber-300">{runGrade.rank}</p>
+            </div>
+          </div>
+          <div className={`mx-auto mt-4 max-w-lg rounded-xl border px-4 py-3 ${personalBestReached ? 'border-amber-200 bg-amber-50 text-amber-900' : 'border-slate-200 bg-slate-50 text-slate-700'}`}>
+            <p className="flex items-center justify-center gap-2 text-sm font-black">
+              <Crown className="h-4 w-4" /> {personalBestReached ? 'New personal best' : `Personal best ${bestScore.toLocaleString()}`}
+            </p>
+            <p className="mt-1 text-xs font-semibold">Grade {runGrade.rank} · {runGrade.title}. {runGrade.description}</p>
           </div>
           <div className="mx-auto mt-6 flex max-w-sm items-center justify-center gap-2 rounded-xl bg-red-50 p-3 text-sm font-bold text-red-700">
             <Heart className="h-4 w-4" /> Fainted Pokémon do not return during a run.
