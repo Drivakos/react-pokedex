@@ -30,14 +30,16 @@ import {
   disposePrewarmedShowdownBattleWorker,
   prewarmShowdownBattleWorker,
 } from '../../services/showdown-battle-worker.service';
-import type { ActiveBattlePokemon, BattleSide, BattleVisualEvent, OpponentTrainer, RunChallenge, RunChallengeProgress, RunPokemon, RunRewardSummary, RunUpgrade } from '../../types/battle-run';
+import type { ActiveBattlePokemon, BattleSide, BattleVisualEvent, OpponentTrainer, RunChallenge, RunChallengeProgress, RunMilestoneId, RunPokemon, RunRewardSummary, RunStats, RunUpgrade } from '../../types/battle-run';
 import {
+  RUN_MILESTONES,
   RUN_ROUTES,
   RUN_SECTORS,
   RUN_STAGE_LIMIT,
   getBossModifier,
   getContractChainMultiplier,
   getRecruitmentRewardProfile,
+  getRunMilestoneProgress,
   getRunGrade,
   getRunSector,
   getStageChallengeProgress,
@@ -59,6 +61,28 @@ const typeClasses: Record<string, string> = {
   Ghost: 'bg-purple-700', Grass: 'bg-green-600', Ground: 'bg-amber-700', Ice: 'bg-cyan-500',
   Normal: 'bg-stone-400', Poison: 'bg-violet-600', Psychic: 'bg-pink-600', Rock: 'bg-yellow-800',
   Steel: 'bg-slate-500', Water: 'bg-blue-600',
+};
+
+const contractProgressClasses: Record<RunChallengeProgress['status'], {
+  panel: string;
+  label: string;
+  value: string;
+}> = {
+  'on-track': {
+    panel: 'border-[var(--battle-contract-success-border)] bg-[var(--battle-contract-success-surface)]',
+    label: 'text-[var(--battle-contract-success)]',
+    value: 'text-[var(--battle-contract-success-strong)]',
+  },
+  'at-risk': {
+    panel: 'border-[var(--battle-contract-warning-border)] bg-[var(--battle-contract-warning-surface)]',
+    label: 'text-[var(--battle-contract-warning)]',
+    value: 'text-[var(--battle-contract-warning-strong)]',
+  },
+  failed: {
+    panel: 'border-[var(--battle-contract-danger-border)] bg-[var(--battle-contract-danger-surface)]',
+    label: 'text-[var(--battle-contract-danger)]',
+    value: 'text-[var(--battle-contract-danger-strong)]',
+  },
 };
 
 function TypeBadges({ types, compact = false }: { types: string[]; compact?: boolean }) {
@@ -100,6 +124,65 @@ function StageMeter({ stage, complete = false }: { stage: number; complete?: boo
       </div>
       <span className="text-[10px] font-black text-slate-500">{Math.min(stage, RUN_STAGE_LIMIT)}/{RUN_STAGE_LIMIT}</span>
     </div>
+  );
+}
+
+function RunMilestoneBoard({
+  stats,
+  unlockedIds,
+  title = 'Run medal board',
+  expanded = false,
+}: {
+  stats: RunStats;
+  unlockedIds: RunMilestoneId[];
+  title?: string;
+  expanded?: boolean;
+}) {
+  const progress = getRunMilestoneProgress(stats, unlockedIds);
+  const completed = progress.filter(item => item.unlocked).length;
+
+  return (
+    <details open={expanded || undefined} className="group overflow-hidden rounded-2xl border border-[var(--battle-panel-border)] bg-[var(--battle-panel-surface)] shadow-sm">
+      <summary className="flex cursor-pointer list-none items-center justify-between gap-3 bg-gradient-to-r from-amber-50 via-white to-emerald-50 px-4 py-3 [&::-webkit-details-marker]:hidden">
+        <span className="flex items-center gap-2">
+          <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-amber-100 text-amber-700"><Medal className="h-4 w-4" /></span>
+          <span>
+            <span className="block text-[9px] font-black uppercase tracking-[0.18em] text-amber-700">Optional run goals</span>
+            <strong className="block text-sm text-[var(--battle-panel-title)]">{title}</strong>
+          </span>
+        </span>
+        <span className="flex items-center gap-2 text-[10px] font-black text-slate-600">
+          {completed}/{RUN_MILESTONES.length} earned
+          <ChevronRight className="h-4 w-4 transition-transform group-open:rotate-90" />
+        </span>
+      </summary>
+      <div className="grid gap-px bg-slate-200 sm:grid-cols-2 xl:grid-cols-4">
+        {progress.map(({ milestone, current, unlocked }) => {
+          const percent = Math.min(100, Math.round((current / milestone.target) * 100));
+          return (
+            <div key={milestone.id} className={`p-3.5 ${unlocked ? 'bg-emerald-50/70' : 'bg-white'}`}>
+              <div className="flex items-start justify-between gap-2">
+                <span>
+                  <span className={`block text-[9px] font-black uppercase tracking-[0.14em] ${unlocked ? 'text-emerald-600' : 'text-slate-400'}`}>{unlocked ? 'Medal earned' : milestone.label}</span>
+                  <strong className="mt-0.5 block text-sm text-slate-950">{milestone.title}</strong>
+                </span>
+                {unlocked
+                  ? <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600" />
+                  : <LockKeyhole className="h-4 w-4 shrink-0 text-slate-300" />}
+              </div>
+              <p className="mt-1.5 min-h-8 text-[11px] font-semibold leading-relaxed text-slate-500">{milestone.description}</p>
+              <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-slate-100">
+                <div className={`h-full rounded-full transition-all ${unlocked ? 'bg-emerald-500' : 'bg-amber-500'}`} style={{ width: `${percent}%` }} />
+              </div>
+              <div className="mt-2 flex items-center justify-between gap-2 text-[10px] font-black">
+                <span className={unlocked ? 'text-emerald-700' : 'text-slate-500'}>{current}/{milestone.target}</span>
+                <span className="text-amber-700">+{milestone.scoreBonus.toLocaleString()}{milestone.scoutPasses > 0 ? ` · ${milestone.scoutPasses} Scout Pass` : ''}</span>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </details>
   );
 }
 
@@ -200,35 +283,36 @@ function ChallengeCard({ challenge, compact = false, progress, chainMultiplier =
   chainMultiplier?: number;
 }) {
   const payout = Math.round(challenge.bounty * chainMultiplier);
+  const progressTheme = progress ? contractProgressClasses[progress.status] : null;
   return (
-    <div className={`rounded-2xl border border-white/10 bg-slate-950 text-white shadow-lg ${compact ? 'p-3' : 'p-4'}`}>
+    <div className={`rounded-2xl border border-[var(--battle-contract-border)] bg-[var(--battle-contract-surface)] text-[var(--battle-contract-title)] shadow-lg shadow-slate-200/60 ${compact ? 'p-3' : 'p-4'}`}>
       <div className="flex items-start justify-between gap-4">
         <div className="flex min-w-0 gap-3">
-          <span className={`flex shrink-0 items-center justify-center rounded-xl bg-red-500/15 text-red-300 ${compact ? 'h-8 w-8' : 'h-10 w-10'}`}>
+          <span className={`flex shrink-0 items-center justify-center rounded-xl bg-[var(--battle-contract-accent-surface)] text-[var(--battle-contract-accent)] ${compact ? 'h-8 w-8' : 'h-10 w-10'}`}>
             <Target className={compact ? 'h-4 w-4' : 'h-5 w-5'} />
           </span>
           <span className="min-w-0">
-            <span className="block text-[9px] font-black uppercase tracking-[0.2em] text-red-300">Stage contract</span>
+            <span className="block text-[9px] font-black uppercase tracking-[0.2em] text-[var(--battle-contract-accent)]">Stage contract</span>
             <strong className={`block truncate ${compact ? 'text-sm' : 'text-lg'}`}>{challenge.title}</strong>
-            <span className={`mt-0.5 block leading-relaxed text-slate-300 ${compact ? 'text-[11px]' : 'text-sm'}`}>{challenge.description}</span>
+            <span className={`mt-0.5 block leading-relaxed text-[var(--battle-contract-copy)] ${compact ? 'text-[11px]' : 'text-sm'}`}>{challenge.description}</span>
           </span>
         </div>
-        <span className="shrink-0 rounded-full bg-amber-400/15 px-2.5 py-1 text-right text-xs font-black text-amber-300">
+        <span className="shrink-0 rounded-full bg-[var(--battle-contract-bounty-surface)] px-2.5 py-1 text-right text-xs font-black text-[var(--battle-contract-bounty)]">
           <span className="block">+{payout.toLocaleString()}</span>
-          {chainMultiplier > 1 && <span className="block text-[8px] uppercase tracking-wider text-amber-200/70">Chain x{chainMultiplier.toFixed(2)}</span>}
+          {chainMultiplier > 1 && <span className="block text-[8px] uppercase tracking-wider opacity-70">Chain x{chainMultiplier.toFixed(2)}</span>}
         </span>
       </div>
-      {progress && (
-        <div className={`mt-3 rounded-xl border px-3 py-2 ${progress.status === 'failed' ? 'border-red-400/30 bg-red-500/15' : progress.status === 'at-risk' ? 'border-amber-400/30 bg-amber-400/10' : 'border-emerald-400/30 bg-emerald-400/10'}`}>
+      {progress && progressTheme && (
+        <div className={`mt-3 rounded-xl border px-3 py-2 ${progressTheme.panel}`}>
           <div className="flex items-center justify-between gap-3">
-            <span className={`text-[10px] font-black uppercase tracking-wider ${progress.status === 'failed' ? 'text-red-300' : progress.status === 'at-risk' ? 'text-amber-300' : 'text-emerald-300'}`}>
+            <span className={`text-[10px] font-black uppercase tracking-wider ${progressTheme.label}`}>
               {progress.label}
             </span>
             <span className="flex items-center gap-3">
               {progress.metrics.map(metric => (
                 <span key={metric.label} className="text-right">
-                  <span className="block text-[8px] font-black uppercase text-slate-500">{metric.label}</span>
-                  <strong className="block text-xs text-white">{metric.value}</strong>
+                  <span className="block text-[8px] font-black uppercase text-[var(--battle-contract-muted)]">{metric.label}</span>
+                  <strong className={`block text-xs ${progressTheme.value}`}>{metric.value}</strong>
                 </span>
               ))}
             </span>
@@ -256,110 +340,129 @@ function RewardSummary({ reward, score, streak, upgrades, bestScore, personalBes
     ...(reward.flawlessBonus > 0 ? [{ label: 'Flawless team', value: reward.flawlessBonus, icon: Heart }] : []),
     ...(reward.checkpointBonus > 0 ? [{ label: 'Checkpoint', value: reward.checkpointBonus, icon: Flag }] : []),
     ...(reward.routeBonus > 0 && reward.route ? [{ label: reward.route.title, value: reward.routeBonus, icon: Compass }] : []),
+    ...(reward.milestoneBonus > 0 ? [{ label: 'Run medals', value: reward.milestoneBonus, icon: Medal }] : []),
   ];
 
   return (
-    <div className="mb-6 overflow-hidden rounded-2xl border border-slate-800 bg-slate-950 text-white shadow-xl">
-      <div className="flex flex-col justify-between gap-3 border-b border-white/10 px-5 py-4 sm:flex-row sm:items-center">
+    <div className="mb-6 overflow-hidden rounded-2xl border border-[var(--battle-panel-border)] bg-[var(--battle-panel-surface)] text-[var(--battle-panel-title)] shadow-xl shadow-slate-200/70">
+      <div className="flex flex-col justify-between gap-3 border-b border-[var(--battle-panel-border)] bg-gradient-to-r from-red-50 via-white to-sky-50 px-5 py-4 sm:flex-row sm:items-center">
         <div>
-          <p className="text-[10px] font-black uppercase tracking-[0.2em] text-emerald-300">Stage {reward.stage} cleared</p>
+          <p className="text-[10px] font-black uppercase tracking-[0.2em] text-emerald-700">Stage {reward.stage} cleared</p>
           <p className="mt-1 text-xl font-black">Performance reward</p>
         </div>
         <div className="flex items-end gap-5">
           <div className="text-right">
-            <p className="text-[9px] font-black uppercase tracking-wider text-slate-400">Earned</p>
-            <p className="text-2xl font-black text-amber-300">+{reward.totalScore.toLocaleString()}</p>
+            <p className="text-[9px] font-black uppercase tracking-wider text-slate-500">Earned</p>
+            <p className="text-2xl font-black text-amber-700">+{reward.totalScore.toLocaleString()}</p>
           </div>
           <div className="text-right">
-            <p className="text-[9px] font-black uppercase tracking-wider text-slate-400">Run score</p>
+            <p className="text-[9px] font-black uppercase tracking-wider text-slate-500">Run score</p>
             <p className="text-lg font-black">{score.toLocaleString()}</p>
           </div>
           <div className="text-right">
-            <p className="text-[9px] font-black uppercase tracking-wider text-slate-400">Wins</p>
-            <p className="flex items-center justify-end gap-1 text-lg font-black"><Flame className="h-4 w-4 text-orange-400" /> {streak}</p>
+            <p className="text-[9px] font-black uppercase tracking-wider text-slate-500">Wins</p>
+            <p className="flex items-center justify-end gap-1 text-lg font-black"><Flame className="h-4 w-4 text-orange-600" /> {streak}</p>
           </div>
         </div>
       </div>
       {personalBestReached && score === bestScore && (
-        <div className="flex items-center justify-between gap-3 border-b border-amber-300/20 bg-amber-400/10 px-5 py-2.5 text-xs font-black text-amber-200">
+        <div className="flex items-center justify-between gap-3 border-b border-amber-200 bg-amber-50 px-5 py-2.5 text-xs font-black text-amber-800">
           <span className="flex items-center gap-2"><Crown className="h-4 w-4" /> {final ? 'New personal best secured' : 'Personal best in progress'}</span>
           <span>{bestScore.toLocaleString()} points</span>
         </div>
       )}
-      <div className="grid gap-px bg-white/10 [grid-template-columns:repeat(auto-fit,minmax(150px,1fr))]">
+      <div className="grid gap-px bg-[var(--battle-panel-border)] [grid-template-columns:repeat(auto-fit,minmax(150px,1fr))]">
         {bonuses.map(({ label, value, icon: Icon }) => (
-          <div key={label} className="flex items-center justify-between gap-3 bg-slate-950 px-4 py-3">
-            <span className="flex items-center gap-2 text-xs font-bold text-slate-300"><Icon className="h-3.5 w-3.5 text-slate-500" /> {label}</span>
-            <strong className="text-sm text-white">+{value}</strong>
+          <div key={label} className="flex items-center justify-between gap-3 bg-[var(--battle-panel-surface)] px-4 py-3">
+            <span className="flex items-center gap-2 text-xs font-bold text-[var(--battle-panel-copy)]"><Icon className="h-3.5 w-3.5 text-[var(--battle-panel-muted)]" /> {label}</span>
+            <strong className="text-sm text-[var(--battle-panel-title)]">+{value}</strong>
           </div>
         ))}
       </div>
       {reward.challenge && (
-        <div className={`flex items-center justify-between gap-4 border-t border-white/10 px-5 py-3 ${reward.challengeCompleted ? 'bg-emerald-950/60' : 'bg-slate-900'}`}>
+        <div className={`flex items-center justify-between gap-4 border-t px-5 py-3 ${reward.challengeCompleted ? 'border-[var(--battle-contract-success-border)] bg-[var(--battle-contract-success-surface)]' : 'border-[var(--battle-contract-danger-border)] bg-[var(--battle-contract-danger-surface)]'}`}>
           <div className="flex items-center gap-3">
             {reward.challengeCompleted
-              ? <CheckCircle2 className="h-5 w-5 shrink-0 text-emerald-400" />
-              : <XCircle className="h-5 w-5 shrink-0 text-slate-500" />}
+              ? <CheckCircle2 className="h-5 w-5 shrink-0 text-[var(--battle-contract-success)]" />
+              : <XCircle className="h-5 w-5 shrink-0 text-[var(--battle-contract-danger)]" />}
             <div>
-              <p className={`text-xs font-black uppercase tracking-wider ${reward.challengeCompleted ? 'text-emerald-300' : 'text-slate-400'}`}>
+              <p className={`text-xs font-black uppercase tracking-wider ${reward.challengeCompleted ? 'text-[var(--battle-contract-success)]' : 'text-[var(--battle-contract-danger)]'}`}>
                 {reward.challengeCompleted ? `Contract cleared · ${reward.contractStreak} chain` : 'Contract missed · chain reset'}
               </p>
-              <p className="text-sm font-bold text-white">{reward.challenge.title}</p>
+              <p className="text-sm font-bold text-[var(--battle-contract-title)]">{reward.challenge.title}</p>
             </div>
           </div>
           <span className="text-right">
-            <strong className={`block ${reward.challengeCompleted ? 'text-emerald-300' : 'text-slate-500'}`}>
+            <strong className={`block ${reward.challengeCompleted ? 'text-[var(--battle-contract-success-strong)]' : 'text-[var(--battle-contract-danger-strong)]'}`}>
               {reward.challengeCompleted ? `+${reward.challengeBonus.toLocaleString()}` : 'No bonus'}
             </strong>
             {reward.challengeCompleted && reward.challengeMultiplier > 1 && (
-              <span className="block text-[9px] font-black uppercase tracking-wider text-emerald-400/70">Chain x{reward.challengeMultiplier.toFixed(2)}</span>
+              <span className="block text-[9px] font-black uppercase tracking-wider text-[var(--battle-contract-success)] opacity-70">Chain x{reward.challengeMultiplier.toFixed(2)}</span>
             )}
             {reward.scoutPassesEarned > 0 && (
-              <span className="mt-1 flex items-center justify-end gap-1 text-[9px] font-black uppercase tracking-wider text-sky-300">
+              <span className="mt-1 flex items-center justify-end gap-1 text-[9px] font-black uppercase tracking-wider text-sky-700">
                 <RefreshCw className="h-3 w-3" /> +{reward.scoutPassesEarned} Scout {reward.scoutPassesEarned === 1 ? 'Pass' : 'Passes'}
               </span>
             )}
           </span>
         </div>
       )}
-      {!final && reward.route && (
-        <div className="flex items-center justify-between gap-4 border-t border-indigo-300/20 bg-indigo-400/10 px-5 py-3">
-          <span className="flex items-center gap-3">
-            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-300/15 text-indigo-200"><Medal className="h-4 w-4" /></span>
-            <span>
-              <span className="block text-[9px] font-black uppercase tracking-[0.18em] text-indigo-300">{reward.route.title} spoils secured</span>
-              <strong className="block text-sm text-white">Level {recruitmentReward.level} recruitment pool</strong>
+      {reward.milestonesUnlocked.length > 0 && (
+        <div className="flex items-center justify-between gap-4 border-t border-amber-200 bg-amber-50 px-5 py-3">
+          <span className="flex min-w-0 items-center gap-3">
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-amber-100 text-amber-700"><Medal className="h-5 w-5" /></span>
+            <span className="min-w-0">
+              <span className="block text-[9px] font-black uppercase tracking-[0.18em] text-amber-700">Run medal unlocked</span>
+              <strong className="block truncate text-sm text-amber-950">{reward.milestonesUnlocked.map(milestone => milestone.title).join(' · ')}</strong>
             </span>
           </span>
-          <span className="text-right text-xs font-black text-indigo-200">
-            {recruitmentReward.choiceCount} choices
-            {reward.route.recruitmentChoiceBonus > 0 && <span className="block text-[9px] uppercase tracking-wider text-indigo-300">+{reward.route.recruitmentChoiceBonus} route bonus</span>}
+          <span className="shrink-0 text-right">
+            <strong className="block text-sm text-amber-800">+{reward.milestoneBonus.toLocaleString()}</strong>
+            {reward.milestoneScoutPasses > 0 && (
+              <span className="mt-0.5 flex items-center justify-end gap-1 text-[9px] font-black uppercase tracking-wider text-sky-700">
+                <RefreshCw className="h-3 w-3" /> +{reward.milestoneScoutPasses} Scout {reward.milestoneScoutPasses === 1 ? 'Pass' : 'Passes'}
+              </span>
+            )}
           </span>
         </div>
       )}
-      <div className="bg-emerald-950/50 px-5 py-2.5 text-xs font-bold text-emerald-200">
+      {!final && reward.route && (
+        <div className="flex items-center justify-between gap-4 border-t border-indigo-200 bg-indigo-50 px-5 py-3">
+          <span className="flex items-center gap-3">
+            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-100 text-indigo-700"><Medal className="h-4 w-4" /></span>
+            <span>
+              <span className="block text-[9px] font-black uppercase tracking-[0.18em] text-indigo-700">{reward.route.title} spoils secured</span>
+              <strong className="block text-sm text-indigo-950">Level {recruitmentReward.level} recruitment pool</strong>
+            </span>
+          </span>
+          <span className="text-right text-xs font-black text-indigo-700">
+            {recruitmentReward.choiceCount} choices
+            {reward.route.recruitmentChoiceBonus > 0 && <span className="block text-[9px] uppercase tracking-wider text-indigo-600">+{reward.route.recruitmentChoiceBonus} route bonus</span>}
+          </span>
+        </div>
+      )}
+      <div className="border-t border-emerald-200 bg-emerald-50 px-5 py-2.5 text-xs font-bold text-emerald-700">
         {final ? 'Final checkpoint secured. The challenge is complete.' : `Surviving Pokémon gained ${reward.levelsGained} levels.`}
       </div>
     </div>
   );
 }
 
-function TrainerCard({ trainer, stage, compact = false }: {
+function TrainerCard({ trainer, stage }: {
   trainer: OpponentTrainer;
   stage: number;
-  compact?: boolean;
 }) {
   return (
-    <div className={`flex items-center gap-3 rounded-2xl border border-white/20 bg-slate-950/80 text-white shadow-xl backdrop-blur ${compact ? 'p-2.5 pr-4' : 'p-4'}`}>
-      <TrainerImage src={trainer.image} name={trainer.name} className={compact ? 'h-14 w-14' : 'h-20 w-20'} />
+    <div className="flex items-center gap-3 rounded-2xl border border-[var(--battle-panel-border)] bg-[var(--battle-panel-surface)] p-4 text-[var(--battle-panel-title)] shadow-lg shadow-slate-200/60 backdrop-blur">
+      <TrainerImage src={trainer.image} name={trainer.name} className="h-20 w-20" />
       <div className="min-w-0">
-        <div className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-[0.18em] text-red-300">
+        <div className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-[0.18em] text-red-600">
           <Bot className="h-3 w-3" /> {trainer.title}
         </div>
-        <p className={`${compact ? 'text-lg' : 'text-2xl'} truncate font-black`}>{trainer.name}</p>
+        <p className="truncate text-2xl font-black">{trainer.name}</p>
         <div className="mt-1 flex gap-1" aria-label={`Difficulty ${Math.min(5, Math.ceil(stage / 2))} of 5`}>
           {Array.from({ length: 5 }, (_, index) => (
-            <Zap key={index} className={`h-3 w-3 ${index < Math.min(5, Math.ceil(stage / 2)) ? 'fill-amber-400 text-amber-400' : 'text-slate-600'}`} />
+            <Zap key={index} className={`h-3 w-3 ${index < Math.min(5, Math.ceil(stage / 2)) ? 'fill-amber-400 text-amber-500' : 'text-slate-300'}`} />
           ))}
         </div>
       </div>
@@ -454,18 +557,6 @@ function pokemonMotion(event: BattleVisualEvent | null, side: BattleSide): strin
   if (event.kind === 'switch' && event.actor === side) return 'battle-enter';
   return '';
 }
-
-const BattleOpponentBadge = memo(function BattleOpponentBadge() {
-  const trainer = useBattleRunStore(state => state.opponentTrainer);
-  const stage = useBattleRunStore(state => state.stage);
-  if (!trainer) return null;
-
-  return (
-    <div className="absolute right-4 top-4 z-20 hidden sm:block">
-      <TrainerCard trainer={trainer} stage={stage} compact />
-    </div>
-  );
-});
 
 const BattleLogPanel = memo(function BattleLogPanel() {
   const battleLog = useBattleRunStore(state => state.battleLog);
@@ -645,12 +736,11 @@ function BattleArena() {
             <HealthPanel key={`opponent-${displaySnapshot?.opponent?.species ?? 'empty'}`} pokemon={displaySnapshot?.opponent ?? null} opponent />
           </div>
           {challengeProgress && (
-            <div className={`absolute right-3 top-3 z-20 w-[30%] rounded-xl border px-2 py-2 text-right shadow-lg backdrop-blur sm:hidden ${challengeProgress.status === 'failed' ? 'border-red-300/50 bg-red-950/85 text-red-200' : challengeProgress.status === 'at-risk' ? 'border-amber-300/50 bg-amber-950/85 text-amber-200' : 'border-emerald-300/50 bg-emerald-950/85 text-emerald-200'}`}>
-              <span className="block text-[8px] font-black uppercase tracking-wider">{challengeProgress.label}</span>
-              <strong className="mt-0.5 block text-xs text-white">{challengeProgress.metrics.map(metric => metric.value).join(' · ')}</strong>
+            <div className={`absolute right-3 top-3 z-20 w-[30%] rounded-xl border px-2 py-2 text-right shadow-lg backdrop-blur sm:hidden ${contractProgressClasses[challengeProgress.status].panel}`}>
+              <span className={`block text-[8px] font-black uppercase tracking-wider ${contractProgressClasses[challengeProgress.status].label}`}>{challengeProgress.label}</span>
+              <strong className={`mt-0.5 block text-xs ${contractProgressClasses[challengeProgress.status].value}`}>{challengeProgress.metrics.map(metric => metric.value).join(' · ')}</strong>
             </div>
           )}
-          <BattleOpponentBadge />
 
           <div className="absolute right-[8%] top-[31%] z-10 flex h-36 w-[38%] items-end justify-center sm:right-[10%] sm:h-44 sm:w-[34%]">
             {displaySnapshot?.opponent && (
@@ -809,18 +899,18 @@ function VersusScreen() {
 
   return (
     <section className="mx-auto max-w-4xl overflow-hidden rounded-[2rem] border border-white bg-white/90 shadow-2xl">
-      <div className="relative grid items-center overflow-hidden bg-gradient-to-br from-blue-600 via-slate-950 to-red-600 p-7 text-white sm:grid-cols-[1fr_auto_1fr] sm:p-10">
+      <div className="relative grid items-center overflow-hidden bg-gradient-to-br from-sky-100 via-white to-red-100 p-7 text-slate-950 sm:grid-cols-[1fr_auto_1fr] sm:p-10">
         <div className="text-center">
           <TrainerImage src="/images/trainers/player.png" name="You" className="mx-auto h-32 w-32 drop-shadow-2xl sm:h-40 sm:w-40" />
-          <p className="mt-3 text-xs font-black uppercase tracking-[0.2em] text-blue-200">Challenger</p>
+          <p className="mt-3 text-xs font-black uppercase tracking-[0.2em] text-blue-700">Challenger</p>
           <p className="text-2xl font-black">You</p>
         </div>
         <div className="my-5 text-center sm:mx-8 sm:my-0">
-          <div className="rounded-full border-4 border-white bg-slate-950 p-4 text-2xl font-black italic shadow-xl">VS</div>
+          <div className="rounded-full border-4 border-white bg-red-600 p-4 text-2xl font-black italic text-white shadow-xl shadow-red-200">VS</div>
         </div>
         <div className="text-center">
           <TrainerImage src={trainer.image} name={trainer.name} className="mx-auto h-32 w-32 drop-shadow-2xl sm:h-40 sm:w-40" />
-          <p className="mt-3 text-xs font-black uppercase tracking-[0.2em] text-red-200">{trainer.title}</p>
+          <p className="mt-3 text-xs font-black uppercase tracking-[0.2em] text-red-700">{trainer.title}</p>
           <p className="text-2xl font-black">{trainer.name}</p>
         </div>
       </div>
@@ -877,6 +967,8 @@ function RouteSelectionScreen() {
   const contractStreak = useBattleRunStore(state => state.contractStreak);
   const trainer = useBattleRunStore(state => state.opponentTrainer);
   const routePreviews = useBattleRunStore(state => state.routePreviews);
+  const runStats = useBattleRunStore(state => state.runStats);
+  const unlockedMilestoneIds = useBattleRunStore(state => state.unlockedMilestoneIds);
   const checkpoint = isCheckpointStage(stage);
   const sector = getRunSector(stage);
   const finalStage = isFinalStage(stage);
@@ -895,18 +987,22 @@ function RouteSelectionScreen() {
       </div>
 
       {trainer && (
-        <div className="mx-auto mb-4 flex max-w-4xl items-center gap-4 overflow-hidden rounded-2xl border border-slate-800 bg-slate-950 px-4 text-white shadow-lg">
+        <div className="mx-auto mb-4 flex max-w-4xl items-center gap-4 overflow-hidden rounded-2xl border border-[var(--battle-panel-border)] bg-[var(--battle-panel-surface)] px-4 text-[var(--battle-panel-title)] shadow-lg shadow-slate-200/60">
           <TrainerImage src={trainer.image} name={trainer.name} className="h-20 w-20 self-end sm:h-24 sm:w-24" />
           <div className="min-w-0 flex-1 py-3">
-            <p className="text-[9px] font-black uppercase tracking-[0.2em] text-red-300">Scouted challenger · {trainer.title}</p>
+            <p className="text-[9px] font-black uppercase tracking-[0.2em] text-red-600">Scouted challenger · {trainer.title}</p>
             <p className="mt-0.5 text-xl font-black">{trainer.name}</p>
-            <p className="mt-1 truncate text-xs font-semibold italic text-slate-400">“{trainer.intro}”</p>
+            <p className="mt-1 truncate text-xs font-semibold italic text-slate-500">“{trainer.intro}”</p>
           </div>
-          <div className="hidden shrink-0 items-center gap-2 rounded-xl border border-indigo-300/20 bg-indigo-300/10 px-3 py-2 text-xs font-black text-indigo-200 sm:flex">
+          <div className="hidden shrink-0 items-center gap-2 rounded-xl border border-indigo-200 bg-indigo-50 px-3 py-2 text-xs font-black text-indigo-700 sm:flex">
             <Bot className="h-4 w-4" /> {aiProfile.title} · {aiProfile.label}
           </div>
         </div>
       )}
+
+      <div className="mx-auto mb-4 max-w-4xl">
+        <RunMilestoneBoard stats={runStats} unlockedIds={unlockedMilestoneIds} />
+      </div>
 
       {activeChallenge && (
         <div className="mx-auto mb-4 grid max-w-4xl gap-3 lg:grid-cols-[1fr_220px]">
@@ -981,7 +1077,7 @@ function RouteSelectionScreen() {
                     <strong className="block text-lg text-slate-950">{route.title}</strong>
                   </span>
                 </span>
-                <span className="rounded-full bg-slate-950 px-3 py-1 text-sm font-black text-white">x{route.scoreMultiplier}</span>
+                <span className="rounded-full bg-white/80 px-3 py-1 text-sm font-black text-slate-800 shadow-sm">x{route.scoreMultiplier}</span>
               </div>
               <div className="p-5">
                 <p className="text-xs font-black uppercase tracking-[0.16em] text-slate-400">{route.label}</p>
@@ -1044,7 +1140,7 @@ function RouteSelectionScreen() {
                     <strong className="text-sm text-slate-800">x{route.scoreMultiplier}</strong>
                   </div>
                 </div>
-                <div className="mt-4 flex items-center justify-between rounded-xl bg-slate-950 px-4 py-3 text-sm font-black text-white">
+                <div className="mt-4 flex items-center justify-between rounded-xl bg-red-600 px-4 py-3 text-sm font-black text-white shadow-sm shadow-red-200 transition-colors group-hover:bg-red-700">
                   Take this route <ChevronRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
                 </div>
               </div>
@@ -1070,8 +1166,8 @@ function UpgradeDraftScreen() {
         <p className="mx-auto mt-2 max-w-2xl text-slate-600">
           Stage {stage} secured. This upgrade remains active until the run ends and changes every future encounter or reward.
         </p>
-        <div className="mt-3 inline-flex items-center gap-2 rounded-full bg-slate-950 px-4 py-2 text-xs font-black text-white">
-          <Trophy className="h-3.5 w-3.5 text-amber-300" /> Current score {score.toLocaleString()}
+        <div className="mt-3 inline-flex items-center gap-2 rounded-full border border-amber-200 bg-amber-50 px-4 py-2 text-xs font-black text-amber-900">
+          <Trophy className="h-3.5 w-3.5 text-amber-600" /> Current score {score.toLocaleString()}
         </div>
       </div>
 
@@ -1104,7 +1200,7 @@ function UpgradeDraftScreen() {
               <p className="mt-5 text-[10px] font-black uppercase tracking-[0.18em] text-amber-700">{upgrade.label}</p>
               <h3 className="mt-1 text-xl font-black text-slate-950">{upgrade.title}</h3>
               <p className="mt-2 flex-1 text-sm leading-relaxed text-slate-600">{upgrade.description}</p>
-              <div className="mt-5 flex items-center justify-between rounded-xl bg-slate-950 px-4 py-3 text-sm font-black text-white">
+              <div className="mt-5 flex items-center justify-between rounded-xl bg-amber-600 px-4 py-3 text-sm font-black text-white shadow-sm shadow-amber-200 transition-colors group-hover:bg-amber-700">
                 Claim upgrade <ChevronRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
               </div>
             </button>
@@ -1169,6 +1265,8 @@ function RunCompleteScreen({
   personalBestReached,
   winStreak,
   upgrades,
+  runStats,
+  unlockedMilestoneIds,
   reward,
   onRestart,
 }: {
@@ -1178,6 +1276,8 @@ function RunCompleteScreen({
   personalBestReached: boolean;
   winStreak: number;
   upgrades: RunUpgrade[];
+  runStats: RunStats;
+  unlockedMilestoneIds: RunMilestoneId[];
   reward: RunRewardSummary | null;
   onRestart: () => void;
 }) {
@@ -1185,44 +1285,44 @@ function RunCompleteScreen({
 
   return (
     <section className="relative mx-auto max-w-5xl overflow-hidden rounded-[2rem] border border-white bg-white/90 shadow-2xl">
-      <div className="relative overflow-hidden bg-gradient-to-br from-slate-950 via-red-950 to-slate-900 px-6 py-9 text-center text-white sm:px-10 sm:py-12">
-        <div className="pointer-events-none absolute inset-x-24 top-0 h-40 rounded-full bg-amber-300/10 blur-3xl" />
-        <div className="relative mx-auto flex h-16 w-16 items-center justify-center rounded-2xl border border-amber-300/30 bg-amber-300/10 text-amber-300">
+      <div className="relative overflow-hidden bg-gradient-to-br from-amber-50 via-white to-emerald-50 px-6 py-9 text-center text-slate-950 sm:px-10 sm:py-12">
+        <div className="pointer-events-none absolute inset-x-24 top-0 h-40 rounded-full bg-amber-200/40 blur-3xl" />
+        <div className="relative mx-auto flex h-16 w-16 items-center justify-center rounded-2xl border border-amber-200 bg-amber-100 text-amber-700">
           <Medal className="h-8 w-8" />
         </div>
-        <p className="relative mt-5 text-[10px] font-black uppercase tracking-[0.28em] text-amber-300">15-stage challenge complete</p>
+        <p className="relative mt-5 text-[10px] font-black uppercase tracking-[0.28em] text-amber-700">15-stage challenge complete</p>
         <h2 className="relative mt-2 text-4xl font-black sm:text-5xl">Battle Run conquered</h2>
-        <p className="relative mx-auto mt-3 max-w-2xl text-sm leading-relaxed text-slate-300 sm:text-base">
+        <p className="relative mx-auto mt-3 max-w-2xl text-sm leading-relaxed text-slate-600 sm:text-base">
           You cleared every circuit, survived all three checkpoint bosses, and defeated the Run Champion.
         </p>
 
         <div className="relative mx-auto mt-7 grid max-w-3xl gap-2 sm:grid-cols-3">
           {RUN_SECTORS.map(sector => (
-            <div key={sector.number} className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-left">
-              <CheckCircle2 className="h-5 w-5 shrink-0 text-emerald-400" />
+            <div key={sector.number} className="flex items-center gap-3 rounded-xl border border-emerald-200 bg-white/80 px-4 py-3 text-left shadow-sm">
+              <CheckCircle2 className="h-5 w-5 shrink-0 text-emerald-600" />
               <span>
-                <span className="block text-[9px] font-black uppercase tracking-wider text-slate-400">Sector {sector.number}</span>
-                <strong className="block text-sm text-white">{sector.title}</strong>
+                <span className="block text-[9px] font-black uppercase tracking-wider text-slate-500">Sector {sector.number}</span>
+                <strong className="block text-sm text-slate-900">{sector.title}</strong>
               </span>
             </div>
           ))}
         </div>
 
         <div className="relative mx-auto mt-7 grid max-w-xl grid-cols-3 gap-2">
-          <div className="rounded-xl bg-white/5 p-3">
-            <p className="text-[9px] font-black uppercase tracking-wider text-slate-400">Final score</p>
-            <p className="mt-1 text-xl font-black text-white">{score.toLocaleString()}</p>
+          <div className="rounded-xl border border-slate-200 bg-white/80 p-3">
+            <p className="text-[9px] font-black uppercase tracking-wider text-slate-500">Final score</p>
+            <p className="mt-1 text-xl font-black text-slate-900">{score.toLocaleString()}</p>
           </div>
-          <div className="rounded-xl bg-white/5 p-3">
-            <p className="text-[9px] font-black uppercase tracking-wider text-slate-400">Survivors</p>
-            <p className="mt-1 text-xl font-black text-white">{party.length}/6</p>
+          <div className="rounded-xl border border-slate-200 bg-white/80 p-3">
+            <p className="text-[9px] font-black uppercase tracking-wider text-slate-500">Survivors</p>
+            <p className="mt-1 text-xl font-black text-slate-900">{party.length}/6</p>
           </div>
-          <div className="rounded-xl border border-amber-300/20 bg-amber-300/10 p-3">
-            <p className="text-[9px] font-black uppercase tracking-wider text-amber-200">Run grade</p>
-            <p className="mt-1 text-xl font-black text-amber-300">{grade.rank}</p>
+          <div className="rounded-xl border border-amber-200 bg-amber-100 p-3">
+            <p className="text-[9px] font-black uppercase tracking-wider text-amber-700">Run grade</p>
+            <p className="mt-1 text-xl font-black text-amber-900">{grade.rank}</p>
           </div>
         </div>
-        <p className="relative mt-3 text-xs font-bold text-slate-400">{grade.title} · {grade.description}</p>
+        <p className="relative mt-3 text-xs font-bold text-slate-500">{grade.title} · {grade.description}</p>
       </div>
 
       <div className="p-5 sm:p-8">
@@ -1237,6 +1337,10 @@ function RunCompleteScreen({
             final
           />
         )}
+
+        <div className="mb-6">
+          <RunMilestoneBoard stats={runStats} unlockedIds={unlockedMilestoneIds} title="Final medal board" expanded />
+        </div>
 
         <div className="grid gap-5 lg:grid-cols-[1fr_auto] lg:items-end">
           <div>
@@ -1279,6 +1383,8 @@ export default function BattleRunGame() {
   const scoutPasses = useBattleRunStore(state => state.scoutPasses);
   const lastReward = useBattleRunStore(state => state.lastReward);
   const upgrades = useBattleRunStore(state => state.upgrades);
+  const runStats = useBattleRunStore(state => state.runStats);
+  const unlockedMilestoneIds = useBattleRunStore(state => state.unlockedMilestoneIds);
   const party = useBattleRunStore(state => state.party);
   const draftChoices = useBattleRunStore(state => state.draftChoices);
   const seed = useBattleRunStore(state => state.seed);
@@ -1314,7 +1420,7 @@ export default function BattleRunGame() {
     : null;
 
   return (
-    <main className="relative min-h-[calc(100vh-4rem)] overflow-hidden bg-gradient-to-br from-red-50 via-sky-50 to-emerald-50 px-4 py-4 sm:px-6">
+    <main className="battle-run-theme relative min-h-[calc(100vh-4rem)] overflow-hidden bg-gradient-to-br from-red-50 via-sky-50 to-emerald-50 px-4 py-4 sm:px-6">
       <div className="pointer-events-none absolute -left-32 top-20 h-96 w-96 rounded-full bg-red-200/30 blur-3xl" />
       <div className="pointer-events-none absolute -right-32 top-64 h-96 w-96 rounded-full bg-blue-200/30 blur-3xl" />
 
@@ -1341,6 +1447,7 @@ export default function BattleRunGame() {
               <span className="flex items-center gap-1 text-[11px] font-black text-slate-600" title="Contract chain"><Target className="h-3.5 w-3.5 text-red-500" /> x{contractStreak}</span>
               <span className="flex items-center gap-1 text-[11px] font-black text-slate-600" title="Scout Passes"><RefreshCw className="h-3.5 w-3.5 text-sky-600" /> {scoutPasses}</span>
               <span className="hidden items-center gap-1 text-[11px] font-black text-slate-600 md:flex"><ShieldCheck className="h-3.5 w-3.5 text-emerald-600" /> {upgrades.length}</span>
+              <span className="hidden items-center gap-1 text-[11px] font-black text-slate-600 md:flex" title="Run medals"><Medal className="h-3.5 w-3.5 text-amber-600" /> {unlockedMilestoneIds.length}/{RUN_MILESTONES.length}</span>
               <StageMeter stage={stage} complete={phase === 'run-complete'} />
               <div className="flex items-center gap-1 text-[11px] font-black text-slate-500"><Users className="h-3.5 w-3.5" /> {party.length}/6</div>
             </div>
@@ -1411,9 +1518,10 @@ export default function BattleRunGame() {
           )}
 
           {phase === 'starter-draft' && (
-            <div className="mt-7 grid gap-3 text-sm sm:grid-cols-3">
+            <div className="mt-7 grid gap-3 text-sm sm:grid-cols-2 lg:grid-cols-4">
               <div className="rounded-2xl bg-white/70 p-4 text-slate-600"><Compass className="mb-2 h-5 w-5 text-red-500" /><strong className="block text-slate-900">Choose the stakes</strong>Riskier routes strengthen opponents and multiply every reward.</div>
               <div className="rounded-2xl bg-white/70 p-4 text-slate-600"><Target className="mb-2 h-5 w-5 text-amber-600" /><strong className="block text-slate-900">Chain contracts</strong>Build a score multiplier and earn Scout Passes to redraw recruits.</div>
+              <div className="rounded-2xl bg-white/70 p-4 text-slate-600"><Medal className="mb-2 h-5 w-5 text-violet-600" /><strong className="block text-slate-900">Earn run medals</strong>Complete multi-stage goals for major score and Scout Pass payouts.</div>
               <div className="rounded-2xl bg-white/70 p-4 text-slate-600"><Heart className="mb-2 h-5 w-5 text-pink-500" /><strong className="block text-slate-900">Faints are permanent</strong>Lose the whole party and the run ends.</div>
             </div>
           )}
@@ -1434,6 +1542,8 @@ export default function BattleRunGame() {
           personalBestReached={personalBestReached}
           winStreak={winStreak}
           upgrades={upgrades}
+          runStats={runStats}
+          unlockedMilestoneIds={unlockedMilestoneIds}
           reward={lastReward}
           onRestart={startRun}
         />
@@ -1445,7 +1555,7 @@ export default function BattleRunGame() {
           <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-slate-100"><Shield className="h-10 w-10 text-slate-400" /></div>
           <h2 className="mt-5 text-4xl font-black text-slate-950">Run over</h2>
           <p className="mt-3 text-lg text-slate-600">You reached <strong>stage {stage}</strong>. No usable Pokémon remain.</p>
-          <div className="mx-auto mt-6 grid max-w-lg grid-cols-3 gap-3">
+          <div className="mx-auto mt-6 grid max-w-lg grid-cols-2 gap-3 sm:grid-cols-4">
             <div className="rounded-xl bg-slate-100 p-3">
               <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">Final score</p>
               <p className="mt-1 text-xl font-black text-slate-900">{score.toLocaleString()}</p>
@@ -1454,9 +1564,13 @@ export default function BattleRunGame() {
               <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">Contract chain</p>
               <p className="mt-1 flex items-center justify-center gap-1 text-xl font-black text-slate-900"><Target className="h-5 w-5 text-red-500" /> x{contractStreak}</p>
             </div>
-            <div className="rounded-xl bg-slate-950 p-3 text-white">
-              <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">Run grade</p>
-              <p className="mt-1 text-xl font-black text-amber-300">{runGrade.rank}</p>
+            <div className="rounded-xl border border-violet-200 bg-violet-50 p-3">
+              <p className="text-[10px] font-black uppercase tracking-wider text-violet-600">Run grade</p>
+              <p className="mt-1 text-xl font-black text-violet-950">{runGrade.rank}</p>
+            </div>
+            <div className="rounded-xl border border-amber-200 bg-amber-50 p-3">
+              <p className="text-[10px] font-black uppercase tracking-wider text-amber-700">Run medals</p>
+              <p className="mt-1 flex items-center justify-center gap-1 text-xl font-black text-amber-900"><Medal className="h-5 w-5" /> {unlockedMilestoneIds.length}/{RUN_MILESTONES.length}</p>
             </div>
           </div>
           <div className={`mx-auto mt-4 max-w-lg rounded-xl border px-4 py-3 ${personalBestReached ? 'border-amber-200 bg-amber-50 text-amber-900' : 'border-slate-200 bg-slate-50 text-slate-700'}`}>

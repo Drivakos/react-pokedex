@@ -1,4 +1,4 @@
-import type { BattleRunPhase, RunBossModifier, RunChallenge, RunChallengeProgress, RunGrade, RunPokemon, RunRewardSummary, RunRoute, RunSector, RunUpgrade, RunUpgradeId } from '../types/battle-run';
+import type { BattleRunPhase, RunBossModifier, RunChallenge, RunChallengeProgress, RunGrade, RunMilestone, RunMilestoneId, RunMilestoneProgress, RunPokemon, RunRewardSummary, RunRoute, RunSector, RunStats, RunUpgrade, RunUpgradeId } from '../types/battle-run';
 
 export const PARTY_LIMIT = 6;
 export const LEVELS_PER_STAGE = 2;
@@ -94,6 +94,49 @@ export const RUN_ROUTES: RunRoute[] = [
   },
 ];
 
+export const RUN_MILESTONES: RunMilestone[] = [
+  {
+    id: 'iron-formation',
+    title: 'Iron Formation',
+    label: 'Flawless wins',
+    description: 'Win three battles without losing a team member.',
+    metric: 'flawlessWins',
+    target: 3,
+    scoreBonus: 900,
+    scoutPasses: 0,
+  },
+  {
+    id: 'apex-hunter',
+    title: 'Apex Hunter',
+    label: 'Apex clears',
+    description: 'Clear three Apex routes during the run.',
+    metric: 'apexWins',
+    target: 3,
+    scoreBonus: 1200,
+    scoutPasses: 0,
+  },
+  {
+    id: 'contract-specialist',
+    title: 'Contract Specialist',
+    label: 'Contracts cleared',
+    description: 'Complete five stage contracts during the run.',
+    metric: 'contractsCleared',
+    target: 5,
+    scoreBonus: 1000,
+    scoutPasses: 1,
+  },
+  {
+    id: 'gatebreaker',
+    title: 'Gatebreaker',
+    label: 'Bosses defeated',
+    description: 'Defeat two checkpoint bosses in one run.',
+    metric: 'bossesCleared',
+    target: 2,
+    scoreBonus: 1500,
+    scoutPasses: 1,
+  },
+];
+
 export const RUN_UPGRADES: RunUpgrade[] = [
   {
     id: 'veteran-training',
@@ -177,6 +220,62 @@ export function getRecruitmentRewardProfile(
     stage,
     level: levelForStage(stage),
     choiceCount: recruitmentChoiceCount(upgrades, route),
+  };
+}
+
+export function createEmptyRunStats(): RunStats {
+  return { flawlessWins: 0, apexWins: 0, contractsCleared: 0, bossesCleared: 0 };
+}
+
+export function advanceRunStats(
+  stats: RunStats,
+  stage: number,
+  faintedCount: number,
+  route: RunRoute | null,
+  challengeCompleted: boolean,
+): RunStats {
+  return {
+    flawlessWins: stats.flawlessWins + (Math.max(0, faintedCount) === 0 ? 1 : 0),
+    apexWins: stats.apexWins + (route?.id === 'apex' ? 1 : 0),
+    contractsCleared: stats.contractsCleared + (challengeCompleted ? 1 : 0),
+    bossesCleared: stats.bossesCleared + (isCheckpointStage(stage) ? 1 : 0),
+  };
+}
+
+export function getRunMilestoneProgress(
+  stats: RunStats,
+  unlockedIds: RunMilestoneId[] = [],
+): RunMilestoneProgress[] {
+  const unlocked = new Set(unlockedIds);
+  return RUN_MILESTONES.map(milestone => {
+    const current = Math.max(0, Math.floor(stats[milestone.metric]));
+    return {
+      milestone,
+      current: Math.min(milestone.target, current),
+      complete: current >= milestone.target,
+      unlocked: unlocked.has(milestone.id),
+    };
+  });
+}
+
+export function getNewlyUnlockedRunMilestones(
+  stats: RunStats,
+  unlockedIds: RunMilestoneId[] = [],
+): RunMilestone[] {
+  return getRunMilestoneProgress(stats, unlockedIds)
+    .filter(progress => progress.complete && !progress.unlocked)
+    .map(progress => progress.milestone);
+}
+
+export function calculateRunMilestoneReward(
+  stats: RunStats,
+  unlockedIds: RunMilestoneId[] = [],
+): { milestonesUnlocked: RunMilestone[]; milestoneBonus: number; milestoneScoutPasses: number } {
+  const milestonesUnlocked = getNewlyUnlockedRunMilestones(stats, unlockedIds);
+  return {
+    milestonesUnlocked,
+    milestoneBonus: milestonesUnlocked.reduce((total, milestone) => total + milestone.scoreBonus, 0),
+    milestoneScoutPasses: milestonesUnlocked.reduce((total, milestone) => total + milestone.scoutPasses, 0),
   };
 }
 
@@ -403,6 +502,9 @@ export function calculateBattleReward(
     scoutPassesEarned,
     route,
     routeBonus,
+    milestoneBonus: 0,
+    milestoneScoutPasses: 0,
+    milestonesUnlocked: [],
     totalScore: scoreBeforeRoute + routeBonus,
     levelsGained,
   };

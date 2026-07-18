@@ -133,6 +133,39 @@ export interface RunRoute {
   recruitmentChoiceBonus: number;
 }
 
+export type RunMilestoneId =
+  | 'iron-formation'
+  | 'apex-hunter'
+  | 'contract-specialist'
+  | 'gatebreaker';
+
+export type RunMilestoneMetric = 'flawlessWins' | 'apexWins' | 'contractsCleared' | 'bossesCleared';
+
+export interface RunMilestone {
+  id: RunMilestoneId;
+  title: string;
+  label: string;
+  description: string;
+  metric: RunMilestoneMetric;
+  target: number;
+  scoreBonus: number;
+  scoutPasses: number;
+}
+
+export interface RunStats {
+  flawlessWins: number;
+  apexWins: number;
+  contractsCleared: number;
+  bossesCleared: number;
+}
+
+export interface RunMilestoneProgress {
+  milestone: RunMilestone;
+  current: number;
+  complete: boolean;
+  unlocked: boolean;
+}
+
 export type RunUpgradeId =
   | 'veteran-training'
   | 'expanded-scouting'
@@ -190,6 +223,9 @@ export interface RunRewardSummary {
   scoutPassesEarned: number;
   route: RunRoute | null;
   routeBonus: number;
+  milestoneBonus: number;
+  milestoneScoutPasses: number;
+  milestonesUnlocked: RunMilestone[];
   totalScore: number;
   levelsGained: number;
 }

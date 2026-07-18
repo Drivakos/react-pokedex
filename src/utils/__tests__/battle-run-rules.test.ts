@@ -1,13 +1,17 @@
 import {
   PARTY_LIMIT,
   RUN_ROUTES,
+  RUN_MILESTONES,
   RUN_SECTORS,
   RUN_STAGE_LIMIT,
   RUN_UPGRADES,
   addOrReplacePartyMember,
+  advanceRunStats,
   applyRunUpgradesToChallenge,
+  calculateRunMilestoneReward,
   calculateBattleReward,
   createRunUpgradeChoices,
+  createEmptyRunStats,
   createStageChallenge,
   createSeededRandom,
   enemyPartySize,
@@ -16,6 +20,8 @@ import {
   getContractChainMultiplier,
   getBossModifier,
   getRunGrade,
+  getNewlyUnlockedRunMilestones,
+  getRunMilestoneProgress,
   getRunSector,
   getStageChallengeProgress,
   isCheckpointStage,
@@ -111,6 +117,41 @@ describe('battle run rules', () => {
     expect(getRecruitmentRewardProfile(4, rival)).toEqual({ stage: 5, level: 13, choiceCount: 3 });
     expect(getRecruitmentRewardProfile(4, apex)).toEqual({ stage: 6, level: 15, choiceCount: 4 });
     expect(getRecruitmentRewardProfile(4, apex, scouting).choiceCount).toBe(5);
+  });
+
+  it('tracks multi-stage challenge medals and awards each only once', () => {
+    const apex = RUN_ROUTES.find(route => route.id === 'apex') ?? null;
+    let stats = createEmptyRunStats();
+    stats = advanceRunStats(stats, 1, 0, apex, true);
+    stats = advanceRunStats(stats, 2, 0, apex, true);
+    stats = advanceRunStats(stats, 5, 0, apex, true);
+
+    expect(stats).toEqual({ flawlessWins: 3, apexWins: 3, contractsCleared: 3, bossesCleared: 1 });
+    expect(getNewlyUnlockedRunMilestones(stats).map(milestone => milestone.id))
+      .toEqual(['iron-formation', 'apex-hunter']);
+    expect(getRunMilestoneProgress(stats).find(progress => progress.milestone.id === 'contract-specialist'))
+      .toMatchObject({ current: 3, complete: false });
+
+    expect(calculateRunMilestoneReward(stats)).toMatchObject({
+      milestoneBonus: 2100,
+      milestoneScoutPasses: 0,
+    });
+
+    const unlocked = ['iron-formation', 'apex-hunter'] as const;
+    expect(getNewlyUnlockedRunMilestones(stats, [...unlocked])).toEqual([]);
+    expect(calculateRunMilestoneReward(stats, [...unlocked])).toEqual({
+      milestonesUnlocked: [],
+      milestoneBonus: 0,
+      milestoneScoutPasses: 0,
+    });
+    expect(calculateRunMilestoneReward(
+      { ...stats, contractsCleared: 5, bossesCleared: 2 },
+      [...unlocked],
+    )).toMatchObject({
+      milestoneBonus: 2500,
+      milestoneScoutPasses: 2,
+    });
+    expect(RUN_MILESTONES.reduce((total, milestone) => total + milestone.scoreBonus, 0)).toBe(4600);
   });
 
   it('applies permanent run upgrades to future rewards', () => {

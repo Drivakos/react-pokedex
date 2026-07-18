@@ -2,6 +2,35 @@
 @tailwind components;
 @tailwind utilities;
 
+.battle-run-theme {
+  --battle-panel-surface: rgba(255, 255, 255, 0.94);
+  --battle-panel-border: #e2e8f0;
+  --battle-panel-title: #0f172a;
+  --battle-panel-copy: #475569;
+  --battle-panel-muted: #94a3b8;
+  --battle-contract-surface: rgba(255, 255, 255, 0.94);
+  --battle-contract-border: #fecaca;
+  --battle-contract-title: #0f172a;
+  --battle-contract-copy: #475569;
+  --battle-contract-muted: #94a3b8;
+  --battle-contract-accent: #dc2626;
+  --battle-contract-accent-surface: #fee2e2;
+  --battle-contract-bounty: #a16207;
+  --battle-contract-bounty-surface: #fef3c7;
+  --battle-contract-success: #047857;
+  --battle-contract-success-strong: #065f46;
+  --battle-contract-success-border: #a7f3d0;
+  --battle-contract-success-surface: #ecfdf5;
+  --battle-contract-warning: #b45309;
+  --battle-contract-warning-strong: #92400e;
+  --battle-contract-warning-border: #fde68a;
+  --battle-contract-warning-surface: #fffbeb;
+  --battle-contract-danger: #be123c;
+  --battle-contract-danger-strong: #9f1239;
+  --battle-contract-danger-border: #fecdd3;
+  --battle-contract-danger-surface: #fff1f2;
+}
+
 @layer utilities {
   /* Hide scrollbar but maintain scroll functionality */
   .no-scrollbar {

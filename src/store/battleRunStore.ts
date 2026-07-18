@@ -10,10 +10,12 @@ import type {
   BattleVisualEvent,
   OpponentTrainer,
   RunChallenge,
+  RunMilestoneId,
   RunRewardSummary,
   RunRoute,
   RunRouteId,
   RunRoutePreviewMap,
+  RunStats,
   RunUpgrade,
   RunUpgradeId,
   RunPokemon,
@@ -22,9 +24,12 @@ import {
   PARTY_LIMIT,
   RUN_ROUTES,
   addOrReplacePartyMember,
+  advanceRunStats,
   applyRunUpgradesToChallenge,
+  calculateRunMilestoneReward,
   calculateBattleReward,
   createRunUpgradeChoices,
+  createEmptyRunStats,
   createStageChallenge,
   createSeededRandom,
   getBossModifier,
@@ -78,6 +83,8 @@ interface BattleRunStore {
   winStreak: number;
   contractStreak: number;
   scoutPasses: number;
+  runStats: RunStats;
+  unlockedMilestoneIds: RunMilestoneId[];
   seed: string;
   party: RunPokemon[];
   enemyParty: RunPokemon[];
@@ -159,7 +166,7 @@ export const useBattleRunStore = create<BattleRunStore>((set, get) => {
       return;
     }
 
-    const reward = calculateBattleReward(
+    const baseReward = calculateBattleReward(
       current.stage,
       current.snapshot?.turn ?? 1,
       current.party.length,
@@ -169,6 +176,23 @@ export const useBattleRunStore = create<BattleRunStore>((set, get) => {
       current.upgrades,
       current.contractStreak,
     );
+    const runStats = advanceRunStats(
+      current.runStats,
+      current.stage,
+      fainted.size,
+      current.activeRoute,
+      baseReward.challengeCompleted,
+    );
+    const milestoneReward = calculateRunMilestoneReward(runStats, current.unlockedMilestoneIds);
+    const reward: RunRewardSummary = {
+      ...baseReward,
+      ...milestoneReward,
+      totalScore: baseReward.totalScore + milestoneReward.milestoneBonus,
+    };
+    const unlockedMilestoneIds = [
+      ...current.unlockedMilestoneIds,
+      ...milestoneReward.milestonesUnlocked.map(milestone => milestone.id),
+    ];
     const survivors = levelUpSurvivors(survivingParty, reward.levelsGained);
     const runComplete = isFinalStage(current.stage);
     const upgradeChoices = !runComplete && isCheckpointStage(current.stage)
@@ -193,7 +217,9 @@ export const useBattleRunStore = create<BattleRunStore>((set, get) => {
       personalBestReached,
       winStreak: current.winStreak + 1,
       contractStreak: reward.contractStreak,
-      scoutPasses: current.scoutPasses + reward.scoutPassesEarned,
+      scoutPasses: current.scoutPasses + reward.scoutPassesEarned + reward.milestoneScoutPasses,
+      runStats,
+      unlockedMilestoneIds,
       draftChoices: runComplete || needsUpgradeChoice
         ? []
         : createDraftChoices(
@@ -299,6 +325,8 @@ export const useBattleRunStore = create<BattleRunStore>((set, get) => {
     winStreak: 0,
     contractStreak: 0,
     scoutPasses: 0,
+    runStats: createEmptyRunStats(),
+    unlockedMilestoneIds: [],
     seed: '',
     party: [],
     enemyParty: [],
@@ -333,6 +361,8 @@ export const useBattleRunStore = create<BattleRunStore>((set, get) => {
         winStreak: 0,
         contractStreak: 0,
         scoutPasses: 0,
+        runStats: createEmptyRunStats(),
+        unlockedMilestoneIds: [],
         seed,
         party: [],
         enemyParty: [],
