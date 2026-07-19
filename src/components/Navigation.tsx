@@ -95,13 +95,6 @@ const Navigation: React.FC = () => {
               {gamesMenuOpen && (
                 <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-[60]">
                   <Link
-                    to="/memory-game"
-                    className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center"
-                    onClick={() => setGamesMenuOpen(false)}
-                  >
-                    Memory Match
-                  </Link>
-                  <Link
                     to="/pkmn-grid-challenge"
                     className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center"
                     onClick={() => setGamesMenuOpen(false)}
@@ -170,13 +163,6 @@ const Navigation: React.FC = () => {
 
               {gamesMenuOpen && (
                 <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-[60]">
-                  <Link
-                    to="/memory-game"
-                    className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center"
-                    onClick={() => setGamesMenuOpen(false)}
-                  >
-                    Memory Match
-                  </Link>
                   <Link
                     to="/pkmn-grid-challenge"
                     className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center"
