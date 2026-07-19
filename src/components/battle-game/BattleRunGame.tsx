@@ -1263,20 +1263,22 @@ function RouteSelectionScreen() {
                   </div>
                 )}
 
-                <div className="mt-4 hidden rounded-xl border border-slate-200 bg-slate-50 p-3 sm:block">
+                <div className="mt-3 rounded-xl border border-slate-200 bg-slate-50 p-2.5 sm:mt-4 sm:p-3">
                   <div className="mb-2 flex items-center justify-between gap-2">
                     <span className="flex items-center gap-1.5 text-[9px] font-black uppercase tracking-[0.16em] text-slate-500">
                       <Bot className="h-3.5 w-3.5" /> Scouted roster
                     </span>
-                    <span className="text-[9px] font-black uppercase text-emerald-600">Exact match</span>
+                    <span className="hidden text-[9px] font-black uppercase text-emerald-600 sm:inline">Exact match</span>
                   </div>
-                  <div className="grid gap-1.5 [grid-template-columns:repeat(auto-fit,minmax(72px,1fr))]">
+                  <div className="flex gap-1.5 sm:grid sm:[grid-template-columns:repeat(auto-fit,minmax(72px,1fr))]">
                     {preview.map(pokemon => (
-                      <div key={pokemon.species} className="min-w-0 rounded-lg bg-white px-1.5 py-2 text-center shadow-sm">
-                        <BattlePokemonImage id={pokemon.id} species={pokemon.species} variant="icon" className="mx-auto h-11 w-11" />
-                        <strong className="mt-0.5 block truncate text-[10px] text-slate-800">{pokemon.species}</strong>
-                        <span className="block text-[9px] font-black text-slate-400">LV. {pokemon.level}</span>
-                        {pokemon.item && <span className="mt-1 block truncate rounded bg-amber-100 px-1 py-0.5 text-[8px] font-black text-amber-800">{pokemon.item}</span>}
+                      <div key={pokemon.species} className="flex min-w-0 flex-1 items-center gap-1.5 rounded-lg bg-white px-2 py-1.5 text-left shadow-sm sm:block sm:px-1.5 sm:py-2 sm:text-center">
+                        <BattlePokemonImage id={pokemon.id} species={pokemon.species} variant="icon" className="h-9 w-9 shrink-0 sm:mx-auto sm:h-11 sm:w-11" />
+                        <span className="min-w-0">
+                          <strong className="block truncate text-[10px] text-slate-800">{pokemon.species}</strong>
+                          <span className="block text-[9px] font-black text-slate-400">LV. {pokemon.level}</span>
+                          {pokemon.item && <span className="mt-1 hidden truncate rounded bg-amber-100 px-1 py-0.5 text-[8px] font-black text-amber-800 sm:block">{pokemon.item}</span>}
+                        </span>
                       </div>
                     ))}
                   </div>
