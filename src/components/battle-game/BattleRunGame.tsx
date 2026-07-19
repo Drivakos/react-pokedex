@@ -30,7 +30,7 @@ import {
   disposePrewarmedShowdownBattleWorker,
   prewarmShowdownBattleWorker,
 } from '../../services/showdown-battle-worker.service';
-import type { ActiveBattlePokemon, BattleSide, BattleVisualEvent, OpponentTrainer, RunChallenge, RunChallengeProgress, RunMilestoneId, RunPokemon, RunRewardSummary, RunStats, RunUpgrade } from '../../types/battle-run';
+import type { ActiveBattlePokemon, BattleMoveChoice, BattleSide, BattleVisualEvent, OpponentTrainer, RunChallenge, RunChallengeProgress, RunMilestoneId, RunPokemon, RunRewardSummary, RunStats, RunUpgrade } from '../../types/battle-run';
 import {
   RUN_MILESTONES,
   RUN_ROUTES,
@@ -96,6 +96,79 @@ function TypeBadges({ types, compact = false }: { types: string[]; compact?: boo
           {type}
         </span>
       ))}
+    </div>
+  );
+}
+
+function getEffectivenessPresentation(effectiveness: number | null): {
+  label: string;
+  shortLabel: string;
+  classes: string;
+} {
+  if (effectiveness === null) {
+    return {
+      label: 'Status move · no damage multiplier',
+      shortLabel: 'Status',
+      classes: 'border-slate-200 bg-slate-100 text-slate-600',
+    };
+  }
+  if (effectiveness === 0) {
+    return {
+      label: 'No effect · 0×',
+      shortLabel: 'No effect',
+      classes: 'border-slate-300 bg-slate-200 text-slate-700',
+    };
+  }
+  if (effectiveness > 1) {
+    return {
+      label: `Super effective · ${effectiveness}×`,
+      shortLabel: `${effectiveness}× effective`,
+      classes: 'border-emerald-200 bg-emerald-100 text-emerald-800',
+    };
+  }
+  if (effectiveness < 1) {
+    return {
+      label: `Not very effective · ${effectiveness}×`,
+      shortLabel: `${effectiveness}× effective`,
+      classes: 'border-amber-200 bg-amber-100 text-amber-800',
+    };
+  }
+  return {
+    label: 'Neutral damage · 1×',
+    shortLabel: '1× effective',
+    classes: 'border-blue-200 bg-blue-50 text-blue-700',
+  };
+}
+
+function MoveDetails({ move, opponent }: { move: BattleMoveChoice; opponent?: string }) {
+  const effectiveness = getEffectivenessPresentation(move.effectiveness);
+
+  return (
+    <div
+      id={`battle-move-details-${move.slot}`}
+      role="tooltip"
+      className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm"
+    >
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-2">
+            <strong className="text-sm text-slate-950">{move.name}</strong>
+            <span className={`${typeClasses[move.type] ?? 'bg-slate-400'} rounded px-1.5 py-0.5 text-[9px] font-black uppercase text-white`}>{move.type}</span>
+            <span className={`rounded-full border px-2 py-0.5 text-[10px] font-black ${effectiveness.classes}`}>{effectiveness.label}</span>
+          </div>
+          <p className="mt-1.5 text-xs leading-relaxed text-slate-600">{move.description || 'No move description is available.'}</p>
+        </div>
+        <span className="shrink-0 text-[10px] font-black uppercase tracking-wider text-slate-400">
+          vs {opponent ?? 'opponent'}
+        </span>
+      </div>
+      <dl className="mt-2 grid grid-cols-5 gap-2 border-t border-slate-100 pt-2 text-[10px]">
+        <div><dt className="font-bold text-slate-400">Category</dt><dd className="font-black text-slate-700">{move.category}</dd></div>
+        <div><dt className="font-bold text-slate-400">Power</dt><dd className="font-black text-slate-700">{move.power || '—'}</dd></div>
+        <div><dt className="font-bold text-slate-400">Accuracy</dt><dd className="font-black text-slate-700">{move.accuracy === true ? 'Always' : `${move.accuracy}%`}</dd></div>
+        <div><dt className="font-bold text-slate-400">Priority</dt><dd className="font-black text-slate-700">{move.priority > 0 ? `+${move.priority}` : move.priority}</dd></div>
+        <div><dt className="font-bold text-slate-400">PP</dt><dd className="font-black text-slate-700">{move.pp}/{move.maxpp}</dd></div>
+      </dl>
     </div>
   );
 }
@@ -199,7 +272,7 @@ function DraftCard({ pokemon, onChoose, label, fit, recommended = false }: {
       onClick={onChoose}
       className="group grid grid-cols-[112px_minmax(0,1fr)] overflow-hidden rounded-2xl border border-slate-200 bg-white text-left shadow-md transition duration-200 hover:-translate-y-1 hover:border-red-300 hover:shadow-xl focus:outline-none focus:ring-4 focus:ring-red-200 sm:block"
     >
-      <div className="relative flex min-h-full items-center justify-center overflow-hidden bg-gradient-to-br from-sky-100 via-white to-emerald-100 sm:h-48">
+      <div className="relative flex min-h-full items-center justify-center overflow-hidden bg-gradient-to-br from-sky-100 via-white to-emerald-100 sm:h-48 sm:min-h-0">
         <div className="absolute -right-10 -top-10 h-32 w-32 rounded-full border-[18px] border-white/50" />
         <div className="absolute bottom-3 h-5 w-24 rounded-[50%] bg-emerald-900/10 blur-sm sm:h-8 sm:w-40" />
         <BattlePokemonImage
@@ -475,6 +548,8 @@ function sameActivePokemon(previous: ActiveBattlePokemon | null, next: ActiveBat
   if (!previous || !next) return false;
   return previous.id === next.id
     && previous.species === next.species
+    && previous.types.length === next.types.length
+    && previous.types.every((type, index) => type === next.types[index])
     && previous.level === next.level
     && previous.hp === next.hp
     && previous.maxhp === next.maxhp
@@ -512,6 +587,7 @@ const HealthPanel = memo(function HealthPanel({ pokemon, opponent = false }: {
       </div>
       <div className="mt-1.5 flex items-center justify-between text-[9px] font-bold text-slate-500 sm:mt-2 sm:text-[11px]">
         <span className={pokemon.status ? 'rounded bg-amber-100 px-1.5 py-0.5 text-amber-800' : ''}>{pokemon.status ? pokemon.status.toUpperCase() : 'READY'}</span>
+        <TypeBadges types={pokemon.types} compact />
         <span>{pokemon.hp}/{pokemon.maxhp}</span>
       </div>
     </div>
@@ -705,8 +781,12 @@ function BattleArena() {
   const availableSwitches = decision.switches.filter(choice => !choice.active && !choice.fainted);
   const [displaySnapshot, setDisplaySnapshot] = useState(snapshot);
   const [activeVisual, setActiveVisual] = useState<BattleVisualEvent | null>(null);
+  const [inspectedMoveSlot, setInspectedMoveSlot] = useState<number | null>(null);
   const nextVisual = visualEvents[0];
   const controlsLocked = activeVisual !== null || visualEvents.length > 0;
+  const inspectedMove = decision.kind === 'move'
+    ? decision.moves.find(move => move.slot === inspectedMoveSlot)
+    : undefined;
 
   useEffect(() => {
     if (!nextVisual) return undefined;
@@ -730,6 +810,10 @@ function BattleArena() {
   useEffect(() => {
     if (!activeVisual && visualEvents.length === 0) setDisplaySnapshot(snapshot);
   }, [activeVisual, snapshot, visualEvents.length]);
+
+  useEffect(() => {
+    if (decision.kind !== 'move') setInspectedMoveSlot(null);
+  }, [decision.kind]);
 
   const challengeProgress = activeChallenge && displaySnapshot
     ? getStageChallengeProgress(activeChallenge, displaySnapshot.turn, partySize, displaySnapshot.playerRemaining)
@@ -842,31 +926,51 @@ function BattleArena() {
                   <span className="hidden text-xs font-bold text-slate-400 sm:inline">Switch options below</span>
                 )}
               </div>
+              <div className="mb-3 hidden min-h-[124px] sm:block">
+                {inspectedMove ? (
+                  <MoveDetails move={inspectedMove} opponent={displaySnapshot?.opponent?.species} />
+                ) : (
+                  <div className="flex min-h-[124px] items-center justify-center rounded-2xl border border-dashed border-slate-300 bg-white/60 px-4 text-center text-xs font-bold text-slate-500">
+                    Hover or focus a move to inspect its description, battle stats, and matchup against {displaySnapshot?.opponent?.species ?? 'the active opponent'}.
+                  </div>
+                )}
+              </div>
               <div className="grid grid-cols-2 gap-2 xl:grid-cols-4">
-                {decision.moves.map(move => (
-                  <button
-                    key={move.slot}
-                    type="button"
-                    disabled={move.disabled || controlsLocked}
-                    onClick={() => chooseMove(move.slot)}
-                    className="group relative min-h-[82px] touch-manipulation overflow-hidden rounded-xl border border-slate-200 bg-white p-2.5 text-left transition active:scale-[0.98] hover:border-red-300 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-40 sm:rounded-2xl sm:p-3 xl:min-h-[96px]"
-                  >
-                    <span className={`absolute inset-y-0 left-0 w-1.5 ${typeClasses[move.type] ?? 'bg-slate-400'}`} />
-                    <span className="flex items-start justify-between gap-3 pl-2">
-                      <span>
-                        <span className="block text-sm font-black leading-tight text-slate-900 sm:text-base">{move.name}</span>
-                        <span className="mt-1 flex flex-wrap items-center gap-1 text-[10px] font-bold text-slate-500 sm:text-[11px]">
-                          <span className={`${typeClasses[move.type] ?? 'bg-slate-400'} rounded px-1.5 py-0.5 text-[9px] uppercase text-white`}>{move.type}</span>
-                          <span className="hidden sm:inline">{move.category} · </span>{move.power || '—'} power
+                {decision.moves.map(move => {
+                  const effectiveness = getEffectivenessPresentation(move.effectiveness);
+                  return (
+                    <button
+                      key={move.slot}
+                      type="button"
+                      disabled={move.disabled || controlsLocked}
+                      onClick={() => chooseMove(move.slot)}
+                      onMouseEnter={() => setInspectedMoveSlot(move.slot)}
+                      onMouseLeave={() => setInspectedMoveSlot(current => current === move.slot ? null : current)}
+                      onFocus={() => setInspectedMoveSlot(move.slot)}
+                      onBlur={() => setInspectedMoveSlot(current => current === move.slot ? null : current)}
+                      aria-describedby={inspectedMoveSlot === move.slot ? `battle-move-details-${move.slot}` : undefined}
+                      className="group relative min-h-[92px] touch-manipulation overflow-hidden rounded-xl border border-slate-200 bg-white p-2.5 text-left transition active:scale-[0.98] hover:border-red-300 hover:shadow-md focus-visible:border-red-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-200 disabled:cursor-not-allowed disabled:opacity-40 sm:rounded-2xl sm:p-3 xl:min-h-[108px]"
+                    >
+                      <span className={`absolute inset-y-0 left-0 w-1.5 ${typeClasses[move.type] ?? 'bg-slate-400'}`} />
+                      <span className="flex items-start justify-between gap-3 pl-2">
+                        <span>
+                          <span className="block text-sm font-black leading-tight text-slate-900 sm:text-base">{move.name}</span>
+                          <span className="mt-1 flex flex-wrap items-center gap-1 text-[10px] font-bold text-slate-500 sm:text-[11px]">
+                            <span className={`${typeClasses[move.type] ?? 'bg-slate-400'} rounded px-1.5 py-0.5 text-[9px] uppercase text-white`}>{move.type}</span>
+                            <span className="hidden sm:inline">{move.category} · </span>{move.power || '—'} power
+                          </span>
+                        </span>
+                        <span className="shrink-0 text-right text-[11px] font-black text-slate-500">
+                          {move.pp}/{move.maxpp}<span className="block font-bold text-slate-400">PP</span>
                         </span>
                       </span>
-                      <span className="shrink-0 text-right text-[11px] font-black text-slate-500">
-                        {move.pp}/{move.maxpp}<span className="block font-bold text-slate-400">PP</span>
+                      <span className="mt-2 flex items-center justify-between gap-1 pl-2 text-[9px] font-bold sm:text-[10px]">
+                        <span className="hidden text-slate-400 sm:inline">Accuracy {move.accuracy === true ? '—' : `${move.accuracy}%`}</span>
+                        <span className={`rounded-full border px-1.5 py-0.5 font-black ${effectiveness.classes}`}>{effectiveness.shortLabel}</span>
                       </span>
-                    </span>
-                    <span className="mt-2 hidden pl-2 text-[10px] font-bold text-slate-400 sm:block">Accuracy {move.accuracy === true ? '—' : `${move.accuracy}%`}</span>
-                  </button>
-                ))}
+                    </button>
+                  );
+                })}
               </div>
               {decision.switchingBlocked && (
                 <div className="mt-2 flex items-center gap-2 rounded-xl bg-amber-100 px-3 py-2 text-xs font-black text-amber-800 sm:hidden">

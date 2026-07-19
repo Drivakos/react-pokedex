@@ -14,6 +14,7 @@ import type {
 import type { ShowdownBattleCallbacks } from '../types/battle-worker';
 import { toPokemonSet } from '../utils/battle-pokemon-set';
 import { isSwitchingBlocked, isTrappedSwitchError } from '../utils/battle-request-rules';
+import { calculateMoveEffectiveness } from '../utils/battle-move-effectiveness';
 import { ChallengePlayerAI } from './challenge-player-ai';
 
 function toActivePokemon(pokemon: ClientBattle['p1']['active'][number]): ActiveBattlePokemon | null {
@@ -21,6 +22,7 @@ function toActivePokemon(pokemon: ClientBattle['p1']['active'][number]): ActiveB
   return {
     id: pokemon.species.num,
     species: pokemon.speciesForme,
+    types: [...pokemon.types],
     level: pokemon.level,
     hp: pokemon.hp,
     maxhp: pokemon.maxhp,
@@ -150,6 +152,7 @@ export class ShowdownBattleSession {
     if (request.requestType === 'move') {
       const active = request.active[0];
       const switchingBlocked = switchingBlockedOverride || isSwitchingBlocked(active);
+      const opponentTypes = this.client.p2.active[0]?.types ?? [];
       const moves = (active?.moves ?? []).map((move, index) => {
         const moveData = Dex.moves.get(move.id);
         return {
@@ -157,11 +160,14 @@ export class ShowdownBattleSession {
           name: move.name,
           type: moveData.type,
           category: moveData.category,
+          description: moveData.shortDesc || moveData.desc,
           power: moveData.basePower,
           accuracy: moveData.accuracy,
+          priority: moveData.priority,
           pp: 'pp' in move ? move.pp : 0,
           maxpp: 'maxpp' in move ? move.maxpp : 0,
           disabled: 'disabled' in move ? Boolean(move.disabled) : false,
+          effectiveness: calculateMoveEffectiveness(moveData.type, moveData.category, opponentTypes),
         };
       });
 

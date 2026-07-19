@@ -26,11 +26,14 @@ export interface BattleMoveChoice {
   name: string;
   type: string;
   category: string;
+  description: string;
   power: number;
   accuracy: number | true;
+  priority: number;
   pp: number;
   maxpp: number;
   disabled: boolean;
+  effectiveness: number | null;
 }
 
 export interface BattleSwitchChoice {
@@ -52,6 +55,7 @@ export interface BattleDecision {
 export interface ActiveBattlePokemon {
   id: number;
   species: string;
+  types: string[];
   level: number;
   hp: number;
   maxhp: number;
