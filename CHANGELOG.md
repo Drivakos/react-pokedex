@@ -1,3 +1,18 @@
+# [1.5.0](https://github.com/Drivakos/react-pokedex/compare/v1.4.1...v1.5.0) (2026-07-19)
+
+
+### Bug Fixes
+
+* make battle run mobile responive ([79deb03](https://github.com/Drivakos/react-pokedex/commit/79deb0384f835f00d6381efdcf27e44fe90a6e1a))
+* move pkmn status next to name ([c264de0](https://github.com/Drivakos/react-pokedex/commit/c264de0e1b8b28d70061aa7868fa0edf70be66d4))
+* show oponents pokemon on mobile ([a8fc9d7](https://github.com/Drivakos/react-pokedex/commit/a8fc9d7f569e41d6b021a62a9f24be670ee34bdc))
+* styles for battle run ([b594016](https://github.com/Drivakos/react-pokedex/commit/b5940168f3154ea97dc22b4a7feeef760afcee8e))
+
+
+### Features
+
+* improve rewards for completing team ([fc15a34](https://github.com/Drivakos/react-pokedex/commit/fc15a3473d735239dc6388342fdeb207bd784437))
+
 ## [1.4.1](https://github.com/Drivakos/react-pokedex/compare/v1.4.0...v1.4.1) (2026-07-13)
 
 
