@@ -326,7 +326,7 @@ const PokemonCards: React.FC<PokemonCardsProps> = ({ pokemonName, pokemonId }) =
 
       return data;
     } catch (err) {
-      console.error('❌ Error reading cache:', err);
+      console.error('Error reading cache:', err);
       return null;
     }
   };
@@ -344,7 +344,7 @@ const PokemonCards: React.FC<PokemonCardsProps> = ({ pokemonName, pokemonId }) =
 
       localStorage.setItem(cacheKey, JSON.stringify(data));
     } catch (err) {
-      console.error('❌ Error saving to cache:', err);
+      console.error('Error saving to cache:', err);
       // If localStorage is full, try to clear old entries
       if (err instanceof Error && err.name === 'QuotaExceededError') {
         clearOldCache();
@@ -364,7 +364,7 @@ const PokemonCards: React.FC<PokemonCardsProps> = ({ pokemonName, pokemonId }) =
       }
       keysToRemove.forEach(key => localStorage.removeItem(key));
     } catch (err) {
-      console.error('❌ Error clearing cache:', err);
+      console.error('Error clearing cache:', err);
     }
   };
 
@@ -419,7 +419,7 @@ const PokemonCards: React.FC<PokemonCardsProps> = ({ pokemonName, pokemonId }) =
       setLoadedFromCache(true);
 
     } catch (err: unknown) {
-      console.error('❌ Failed to load local TCG cards:', err);
+      console.error('Failed to load local TCG cards:', err);
       setError(`Failed to load trading cards: ${(err as Error).message}`);
     } finally {
       setLoading(false);

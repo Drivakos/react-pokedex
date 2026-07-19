@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Save, Copy } from 'lucide-react';
+import { CheckCircle2, Copy, Save, Upload, UserRound } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { formatName } from '../../utils/helpers';
 import { fetchMoveDetails, fetchPokemonAbilities, fetchCompetitiveItems, fetchPokemonById, fetchPokemonMoves } from '../../services/api';
@@ -718,7 +718,7 @@ const MovesetEditorContent: React.FC<MovesetEditorProps> = ({ pokemon, teamId, i
             <Copy size={12} /> Copy
           </button>
           <button className="sd-action-btn" onClick={exportCurrentPokemon}>
-            ⬆ Import/Export
+            <Upload size={12} aria-hidden="true" /> Import/Export
           </button>
           <button className="sd-action-btn" onClick={handleSaveBuild} style={{ color: '#2a8c2a', fontWeight: 'bold' }}>
             <Save size={12} /> Save
@@ -745,7 +745,13 @@ const MovesetEditorContent: React.FC<MovesetEditorProps> = ({ pokemon, teamId, i
               </div>
               <div className="sd-details-row" style={{ marginTop: 4 }}>
                 <div><label>Level</label> <strong>100</strong></div>
-                <div><label>Gender</label> <strong>{pokemonBuild.gender === 'male' ? '♂' : pokemonBuild.gender === 'female' ? '♀' : '—'}</strong></div>
+                <div>
+                  <label>Gender</label>{' '}
+                  <strong className="inline-flex items-center gap-1">
+                    {pokemonBuild.gender ? <UserRound size={11} aria-hidden="true" /> : null}
+                    {pokemonBuild.gender ? formatName(pokemonBuild.gender) : '—'}
+                  </strong>
+                </div>
                 <div>
                   <label>Shiny</label>
                   <input
@@ -943,7 +949,11 @@ const MovesetEditorContent: React.FC<MovesetEditorProps> = ({ pokemon, teamId, i
               ))}
               <div className="sd-ev-total">
                 {remainingEVs} remaining
-                {remainingEVs === 0 && <span style={{ color: '#2a8c2a', marginLeft: 6 }}>✓ Fully trained</span>}
+                {remainingEVs === 0 && (
+                  <span style={{ color: '#2a8c2a', marginLeft: 6, display: 'inline-flex', alignItems: 'center', gap: 3 }}>
+                    <CheckCircle2 size={12} aria-hidden="true" /> Fully trained
+                  </span>
+                )}
               </div>
             </div>
 

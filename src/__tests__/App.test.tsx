@@ -37,7 +37,6 @@ jest.mock('../components/auth/ProtectedRoute', () => ({ children }: { children: 
 jest.mock('../components/Navigation', () => () => <div data-testid="navigation">Navigation</div>);
 jest.mock('../components/teams/Teams', () => () => <div data-testid="teams-content">Teams</div>);
 jest.mock('../components/teams/TeamEditor', () => () => <div data-testid="team-editor-content">Team Editor</div>);
-jest.mock('../components/PokemonMemoryGame', () => () => <div data-testid="pokemon-memory-game-content">Pokemon Memory Game</div>);
 jest.mock('../components/PokéGridChallenge', () => () => <div data-testid="pokegrid-challenge-content">PokeGrid</div>);
 
 describe('App Routing', () => {
@@ -89,14 +88,5 @@ describe('App Routing', () => {
       </MemoryRouter>
     );
     expect(await screen.findByTestId('team-editor')).toBeInTheDocument();
-  });
-
-  it('renders Pokemon Memory Game', async () => {
-    render(
-      <MemoryRouter initialEntries={['/memory-game']}>
-        <AppContent />
-      </MemoryRouter>
-    );
-    expect(await screen.findByTestId('pokemon-memory-game')).toBeInTheDocument();
   });
 });

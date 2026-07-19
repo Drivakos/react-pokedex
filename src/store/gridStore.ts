@@ -175,10 +175,7 @@ export const useGridStore = create<GridState>()(
         );
 
         if (isAlreadyUsed) {
-          toast.error(`${pokemon.name} has already been used in this grid!`, {
-            icon: '🚫',
-            duration: 3000
-          });
+          toast.error(`${pokemon.name} has already been used in this grid!`, { duration: 3000 });
           return;
         }
 

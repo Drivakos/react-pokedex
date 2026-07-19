@@ -1,0 +1,546 @@
+import type { BattleRunPhase, RunBossModifier, RunChallenge, RunChallengeProgress, RunGrade, RunMilestone, RunMilestoneId, RunMilestoneProgress, RunPokemon, RunRewardSummary, RunRoute, RunSector, RunStats, RunUpgrade, RunUpgradeId } from '../types/battle-run';
+
+export const PARTY_LIMIT = 6;
+export const LEVELS_PER_STAGE = 2;
+export const CHECKPOINT_INTERVAL = 5;
+export const RUN_STAGE_LIMIT = 15;
+export const CONTRACT_CHAIN_STEP = 0.15;
+export const CONTRACT_CHAIN_MAX_MULTIPLIER = 1.75;
+
+export const RUN_SECTORS: RunSector[] = [
+  {
+    number: 1,
+    title: 'Opening Circuit',
+    objective: 'Build a team and secure the first gate.',
+    startStage: 1,
+    endStage: 5,
+    bossTitle: 'Gatekeeper',
+  },
+  {
+    number: 2,
+    title: 'Pressure Circuit',
+    objective: 'Take harder routes and protect the roster.',
+    startStage: 6,
+    endStage: 10,
+    bossTitle: 'Elite Trial',
+  },
+  {
+    number: 3,
+    title: 'Summit Circuit',
+    objective: 'Survive the final ascent and defeat the champion.',
+    startStage: 11,
+    endStage: RUN_STAGE_LIMIT,
+    bossTitle: 'Run Champion',
+  },
+];
+
+export const RUN_BOSS_MODIFIERS: RunBossModifier[] = [
+  {
+    stage: 5,
+    title: 'Reserve protocol',
+    label: 'One-time recovery',
+    description: 'Every opposing Pokémon carries a Sitrus Berry and restores health once at or below half HP.',
+    item: 'Sitrus Berry',
+  },
+  {
+    stage: 10,
+    title: 'Overdrive protocol',
+    label: 'Damage with recoil',
+    description: 'Every opposing Pokémon carries a Life Orb, increasing attack damage while taking recoil after damaging moves.',
+    item: 'Life Orb',
+  },
+  {
+    stage: 15,
+    title: 'Champion endurance',
+    label: 'Sustained recovery',
+    description: 'Every opposing Pokémon carries Leftovers and restores health at the end of each turn.',
+    item: 'Leftovers',
+  },
+];
+
+export const RUN_ROUTES: RunRoute[] = [
+  {
+    id: 'trail',
+    title: 'Trail route',
+    label: 'Measured risk',
+    description: 'Face the stage at its normal strength.',
+    levelBonus: 0,
+    partySizeBonus: 0,
+    scoreMultiplier: 1,
+    recruitmentStageBonus: 0,
+    recruitmentChoiceBonus: 0,
+  },
+  {
+    id: 'rival',
+    title: 'Rival route',
+    label: 'High pressure',
+    description: 'Opponents gain two levels. Earn 25% more score and a recruitment pool scaled one stage ahead.',
+    levelBonus: 2,
+    partySizeBonus: 0,
+    scoreMultiplier: 1.25,
+    recruitmentStageBonus: 1,
+    recruitmentChoiceBonus: 0,
+  },
+  {
+    id: 'apex',
+    title: 'Apex route',
+    label: 'Maximum danger',
+    description: 'Opponents gain four levels and may add one team member. Earn 60% more score, a two-stage recruitment boost, and one extra choice.',
+    levelBonus: 4,
+    partySizeBonus: 1,
+    scoreMultiplier: 1.6,
+    recruitmentStageBonus: 2,
+    recruitmentChoiceBonus: 1,
+  },
+];
+
+export const RUN_MILESTONES: RunMilestone[] = [
+  {
+    id: 'iron-formation',
+    title: 'Iron Formation',
+    label: 'Flawless wins',
+    description: 'Win three battles without losing a team member.',
+    metric: 'flawlessWins',
+    target: 3,
+    scoreBonus: 900,
+    scoutPasses: 0,
+  },
+  {
+    id: 'apex-hunter',
+    title: 'Apex Hunter',
+    label: 'Apex clears',
+    description: 'Clear three Apex routes during the run.',
+    metric: 'apexWins',
+    target: 3,
+    scoreBonus: 1200,
+    scoutPasses: 0,
+  },
+  {
+    id: 'contract-specialist',
+    title: 'Contract Specialist',
+    label: 'Contracts cleared',
+    description: 'Complete five stage contracts during the run.',
+    metric: 'contractsCleared',
+    target: 5,
+    scoreBonus: 1000,
+    scoutPasses: 1,
+  },
+  {
+    id: 'gatebreaker',
+    title: 'Gatebreaker',
+    label: 'Bosses defeated',
+    description: 'Defeat two checkpoint bosses in one run.',
+    metric: 'bossesCleared',
+    target: 2,
+    scoreBonus: 1500,
+    scoutPasses: 1,
+  },
+];
+
+export const RUN_UPGRADES: RunUpgrade[] = [
+  {
+    id: 'veteran-training',
+    title: 'Veteran training',
+    label: 'Team growth',
+    description: 'Surviving Pokémon gain one additional level after every victory.',
+  },
+  {
+    id: 'expanded-scouting',
+    title: 'Expanded scouting',
+    label: 'Recruitment',
+    description: 'Every recruitment draft offers one additional Pokémon.',
+  },
+  {
+    id: 'contract-ledger',
+    title: 'Contract ledger',
+    label: 'Objectives',
+    description: 'Future stage contract bounties are increased by 30%.',
+  },
+  {
+    id: 'route-dividend',
+    title: 'Route dividend',
+    label: 'Risk reward',
+    description: 'Rival and Apex route bonuses are increased by 25%.',
+  },
+  {
+    id: 'flawless-standard',
+    title: 'Flawless standard',
+    label: 'Precision',
+    description: 'The score bonus for a victory without faints is doubled.',
+  },
+  {
+    id: 'survivor-mark',
+    title: 'Survivor mark',
+    label: 'Endurance',
+    description: 'Score earned from each surviving Pokémon is increased by 50%.',
+  },
+];
+
+export function hasRunUpgrade(upgrades: RunUpgrade[], id: RunUpgradeId): boolean {
+  return upgrades.some(upgrade => upgrade.id === id);
+}
+
+export function createRunUpgradeChoices(
+  owned: RunUpgrade[],
+  random: () => number = Math.random,
+  count = 3,
+): RunUpgrade[] {
+  const available = RUN_UPGRADES.filter(upgrade => !hasRunUpgrade(owned, upgrade.id));
+  const choices: RunUpgrade[] = [];
+  while (choices.length < count && available.length > 0) {
+    const index = Math.floor(random() * available.length);
+    const [upgrade] = available.splice(index, 1);
+    choices.push(upgrade);
+  }
+  return choices;
+}
+
+export function applyRunUpgradesToChallenge(challenge: RunChallenge, upgrades: RunUpgrade[]): RunChallenge {
+  if (!hasRunUpgrade(upgrades, 'contract-ledger')) return challenge;
+  return { ...challenge, bounty: Math.round(challenge.bounty * 1.3) };
+}
+
+export function getContractChainMultiplier(contractStreak: number): number {
+  const normalizedStreak = Math.max(0, Math.floor(contractStreak));
+  return Math.min(CONTRACT_CHAIN_MAX_MULTIPLIER, 1 + normalizedStreak * CONTRACT_CHAIN_STEP);
+}
+
+export function recruitmentChoiceCount(upgrades: RunUpgrade[], route: RunRoute | null = null): number {
+  const baseChoices = hasRunUpgrade(upgrades, 'expanded-scouting') ? 4 : 3;
+  return baseChoices + (route?.recruitmentChoiceBonus ?? 0);
+}
+
+export function getRecruitmentRewardProfile(
+  nextStage: number,
+  route: RunRoute | null = null,
+  upgrades: RunUpgrade[] = [],
+): { stage: number; level: number; choiceCount: number } {
+  const stage = Math.max(1, Math.floor(nextStage)) + (route?.recruitmentStageBonus ?? 0);
+  return {
+    stage,
+    level: levelForStage(stage),
+    choiceCount: recruitmentChoiceCount(upgrades, route),
+  };
+}
+
+export function createEmptyRunStats(): RunStats {
+  return { flawlessWins: 0, apexWins: 0, contractsCleared: 0, bossesCleared: 0 };
+}
+
+export function advanceRunStats(
+  stats: RunStats,
+  stage: number,
+  faintedCount: number,
+  route: RunRoute | null,
+  challengeCompleted: boolean,
+): RunStats {
+  return {
+    flawlessWins: stats.flawlessWins + (Math.max(0, faintedCount) === 0 ? 1 : 0),
+    apexWins: stats.apexWins + (route?.id === 'apex' ? 1 : 0),
+    contractsCleared: stats.contractsCleared + (challengeCompleted ? 1 : 0),
+    bossesCleared: stats.bossesCleared + (isCheckpointStage(stage) ? 1 : 0),
+  };
+}
+
+export function getRunMilestoneProgress(
+  stats: RunStats,
+  unlockedIds: RunMilestoneId[] = [],
+): RunMilestoneProgress[] {
+  const unlocked = new Set(unlockedIds);
+  return RUN_MILESTONES.map(milestone => {
+    const current = Math.max(0, Math.floor(stats[milestone.metric]));
+    return {
+      milestone,
+      current: Math.min(milestone.target, current),
+      complete: current >= milestone.target,
+      unlocked: unlocked.has(milestone.id),
+    };
+  });
+}
+
+export function getNewlyUnlockedRunMilestones(
+  stats: RunStats,
+  unlockedIds: RunMilestoneId[] = [],
+): RunMilestone[] {
+  return getRunMilestoneProgress(stats, unlockedIds)
+    .filter(progress => progress.complete && !progress.unlocked)
+    .map(progress => progress.milestone);
+}
+
+export function calculateRunMilestoneReward(
+  stats: RunStats,
+  unlockedIds: RunMilestoneId[] = [],
+): { milestonesUnlocked: RunMilestone[]; milestoneBonus: number; milestoneScoutPasses: number } {
+  const milestonesUnlocked = getNewlyUnlockedRunMilestones(stats, unlockedIds);
+  return {
+    milestonesUnlocked,
+    milestoneBonus: milestonesUnlocked.reduce((total, milestone) => total + milestone.scoreBonus, 0),
+    milestoneScoutPasses: milestonesUnlocked.reduce((total, milestone) => total + milestone.scoutPasses, 0),
+  };
+}
+
+export function getRunGrade(score: number, wins: number): RunGrade {
+  const averageScore = wins > 0 ? score / wins : 0;
+  if (averageScore >= 5000) {
+    return { rank: 'S', title: 'Master', description: 'Exceptional risk control and objective execution.' };
+  }
+  if (averageScore >= 3800) {
+    return { rank: 'A', title: 'Elite', description: 'A high-scoring run built on difficult routes.' };
+  }
+  if (averageScore >= 2800) {
+    return { rank: 'B', title: 'Contender', description: 'Strong decisions with room for larger bounties.' };
+  }
+  if (averageScore >= 1800) {
+    return { rank: 'C', title: 'Challenger', description: 'A solid run with several rewards secured.' };
+  }
+  return { rank: 'D', title: 'Rookie', description: 'Build the team, clear contracts, and raise the stakes.' };
+}
+
+export function isCheckpointStage(stage: number): boolean {
+  return Math.max(1, stage) % CHECKPOINT_INTERVAL === 0;
+}
+
+export function getBossModifier(stage: number): RunBossModifier | null {
+  const normalizedStage = Math.max(1, Math.floor(stage));
+  return RUN_BOSS_MODIFIERS.find(modifier => modifier.stage === normalizedStage) ?? null;
+}
+
+export function isFinalStage(stage: number): boolean {
+  return Math.max(1, stage) >= RUN_STAGE_LIMIT;
+}
+
+export function getRunSector(stage: number): RunSector {
+  const normalizedStage = Math.min(RUN_STAGE_LIMIT, Math.max(1, stage));
+  return RUN_SECTORS.find(sector => normalizedStage <= sector.endStage) ?? RUN_SECTORS[RUN_SECTORS.length - 1];
+}
+
+export function getPostBattlePhase(stage: number, hasUpgradeChoice: boolean): BattleRunPhase {
+  if (isFinalStage(stage)) return 'run-complete';
+  return hasUpgradeChoice ? 'upgrade-draft' : 'reward-draft';
+}
+
+export function levelForStage(stage: number): number {
+  return Math.min(100, 5 + (Math.max(1, stage) - 1) * LEVELS_PER_STAGE);
+}
+export function enemyPartySize(stage: number): number {
+  const normalizedStage = Math.max(1, stage);
+  const baseSize = 1 + Math.floor((normalizedStage - 1) / 4);
+  return Math.min(3, baseSize + (isCheckpointStage(normalizedStage) ? 1 : 0));
+}
+
+export function targetBstForStage(stage: number): number {
+  const normalizedStage = Math.max(1, stage);
+  const checkpointBoost = isCheckpointStage(normalizedStage) ? 35 : 0;
+  return Math.min(600, 330 + (normalizedStage - 1) * 24 + checkpointBoost);
+}
+
+export function levelUpSurvivors(party: RunPokemon[], levels = LEVELS_PER_STAGE): RunPokemon[] {
+  return party.map(pokemon => ({
+    ...pokemon,
+    level: Math.min(100, pokemon.level + levels),
+  }));
+}
+
+export function rotatePartyToLead(party: RunPokemon[], leadIndex: number): RunPokemon[] {
+  if (!Number.isInteger(leadIndex) || leadIndex < 0 || leadIndex >= party.length) return party;
+  if (leadIndex === 0) return [...party];
+  return [party[leadIndex], ...party.slice(0, leadIndex), ...party.slice(leadIndex + 1)];
+}
+
+export function createStageChallenge(
+  stage: number,
+  partySize: number,
+  random: () => number = Math.random,
+): RunChallenge {
+  const normalizedStage = Math.max(1, stage);
+  const normalizedPartySize = Math.max(1, partySize);
+
+  if (isCheckpointStage(normalizedStage)) {
+    const maxTurns = 10 + enemyPartySize(normalizedStage);
+    return {
+      kind: 'checkpoint',
+      title: 'Checkpoint mastery',
+      description: `Win within ${maxTurns} turns with no more than one fainted Pokémon.`,
+      bounty: 1500 + normalizedStage * 100,
+      maxTurns,
+      maxFaints: 1,
+    };
+  }
+
+  const tempoTurns = 7 + enemyPartySize(normalizedStage) * 2;
+  const challenges: RunChallenge[] = [
+    {
+      kind: 'tempo',
+      title: 'Rapid clear',
+      description: `Defeat the trainer within ${tempoTurns} turns.`,
+      bounty: 500 + normalizedStage * 75,
+      maxTurns: tempoTurns,
+    },
+    {
+      kind: 'flawless',
+      title: 'Perfect formation',
+      description: 'Win without losing a Pokémon.',
+      bounty: 650 + normalizedStage * 75,
+      maxFaints: 0,
+    },
+  ];
+
+  if (normalizedPartySize > 1) {
+    const minSurvivors = Math.max(1, Math.ceil(normalizedPartySize * 0.75));
+    challenges.push({
+      kind: 'formation',
+      title: 'Hold the line',
+      description: `Finish with at least ${minSurvivors} Pokémon still standing.`,
+      bounty: 450 + normalizedStage * 60,
+      minSurvivors,
+    });
+  }
+
+  return challenges[Math.floor(random() * challenges.length)] ?? challenges[0];
+}
+
+export function isStageChallengeComplete(
+  challenge: RunChallenge,
+  turns: number,
+  survivors: number,
+  faintedCount: number,
+): boolean {
+  if (challenge.maxTurns !== undefined && turns > challenge.maxTurns) return false;
+  if (challenge.maxFaints !== undefined && faintedCount > challenge.maxFaints) return false;
+  if (challenge.minSurvivors !== undefined && survivors < challenge.minSurvivors) return false;
+  return true;
+}
+
+export function getStageChallengeProgress(
+  challenge: RunChallenge,
+  turns: number,
+  partySize: number,
+  survivors: number,
+): RunChallengeProgress {
+  const normalizedTurns = Math.max(0, turns);
+  const normalizedPartySize = Math.max(1, partySize);
+  const normalizedSurvivors = Math.max(0, survivors);
+  const faintedCount = Math.max(0, normalizedPartySize - normalizedSurvivors);
+  const metrics: RunChallengeProgress['metrics'] = [];
+  let failed = false;
+  let atRisk = false;
+
+  if (challenge.maxTurns !== undefined) {
+    const currentTurn = Math.max(1, normalizedTurns);
+    const remaining = Math.max(0, challenge.maxTurns - currentTurn + 1);
+    metrics.push({ label: 'Turns left', value: String(remaining) });
+    if (normalizedTurns > challenge.maxTurns) failed = true;
+    else if (remaining <= 2) atRisk = true;
+  }
+
+  if (challenge.maxFaints !== undefined) {
+    metrics.push({ label: 'Faints', value: `${faintedCount}/${challenge.maxFaints}` });
+    if (faintedCount > challenge.maxFaints) failed = true;
+    else if (challenge.maxFaints > 0 && faintedCount === challenge.maxFaints) atRisk = true;
+  }
+
+  if (challenge.minSurvivors !== undefined) {
+    metrics.push({ label: 'Standing', value: `${normalizedSurvivors}/${challenge.minSurvivors}` });
+    if (normalizedSurvivors < challenge.minSurvivors) failed = true;
+    else if (normalizedSurvivors === challenge.minSurvivors) atRisk = true;
+  }
+
+  if (failed) return { status: 'failed', label: 'Contract missed', metrics };
+  if (atRisk) return { status: 'at-risk', label: 'Contract at risk', metrics };
+  return { status: 'on-track', label: 'Contract on track', metrics };
+}
+
+export function calculateBattleReward(
+  stage: number,
+  turns: number,
+  partySize: number,
+  faintedCount: number,
+  challenge: RunChallenge | null = null,
+  route: RunRoute | null = null,
+  upgrades: RunUpgrade[] = [],
+  currentContractStreak = 0,
+): RunRewardSummary {
+  const normalizedStage = Math.max(1, stage);
+  const normalizedTurns = Math.max(1, turns);
+  const survivors = Math.max(0, partySize - faintedCount);
+  const stageScore = normalizedStage * 400;
+  const survivalBonusBase = survivors * 150;
+  const survivalBonus = hasRunUpgrade(upgrades, 'survivor-mark')
+    ? Math.round(survivalBonusBase * 1.5)
+    : survivalBonusBase;
+  const tempoBonus = Math.max(0, 12 - normalizedTurns) * 50;
+  const flawlessBonus = faintedCount === 0
+    ? (hasRunUpgrade(upgrades, 'flawless-standard') ? 800 : 400)
+    : 0;
+  const checkpointBonus = isCheckpointStage(normalizedStage) ? 1000 : 0;
+  const challengeCompleted = challenge
+    ? isStageChallengeComplete(challenge, normalizedTurns, survivors, faintedCount)
+    : false;
+  const challengeMultiplier = challengeCompleted ? getContractChainMultiplier(currentContractStreak) : 1;
+  const contractStreak = challengeCompleted ? Math.max(0, Math.floor(currentContractStreak)) + 1 : 0;
+  const challengeBonus = challengeCompleted && challenge ? Math.round(challenge.bounty * challengeMultiplier) : 0;
+  const scoutPassesEarned = challengeCompleted && !isFinalStage(normalizedStage)
+    ? (route?.id === 'apex' ? 2 : 1)
+    : 0;
+  const scoreBeforeRoute = stageScore + survivalBonus + tempoBonus + flawlessBonus + checkpointBonus + challengeBonus;
+  const routeBonusBase = route ? Math.round(scoreBeforeRoute * (route.scoreMultiplier - 1)) : 0;
+  const routeBonus = hasRunUpgrade(upgrades, 'route-dividend')
+    ? Math.round(routeBonusBase * 1.25)
+    : routeBonusBase;
+  const levelsGained = LEVELS_PER_STAGE
+    + (isCheckpointStage(normalizedStage) ? 1 : 0)
+    + (hasRunUpgrade(upgrades, 'veteran-training') ? 1 : 0);
+
+  return {
+    stage: normalizedStage,
+    turns: normalizedTurns,
+    survivors,
+    stageScore,
+    survivalBonus,
+    tempoBonus,
+    flawlessBonus,
+    checkpointBonus,
+    challenge,
+    challengeCompleted,
+    contractStreak,
+    challengeMultiplier,
+    challengeBonus,
+    scoutPassesEarned,
+    route,
+    routeBonus,
+    milestoneBonus: 0,
+    milestoneScoutPasses: 0,
+    milestonesUnlocked: [],
+    totalScore: scoreBeforeRoute + routeBonus,
+    levelsGained,
+  };
+}
+
+export function addOrReplacePartyMember(
+  party: RunPokemon[],
+  recruit: RunPokemon,
+  replaceIndex?: number,
+): RunPokemon[] {
+  if (party.length < PARTY_LIMIT) return [...party, recruit];
+  if (replaceIndex === undefined || replaceIndex < 0 || replaceIndex >= party.length) {
+    return party;
+  }
+
+  return party.map((pokemon, index) => index === replaceIndex ? recruit : pokemon);
+}
+
+export function createSeededRandom(seed: string): () => number {
+  let state = 2166136261;
+  for (let i = 0; i < seed.length; i += 1) {
+    state ^= seed.charCodeAt(i);
+    state = Math.imul(state, 16777619);
+  }
+
+  return () => {
+    state += 0x6D2B79F5;
+    let value = state;
+    value = Math.imul(value ^ (value >>> 15), value | 1);
+    value ^= value + Math.imul(value ^ (value >>> 7), value | 61);
+    return ((value ^ (value >>> 14)) >>> 0) / 4294967296;
+  };
+}

@@ -21,20 +21,20 @@ export async function diagnoseRedis(): Promise<{
   const url = import.meta.env.VITE_UPSTASH_REDIS_REST_URL;
   const token = import.meta.env.VITE_UPSTASH_REDIS_REST_TOKEN;
 
-  console.group('🔍 Redis Diagnostics');
+  console.group('Redis Diagnostics');
 
   // Check configuration
   if (!url) {
     issues.push('VITE_UPSTASH_REDIS_REST_URL is not set');
     suggestions.push('Add VITE_UPSTASH_REDIS_REST_URL to your .env.local file');
   } else {
-    console.log('✅ URL is set');
+    console.log('URL is set');
     
     if (!url.startsWith('https://')) {
       issues.push('Redis URL does not start with https://');
       suggestions.push('Check that your URL is correct. Should look like: https://your-db.upstash.io');
     } else {
-      console.log('✅ URL format looks correct');
+      console.log('URL format looks correct');
     }
   }
 
@@ -42,13 +42,13 @@ export async function diagnoseRedis(): Promise<{
     issues.push('VITE_UPSTASH_REDIS_REST_TOKEN is not set');
     suggestions.push('Add VITE_UPSTASH_REDIS_REST_TOKEN to your .env.local file');
   } else {
-    console.log('✅ Token is set');
+    console.log('Token is set');
     
     if (token.length < 10) {
       issues.push('Redis token seems too short');
       suggestions.push('Check that you copied the full token from Upstash dashboard');
     } else {
-      console.log('✅ Token length looks correct');
+      console.log('Token length looks correct');
     }
   }
 
@@ -65,7 +65,7 @@ export async function diagnoseRedis(): Promise<{
       
       if (stats.enabled) {
         connected = true;
-        console.log('✅ Successfully connected to Redis!');
+        console.log('Successfully connected to Redis!');
         console.log(`   Keys in cache: ${stats.keyCount || 0}`);
       } else {
         issues.push('Cache is enabled but connection failed');
@@ -105,30 +105,30 @@ export async function testRedisConnection(): Promise<boolean> {
     const testKey = 'test:connection';
     const testValue = { test: true, timestamp: Date.now() };
     
-    console.log('🧪 Testing Redis write...');
+    console.log('Testing Redis write...');
     const writeSuccess = await setInCache(testKey, testValue, 60);
     
     if (!writeSuccess) {
-      console.error('❌ Write test failed');
+      console.error('Write test failed');
       return false;
     }
     
-    console.log('✅ Write test passed');
-    console.log('🧪 Testing Redis read...');
+    console.log('Write test passed');
+    console.log('Testing Redis read...');
     
     const readValue = await getFromCache(testKey);
     
     if (!readValue) {
-      console.error('❌ Read test failed');
+      console.error('Read test failed');
       return false;
     }
     
-    console.log('✅ Read test passed');
-    console.log('✅ Redis is working correctly!');
+    console.log('Read test passed');
+    console.log('Redis is working correctly!');
     
     return true;
   } catch (error) {
-    console.error('❌ Connection test failed:', error);
+    console.error('Connection test failed:', error);
     return false;
   }
 }
@@ -140,9 +140,8 @@ if (typeof window !== 'undefined') {
   (window as Window & { diagnoseRedis: typeof diagnoseRedis; testRedisConnection: typeof testRedisConnection }).diagnoseRedis = diagnoseRedis;
   (window as Window & { diagnoseRedis: typeof diagnoseRedis; testRedisConnection: typeof testRedisConnection }).testRedisConnection = testRedisConnection;
   
-  console.log('💡 Redis diagnostics loaded!');
+  console.log('Redis diagnostics loaded!');
   console.log('   Run these in console:');
   console.log('   - diagnoseRedis()');
   console.log('   - testRedisConnection()');
 }
-

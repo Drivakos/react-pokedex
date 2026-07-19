@@ -78,7 +78,7 @@ export async function warmPopularPokemon(): Promise<{
   let failed = 0;
   const errors: string[] = [];
 
-  console.log(`🔥 Warming cache for ${popularPokemonIds.length} popular Pokemon...`);
+  console.log(`Warming cache for ${popularPokemonIds.length} popular Pokemon...`);
 
   for (const id of popularPokemonIds) {
     try {
@@ -90,7 +90,7 @@ export async function warmPopularPokemon(): Promise<{
     }
   }
 
-  console.log(`✅ Cache warming complete: ${cached} cached, ${failed} failed`);
+  console.log(`Cache warming complete: ${cached} cached, ${failed} failed`);
 
   return {
     success: failed === 0,
@@ -215,7 +215,7 @@ export async function scheduleInitialCacheWarmup(): Promise<void> {
     return;
   }
 
-  console.log('🔥 Starting initial cache warmup...');
+  console.log('Starting initial cache warmup...');
 
   try {
     // Warm starters first (most common)
@@ -224,9 +224,9 @@ export async function scheduleInitialCacheWarmup(): Promise<void> {
     // Then popular Pokemon
     await warmPopularPokemon();
 
-    console.log('✅ Initial cache warmup complete');
+    console.log('Initial cache warmup complete');
   } catch (error) {
-    console.error('❌ Cache warmup failed:', error);
+    console.error('Cache warmup failed:', error);
   }
 }
 
@@ -243,5 +243,4 @@ export const CacheManager = {
   getMetrics: getCacheMetrics,
   scheduleWarmup: scheduleInitialCacheWarmup,
 };
-
 

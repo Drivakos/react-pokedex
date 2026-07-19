@@ -95,7 +95,7 @@ export async function warmPokemonCache(pokemonIds: number[] = []): Promise<void>
     495, 498, 501, // Gen 5 starters
   ];
 
-  console.log(`🔥 Warming cache for ${idsToWarm.length} popular Pokemon...`);
+  console.log(`Warming cache for ${idsToWarm.length} popular Pokemon...`);
 
   const promises = idsToWarm.map(async (id) => {
     try {
@@ -108,7 +108,7 @@ export async function warmPokemonCache(pokemonIds: number[] = []): Promise<void>
 
   await Promise.allSettled(promises);
   
-  console.log('✅ Cache warming complete');
+  console.log('Cache warming complete');
 }
 
 /**
@@ -175,4 +175,3 @@ export const PokemonService = {
   getBatch: getBatchPokemon,
   warmCache: warmPokemonCache,
 };
-

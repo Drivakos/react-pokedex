@@ -15,8 +15,8 @@ const MagicLinkLogin = React.lazy(() => import('./components/auth/MagicLinkLogin
 const ProtectedRoute = React.lazy(() => import('./components/auth/ProtectedRoute'));
 const Teams = React.lazy(() => import('./components/teams/Teams'));
 const TeamEditor = React.lazy(() => import('./components/teams/TeamEditor'));
-const PokemonMemoryGame = React.lazy(() => import('./components/PokemonMemoryGame'));
 const PokéGridChallenge = React.lazy(() => import('./components/PokéGridChallenge'));
+const BattleRunGame = React.lazy(() => import('./components/battle-game/BattleRunGame'));
 
 const LoadingFallback = ({ message = 'Loading...' }: { message?: string }) => (
   <div className="min-h-screen flex items-center justify-center bg-gray-50">
@@ -57,8 +57,8 @@ function AppContent() {
               <div data-testid="team-editor"><TeamEditor /></div>
             </ProtectedRoute>
           } />
-          <Route path="/memory-game" element={<div data-testid="pokemon-memory-game"><PokemonMemoryGame /></div>} />
           <Route path="/pkmn-grid-challenge" element={<div data-testid="pokegrid-challenge"><PokéGridChallenge /></div>} />
+          <Route path="/battle-run" element={<div data-testid="battle-run-game"><BattleRunGame /></div>} />
         </Routes>
       </Suspense>
     </>

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Search } from 'lucide-react';
+import { Search, X } from 'lucide-react';
 import PokemonImage from '../../PokemonImage';
 import type { TeamPokemonData } from '../../../store/teamStore';
 
@@ -36,8 +36,8 @@ export const PokemonSearchModal: React.FC<PokemonSearchModalProps> = ({
       <div className="sd-panel" style={{ maxWidth: 600, width: '100%', maxHeight: '80vh', display: 'flex', flexDirection: 'column' }}>
         <div className="sd-header">
           <span style={{ fontWeight: 'bold', flex: 1 }}>Add Pokémon to Team</span>
-          <button className="sd-header-btn" onClick={onClose}>
-            ✕
+          <button className="sd-header-btn inline-flex items-center justify-center" onClick={onClose} aria-label="Close Pokémon search">
+            <X size={14} aria-hidden="true" />
           </button>
         </div>
         <div className="sd-search-bar">

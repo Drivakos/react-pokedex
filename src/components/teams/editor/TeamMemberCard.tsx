@@ -1,7 +1,7 @@
 import React from 'react';
 import PokemonImage from '../../PokemonImage';
 import { TeamMember } from '../../../lib/supabase';
-import { X } from 'lucide-react';
+import { CopyPlus, Pencil, Trash2, UserRound } from 'lucide-react';
 import type { TeamPokemonData } from '../../../store/teamStore';
 
 interface TeamMemberCardProps {
@@ -56,10 +56,10 @@ export const TeamMemberCard: React.FC<TeamMemberCardProps> = ({
       {/* Action buttons */}
       <div className="sd-actions">
         <button className="sd-action-btn" onClick={() => onCopy(member, pokemon)}>
-          ⊕ Copy
+          <CopyPlus size={12} aria-hidden="true" /> Copy
         </button>
-        <button className="sd-action-btn" onClick={() => onEdit(member)}>✎ Edit</button>
-        <button className="sd-action-btn sd-action-btn--danger" onClick={() => onRemoveClick(member)}>🗑 Delete</button>
+        <button className="sd-action-btn" onClick={() => onEdit(member)}><Pencil size={12} aria-hidden="true" /> Edit</button>
+        <button className="sd-action-btn sd-action-btn--danger" onClick={() => onRemoveClick(member)}><Trash2 size={12} aria-hidden="true" /> Delete</button>
       </div>
 
       {/* Build card body */}
@@ -78,7 +78,13 @@ export const TeamMemberCard: React.FC<TeamMemberCardProps> = ({
             </div>
             <div className="sd-details-row" style={{ marginTop: 4 }}>
               <div><label>Level</label> <strong>{member.level || 100}</strong></div>
-              <div><label>Gender</label> <strong>{member.gender === 'male' ? '♂' : member.gender === 'female' ? '♀' : '—'}</strong></div>
+              <div>
+                <label>Gender</label>{' '}
+                <strong className="inline-flex items-center gap-1">
+                  {member.gender ? <UserRound size={11} aria-hidden="true" /> : null}
+                  {member.gender ? formatName(member.gender) : '—'}
+                </strong>
+              </div>
               <div><label>Shiny</label> <strong>{member.is_shiny ? 'Yes' : 'No'}</strong></div>
               <div><label>Tera</label> <strong>{member.tera_type ? formatName(member.tera_type) : '—'}</strong></div>
             </div>

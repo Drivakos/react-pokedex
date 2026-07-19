@@ -1,0 +1,304 @@
+import {
+  PARTY_LIMIT,
+  RUN_ROUTES,
+  RUN_MILESTONES,
+  RUN_SECTORS,
+  RUN_STAGE_LIMIT,
+  RUN_UPGRADES,
+  addOrReplacePartyMember,
+  advanceRunStats,
+  applyRunUpgradesToChallenge,
+  calculateRunMilestoneReward,
+  calculateBattleReward,
+  createRunUpgradeChoices,
+  createEmptyRunStats,
+  createStageChallenge,
+  createSeededRandom,
+  enemyPartySize,
+  getPostBattlePhase,
+  getRecruitmentRewardProfile,
+  getContractChainMultiplier,
+  getBossModifier,
+  getRunGrade,
+  getNewlyUnlockedRunMilestones,
+  getRunMilestoneProgress,
+  getRunSector,
+  getStageChallengeProgress,
+  isCheckpointStage,
+  isFinalStage,
+  isStageChallengeComplete,
+  levelForStage,
+  levelUpSurvivors,
+  recruitmentChoiceCount,
+  rotatePartyToLead,
+  targetBstForStage,
+} from '../battle-run-rules';
+import type { RunPokemon } from '../../types/battle-run';
+
+const pokemon = (species: string, level = 5): RunPokemon => ({
+  id: 1,
+  species,
+  level,
+  types: ['Normal'],
+  ability: 'Run Away',
+  moves: ['Tackle'],
+  bst: 300,
+});
+
+describe('battle run rules', () => {
+  it('structures the challenge as three sectors with a final stage', () => {
+    expect(RUN_STAGE_LIMIT).toBe(15);
+    expect(RUN_SECTORS).toHaveLength(3);
+    expect(getRunSector(1)).toMatchObject({ number: 1, title: 'Opening Circuit' });
+    expect(getRunSector(6)).toMatchObject({ number: 2, title: 'Pressure Circuit' });
+    expect(getRunSector(15)).toMatchObject({ number: 3, bossTitle: 'Run Champion' });
+    expect(isFinalStage(14)).toBe(false);
+    expect(isFinalStage(15)).toBe(true);
+  });
+
+  it('gives every checkpoint a distinct simulator-backed boss trait', () => {
+    expect(getBossModifier(5)).toMatchObject({ title: 'Reserve protocol', item: 'Sitrus Berry' });
+    expect(getBossModifier(10)).toMatchObject({ title: 'Overdrive protocol', item: 'Life Orb' });
+    expect(getBossModifier(15)).toMatchObject({ title: 'Champion endurance', item: 'Leftovers' });
+    expect(getBossModifier(6)).toBeNull();
+  });
+
+  it('ends the run after the final boss instead of opening another reward draft', () => {
+    expect(getPostBattlePhase(4, false)).toBe('reward-draft');
+    expect(getPostBattlePhase(5, true)).toBe('upgrade-draft');
+    expect(getPostBattlePhase(RUN_STAGE_LIMIT, true)).toBe('run-complete');
+  });
+
+  it('scales levels, enemy party size, and target strength by stage', () => {
+    expect(levelForStage(1)).toBe(5);
+    expect(levelForStage(5)).toBe(13);
+    expect(enemyPartySize(1)).toBe(1);
+    expect(enemyPartySize(4)).toBe(1);
+    expect(enemyPartySize(5)).toBe(3);
+    expect(enemyPartySize(9)).toBe(3);
+    expect(targetBstForStage(10)).toBeGreaterThan(targetBstForStage(2));
+    expect(targetBstForStage(5)).toBeGreaterThan(targetBstForStage(6));
+    expect(isCheckpointStage(5)).toBe(true);
+    expect(isCheckpointStage(6)).toBe(false);
+  });
+
+  it('rewards survival, speed, flawless clears, and checkpoints', () => {
+    const standard = calculateBattleReward(4, 8, 3, 1);
+    expect(standard.survivors).toBe(2);
+    expect(standard.survivalBonus).toBe(300);
+    expect(standard.tempoBonus).toBe(200);
+    expect(standard.flawlessBonus).toBe(0);
+    expect(standard.checkpointBonus).toBe(0);
+    expect(standard.levelsGained).toBe(2);
+
+    const checkpoint = calculateBattleReward(5, 5, 3, 0);
+    expect(checkpoint.flawlessBonus).toBe(400);
+    expect(checkpoint.checkpointBonus).toBe(1000);
+    expect(checkpoint.levelsGained).toBe(3);
+    expect(checkpoint.totalScore).toBeGreaterThan(standard.totalScore);
+  });
+
+  it('multiplies the complete reward when a riskier route is cleared', () => {
+    const apex = RUN_ROUTES.find(route => route.id === 'apex');
+    expect(apex).toBeDefined();
+    const base = calculateBattleReward(3, 7, 2, 0);
+    const boosted = calculateBattleReward(3, 7, 2, 0, null, apex);
+    expect(boosted.route).toEqual(apex);
+    expect(boosted.routeBonus).toBe(Math.round(base.totalScore * 0.6));
+    expect(boosted.totalScore).toBe(base.totalScore + boosted.routeBonus);
+  });
+
+  it('turns dangerous routes into stronger and broader recruitment rewards', () => {
+    const trail = RUN_ROUTES.find(route => route.id === 'trail') ?? null;
+    const rival = RUN_ROUTES.find(route => route.id === 'rival') ?? null;
+    const apex = RUN_ROUTES.find(route => route.id === 'apex') ?? null;
+    const scouting = RUN_UPGRADES.filter(upgrade => upgrade.id === 'expanded-scouting');
+
+    expect(getRecruitmentRewardProfile(4, trail)).toEqual({ stage: 4, level: 11, choiceCount: 3 });
+    expect(getRecruitmentRewardProfile(4, rival)).toEqual({ stage: 5, level: 13, choiceCount: 3 });
+    expect(getRecruitmentRewardProfile(4, apex)).toEqual({ stage: 6, level: 15, choiceCount: 4 });
+    expect(getRecruitmentRewardProfile(4, apex, scouting).choiceCount).toBe(5);
+  });
+
+  it('tracks multi-stage challenge medals and awards each only once', () => {
+    const apex = RUN_ROUTES.find(route => route.id === 'apex') ?? null;
+    let stats = createEmptyRunStats();
+    stats = advanceRunStats(stats, 1, 0, apex, true);
+    stats = advanceRunStats(stats, 2, 0, apex, true);
+    stats = advanceRunStats(stats, 5, 0, apex, true);
+
+    expect(stats).toEqual({ flawlessWins: 3, apexWins: 3, contractsCleared: 3, bossesCleared: 1 });
+    expect(getNewlyUnlockedRunMilestones(stats).map(milestone => milestone.id))
+      .toEqual(['iron-formation', 'apex-hunter']);
+    expect(getRunMilestoneProgress(stats).find(progress => progress.milestone.id === 'contract-specialist'))
+      .toMatchObject({ current: 3, complete: false });
+
+    expect(calculateRunMilestoneReward(stats)).toMatchObject({
+      milestoneBonus: 2100,
+      milestoneScoutPasses: 0,
+    });
+
+    const unlocked = ['iron-formation', 'apex-hunter'] as const;
+    expect(getNewlyUnlockedRunMilestones(stats, [...unlocked])).toEqual([]);
+    expect(calculateRunMilestoneReward(stats, [...unlocked])).toEqual({
+      milestonesUnlocked: [],
+      milestoneBonus: 0,
+      milestoneScoutPasses: 0,
+    });
+    expect(calculateRunMilestoneReward(
+      { ...stats, contractsCleared: 5, bossesCleared: 2 },
+      [...unlocked],
+    )).toMatchObject({
+      milestoneBonus: 2500,
+      milestoneScoutPasses: 2,
+    });
+    expect(RUN_MILESTONES.reduce((total, milestone) => total + milestone.scoreBonus, 0)).toBe(4600);
+  });
+
+  it('applies permanent run upgrades to future rewards', () => {
+    const apex = RUN_ROUTES.find(route => route.id === 'apex');
+    const selected = RUN_UPGRADES.filter(upgrade => (
+      upgrade.id === 'veteran-training'
+      || upgrade.id === 'route-dividend'
+      || upgrade.id === 'flawless-standard'
+      || upgrade.id === 'survivor-mark'
+    ));
+    const base = calculateBattleReward(3, 7, 2, 0, null, apex);
+    const upgraded = calculateBattleReward(3, 7, 2, 0, null, apex, selected);
+    expect(upgraded.levelsGained).toBe(base.levelsGained + 1);
+    expect(upgraded.survivalBonus).toBe(450);
+    expect(upgraded.flawlessBonus).toBe(800);
+    expect(upgraded.routeBonus).toBeGreaterThan(base.routeBonus);
+  });
+
+  it('offers unowned checkpoint upgrades and improves scouting and contracts', () => {
+    const owned = RUN_UPGRADES.filter(upgrade => upgrade.id === 'veteran-training');
+    const choices = createRunUpgradeChoices(owned, () => 0, 3);
+    expect(choices).toHaveLength(3);
+    expect(choices.map(choice => choice.id)).not.toContain('veteran-training');
+
+    const scouting = RUN_UPGRADES.filter(upgrade => upgrade.id === 'expanded-scouting');
+    expect(recruitmentChoiceCount([])).toBe(3);
+    expect(recruitmentChoiceCount(scouting)).toBe(4);
+
+    const ledger = RUN_UPGRADES.filter(upgrade => upgrade.id === 'contract-ledger');
+    const challenge = createStageChallenge(3, 2, () => 0);
+    expect(applyRunUpgradesToChallenge(challenge, ledger).bounty).toBe(Math.round(challenge.bounty * 1.3));
+  });
+
+  it('creates stage contracts that match the current encounter', () => {
+    const rapid = createStageChallenge(2, 1, () => 0);
+    expect(rapid.kind).toBe('tempo');
+    expect(rapid.maxTurns).toBeDefined();
+
+    const formation = createStageChallenge(3, 4, () => 0.99);
+    expect(formation.kind).toBe('formation');
+    expect(formation.minSurvivors).toBe(3);
+
+    const checkpoint = createStageChallenge(5, 4, () => 0);
+    expect(checkpoint.kind).toBe('checkpoint');
+    expect(checkpoint.maxFaints).toBe(1);
+  });
+
+  it('awards a contract bounty only when every objective is met', () => {
+    const challenge = createStageChallenge(2, 2, () => 0);
+    expect(isStageChallengeComplete(challenge, challenge.maxTurns ?? 1, 2, 0)).toBe(true);
+    expect(isStageChallengeComplete(challenge, (challenge.maxTurns ?? 1) + 1, 2, 0)).toBe(false);
+
+    const cleared = calculateBattleReward(2, challenge.maxTurns ?? 1, 2, 0, challenge);
+    const missed = calculateBattleReward(2, (challenge.maxTurns ?? 1) + 1, 2, 0, challenge);
+    expect(cleared.challengeCompleted).toBe(true);
+    expect(cleared.challengeBonus).toBe(challenge.bounty);
+    expect(missed.challengeCompleted).toBe(false);
+    expect(missed.challengeBonus).toBe(0);
+  });
+
+  it('builds a capped contract chain multiplier and resets it on a miss', () => {
+    const challenge = createStageChallenge(2, 2, () => 0);
+    const turns = challenge.maxTurns ?? 1;
+    const firstClear = calculateBattleReward(2, turns, 2, 0, challenge, null, [], 0);
+    const chainedClear = calculateBattleReward(2, turns, 2, 0, challenge, null, [], 3);
+    const missed = calculateBattleReward(2, turns + 1, 2, 0, challenge, null, [], 4);
+
+    expect(firstClear).toMatchObject({ contractStreak: 1, challengeMultiplier: 1 });
+    expect(chainedClear.contractStreak).toBe(4);
+    expect(chainedClear.challengeMultiplier).toBe(1.45);
+    expect(chainedClear.challengeBonus).toBe(Math.round(challenge.bounty * 1.45));
+    expect(missed).toMatchObject({ contractStreak: 0, challengeMultiplier: 1, challengeBonus: 0 });
+    expect(getContractChainMultiplier(100)).toBe(1.75);
+  });
+
+  it('turns cleared contracts into Scout Passes with an Apex bonus', () => {
+    const challenge = createStageChallenge(2, 2, () => 0);
+    const turns = challenge.maxTurns ?? 1;
+    const apex = RUN_ROUTES.find(route => route.id === 'apex');
+    const trailClear = calculateBattleReward(2, turns, 2, 0, challenge);
+    const apexClear = calculateBattleReward(2, turns, 2, 0, challenge, apex);
+    const missed = calculateBattleReward(2, turns + 1, 2, 0, challenge, apex);
+    const finalClear = calculateBattleReward(RUN_STAGE_LIMIT, turns, 2, 0, challenge, apex);
+
+    expect(trailClear.scoutPassesEarned).toBe(1);
+    expect(apexClear.scoutPassesEarned).toBe(2);
+    expect(missed.scoutPassesEarned).toBe(0);
+    expect(finalClear.scoutPassesEarned).toBe(0);
+  });
+
+  it('reports live contract progress as on track, at risk, or failed', () => {
+    const rapid = createStageChallenge(2, 1, () => 0);
+    expect(getStageChallengeProgress(rapid, (rapid.maxTurns ?? 3) - 2, 1, 1))
+      .toMatchObject({ status: 'on-track', metrics: [{ label: 'Turns left', value: '3' }] });
+    expect(getStageChallengeProgress(rapid, (rapid.maxTurns ?? 2) - 1, 1, 1).status).toBe('at-risk');
+    expect(getStageChallengeProgress(rapid, (rapid.maxTurns ?? 1) + 1, 1, 1).status).toBe('failed');
+
+    const flawless = createStageChallenge(2, 1, () => 0.99);
+    expect(getStageChallengeProgress(flawless, 1, 3, 3).status).toBe('on-track');
+    expect(getStageChallengeProgress(flawless, 1, 3, 2).status).toBe('failed');
+
+    const checkpoint = createStageChallenge(5, 3, () => 0);
+    expect(getStageChallengeProgress(checkpoint, 2, 3, 2).status).toBe('at-risk');
+  });
+
+  it('adds recruits until the party limit', () => {
+    const party = [pokemon('Eevee')];
+    expect(addOrReplacePartyMember(party, pokemon('Pikachu')).map(member => member.species))
+      .toEqual(['Eevee', 'Pikachu']);
+  });
+
+  it('requires a valid replacement when the party is full', () => {
+    const party = Array.from({ length: PARTY_LIMIT }, (_, index) => pokemon(`Pokemon ${index}`));
+    expect(addOrReplacePartyMember(party, pokemon('Newcomer'))).toEqual(party);
+    const replaced = addOrReplacePartyMember(party, pokemon('Newcomer'), 2);
+    expect(replaced).toHaveLength(PARTY_LIMIT);
+    expect(replaced[2].species).toBe('Newcomer');
+  });
+
+  it('levels surviving Pokémon without mutating the original party', () => {
+    const party = [pokemon('Eevee', 99)];
+    const leveled = levelUpSurvivors(party);
+    expect(leveled[0].level).toBe(100);
+    expect(party[0].level).toBe(99);
+  });
+
+  it('rotates a selected Pokémon into the lead slot without changing the original party', () => {
+    const party = [pokemon('Eevee'), pokemon('Pikachu'), pokemon('Bulbasaur')];
+    const rotated = rotatePartyToLead(party, 2);
+
+    expect(rotated.map(member => member.species)).toEqual(['Bulbasaur', 'Eevee', 'Pikachu']);
+    expect(party.map(member => member.species)).toEqual(['Eevee', 'Pikachu', 'Bulbasaur']);
+    expect(rotatePartyToLead(party, 99)).toBe(party);
+  });
+
+  it('generates repeatable random sequences from the same seed', () => {
+    const first = createSeededRandom('same-run');
+    const second = createSeededRandom('same-run');
+    expect([first(), first(), first()]).toEqual([second(), second(), second()]);
+  });
+
+  it('grades runs by average score per cleared stage', () => {
+    expect(getRunGrade(0, 0).rank).toBe('D');
+    expect(getRunGrade(4000, 2).rank).toBe('C');
+    expect(getRunGrade(6000, 2).rank).toBe('B');
+    expect(getRunGrade(8000, 2).rank).toBe('A');
+    expect(getRunGrade(15000, 3)).toEqual(expect.objectContaining({ rank: 'S', title: 'Master' }));
+  });
+});

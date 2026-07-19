@@ -4,6 +4,7 @@
   "version": "1.4.1",
   "type": "module",
   "scripts": {
+    "generate:battle-catalog": "node scripts/generate-battle-catalog.mjs",
     "dev": "vite",
     "build": "tsc && vite build",
     "build:prod": "node scripts/build-prod.js",
@@ -23,6 +24,12 @@
   },
   "dependencies": {
     "@netlify/cache": "^3.0.4",
+    "@pkmn/client": "^0.7.3",
+    "@pkmn/data": "^0.10.11",
+    "@pkmn/img": "^0.3.4",
+    "@pkmn/protocol": "^0.7.3",
+    "@pkmn/sim": "^0.10.11",
+    "@pkmn/view": "^0.7.3",
     "@sentry/react": "^10.40.0",
     "@supabase/supabase-js": "^2.49.4",
     "@types/react-helmet": "^6.1.11",
