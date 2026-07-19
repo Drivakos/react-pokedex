@@ -16,7 +16,9 @@ export interface RunArenaTheme {
   routeAccentClass: string;
 }
 
-const sectorThemes: Record<1 | 2 | 3, Omit<RunArenaTheme, 'routeFrameClass' | 'routeAccentClass'>> = {
+const battleBadgeClass = 'border-slate-200 bg-white/95 text-slate-600';
+
+const sectorThemes: Record<1 | 2 | 3, Omit<RunArenaTheme, 'badgeClass' | 'routeFrameClass' | 'routeAccentClass'>> = {
   1: {
     id: 'opening-circuit',
     skyClass: 'from-sky-500 via-cyan-300 to-cyan-100',
@@ -25,7 +27,6 @@ const sectorThemes: Record<1 | 2 | 3, Omit<RunArenaTheme, 'routeFrameClass' | 'r
     platformClass: 'border-cyan-100/35 bg-teal-950/25 shadow-[inset_0_12px_28px_rgba(6,78,59,0.28)]',
     lightClass: 'bg-cyan-100',
     beamClass: 'bg-cyan-200/10',
-    badgeClass: 'border-cyan-200/30 bg-slate-950/80 text-cyan-200',
   },
   2: {
     id: 'pressure-circuit',
@@ -35,7 +36,6 @@ const sectorThemes: Record<1 | 2 | 3, Omit<RunArenaTheme, 'routeFrameClass' | 'r
     platformClass: 'border-violet-200/30 bg-indigo-950/35 shadow-[inset_0_12px_28px_rgba(46,16,101,0.42)]',
     lightClass: 'bg-fuchsia-200',
     beamClass: 'bg-fuchsia-300/10',
-    badgeClass: 'border-violet-200/30 bg-violet-950/85 text-violet-200',
   },
   3: {
     id: 'summit-circuit',
@@ -45,7 +45,6 @@ const sectorThemes: Record<1 | 2 | 3, Omit<RunArenaTheme, 'routeFrameClass' | 'r
     platformClass: 'border-amber-200/35 bg-red-950/30 shadow-[inset_0_12px_28px_rgba(69,10,10,0.46)]',
     lightClass: 'bg-amber-200',
     beamClass: 'bg-amber-300/10',
-    badgeClass: 'border-amber-200/35 bg-slate-950/90 text-amber-200',
   },
 };
 
@@ -66,5 +65,5 @@ const routeClasses: Record<RunRouteId, Pick<RunArenaTheme, 'routeFrameClass' | '
 
 export function getRunArenaTheme(stage: number, routeId: RunRouteId = 'trail'): RunArenaTheme {
   const sector = getRunSector(stage);
-  return { ...sectorThemes[sector.number], ...routeClasses[routeId] };
+  return { ...sectorThemes[sector.number], ...routeClasses[routeId], badgeClass: battleBadgeClass };
 }

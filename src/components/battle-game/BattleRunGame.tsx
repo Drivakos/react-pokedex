@@ -271,7 +271,7 @@ function DraftCard({ pokemon, onChoose, label, fit, recommended = false }: {
     <button
       type="button"
       onClick={onChoose}
-      className="group grid grid-cols-[112px_minmax(0,1fr)] overflow-hidden rounded-2xl border border-slate-200 bg-white text-left shadow-md transition duration-200 hover:-translate-y-1 hover:border-red-300 hover:shadow-xl focus:outline-none focus:ring-4 focus:ring-red-200 sm:block"
+      className="group grid h-full self-stretch grid-cols-[112px_minmax(0,1fr)] overflow-hidden rounded-2xl border border-slate-200 bg-white text-left shadow-md transition-[border-color,box-shadow] duration-200 hover:border-red-300 hover:shadow-xl focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-inset focus-visible:ring-red-200 sm:grid-cols-1 sm:grid-rows-[12rem_minmax(0,1fr)]"
     >
       <div className="relative flex min-h-full items-center justify-center overflow-hidden bg-gradient-to-br from-sky-100 via-white to-emerald-100 sm:h-48 sm:min-h-0">
         <div className="absolute -right-10 -top-10 h-32 w-32 rounded-full border-[18px] border-white/50" />
@@ -291,14 +291,12 @@ function DraftCard({ pokemon, onChoose, label, fit, recommended = false }: {
           </span>
         )}
       </div>
-      <div className="min-w-0 p-3.5 sm:p-4">
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <h3 className="truncate text-lg font-black text-slate-950 sm:text-2xl">{pokemon.species}</h3>
-            <p className="text-xs font-bold text-slate-400 sm:text-sm">BST {pokemon.bst}</p>
-          </div>
-          <TypeBadges types={pokemon.types} compact />
+      <div className="flex min-w-0 flex-col p-3.5 sm:p-4">
+        <div className="flex min-w-0 items-center justify-between gap-3">
+          <h3 className="min-w-0 flex-1 truncate text-lg font-black text-slate-950 sm:text-2xl">{pokemon.species}</h3>
+          <div className="shrink-0"><TypeBadges types={pokemon.types} compact /></div>
         </div>
+        <p className="text-xs font-bold text-slate-400 sm:text-sm">BST {pokemon.bst}</p>
         <div className="mt-2 rounded-xl bg-slate-50 p-2.5 sm:mt-3 sm:p-3">
           <p className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">Ability</p>
           <p className="mt-0.5 truncate text-xs font-extrabold text-slate-700 sm:text-sm">{pokemon.ability}</p>
@@ -327,7 +325,7 @@ function DraftCard({ pokemon, onChoose, label, fit, recommended = false }: {
             </div>
           </div>
         )}
-        <div className="mt-2.5 flex items-center justify-between rounded-xl bg-red-600 px-3 py-2.5 text-xs font-black text-white transition group-hover:bg-red-700 sm:mt-4 sm:px-4 sm:py-3 sm:text-sm">
+        <div className="mt-2.5 flex items-center justify-between rounded-xl bg-red-600 px-3 py-2.5 text-xs font-black text-white transition group-hover:bg-red-700 sm:mt-auto sm:px-4 sm:py-3 sm:text-sm">
           {label} <ChevronRight className="h-4 w-4 transition group-hover:translate-x-1" />
         </div>
       </div>
@@ -853,7 +851,7 @@ function BattleArena() {
               <span className={`rounded-full px-2 py-0.5 ${arenaTheme.routeAccentClass}`}>{activeRoute?.label ?? 'Challenge route'}</span>
               <span>Stage {stage}</span>
             </div>
-            <strong className="mt-1 block text-xs text-white">
+            <strong className="mt-1 block text-xs text-slate-950">
               {bossModifier ? `${finalStage ? 'Final gate' : sector.bossTitle} · ${bossModifier.title}` : sector.title}
             </strong>
             <div className="mt-1.5 flex justify-center gap-1">
@@ -1903,7 +1901,7 @@ export default function BattleRunGame() {
           {draftChoices.length === 0 ? (
             <div className="flex items-center justify-center gap-3 py-20 font-bold text-slate-500"><Loader2 className="animate-spin" /> Scouting Pokémon…</div>
           ) : (
-            <div className={`grid gap-3 sm:gap-5 md:grid-cols-2 ${draftChoices.length >= 4 ? 'xl:grid-cols-4' : 'lg:grid-cols-3'}`}>
+            <div className={`grid items-stretch gap-3 sm:gap-5 md:grid-cols-2 ${draftChoices.length >= 4 ? 'xl:grid-cols-4' : 'lg:grid-cols-3'}`}>
               {draftChoices.map(pokemon => (
                 <DraftCard
                   key={pokemon.species}

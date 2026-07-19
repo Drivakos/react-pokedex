@@ -15,4 +15,14 @@ describe('Battle Run arena themes', () => {
     expect(trail.routeFrameClass).not.toBe(apex.routeFrameClass);
     expect(apex.routeAccentClass).toContain('bg-red-500');
   });
+
+  it('keeps the in-battle route badge on the shared white panel treatment', () => {
+    const themes = [
+      getRunArenaTheme(1, 'trail'),
+      getRunArenaTheme(8, 'rival'),
+      getRunArenaTheme(15, 'apex'),
+    ];
+
+    expect(themes.every(theme => theme.badgeClass.includes('bg-white'))).toBe(true);
+  });
 });
