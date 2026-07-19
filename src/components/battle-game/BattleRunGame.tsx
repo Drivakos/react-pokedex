@@ -87,11 +87,11 @@ const contractProgressClasses: Record<RunChallengeProgress['status'], {
 
 function TypeBadges({ types, compact = false }: { types: string[]; compact?: boolean }) {
   return (
-    <div className="flex flex-wrap gap-1.5">
+    <div className="flex flex-wrap gap-1">
       {types.map(type => (
         <span
           key={type}
-          className={`${typeClasses[type] ?? 'bg-gray-500'} rounded-full text-xs font-extrabold uppercase tracking-wide text-white ${compact ? 'px-2 py-0.5' : 'px-2.5 py-1'}`}
+          className={`${typeClasses[type] ?? 'bg-gray-500'} rounded-full font-extrabold uppercase tracking-wide text-white ${compact ? 'px-2 py-0.5 text-[9px] sm:text-[10px]' : 'px-2.5 py-1 text-xs'}`}
         >
           {type}
         </span>
@@ -197,55 +197,55 @@ function DraftCard({ pokemon, onChoose, label, fit, recommended = false }: {
     <button
       type="button"
       onClick={onChoose}
-      className="group overflow-hidden rounded-[2rem] border border-white/80 bg-white/95 text-left shadow-xl transition duration-300 hover:-translate-y-2 hover:border-red-300 hover:shadow-2xl focus:outline-none focus:ring-4 focus:ring-red-200"
+      className="group grid grid-cols-[112px_minmax(0,1fr)] overflow-hidden rounded-2xl border border-slate-200 bg-white text-left shadow-md transition duration-200 hover:-translate-y-1 hover:border-red-300 hover:shadow-xl focus:outline-none focus:ring-4 focus:ring-red-200 sm:block"
     >
-      <div className="relative flex h-52 items-center justify-center overflow-hidden bg-gradient-to-br from-sky-100 via-white to-emerald-100">
+      <div className="relative flex min-h-full items-center justify-center overflow-hidden bg-gradient-to-br from-sky-100 via-white to-emerald-100 sm:h-48">
         <div className="absolute -right-10 -top-10 h-32 w-32 rounded-full border-[18px] border-white/50" />
-        <div className="absolute bottom-3 h-8 w-40 rounded-[50%] bg-emerald-900/10 blur-sm" />
+        <div className="absolute bottom-3 h-5 w-24 rounded-[50%] bg-emerald-900/10 blur-sm sm:h-8 sm:w-40" />
         <BattlePokemonImage
           id={pokemon.id}
           species={pokemon.species}
           variant="artwork"
-          className="relative z-10 h-44 w-44 drop-shadow-xl transition duration-300 group-hover:scale-110"
+          className="relative z-10 h-28 w-28 drop-shadow-xl transition duration-300 group-hover:scale-105 sm:h-40 sm:w-40"
         />
-        <span className="absolute left-4 top-4 rounded-full bg-slate-950/80 px-3 py-1.5 text-xs font-black text-white backdrop-blur">
+        <span className="absolute left-2 top-2 rounded-full bg-slate-950/80 px-2 py-1 text-[10px] font-black text-white backdrop-blur sm:left-4 sm:top-4 sm:px-3 sm:py-1.5 sm:text-xs">
           LV. {pokemon.level}
         </span>
         {recommended && (
-          <span className="absolute right-4 top-4 flex items-center gap-1 rounded-full bg-amber-400 px-3 py-1.5 text-[10px] font-black uppercase tracking-wider text-amber-950 shadow-md">
-            <Star className="h-3.5 w-3.5 fill-current" /> Best team fit
+          <span className="absolute bottom-2 left-2 flex items-center gap-1 rounded-full bg-amber-400 px-2 py-1 text-[8px] font-black uppercase tracking-wider text-amber-950 shadow-md sm:bottom-auto sm:left-auto sm:right-4 sm:top-4 sm:px-3 sm:py-1.5 sm:text-[10px]">
+            <Star className="h-3 w-3 fill-current sm:h-3.5 sm:w-3.5" /> Best fit
           </span>
         )}
       </div>
-      <div className="p-5">
+      <div className="min-w-0 p-3.5 sm:p-4">
         <div className="flex items-start justify-between gap-3">
           <div>
-            <h3 className="text-2xl font-black text-slate-950">{pokemon.species}</h3>
-            <p className="text-sm font-bold text-slate-400">BST {pokemon.bst}</p>
+            <h3 className="truncate text-lg font-black text-slate-950 sm:text-2xl">{pokemon.species}</h3>
+            <p className="text-xs font-bold text-slate-400 sm:text-sm">BST {pokemon.bst}</p>
           </div>
           <TypeBadges types={pokemon.types} compact />
         </div>
-        <div className="mt-4 rounded-2xl bg-slate-50 p-3">
+        <div className="mt-2 rounded-xl bg-slate-50 p-2.5 sm:mt-3 sm:p-3">
           <p className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">Ability</p>
-          <p className="mt-0.5 text-sm font-extrabold text-slate-700">{pokemon.ability}</p>
-          <div className="mt-2 flex flex-wrap gap-1">
-            {pokemon.moves.slice(0, 4).map(move => (
-              <span key={move} className="rounded-md bg-white px-2 py-1 text-[11px] font-bold text-slate-500 shadow-sm">{move}</span>
+          <p className="mt-0.5 truncate text-xs font-extrabold text-slate-700 sm:text-sm">{pokemon.ability}</p>
+          <div className="mt-1.5 flex flex-wrap gap-1">
+            {pokemon.moves.slice(0, 4).map((move, index) => (
+              <span key={move} className={`${index > 1 ? 'hidden sm:inline' : ''} truncate rounded-md bg-white px-1.5 py-0.5 text-[9px] font-bold text-slate-500 shadow-sm sm:px-2 sm:py-1 sm:text-[11px]`}>{move}</span>
             ))}
           </div>
         </div>
         {fit && (
-          <div className={`mt-3 rounded-xl border px-3 py-2.5 ${recommended ? 'border-amber-200 bg-amber-50' : 'border-sky-100 bg-sky-50/70'}`}>
+          <div className={`mt-2 rounded-xl border px-2.5 py-2 sm:mt-3 sm:px-3 sm:py-2.5 ${recommended ? 'border-amber-200 bg-amber-50' : 'border-sky-100 bg-sky-50/70'}`}>
             <div className="flex items-center justify-between gap-3">
               <span>
                 <span className={`block text-[9px] font-black uppercase tracking-[0.16em] ${recommended ? 'text-amber-700' : 'text-sky-700'}`}>Team fit</span>
-                <strong className="block text-sm text-slate-900">{fit.label}</strong>
+                <strong className="block text-xs text-slate-900 sm:text-sm">{fit.label}</strong>
               </span>
               <span className={`text-xs font-black ${fit.powerDelta >= 0 ? 'text-emerald-700' : 'text-red-600'}`}>
                 {fit.powerDelta === 0 ? 'Team average' : `${fit.powerDelta > 0 ? '+' : ''}${fit.powerDelta} BST`}
               </span>
             </div>
-            <div className="mt-2 flex flex-wrap gap-1.5">
+            <div className="mt-1.5 hidden flex-wrap gap-1.5 sm:flex">
               <span className={`rounded-full px-2 py-1 text-[9px] font-black ${fit.newTypes.length > 0 ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-200 text-slate-500'}`}>
                 {fit.newTypes.length > 0 ? `Adds ${fit.newTypes.join(' / ')}` : 'Typing represented'}
               </span>
@@ -253,7 +253,7 @@ function DraftCard({ pokemon, onChoose, label, fit, recommended = false }: {
             </div>
           </div>
         )}
-        <div className="mt-4 flex items-center justify-between rounded-xl bg-red-600 px-4 py-3 text-sm font-black text-white transition group-hover:bg-red-700">
+        <div className="mt-2.5 flex items-center justify-between rounded-xl bg-red-600 px-3 py-2.5 text-xs font-black text-white transition group-hover:bg-red-700 sm:mt-4 sm:px-4 sm:py-3 sm:text-sm">
           {label} <ChevronRight className="h-4 w-4 transition group-hover:translate-x-1" />
         </div>
       </div>
@@ -486,31 +486,31 @@ const HealthPanel = memo(function HealthPanel({ pokemon, opponent = false }: {
   pokemon: ActiveBattlePokemon | null;
   opponent?: boolean;
 }) {
-  if (!pokemon) return <div className="h-24 animate-pulse rounded-2xl bg-white/60" />;
+  if (!pokemon) return <div className="h-20 animate-pulse rounded-xl bg-white/60 sm:h-24 sm:rounded-2xl" />;
   const percentage = pokemon.maxhp > 0 ? Math.max(0, Math.round((pokemon.hp / pokemon.maxhp) * 100)) : 0;
   const barColor = percentage > 50 ? 'bg-emerald-500' : percentage > 20 ? 'bg-amber-500' : 'bg-red-500';
 
   return (
-    <div className={`rounded-2xl border bg-white/95 p-3 shadow-xl backdrop-blur-sm ${opponent ? 'border-red-200/80' : 'border-blue-200/80'}`}>
-      <div className="mb-2 flex items-center justify-between gap-3">
+    <div className={`rounded-xl border bg-white/95 p-2 shadow-lg backdrop-blur-sm sm:rounded-2xl sm:p-3 sm:shadow-xl ${opponent ? 'border-red-200/80' : 'border-blue-200/80'}`}>
+      <div className="mb-1.5 flex items-center justify-between gap-2 sm:mb-2 sm:gap-3">
         <span className="min-w-0">
-          <span className={`block text-[9px] font-black uppercase tracking-[0.18em] ${opponent ? 'text-red-500' : 'text-blue-500'}`}>
+          <span className={`hidden text-[9px] font-black uppercase tracking-[0.18em] sm:block ${opponent ? 'text-red-500' : 'text-blue-500'}`}>
             {opponent ? 'Opponent' : 'Active'}
           </span>
-          <strong className="block truncate text-base text-slate-900 sm:text-lg">{pokemon.species}</strong>
+          <strong className="block truncate text-sm text-slate-900 sm:text-lg">{pokemon.species}</strong>
         </span>
-        <span className="shrink-0 rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-black text-slate-600">LV. {pokemon.level}</span>
+        <span className="shrink-0 rounded-full bg-slate-100 px-2 py-0.5 text-[9px] font-black text-slate-600 sm:px-2.5 sm:py-1 sm:text-[11px]">LV. {pokemon.level}</span>
       </div>
       <div className="flex items-center gap-2">
         <span className="text-[10px] font-black text-slate-400">HP</span>
-        <div className="h-3 flex-1 overflow-hidden rounded-full bg-slate-200 ring-1 ring-slate-300">
+        <div className="h-2.5 flex-1 overflow-hidden rounded-full bg-slate-200 ring-1 ring-slate-300 sm:h-3">
           <div
             className={`battle-health-fill h-full w-full origin-left rounded-full ${barColor}`}
             style={{ transform: `scaleX(${percentage / 100})` }}
           />
         </div>
       </div>
-      <div className="mt-2 flex items-center justify-between text-[11px] font-bold text-slate-500">
+      <div className="mt-1.5 flex items-center justify-between text-[9px] font-bold text-slate-500 sm:mt-2 sm:text-[11px]">
         <span className={pokemon.status ? 'rounded bg-amber-100 px-1.5 py-0.5 text-amber-800' : ''}>{pokemon.status ? pokemon.status.toUpperCase() : 'READY'}</span>
         <span>{pokemon.hp}/{pokemon.maxhp}</span>
       </div>
@@ -608,7 +608,7 @@ const BattleSidebar = memo(function BattleSidebar() {
   const aiProfile = getBattleAiProfile(stage);
 
   return (
-    <aside className="flex h-full min-h-0 flex-col overflow-hidden rounded-[2rem] border border-white/80 bg-white/75 text-slate-900 shadow-2xl backdrop-blur-xl">
+    <aside className="hidden h-full min-h-0 flex-col overflow-hidden rounded-2xl border border-white/80 bg-white/75 text-slate-900 shadow-xl backdrop-blur-xl xl:flex">
       {trainer && (
         <div className="shrink-0 border-b border-slate-200/80 bg-gradient-to-br from-red-50 via-white/80 to-sky-50 p-5">
           <TrainerCard trainer={trainer} stage={stage} />
@@ -645,6 +645,50 @@ const BattleSidebar = memo(function BattleSidebar() {
     </aside>
   );
 });
+
+function MobileBattleSummary() {
+  const trainer = useBattleRunStore(state => state.opponentTrainer);
+  const activeChallenge = useBattleRunStore(state => state.activeChallenge);
+  const activeRoute = useBattleRunStore(state => state.activeRoute);
+  const battleLog = useBattleRunStore(state => state.battleLog);
+  const stage = useBattleRunStore(state => state.stage);
+
+  if (!trainer) return null;
+  const recentLog = battleLog.slice(-6);
+
+  return (
+    <details className="group overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm xl:hidden">
+      <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between gap-3 px-3 py-2.5 [&::-webkit-details-marker]:hidden">
+        <span className="flex min-w-0 items-center gap-2.5">
+          <TrainerImage src={trainer.image} name={trainer.name} className="h-10 w-10 shrink-0" />
+          <span className="min-w-0">
+            <span className="block truncate text-sm font-black text-slate-900">{trainer.name}</span>
+            <span className="block truncate text-[10px] font-bold text-slate-500">
+              {activeRoute?.title ?? `Stage ${stage}`} · Battle details
+            </span>
+          </span>
+        </span>
+        <span className="flex items-center gap-1 text-xs font-black text-slate-500">
+          View <ChevronRight className="h-4 w-4 transition-transform group-open:rotate-90" />
+        </span>
+      </summary>
+      <div className="border-t border-slate-200 bg-slate-50 p-3">
+        {activeChallenge && <ChallengeCard challenge={activeChallenge} compact />}
+        <div className="mt-3 rounded-xl border border-slate-200 bg-white p-3">
+          <div className="mb-2 flex items-center justify-between">
+            <span className="flex items-center gap-1.5 text-xs font-black text-slate-900"><Swords className="h-3.5 w-3.5 text-red-600" /> Recent turns</span>
+            <span className="text-[9px] font-black uppercase tracking-wider text-emerald-600">Live</span>
+          </div>
+          <div className="space-y-1.5 text-xs leading-relaxed text-slate-600" aria-live="polite">
+            {recentLog.map((message, index) => (
+              <p key={`${battleLog.length - recentLog.length + index}-${message}`} className="border-t border-slate-100 pt-1.5 first:border-0 first:pt-0">{message}</p>
+            ))}
+          </div>
+        </div>
+      </div>
+    </details>
+  );
+}
 
 function BattleArena() {
   const snapshot = useBattleRunStore(state => state.snapshot);
@@ -697,9 +741,9 @@ function BattleArena() {
   const bossModifier = getBossModifier(stage);
 
   return (
-    <div className="mx-auto grid w-full max-w-7xl gap-5 xl:grid-cols-[minmax(0,1fr)_340px]">
-      <section className="overflow-hidden rounded-[2rem] border border-slate-200/80 bg-white shadow-2xl">
-        <div className="battle-stage relative h-[clamp(430px,52svh,500px)] overflow-hidden bg-slate-950">
+    <div className="mx-auto grid w-full max-w-7xl gap-3 xl:grid-cols-[minmax(0,1fr)_340px] xl:gap-5">
+      <section className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-lg sm:rounded-[2rem] sm:shadow-2xl">
+        <div className="battle-stage relative h-[min(46svh,360px)] min-h-[310px] overflow-hidden bg-slate-950 sm:h-[clamp(430px,52svh,500px)]">
           <div className={`pointer-events-none absolute inset-x-0 top-0 h-[47%] bg-gradient-to-b ${arenaTheme.skyClass}`} />
           <div className={`pointer-events-none absolute left-[24%] -top-[12%] h-[56%] w-16 -rotate-12 blur-xl ${arenaTheme.beamClass}`} />
           <div className={`pointer-events-none absolute right-[22%] -top-[12%] h-[56%] w-16 rotate-12 blur-xl ${arenaTheme.beamClass}`} />
@@ -732,17 +776,17 @@ function BattleArena() {
             </div>
           </div>
 
-          <div className="absolute left-3 top-3 z-20 w-[min(64%,320px)] sm:left-5 sm:top-5">
+          <div className="absolute left-2.5 top-2.5 z-20 w-[min(61%,260px)] sm:left-5 sm:top-5 sm:w-[min(64%,320px)]">
             <HealthPanel key={`opponent-${displaySnapshot?.opponent?.species ?? 'empty'}`} pokemon={displaySnapshot?.opponent ?? null} opponent />
           </div>
           {challengeProgress && (
-            <div className={`absolute right-3 top-3 z-20 w-[30%] rounded-xl border px-2 py-2 text-right shadow-lg backdrop-blur sm:hidden ${contractProgressClasses[challengeProgress.status].panel}`}>
+            <div className={`absolute right-2.5 top-2.5 z-20 w-[34%] rounded-xl border px-2 py-1.5 text-right shadow-lg backdrop-blur sm:hidden ${contractProgressClasses[challengeProgress.status].panel}`}>
               <span className={`block text-[8px] font-black uppercase tracking-wider ${contractProgressClasses[challengeProgress.status].label}`}>{challengeProgress.label}</span>
               <strong className={`mt-0.5 block text-xs ${contractProgressClasses[challengeProgress.status].value}`}>{challengeProgress.metrics.map(metric => metric.value).join(' · ')}</strong>
             </div>
           )}
 
-          <div className="absolute right-[8%] top-[31%] z-10 flex h-36 w-[38%] items-end justify-center sm:right-[10%] sm:h-44 sm:w-[34%]">
+          <div className="absolute right-[5%] top-[29%] z-10 flex h-28 w-[39%] items-end justify-center sm:right-[10%] sm:h-44 sm:w-[34%]">
             {displaySnapshot?.opponent && (
               <div className={`relative h-full w-full ${pokemonMotion(activeVisual, 'opponent')}`}>
                 <BattlePokemonImage id={displaySnapshot.opponent.id} species={displaySnapshot.opponent.species} side="p2" className="h-full w-full drop-shadow-2xl" />
@@ -750,7 +794,7 @@ function BattleArena() {
             )}
           </div>
 
-          <div className="absolute bottom-[7%] left-[2%] z-10 flex h-40 w-[36%] items-end justify-center sm:bottom-[5%] sm:left-[8%] sm:h-48 sm:w-[38%]">
+          <div className="absolute bottom-[7%] left-[1%] z-10 flex h-32 w-[39%] items-end justify-center sm:bottom-[5%] sm:left-[8%] sm:h-48 sm:w-[38%]">
             {displaySnapshot?.player && (
               <div className={`relative h-full w-full ${pokemonMotion(activeVisual, 'player')}`}>
                 <BattlePokemonImage id={displaySnapshot.player.id} species={displaySnapshot.player.species} side="p1" className="h-full w-full drop-shadow-2xl" />
@@ -758,13 +802,13 @@ function BattleArena() {
             )}
           </div>
 
-          <div className="absolute bottom-3 right-3 z-20 w-[56%] max-w-[320px] sm:bottom-5 sm:right-5">
+          <div className="absolute bottom-2.5 right-2.5 z-20 w-[59%] max-w-[320px] sm:bottom-5 sm:right-5 sm:w-[56%]">
             <HealthPanel key={`player-${displaySnapshot?.player?.species ?? 'empty'}`} pokemon={displaySnapshot?.player ?? null} />
           </div>
 
           <BattleEffect event={activeVisual} />
 
-          <div className="absolute left-3 top-[43%] z-20 flex items-center gap-2 whitespace-nowrap rounded-full border border-white/15 bg-slate-950/90 px-3 py-2 text-[9px] font-black text-white shadow-xl backdrop-blur sm:left-1/2 sm:-translate-x-1/2 sm:gap-3 sm:px-4 sm:text-xs">
+          <div className="absolute left-2.5 top-[43%] z-20 flex items-center gap-1.5 whitespace-nowrap rounded-full border border-white/15 bg-slate-950/90 px-2.5 py-1.5 text-[8px] font-black text-white shadow-xl backdrop-blur sm:left-1/2 sm:-translate-x-1/2 sm:gap-3 sm:px-4 sm:py-2 sm:text-xs">
             <span>TURN {displaySnapshot?.turn ?? 0}</span>
             <span className="h-4 w-px bg-white/30" />
             <span>YOU {displaySnapshot?.playerRemaining ?? 0}</span>
@@ -773,7 +817,7 @@ function BattleArena() {
           </div>
         </div>
 
-        <div className="border-t border-slate-200 bg-slate-50 p-4 sm:p-6">
+        <div className="border-t border-slate-200 bg-slate-50 p-3 sm:p-6">
           {error && <div className="mb-4 rounded-xl border border-red-200 bg-red-50 p-3 text-sm font-semibold text-red-700">{error}</div>}
 
           {decision.kind === 'move' && !controlsLocked && (
@@ -798,29 +842,29 @@ function BattleArena() {
                   <span className="hidden text-xs font-bold text-slate-400 sm:inline">Switch options below</span>
                 )}
               </div>
-              <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+              <div className="grid grid-cols-2 gap-2 xl:grid-cols-4">
                 {decision.moves.map(move => (
                   <button
                     key={move.slot}
                     type="button"
                     disabled={move.disabled || controlsLocked}
                     onClick={() => chooseMove(move.slot)}
-                    className="group relative min-h-20 overflow-hidden rounded-2xl border border-slate-200 bg-slate-50 p-3 text-left transition hover:-translate-y-0.5 hover:border-red-300 hover:bg-white hover:shadow-lg disabled:cursor-not-allowed disabled:opacity-40 xl:min-h-[96px]"
+                    className="group relative min-h-[82px] touch-manipulation overflow-hidden rounded-xl border border-slate-200 bg-white p-2.5 text-left transition active:scale-[0.98] hover:border-red-300 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-40 sm:rounded-2xl sm:p-3 xl:min-h-[96px]"
                   >
                     <span className={`absolute inset-y-0 left-0 w-1.5 ${typeClasses[move.type] ?? 'bg-slate-400'}`} />
                     <span className="flex items-start justify-between gap-3 pl-2">
                       <span>
-                        <span className="block font-black text-slate-900">{move.name}</span>
-                        <span className="mt-1 flex flex-wrap items-center gap-1 text-[11px] font-bold text-slate-500">
+                        <span className="block text-sm font-black leading-tight text-slate-900 sm:text-base">{move.name}</span>
+                        <span className="mt-1 flex flex-wrap items-center gap-1 text-[10px] font-bold text-slate-500 sm:text-[11px]">
                           <span className={`${typeClasses[move.type] ?? 'bg-slate-400'} rounded px-1.5 py-0.5 text-[9px] uppercase text-white`}>{move.type}</span>
-                          {move.category} · {move.power || '—'} power
+                          <span className="hidden sm:inline">{move.category} · </span>{move.power || '—'} power
                         </span>
                       </span>
                       <span className="shrink-0 text-right text-[11px] font-black text-slate-500">
                         {move.pp}/{move.maxpp}<span className="block font-bold text-slate-400">PP</span>
                       </span>
                     </span>
-                    <span className="mt-2 block pl-2 text-[10px] font-bold text-slate-400">Accuracy {move.accuracy === true ? '—' : `${move.accuracy}%`}</span>
+                    <span className="mt-2 hidden pl-2 text-[10px] font-bold text-slate-400 sm:block">Accuracy {move.accuracy === true ? '—' : `${move.accuracy}%`}</span>
                   </button>
                 ))}
               </div>
@@ -846,14 +890,15 @@ function BattleArena() {
           )}
 
           {decision.kind === 'move' && availableSwitches.length > 0 && !controlsLocked && (
-            <details className="mt-4 rounded-xl bg-blue-50/70 p-3">
-              <summary className="cursor-pointer text-sm font-black text-blue-800">Switch Pokémon instead</summary>
+            <details className="mt-3 rounded-xl border border-blue-100 bg-blue-50/70 p-3">
+              <summary className="min-h-6 cursor-pointer text-sm font-black text-blue-800">Switch Pokémon instead</summary>
               <div className="mt-3"><SwitchChoices choices={availableSwitches} onChoose={chooseSwitch} /></div>
             </details>
           )}
         </div>
       </section>
 
+      <MobileBattleSummary />
       <BattleSidebar />
     </div>
   );
@@ -967,15 +1012,15 @@ function LeadSelectionScreen() {
 
   return (
     <section className="relative mx-auto max-w-5xl">
-      <div className="mb-7 text-center">
+      <div className="mb-4 text-center sm:mb-7">
         <p className="text-[10px] font-black uppercase tracking-[0.22em] text-blue-700">Stage {stage} formation</p>
-        <h2 className="mt-1 text-3xl font-black text-slate-950 sm:text-4xl">Choose your lead Pokémon</h2>
-        <p className="mx-auto mt-2 max-w-2xl text-slate-600">
+        <h2 className="mt-1 text-2xl font-black text-slate-950 sm:text-4xl">Choose your lead Pokémon</h2>
+        <p className="mx-auto mt-2 max-w-2xl text-sm text-slate-600 sm:text-base">
           Pick who enters battle first. The rest of your team keeps its current rotation, and opponent scouting opens after your lead is locked in.
         </p>
       </div>
 
-      <div className="mb-5 flex items-center justify-between gap-4 rounded-2xl border border-blue-200 bg-blue-50/90 px-4 py-3 text-blue-950 shadow-sm">
+      <div className="mb-4 flex items-center justify-between gap-3 rounded-xl border border-blue-200 bg-blue-50/90 px-3 py-2.5 text-blue-950 shadow-sm sm:mb-5 sm:rounded-2xl sm:px-4 sm:py-3">
         <span className="flex min-w-0 items-center gap-3">
           <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-600 text-white shadow-md shadow-blue-200">
             <ArrowLeftRight className="h-5 w-5" />
@@ -990,15 +1035,15 @@ function LeadSelectionScreen() {
         </span>
       </div>
 
-      <div className={`grid gap-4 ${party.length >= 4 ? 'md:grid-cols-2 xl:grid-cols-3' : 'sm:grid-cols-2 lg:grid-cols-3'}`}>
+      <div className={`grid gap-3 sm:gap-4 ${party.length >= 4 ? 'md:grid-cols-2 xl:grid-cols-3' : 'sm:grid-cols-2 lg:grid-cols-3'}`}>
         {party.map((pokemon, index) => (
           <button
             key={pokemon.species}
             type="button"
             onClick={() => chooseLead(index)}
-            className="group overflow-hidden rounded-2xl border border-slate-200 bg-white text-left shadow-lg transition duration-200 hover:-translate-y-1 hover:border-blue-400 hover:shadow-xl focus:outline-none focus:ring-4 focus:ring-blue-200"
+            className="group grid grid-cols-[112px_minmax(0,1fr)] overflow-hidden rounded-2xl border border-slate-200 bg-white text-left shadow-md transition duration-200 hover:-translate-y-1 hover:border-blue-400 hover:shadow-xl focus:outline-none focus:ring-4 focus:ring-blue-200 sm:block"
           >
-            <div className="relative flex h-40 items-center justify-center overflow-hidden bg-gradient-to-br from-blue-100 via-white to-emerald-100">
+            <div className="relative flex min-h-full items-center justify-center overflow-hidden bg-gradient-to-br from-blue-100 via-white to-emerald-100 sm:h-40">
               <span className="absolute left-3 top-3 rounded-full bg-slate-950/80 px-2.5 py-1 text-[10px] font-black uppercase tracking-wider text-white">
                 Slot {index + 1}
               </span>
@@ -1011,18 +1056,18 @@ function LeadSelectionScreen() {
                 id={pokemon.id}
                 species={pokemon.species}
                 variant="artwork"
-                className="h-36 w-36 drop-shadow-xl transition duration-200 group-hover:scale-105"
+                className="h-28 w-28 drop-shadow-xl transition duration-200 group-hover:scale-105 sm:h-36 sm:w-36"
               />
             </div>
-            <div className="p-4">
+            <div className="min-w-0 p-3 sm:p-4">
               <div className="flex items-start justify-between gap-3">
                 <span className="min-w-0">
-                  <strong className="block truncate text-xl text-slate-950">{pokemon.species}</strong>
+                  <strong className="block truncate text-lg text-slate-950 sm:text-xl">{pokemon.species}</strong>
                   <span className="text-xs font-black text-slate-400">LV. {pokemon.level} · BST {pokemon.bst}</span>
                 </span>
                 <TypeBadges types={pokemon.types} compact />
               </div>
-              <div className="mt-3 flex items-center justify-between rounded-xl bg-blue-600 px-3.5 py-2.5 text-sm font-black text-white transition-colors group-hover:bg-blue-700">
+              <div className="mt-3 flex items-center justify-between rounded-xl bg-blue-600 px-3 py-2.5 text-xs font-black text-white transition-colors group-hover:bg-blue-700 sm:px-3.5 sm:text-sm">
                 {index === 0 ? 'Keep as lead' : 'Send out first'}
                 <ChevronRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
               </div>
@@ -1054,16 +1099,16 @@ function RouteSelectionScreen() {
 
   return (
     <section className="relative mx-auto max-w-6xl">
-      <div className="mb-6 text-center">
+      <div className="mb-4 text-center sm:mb-6">
         <p className="text-[10px] font-black uppercase tracking-[0.22em] text-red-600">Sector {sector.number} of {RUN_SECTORS.length} · {sector.title}</p>
-        <h2 className="mt-1 text-3xl font-black text-slate-950 sm:text-4xl">{finalStage ? 'Choose the stakes for the final boss' : `Set the stakes for stage ${stage}`}</h2>
-        <p className="mx-auto mt-2 max-w-2xl text-slate-600">
+        <h2 className="mt-1 text-2xl font-black text-slate-950 sm:text-4xl">{finalStage ? 'Choose the stakes for the final boss' : `Set the stakes for stage ${stage}`}</h2>
+        <p className="mx-auto mt-2 max-w-2xl text-sm text-slate-600 sm:text-base">
           {sector.objective} Higher-risk routes strengthen the opposing team, but multiply every point earned from the battle and its contract.
         </p>
       </div>
 
       {party[0] && (
-        <div className="mx-auto mb-4 flex max-w-4xl items-center justify-between gap-4 rounded-2xl border border-blue-200 bg-blue-50/90 px-4 py-3 text-blue-950 shadow-sm">
+        <div className="mx-auto mb-3 flex max-w-4xl items-center justify-between gap-3 rounded-xl border border-blue-200 bg-blue-50/90 px-3 py-2 text-blue-950 shadow-sm sm:mb-4 sm:rounded-2xl sm:px-4 sm:py-3">
           <span className="flex min-w-0 items-center gap-3">
             <span className="h-12 w-12 shrink-0 overflow-hidden rounded-full bg-white shadow-sm">
               <BattlePokemonImage id={party[0].id} species={party[0].species} variant="icon" className="h-full w-full" />
@@ -1073,16 +1118,36 @@ function RouteSelectionScreen() {
               <strong className="block truncate text-base">{party[0].species} will enter first</strong>
             </span>
           </span>
-          <PartyStrip party={party} />
+          <div className="hidden sm:block"><PartyStrip party={party} /></div>
         </div>
       )}
 
+      {(trainer || activeChallenge) && (
+        <details className="group mx-auto mb-3 max-w-4xl overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm sm:hidden">
+          <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between gap-3 px-3 py-2.5 [&::-webkit-details-marker]:hidden">
+            <span className="flex min-w-0 items-center gap-2.5">
+              {trainer && <TrainerImage src={trainer.image} name={trainer.name} className="h-10 w-10 shrink-0" />}
+              <span className="min-w-0 text-left">
+                <strong className="block truncate text-sm text-slate-900">{trainer?.name ?? 'Stage challenge'}</strong>
+                <span className="block truncate text-[10px] font-bold text-slate-500">{activeChallenge?.title ?? aiProfile.title}</span>
+              </span>
+            </span>
+            <span className="flex shrink-0 items-center gap-1 text-xs font-black text-slate-500">Details <ChevronRight className="h-4 w-4 transition-transform group-open:rotate-90" /></span>
+          </summary>
+          <div className="space-y-2 border-t border-slate-200 bg-slate-50 p-3">
+            {trainer && <p className="text-xs font-semibold italic leading-relaxed text-slate-600">“{trainer.intro}”</p>}
+            {activeChallenge && <ChallengeCard challenge={activeChallenge} compact chainMultiplier={chainMultiplier} />}
+            <p className="text-[11px] font-bold text-amber-800">Contract chain: {contractStreak} · score x{chainMultiplier.toFixed(2)}</p>
+          </div>
+        </details>
+      )}
+
       {trainer && (
-        <div className="mx-auto mb-4 flex max-w-4xl items-center gap-4 overflow-hidden rounded-2xl border border-[var(--battle-panel-border)] bg-[var(--battle-panel-surface)] px-4 text-[var(--battle-panel-title)] shadow-lg shadow-slate-200/60">
-          <TrainerImage src={trainer.image} name={trainer.name} className="h-20 w-20 self-end sm:h-24 sm:w-24" />
+        <div className="mx-auto mb-3 hidden max-w-4xl items-center gap-3 overflow-hidden rounded-xl border border-[var(--battle-panel-border)] bg-[var(--battle-panel-surface)] px-3 text-[var(--battle-panel-title)] shadow-sm sm:mb-4 sm:flex sm:gap-4 sm:rounded-2xl sm:px-4 sm:shadow-lg">
+          <TrainerImage src={trainer.image} name={trainer.name} className="h-16 w-16 self-end sm:h-24 sm:w-24" />
           <div className="min-w-0 flex-1 py-3">
             <p className="text-[9px] font-black uppercase tracking-[0.2em] text-red-600">Scouted challenger · {trainer.title}</p>
-            <p className="mt-0.5 text-xl font-black">{trainer.name}</p>
+            <p className="mt-0.5 text-lg font-black sm:text-xl">{trainer.name}</p>
             <p className="mt-1 truncate text-xs font-semibold italic text-slate-500">“{trainer.intro}”</p>
           </div>
           <div className="hidden shrink-0 items-center gap-2 rounded-xl border border-indigo-200 bg-indigo-50 px-3 py-2 text-xs font-black text-indigo-700 sm:flex">
@@ -1091,12 +1156,12 @@ function RouteSelectionScreen() {
         </div>
       )}
 
-      <div className="mx-auto mb-4 max-w-4xl">
+      <div className="mx-auto mb-4 hidden max-w-4xl sm:block">
         <RunMilestoneBoard stats={runStats} unlockedIds={unlockedMilestoneIds} />
       </div>
 
       {activeChallenge && (
-        <div className="mx-auto mb-4 grid max-w-4xl gap-3 lg:grid-cols-[1fr_220px]">
+        <div className="mx-auto mb-4 hidden max-w-4xl gap-3 sm:grid lg:grid-cols-[1fr_220px]">
           <ChallengeCard challenge={activeChallenge} chainMultiplier={chainMultiplier} />
           <div className="flex items-center gap-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-amber-950 shadow-sm lg:flex-col lg:items-start lg:justify-center">
             <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-200/60 text-amber-800">
@@ -1136,7 +1201,7 @@ function RouteSelectionScreen() {
         </div>
       )}
 
-      <div className="grid gap-4 lg:grid-cols-3">
+      <div className="grid gap-3 sm:gap-4 lg:grid-cols-3">
         {RUN_ROUTES.map((route, index) => {
           const preview = routePreviews[route.id];
           const recruitmentReward = getRecruitmentRewardProfile(stage + 1, route, upgrades);
@@ -1158,9 +1223,9 @@ function RouteSelectionScreen() {
               key={route.id}
               type="button"
               onClick={() => selectRoute(route.id)}
-              className="group flex h-full flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white text-left shadow-lg transition duration-200 hover:-translate-y-1 hover:border-slate-400 hover:shadow-xl focus:outline-none focus:ring-4 focus:ring-red-200"
+              className="group flex h-full flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white text-left shadow-md transition duration-200 hover:-translate-y-1 hover:border-slate-400 hover:shadow-xl focus:outline-none focus:ring-4 focus:ring-red-200"
             >
-              <div className={`flex items-center justify-between border-b p-4 ${accent}`}>
+              <div className={`flex items-center justify-between border-b p-3 sm:p-4 ${accent}`}>
                 <span className="flex items-center gap-3">
                   <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/80"><Icon className="h-5 w-5" /></span>
                   <span>
@@ -1170,9 +1235,9 @@ function RouteSelectionScreen() {
                 </span>
                 <span className="rounded-full bg-white/80 px-3 py-1 text-sm font-black text-slate-800 shadow-sm">x{route.scoreMultiplier}</span>
               </div>
-              <div className="flex flex-1 flex-col p-5">
+              <div className="flex flex-1 flex-col p-3.5 sm:p-5">
                 <p className="text-xs font-black uppercase tracking-[0.16em] text-slate-400">{route.label}</p>
-                <p className="mt-2 min-h-10 text-sm leading-relaxed text-slate-600 lg:min-h-[4.5rem]">{routeDescription}</p>
+                <p className="mt-2 text-sm leading-relaxed text-slate-600 lg:min-h-[4.5rem]">{routeDescription}</p>
 
                 {finalStage ? (
                   <div className="mt-4 flex items-center justify-between gap-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5 text-amber-950">
@@ -1198,7 +1263,7 @@ function RouteSelectionScreen() {
                   </div>
                 )}
 
-                <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-3">
+                <div className="mt-4 hidden rounded-xl border border-slate-200 bg-slate-50 p-3 sm:block">
                   <div className="mb-2 flex items-center justify-between gap-2">
                     <span className="flex items-center gap-1.5 text-[9px] font-black uppercase tracking-[0.16em] text-slate-500">
                       <Bot className="h-3.5 w-3.5" /> Scouted roster
@@ -1217,7 +1282,7 @@ function RouteSelectionScreen() {
                   </div>
                 </div>
 
-                <div className="mt-5 grid grid-cols-3 gap-2 text-center">
+                <div className="mt-3 grid grid-cols-3 gap-2 text-center sm:mt-5">
                   <div className="rounded-xl bg-slate-50 p-2">
                     <span className="block text-[9px] font-black uppercase text-slate-400">Level</span>
                     <strong className="text-sm text-slate-800">{preview[0] ? `L${preview[0].level}` : '—'}</strong>
@@ -1231,7 +1296,7 @@ function RouteSelectionScreen() {
                     <strong className="text-sm text-slate-800">x{route.scoreMultiplier}</strong>
                   </div>
                 </div>
-                <div className="mt-4 flex items-center justify-between rounded-xl bg-red-600 px-4 py-3 text-sm font-black text-white shadow-sm shadow-red-200 transition-colors group-hover:bg-red-700">
+                <div className="mt-3 flex items-center justify-between rounded-xl bg-red-600 px-4 py-3 text-sm font-black text-white shadow-sm shadow-red-200 transition-colors group-hover:bg-red-700 sm:mt-4">
                   Take this route <ChevronRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
                 </div>
               </div>
@@ -1251,10 +1316,10 @@ function UpgradeDraftScreen() {
 
   return (
     <section className="relative mx-auto max-w-6xl">
-      <div className="mb-6 text-center">
+      <div className="mb-4 text-center sm:mb-6">
         <p className="text-[10px] font-black uppercase tracking-[0.22em] text-amber-700">Checkpoint cleared</p>
-        <h2 className="mt-1 text-3xl font-black text-slate-950 sm:text-4xl">Choose a permanent run upgrade</h2>
-        <p className="mx-auto mt-2 max-w-2xl text-slate-600">
+        <h2 className="mt-1 text-2xl font-black text-slate-950 sm:text-4xl">Choose a permanent run upgrade</h2>
+        <p className="mx-auto mt-2 max-w-2xl text-sm text-slate-600 sm:text-base">
           Stage {stage} secured. This upgrade remains active until the run ends and changes every future encounter or reward.
         </p>
         <div className="mt-3 inline-flex items-center gap-2 rounded-full border border-amber-200 bg-amber-50 px-4 py-2 text-xs font-black text-amber-900">
@@ -1262,7 +1327,7 @@ function UpgradeDraftScreen() {
         </div>
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-3">
+      <div className="grid gap-3 sm:gap-4 lg:grid-cols-3">
         {upgradeChoices.map(upgrade => {
           const Icon = upgrade.id === 'veteran-training'
             ? Crown
@@ -1280,7 +1345,7 @@ function UpgradeDraftScreen() {
               key={upgrade.id}
               type="button"
               onClick={() => chooseUpgrade(upgrade.id)}
-              className="group flex min-h-64 flex-col rounded-2xl border border-slate-200 bg-white p-5 text-left shadow-lg transition duration-200 hover:-translate-y-1 hover:border-amber-400 hover:shadow-xl focus:outline-none focus:ring-4 focus:ring-amber-200"
+              className="group flex min-h-0 flex-col rounded-2xl border border-slate-200 bg-white p-4 text-left shadow-md transition duration-200 hover:-translate-y-1 hover:border-amber-400 hover:shadow-xl focus:outline-none focus:ring-4 focus:ring-amber-200 sm:min-h-64 sm:p-5"
             >
               <div className="flex items-start justify-between gap-4">
                 <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-100 text-amber-700">
@@ -1288,7 +1353,7 @@ function UpgradeDraftScreen() {
                 </span>
                 <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[9px] font-black uppercase tracking-wider text-slate-500">Permanent</span>
               </div>
-              <p className="mt-5 text-[10px] font-black uppercase tracking-[0.18em] text-amber-700">{upgrade.label}</p>
+              <p className="mt-3 text-[10px] font-black uppercase tracking-[0.18em] text-amber-700 sm:mt-5">{upgrade.label}</p>
               <h3 className="mt-1 text-xl font-black text-slate-950">{upgrade.title}</h3>
               <p className="mt-2 flex-1 text-sm leading-relaxed text-slate-600">{upgrade.description}</p>
               <div className="mt-5 flex items-center justify-between rounded-xl bg-amber-600 px-4 py-3 text-sm font-black text-white shadow-sm shadow-amber-200 transition-colors group-hover:bg-amber-700">
@@ -1310,11 +1375,11 @@ function ReplacementScreen() {
 
   return (
     <section className="mx-auto max-w-6xl text-center">
-      <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-blue-100 text-blue-700"><ArrowLeftRight className="h-8 w-8" /></div>
-      <h2 className="mt-4 text-3xl font-black text-slate-950">Your party is full</h2>
-      <p className="mx-auto mt-2 max-w-xl text-slate-600">Choose a team member for <strong>{recruit.species}</strong> to replace. Each card shows the exact power and type coverage change; the replaced Pokémon permanently leaves this run.</p>
+      <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-blue-100 text-blue-700 sm:h-16 sm:w-16 sm:rounded-2xl"><ArrowLeftRight className="h-6 w-6 sm:h-8 sm:w-8" /></div>
+      <h2 className="mt-3 text-2xl font-black text-slate-950 sm:mt-4 sm:text-3xl">Your party is full</h2>
+      <p className="mx-auto mt-2 max-w-xl text-sm text-slate-600 sm:text-base">Choose a team member for <strong>{recruit.species}</strong> to replace. The replaced Pokémon permanently leaves this run.</p>
 
-      <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="mt-5 grid gap-3 sm:mt-8 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3">
         {party.map((pokemon, index) => {
           const impact = analyzeReplacementImpact(party, recruit, index);
           const coveragePreserved = impact.gainedTypes.length === 0 && impact.lostTypes.length === 0;
@@ -1323,9 +1388,9 @@ function ReplacementScreen() {
               key={pokemon.species}
               type="button"
               onClick={() => replace(index)}
-              className="group flex items-center gap-4 rounded-2xl border border-slate-200 bg-white p-4 text-left shadow-lg transition hover:-translate-y-1 hover:border-red-400 hover:bg-red-50"
+              className="group flex items-center gap-3 rounded-2xl border border-slate-200 bg-white p-3 text-left shadow-md transition hover:-translate-y-1 hover:border-red-400 hover:bg-red-50 sm:gap-4 sm:p-4"
             >
-              <div className="h-24 w-24 shrink-0 rounded-2xl bg-sky-50 p-1">
+              <div className="h-20 w-20 shrink-0 rounded-xl bg-sky-50 p-1 sm:h-24 sm:w-24 sm:rounded-2xl">
                 <BattlePokemonImage id={pokemon.id} species={pokemon.species} variant="artwork" className="h-full w-full" />
               </div>
               <span className="min-w-0 flex-1">
@@ -1511,11 +1576,11 @@ export default function BattleRunGame() {
     : null;
 
   return (
-    <main className="battle-run-theme relative min-h-[calc(100vh-4rem)] overflow-hidden bg-gradient-to-br from-red-50 via-sky-50 to-emerald-50 px-4 py-4 sm:px-6">
+    <main className="battle-run-theme relative min-h-[calc(100svh-4rem)] overflow-hidden bg-slate-50 px-2 py-3 sm:bg-gradient-to-br sm:from-red-50 sm:via-sky-50 sm:to-emerald-50 sm:px-6 sm:py-4">
       <div className="pointer-events-none absolute -left-32 top-20 h-96 w-96 rounded-full bg-red-200/30 blur-3xl" />
       <div className="pointer-events-none absolute -right-32 top-64 h-96 w-96 rounded-full bg-blue-200/30 blur-3xl" />
 
-      <header className="relative mx-auto mb-4 max-w-7xl rounded-2xl border border-white/80 bg-white/75 px-3 py-2.5 shadow-sm backdrop-blur sm:px-4">
+      <header className="relative mx-auto mb-3 max-w-7xl rounded-xl border border-slate-200 bg-white px-3 py-2.5 shadow-sm sm:mb-4 sm:rounded-2xl sm:border-white/80 sm:bg-white/75 sm:px-4 sm:backdrop-blur">
         <div className="flex flex-col justify-between gap-2 lg:flex-row lg:items-center">
           <div className="flex items-center gap-3">
             <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-red-600 text-white shadow-md shadow-red-200">
@@ -1542,18 +1607,18 @@ export default function BattleRunGame() {
               <StageMeter stage={stage} complete={phase === 'run-complete'} />
               <div className="flex items-center gap-1 text-[11px] font-black text-slate-500"><Users className="h-3.5 w-3.5" /> {party.length}/6</div>
             </div>
-            {party.length > 0 && <PartyStrip party={party} />}
+            {party.length > 0 && <div className="hidden sm:block"><PartyStrip party={party} /></div>}
           </div>
         </div>
       </header>
 
       {isDraft && (
         <section className="relative mx-auto max-w-6xl">
-          <div className="mb-7 text-center">
-            <h2 className="text-3xl font-black text-slate-950 sm:text-4xl">
+          <div className="mb-4 text-center sm:mb-7">
+            <h2 className="text-2xl font-black text-slate-950 sm:text-4xl">
               {phase === 'starter-draft' ? 'Choose your first partner' : 'Victory reward'}
             </h2>
-            <p className="mx-auto mt-2 max-w-2xl text-slate-600">
+            <p className="mx-auto mt-2 max-w-2xl text-sm text-slate-600 sm:text-base">
               {phase === 'starter-draft'
                 ? 'Build a team capable of clearing 15 stages, three checkpoint bosses, and the final Run Champion.'
                 : party.length < 6
@@ -1594,7 +1659,7 @@ export default function BattleRunGame() {
           {draftChoices.length === 0 ? (
             <div className="flex items-center justify-center gap-3 py-20 font-bold text-slate-500"><Loader2 className="animate-spin" /> Scouting Pokémon…</div>
           ) : (
-            <div className={`grid gap-5 md:grid-cols-2 ${draftChoices.length >= 4 ? 'xl:grid-cols-4' : 'lg:grid-cols-3'}`}>
+            <div className={`grid gap-3 sm:gap-5 md:grid-cols-2 ${draftChoices.length >= 4 ? 'xl:grid-cols-4' : 'lg:grid-cols-3'}`}>
               {draftChoices.map(pokemon => (
                 <DraftCard
                   key={pokemon.species}
@@ -1609,12 +1674,17 @@ export default function BattleRunGame() {
           )}
 
           {phase === 'starter-draft' && (
-            <div className="mt-7 grid gap-3 text-sm sm:grid-cols-2 lg:grid-cols-4">
-              <div className="rounded-2xl bg-white/70 p-4 text-slate-600"><Compass className="mb-2 h-5 w-5 text-red-500" /><strong className="block text-slate-900">Choose the stakes</strong>Riskier routes strengthen opponents and multiply every reward.</div>
-              <div className="rounded-2xl bg-white/70 p-4 text-slate-600"><Target className="mb-2 h-5 w-5 text-amber-600" /><strong className="block text-slate-900">Chain contracts</strong>Build a score multiplier and earn Scout Passes to redraw recruits.</div>
-              <div className="rounded-2xl bg-white/70 p-4 text-slate-600"><Medal className="mb-2 h-5 w-5 text-violet-600" /><strong className="block text-slate-900">Earn run medals</strong>Complete multi-stage goals for major score and Scout Pass payouts.</div>
-              <div className="rounded-2xl bg-white/70 p-4 text-slate-600"><Heart className="mb-2 h-5 w-5 text-pink-500" /><strong className="block text-slate-900">Faints are permanent</strong>Lose the whole party and the run ends.</div>
-            </div>
+            <details className="group mt-4 overflow-hidden rounded-2xl border border-slate-200 bg-white/80 sm:mt-7" open={undefined}>
+              <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between px-4 py-3 text-sm font-black text-slate-800 [&::-webkit-details-marker]:hidden">
+                How Battle Run works <ChevronRight className="h-4 w-4 transition-transform group-open:rotate-90" />
+              </summary>
+              <div className="grid gap-px border-t border-slate-200 bg-slate-200 text-sm sm:grid-cols-2 lg:grid-cols-4">
+                <div className="bg-white p-4 text-slate-600"><Compass className="mb-2 h-5 w-5 text-red-500" /><strong className="block text-slate-900">Choose the stakes</strong>Riskier routes strengthen opponents and multiply every reward.</div>
+                <div className="bg-white p-4 text-slate-600"><Target className="mb-2 h-5 w-5 text-amber-600" /><strong className="block text-slate-900">Chain contracts</strong>Build a score multiplier and earn Scout Passes to redraw recruits.</div>
+                <div className="bg-white p-4 text-slate-600"><Medal className="mb-2 h-5 w-5 text-violet-600" /><strong className="block text-slate-900">Earn run medals</strong>Complete multi-stage goals for major score and Scout Pass payouts.</div>
+                <div className="bg-white p-4 text-slate-600"><Heart className="mb-2 h-5 w-5 text-pink-500" /><strong className="block text-slate-900">Faints are permanent</strong>Lose the whole party and the run ends.</div>
+              </div>
+            </details>
           )}
         </section>
       )}
