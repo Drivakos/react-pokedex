@@ -17,7 +17,7 @@ describe('ShowdownBattleSession', () => {
           onSnapshot: snapshot => { latestSnapshot = snapshot; },
           onDecision: decision => {
             if (decision.kind !== 'move') return;
-            const move = decision.moves.find(option => option.name === 'Petal Dance') ?? decision.moves[0];
+            const move = decision.moves.find(option => option.power > 0) ?? decision.moves[0];
             session.chooseMove(move.slot);
           },
           onLog: () => undefined,

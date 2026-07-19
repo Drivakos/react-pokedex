@@ -18,7 +18,7 @@ describe('battle content catalog', () => {
       level: 11,
       types: ['Electric'],
       ability: 'Static',
-      moves: ['Volt Tackle', 'Thunderbolt', 'Iron Tail', 'Play Rough'],
+      moves: ['Volt Tackle', 'Surf', 'Volt Switch', 'Thunder Wave'],
       bst: 320,
     });
   });

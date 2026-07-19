@@ -849,7 +849,7 @@ function BattleArena() {
             </div>
           )}
 
-          <div className="absolute right-[5%] top-[29%] z-10 flex h-28 w-[39%] items-end justify-center sm:right-[10%] sm:h-44 sm:w-[34%]">
+          <div className="absolute right-[7%] bottom-[41%] z-10 flex h-28 w-[38%] items-end justify-center sm:right-[10%] sm:bottom-[43%] sm:h-40 sm:w-[32%]">
             {displaySnapshot?.opponent && (
               <div className={`relative h-full w-full ${pokemonMotion(activeVisual, 'opponent')}`}>
                 <BattlePokemonImage id={displaySnapshot.opponent.id} species={displaySnapshot.opponent.species} side="p2" className="h-full w-full drop-shadow-2xl" />
@@ -857,7 +857,7 @@ function BattleArena() {
             )}
           </div>
 
-          <div className="absolute bottom-[7%] left-[1%] z-10 flex h-32 w-[39%] items-end justify-center sm:bottom-[5%] sm:left-[8%] sm:h-48 sm:w-[38%]">
+          <div className="absolute bottom-[10%] left-[3%] z-10 flex h-32 w-[39%] items-end justify-center sm:bottom-[9%] sm:left-[8%] sm:h-48 sm:w-[38%]">
             {displaySnapshot?.player && (
               <div className={`relative h-full w-full ${pokemonMotion(activeVisual, 'player')}`}>
                 <BattlePokemonImage id={displaySnapshot.player.id} species={displaySnapshot.player.species} side="p1" className="h-full w-full drop-shadow-2xl" />
