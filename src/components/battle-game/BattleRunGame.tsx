@@ -569,11 +569,14 @@ const HealthPanel = memo(function HealthPanel({ pokemon, opponent = false }: {
   return (
     <div className={`rounded-xl border bg-white/95 p-2 shadow-lg backdrop-blur-sm sm:rounded-2xl sm:p-3 sm:shadow-xl ${opponent ? 'border-red-200/80' : 'border-blue-200/80'}`}>
       <div className="mb-1.5 flex items-center justify-between gap-2 sm:mb-2 sm:gap-3">
-        <span className="min-w-0">
+        <span className="min-w-0 flex-1">
           <span className={`hidden text-[9px] font-black uppercase tracking-[0.18em] sm:block ${opponent ? 'text-red-500' : 'text-blue-500'}`}>
             {opponent ? 'Opponent' : 'Active'}
           </span>
-          <strong className="block truncate text-sm text-slate-900 sm:text-lg">{pokemon.species}</strong>
+          <span className="flex min-w-0 flex-wrap items-center gap-1 sm:gap-2">
+            <strong className="min-w-0 truncate text-sm text-slate-900 sm:text-lg">{pokemon.species}</strong>
+            <TypeBadges types={pokemon.types} compact />
+          </span>
         </span>
         <span className="shrink-0 rounded-full bg-slate-100 px-2 py-0.5 text-[9px] font-black text-slate-600 sm:px-2.5 sm:py-1 sm:text-[11px]">LV. {pokemon.level}</span>
       </div>
@@ -588,7 +591,6 @@ const HealthPanel = memo(function HealthPanel({ pokemon, opponent = false }: {
       </div>
       <div className="mt-1.5 flex items-center justify-between text-[9px] font-bold text-slate-500 sm:mt-2 sm:text-[11px]">
         <span className={pokemon.status ? 'rounded bg-amber-100 px-1.5 py-0.5 text-amber-800' : ''}>{pokemon.status ? pokemon.status.toUpperCase() : 'READY'}</span>
-        <TypeBadges types={pokemon.types} compact />
         <span>{pokemon.hp}/{pokemon.maxhp}</span>
       </div>
     </div>
