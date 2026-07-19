@@ -560,34 +560,34 @@ const HealthPanel = memo(function HealthPanel({ pokemon, opponent = false }: {
   pokemon: ActiveBattlePokemon | null;
   opponent?: boolean;
 }) {
-  if (!pokemon) return <div className="h-20 animate-pulse rounded-xl bg-white/60 sm:h-24 sm:rounded-2xl" />;
+  if (!pokemon) return <div className="h-16 animate-pulse rounded-xl bg-white/60" />;
   const percentage = pokemon.maxhp > 0 ? Math.max(0, Math.round((pokemon.hp / pokemon.maxhp) * 100)) : 0;
   const barColor = percentage > 50 ? 'bg-emerald-500' : percentage > 20 ? 'bg-amber-500' : 'bg-red-500';
 
   return (
-    <div className={`rounded-xl border bg-white/95 p-2 shadow-lg backdrop-blur-sm sm:rounded-2xl sm:p-3 sm:shadow-xl ${opponent ? 'border-red-200/80' : 'border-blue-200/80'}`}>
-      <div className="mb-1.5 flex items-center justify-between gap-2 sm:mb-2 sm:gap-3">
+    <div className={`rounded-xl border bg-white/95 p-2 shadow-lg backdrop-blur-sm ${opponent ? 'border-red-200/80' : 'border-blue-200/80'}`}>
+      <div className="mb-1 flex items-center justify-between gap-2">
         <span className="min-w-0 flex-1">
-          <span className={`hidden text-[9px] font-black uppercase tracking-[0.18em] sm:block ${opponent ? 'text-red-500' : 'text-blue-500'}`}>
+          <span className={`hidden text-[8px] font-black uppercase tracking-[0.16em] sm:block ${opponent ? 'text-red-500' : 'text-blue-500'}`}>
             {opponent ? 'Opponent' : 'Active'}
           </span>
-          <span className="flex min-w-0 flex-wrap items-center gap-1 sm:gap-2">
-            <strong className="min-w-0 truncate text-sm text-slate-900 sm:text-lg">{pokemon.species}</strong>
+          <span className="flex min-w-0 flex-wrap items-center gap-1">
+            <strong className="min-w-0 truncate text-sm text-slate-900">{pokemon.species}</strong>
             <TypeBadges types={pokemon.types} compact />
           </span>
         </span>
-        <span className="shrink-0 rounded-full bg-slate-100 px-2 py-0.5 text-[9px] font-black text-slate-600 sm:px-2.5 sm:py-1 sm:text-[11px]">LV. {pokemon.level}</span>
+        <span className="shrink-0 rounded-full bg-slate-100 px-1.5 py-0.5 text-[8px] font-black text-slate-600">LV. {pokemon.level}</span>
       </div>
-      <div className="flex items-center gap-2">
-        <span className="text-[10px] font-black text-slate-400">HP</span>
-        <div className="h-2.5 flex-1 overflow-hidden rounded-full bg-slate-200 ring-1 ring-slate-300 sm:h-3">
+      <div className="flex items-center gap-1.5">
+        <span className="text-[9px] font-black text-slate-400">HP</span>
+        <div className="h-2 flex-1 overflow-hidden rounded-full bg-slate-200 ring-1 ring-slate-300">
           <div
             className={`battle-health-fill h-full w-full origin-left rounded-full ${barColor}`}
             style={{ transform: `scaleX(${percentage / 100})` }}
           />
         </div>
       </div>
-      <div className="mt-1.5 flex items-center justify-between text-[9px] font-bold text-slate-500 sm:mt-2 sm:text-[11px]">
+      <div className="mt-1 flex items-center justify-between text-[8px] font-bold text-slate-500">
         <span className={pokemon.status ? 'rounded bg-amber-100 px-1.5 py-0.5 text-amber-800' : ''}>{pokemon.status ? pokemon.status.toUpperCase() : 'READY'}</span>
         <span>{pokemon.hp}/{pokemon.maxhp}</span>
       </div>
@@ -819,11 +819,7 @@ function BattleArena() {
   const challengeProgress = activeChallenge && displaySnapshot
     ? getStageChallengeProgress(activeChallenge, displaySnapshot.turn, partySize, displaySnapshot.playerRemaining)
     : null;
-  const sector = getRunSector(stage);
   const arenaTheme = getRunArenaTheme(stage, activeRoute?.id);
-  const gatePosition = ((Math.max(1, stage) - 1) % 5) + 1;
-  const finalStage = isFinalStage(stage);
-  const bossModifier = getBossModifier(stage);
 
   return (
     <div className="mx-auto grid w-full max-w-7xl gap-3 xl:grid-cols-[minmax(0,1fr)_340px] xl:gap-5">
@@ -843,29 +839,11 @@ function BattleArena() {
           <div className={`pointer-events-none absolute bottom-[8%] left-[3%] h-24 w-[48%] rounded-[50%] border-2 ${arenaTheme.platformClass}`} />
           <div className={`pointer-events-none absolute inset-0 z-[2] border-[3px] ${arenaTheme.routeFrameClass}`} />
 
-          <div
-            className={`absolute left-1/2 top-4 z-20 hidden min-w-44 -translate-x-1/2 rounded-xl border px-3 py-2 text-center shadow-xl backdrop-blur lg:block ${arenaTheme.badgeClass}`}
-            aria-label={`${sector.title}, gate ${gatePosition} of 5`}
-          >
-            <div className="flex items-center justify-center gap-2 text-[8px] font-black uppercase tracking-[0.18em]">
-              <span className={`rounded-full px-2 py-0.5 ${arenaTheme.routeAccentClass}`}>{activeRoute?.label ?? 'Challenge route'}</span>
-              <span>Stage {stage}</span>
-            </div>
-            <strong className="mt-1 block text-xs text-slate-950">
-              {bossModifier ? `${finalStage ? 'Final gate' : sector.bossTitle} · ${bossModifier.title}` : sector.title}
-            </strong>
-            <div className="mt-1.5 flex justify-center gap-1">
-              {Array.from({ length: 5 }, (_, index) => (
-                <span key={index} className={`h-1 rounded-full ${index < gatePosition ? `w-4 ${arenaTheme.lightClass}` : 'w-2 bg-white/15'}`} />
-              ))}
-            </div>
-          </div>
-
-          <div className="absolute left-2.5 top-2.5 z-20 w-[min(61%,260px)] sm:left-5 sm:top-5 sm:w-[min(64%,320px)]">
+          <div className="absolute left-2.5 top-2.5 z-20 w-[min(61%,240px)] sm:left-5 sm:top-5 sm:w-[min(52%,260px)]">
             <HealthPanel key={`opponent-${displaySnapshot?.opponent?.species ?? 'empty'}`} pokemon={displaySnapshot?.opponent ?? null} opponent />
           </div>
           {challengeProgress && (
-            <div className={`absolute right-2.5 top-2.5 z-20 w-[34%] rounded-xl border px-2 py-1.5 text-right shadow-lg backdrop-blur sm:hidden ${contractProgressClasses[challengeProgress.status].panel}`}>
+            <div className={`absolute right-2.5 top-10 z-20 w-[34%] rounded-xl border px-2 py-1.5 text-right shadow-lg backdrop-blur sm:hidden ${contractProgressClasses[challengeProgress.status].panel}`}>
               <span className={`block text-[8px] font-black uppercase tracking-wider ${contractProgressClasses[challengeProgress.status].label}`}>{challengeProgress.label}</span>
               <strong className={`mt-0.5 block text-xs ${contractProgressClasses[challengeProgress.status].value}`}>{challengeProgress.metrics.map(metric => metric.value).join(' · ')}</strong>
             </div>
@@ -887,15 +865,15 @@ function BattleArena() {
             )}
           </div>
 
-          <div className="absolute bottom-2.5 right-2.5 z-20 w-[59%] max-w-[320px] sm:bottom-5 sm:right-5 sm:w-[56%]">
+          <div className="absolute bottom-2.5 right-2.5 z-20 w-[56%] max-w-[240px] sm:bottom-5 sm:right-5 sm:w-[48%] sm:max-w-[260px]">
             <HealthPanel key={`player-${displaySnapshot?.player?.species ?? 'empty'}`} pokemon={displaySnapshot?.player ?? null} />
           </div>
 
           <BattleEffect event={activeVisual} />
 
-          <div className="absolute left-2.5 top-[43%] z-20 flex items-center gap-1.5 whitespace-nowrap rounded-full border border-white/15 bg-slate-950/90 px-2.5 py-1.5 text-[8px] font-black text-white shadow-xl backdrop-blur sm:left-1/2 sm:-translate-x-1/2 sm:gap-3 sm:px-4 sm:py-2 sm:text-xs">
+          <div className="absolute right-2.5 top-2.5 z-20 flex items-center gap-1 whitespace-nowrap rounded-full border border-slate-200 bg-white/95 px-2 py-1 text-[7px] font-black text-slate-800 shadow-md backdrop-blur sm:right-5 sm:top-5">
             <span>TURN {displaySnapshot?.turn ?? 0}</span>
-            <span className="h-4 w-px bg-white/30" />
+            <span className="h-3 w-px bg-slate-300" />
             <span>YOU {displaySnapshot?.playerRemaining ?? 0}</span>
             <span className="text-red-300">VS</span>
             <span>{displaySnapshot?.opponentRemaining ?? 0} NPC</span>
