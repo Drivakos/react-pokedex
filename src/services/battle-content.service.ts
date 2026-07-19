@@ -1,5 +1,12 @@
 import catalogData from '../data/battle-pokemon-catalog.json';
-import type { RunPokemon, RunRoute, RunRoutePreviewMap } from '../types/battle-run';
+import progressionData from '../data/battle-pokemon-progression.json';
+import type {
+  PartyDevelopmentChoice,
+  PartyDevelopmentOption,
+  RunPokemon,
+  RunRoute,
+  RunRoutePreviewMap,
+} from '../types/battle-run';
 import { RUN_ROUTES, enemyPartySize, getBossModifier, levelForStage, targetBstForStage } from '../utils/battle-run-rules';
 
 interface BattleCatalogPokemon {
@@ -9,21 +16,82 @@ interface BattleCatalogPokemon {
   ability: string;
   moves: string[];
   bst: number;
+  isMega?: boolean;
+}
+
+interface BattleProgressionEntry {
+  evolutions: string[];
+  megas: BattleCatalogPokemon[];
 }
 
 const allSpecies = catalogData as BattleCatalogPokemon[];
 const speciesByName = new Map(allSpecies.map(pokemon => [pokemon.species, pokemon]));
+const progressionBySpecies = progressionData as Record<string, BattleProgressionEntry>;
 
-export function createRunPokemon(speciesName: string, stage: number): RunPokemon {
-  const pokemon = speciesByName.get(speciesName);
-  if (!pokemon) throw new Error(`Unknown Pokémon: ${speciesName}`);
+function getExcludedSpecies(party: RunPokemon[]): Set<string> {
+  return new Set(party.flatMap(pokemon => (
+    pokemon.baseSpecies ? [pokemon.species, pokemon.baseSpecies] : [pokemon.species]
+  )));
+}
 
+function materializePokemon(pokemon: BattleCatalogPokemon, level: number, baseSpecies?: string): RunPokemon {
   return {
     ...pokemon,
     types: [...pokemon.types],
     moves: [...pokemon.moves],
-    level: levelForStage(stage),
+    level,
+    ...(pokemon.isMega ? { isMega: true, baseSpecies } : {}),
   };
+}
+
+export function createRunPokemon(speciesName: string, stage: number): RunPokemon {
+  const pokemon = speciesByName.get(speciesName);
+  if (!pokemon) throw new Error(`Unknown Pokémon: ${speciesName}`);
+  return materializePokemon(pokemon, levelForStage(stage));
+}
+
+export function getPokemonDevelopmentOptions(pokemon: RunPokemon): PartyDevelopmentOption[] {
+  if (pokemon.isMega) return [];
+  const progression = progressionBySpecies[pokemon.species];
+  if (!progression) return [];
+
+  const evolutions = progression.evolutions.flatMap(species => {
+    const evolution = speciesByName.get(species);
+    return evolution
+      ? [{ kind: 'evolution' as const, pokemon: materializePokemon(evolution, pokemon.level) }]
+      : [];
+  });
+  const megas = progression.megas.map(mega => ({
+    kind: 'mega' as const,
+    pokemon: materializePokemon(mega, pokemon.level, pokemon.species),
+  }));
+
+  return [...evolutions, ...megas];
+}
+
+export function getPartyDevelopmentChoices(party: RunPokemon[]): PartyDevelopmentChoice[] {
+  const alreadyHasMega = party.some(pokemon => pokemon.isMega);
+
+  return party.flatMap((current, partyIndex) => {
+    const options = getPokemonDevelopmentOptions(current)
+      .filter(option => option.kind !== 'mega' || !alreadyHasMega);
+    return options.length > 0 ? [{ partyIndex, current, options }] : [];
+  });
+}
+
+export function developPartyPokemon(
+  party: RunPokemon[],
+  partyIndex: number,
+  targetSpecies: string,
+): RunPokemon[] | null {
+  const current = party[partyIndex];
+  if (!current) return null;
+  const option = getPartyDevelopmentChoices(party)
+    .find(choice => choice.partyIndex === partyIndex)
+    ?.options.find(candidate => candidate.pokemon.species === targetSpecies);
+  if (!option) return null;
+
+  return party.map((pokemon, index) => index === partyIndex ? option.pokemon : pokemon);
 }
 
 function sampleSpecies(
@@ -62,7 +130,7 @@ export function createDraftChoices(
   starter = false,
   count = 3,
 ): RunPokemon[] {
-  return sampleSpecies(stage, count, new Set(party.map(pokemon => pokemon.species)), random, starter);
+  return sampleSpecies(stage, count, getExcludedSpecies(party), random, starter);
 }
 
 export function createRerolledDraftChoices(
@@ -84,7 +152,7 @@ export function createEnemyParty(
   const party = sampleSpecies(
     stage,
     Math.min(3, enemyPartySize(stage) + (route?.partySizeBonus ?? 0)),
-    new Set(playerParty.map(pokemon => pokemon.species)),
+    getExcludedSpecies(playerParty),
     random,
     false,
   );

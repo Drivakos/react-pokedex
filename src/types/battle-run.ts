@@ -6,6 +6,7 @@ export type BattleRunPhase =
   | 'battle'
   | 'upgrade-draft'
   | 'reward-draft'
+  | 'party-development'
   | 'replacement'
   | 'run-complete'
   | 'game-over';
@@ -19,6 +20,21 @@ export interface RunPokemon {
   moves: string[];
   bst: number;
   item?: string;
+  isMega?: boolean;
+  baseSpecies?: string;
+}
+
+export type PartyDevelopmentKind = 'evolution' | 'mega';
+
+export interface PartyDevelopmentOption {
+  kind: PartyDevelopmentKind;
+  pokemon: RunPokemon;
+}
+
+export interface PartyDevelopmentChoice {
+  partyIndex: number;
+  current: RunPokemon;
+  options: PartyDevelopmentOption[];
 }
 
 export interface BattleMoveChoice {

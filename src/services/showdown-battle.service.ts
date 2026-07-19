@@ -19,10 +19,12 @@ import { ChallengePlayerAI } from './challenge-player-ai';
 
 function toActivePokemon(pokemon: ClientBattle['p1']['active'][number]): ActiveBattlePokemon | null {
   if (!pokemon) return null;
+  const clientSpecies = pokemon.species;
+  const species = clientSpecies ?? Dex.species.get(pokemon.speciesForme);
   return {
-    id: pokemon.species.num,
+    id: species.num,
     species: pokemon.speciesForme,
-    types: [...pokemon.types],
+    types: clientSpecies ? [...pokemon.types] : [...species.types],
     level: pokemon.level,
     hp: pokemon.hp,
     maxhp: pokemon.maxhp,

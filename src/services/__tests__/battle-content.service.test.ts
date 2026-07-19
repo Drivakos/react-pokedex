@@ -1,4 +1,13 @@
-import { createDraftChoices, createEnemyParty, createRerolledDraftChoices, createRoutePreviews, createRunPokemon } from '../battle-content.service';
+import {
+  createDraftChoices,
+  createEnemyParty,
+  createRerolledDraftChoices,
+  createRoutePreviews,
+  createRunPokemon,
+  developPartyPokemon,
+  getPartyDevelopmentChoices,
+  getPokemonDevelopmentOptions,
+} from '../battle-content.service';
 import { RUN_ROUTES, createSeededRandom, enemyPartySize, getRecruitmentRewardProfile } from '../../utils/battle-run-rules';
 
 describe('battle content catalog', () => {
@@ -22,6 +31,67 @@ describe('battle content catalog', () => {
     expect(first).toEqual(second);
     expect(first).toHaveLength(3);
     expect(first.map(pokemon => pokemon.species)).not.toContain('Pikachu');
+  });
+
+  it('offers one-stage and branching evolutions at the current level', () => {
+    const bulbasaur = createRunPokemon('Bulbasaur', 4);
+    const eevee = createRunPokemon('Eevee', 4);
+
+    expect(getPokemonDevelopmentOptions(bulbasaur)).toEqual([
+      expect.objectContaining({
+        kind: 'evolution',
+        pokemon: expect.objectContaining({ species: 'Ivysaur', level: bulbasaur.level }),
+      }),
+    ]);
+    expect(getPokemonDevelopmentOptions(eevee).map(option => option.pokemon.species)).toEqual([
+      'Vaporeon', 'Jolteon', 'Flareon', 'Espeon', 'Umbreon', 'Leafeon', 'Glaceon', 'Sylveon',
+    ]);
+  });
+
+  it('offers Mega forms to fully evolved Pokémon and limits the party to one Mega', () => {
+    const venusaur = createRunPokemon('Venusaur', 6);
+    const charizard = createRunPokemon('Charizard', 6);
+    const charizardMegas = getPokemonDevelopmentOptions(charizard);
+
+    expect(charizardMegas.map(option => option.pokemon.species)).toEqual([
+      'Charizard-Mega-X', 'Charizard-Mega-Y',
+    ]);
+    expect(charizardMegas.every(option => option.kind === 'mega' && option.pokemon.isMega)).toBe(true);
+
+    const developed = developPartyPokemon([venusaur, charizard], 0, 'Venusaur-Mega');
+    expect(developed?.[0]).toMatchObject({
+      species: 'Venusaur-Mega',
+      baseSpecies: 'Venusaur',
+      level: venusaur.level,
+      isMega: true,
+      bst: 625,
+    });
+    expect(getPartyDevelopmentChoices(developed ?? []).flatMap(choice => choice.options))
+      .not.toEqual(expect.arrayContaining([expect.objectContaining({ kind: 'mega' })]));
+  });
+
+  it('keeps a Mega Pokémon and its base species out of future recruitment drafts', () => {
+    const venusaur = createRunPokemon('Venusaur', 6);
+    const party = developPartyPokemon([venusaur], 0, 'Venusaur-Mega');
+    expect(party).not.toBeNull();
+
+    const choices = createDraftChoices(
+      6,
+      party ?? [],
+      createSeededRandom('mega-exclusions'),
+      false,
+      1025,
+    );
+    const species = choices.map(pokemon => pokemon.species);
+
+    expect(species).not.toContain('Venusaur');
+    expect(species).not.toContain('Venusaur-Mega');
+  });
+
+  it('rejects development targets that are not available to that party member', () => {
+    const party = [createRunPokemon('Bulbasaur', 2)];
+    expect(developPartyPokemon(party, 0, 'Venusaur')).toBeNull();
+    expect(developPartyPokemon(party, 4, 'Ivysaur')).toBeNull();
   });
 
   it('supports expanded recruitment drafts from run upgrades', () => {

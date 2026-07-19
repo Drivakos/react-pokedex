@@ -54,6 +54,7 @@ import { preloadMoveAnimationAssets } from './move-animation-recipes';
 import { analyzeDraftFit, analyzeReplacementImpact, getRecommendedDraftChoice } from '../../utils/battle-run-draft';
 import type { DraftFitAnalysis } from '../../utils/battle-run-draft';
 import { getBattleAiProfile } from '../../utils/battle-ai-profile';
+import { getPartyDevelopmentChoices } from '../../services/battle-content.service';
 
 const typeClasses: Record<string, string> = {
   Bug: 'bg-lime-600', Dark: 'bg-slate-700', Dragon: 'bg-indigo-600', Electric: 'bg-yellow-500',
@@ -1147,7 +1148,7 @@ function LeadSelectionScreen() {
             onClick={() => chooseLead(index)}
             className="group grid grid-cols-[112px_minmax(0,1fr)] overflow-hidden rounded-2xl border border-slate-200 bg-white text-left shadow-md transition duration-200 hover:-translate-y-1 hover:border-blue-400 hover:shadow-xl focus:outline-none focus:ring-4 focus:ring-blue-200 sm:block"
           >
-            <div className="relative flex min-h-full items-center justify-center overflow-hidden bg-gradient-to-br from-blue-100 via-white to-emerald-100 sm:h-40">
+            <div className="relative flex min-h-full items-center justify-center overflow-hidden bg-gradient-to-br from-blue-100 via-white to-emerald-100 sm:h-40 sm:min-h-0">
               <span className="absolute left-3 top-3 rounded-full bg-slate-950/80 px-2.5 py-1 text-[10px] font-black uppercase tracking-wider text-white">
                 Slot {index + 1}
               </span>
@@ -1164,12 +1165,26 @@ function LeadSelectionScreen() {
               />
             </div>
             <div className="min-w-0 p-3 sm:p-4">
-              <div className="flex items-start justify-between gap-3">
-                <span className="min-w-0">
-                  <strong className="block truncate text-lg text-slate-950 sm:text-xl">{pokemon.species}</strong>
-                  <span className="text-xs font-black text-slate-400">LV. {pokemon.level} · BST {pokemon.bst}</span>
+              <div className="min-w-0">
+                <strong className="block truncate text-lg text-slate-950 sm:text-xl">{pokemon.species}</strong>
+                <span className="text-xs font-black text-slate-400">LV. {pokemon.level} · BST {pokemon.bst}</span>
+              </div>
+
+              <div className="mt-2">
+                <TypeBadges types={pokemon.types} />
+              </div>
+
+              <div className="mt-3 rounded-xl border border-slate-200 bg-slate-50 p-2.5">
+                <span className="block text-[9px] font-black uppercase tracking-[0.16em] text-slate-400">Ability</span>
+                <strong className="mt-0.5 block truncate text-xs text-slate-700">{pokemon.ability}</strong>
+                <span className="mt-2 block text-[9px] font-black uppercase tracking-[0.16em] text-slate-400">Moves</span>
+                <span className="mt-1 grid grid-cols-2 gap-1">
+                  {pokemon.moves.map(move => (
+                    <span key={move} title={move} className="truncate rounded-md bg-white px-1.5 py-1 text-[9px] font-bold text-slate-600 shadow-sm">
+                      {move}
+                    </span>
+                  ))}
                 </span>
-                <TypeBadges types={pokemon.types} compact />
               </div>
               <div className="mt-3 flex items-center justify-between rounded-xl bg-blue-600 px-3 py-2.5 text-xs font-black text-white transition-colors group-hover:bg-blue-700 sm:px-3.5 sm:text-sm">
                 {index === 0 ? 'Keep as lead' : 'Send out first'}
@@ -1520,6 +1535,103 @@ function ReplacementScreen() {
   );
 }
 
+function PartyDevelopmentScreen() {
+  const party = useBattleRunStore(state => state.party);
+  const develop = useBattleRunStore(state => state.developPartyMember);
+  const close = useBattleRunStore(state => state.closePartyDevelopment);
+  const choices = getPartyDevelopmentChoices(party);
+  const hasMega = party.some(pokemon => pokemon.isMega);
+
+  return (
+    <section className="relative mx-auto max-w-6xl">
+      <div className="text-center">
+        <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-violet-100 text-violet-700 sm:h-16 sm:w-16 sm:rounded-2xl">
+          <Zap className="h-6 w-6 sm:h-8 sm:w-8" />
+        </div>
+        <p className="mt-3 text-[10px] font-black uppercase tracking-[0.2em] text-violet-700">Party development</p>
+        <h2 className="mt-1 text-2xl font-black text-slate-950 sm:text-4xl">Evolve a current partner</h2>
+        <p className="mx-auto mt-2 max-w-2xl text-sm text-slate-600 sm:text-base">
+          Spend this stage reward to evolve one partner. Fully evolved Pokémon with a Mega form can permanently Mega Evolve for the rest of the run.
+        </p>
+        <div className="mt-3 flex flex-wrap items-center justify-center gap-2 text-[10px] font-black">
+          <span className="rounded-full bg-emerald-100 px-3 py-1 text-emerald-800">Level is preserved</span>
+          <span className={`rounded-full px-3 py-1 ${hasMega ? 'bg-violet-100 text-violet-800' : 'bg-slate-100 text-slate-600'}`}>
+            {hasMega ? 'Mega slot already used' : 'One Mega per party'}
+          </span>
+        </div>
+      </div>
+
+      {choices.length > 0 ? (
+        <div className="mt-6 space-y-4 sm:mt-8">
+          {choices.map(choice => (
+            <div key={`${choice.partyIndex}-${choice.current.species}`} className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-md">
+              <div className="flex items-center gap-3 border-b border-slate-200 bg-slate-50 px-3 py-3 sm:gap-4 sm:px-5">
+                <div className="h-14 w-14 shrink-0 rounded-xl bg-white p-1 shadow-sm sm:h-16 sm:w-16">
+                  <BattlePokemonImage id={choice.current.id} species={choice.current.species} variant="artwork" className="h-full w-full" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <span className="block text-[9px] font-black uppercase tracking-[0.18em] text-slate-400">Current partner</span>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <strong className="text-lg text-slate-950 sm:text-xl">{choice.current.species}</strong>
+                    <TypeBadges types={choice.current.types} compact />
+                  </div>
+                  <span className="text-xs font-bold text-slate-500">Level {choice.current.level} · BST {choice.current.bst} · {choice.current.ability}</span>
+                </div>
+              </div>
+
+              <div className={`grid gap-2 p-3 sm:gap-3 sm:p-4 ${choice.options.length > 1 ? 'md:grid-cols-2 xl:grid-cols-3' : ''}`}>
+                {choice.options.map(option => {
+                  const bstGain = option.pokemon.bst - choice.current.bst;
+                  return (
+                    <button
+                      key={option.pokemon.species}
+                      type="button"
+                      onClick={() => develop(choice.partyIndex, option.pokemon.species)}
+                      className={`group flex items-center gap-3 rounded-xl border p-3 text-left transition hover:-translate-y-0.5 hover:shadow-lg focus:outline-none focus:ring-4 sm:p-4 ${option.kind === 'mega' ? 'border-violet-200 bg-violet-50/70 hover:border-violet-400 focus:ring-violet-200' : 'border-emerald-200 bg-emerald-50/70 hover:border-emerald-400 focus:ring-emerald-200'}`}
+                    >
+                      <div className="h-20 w-20 shrink-0 rounded-xl bg-white p-1 shadow-sm sm:h-24 sm:w-24">
+                        <BattlePokemonImage id={option.pokemon.id} species={option.pokemon.species} variant="artwork" className="h-full w-full" />
+                      </div>
+                      <span className="min-w-0 flex-1">
+                        <span className={`block text-[9px] font-black uppercase tracking-[0.18em] ${option.kind === 'mega' ? 'text-violet-700' : 'text-emerald-700'}`}>
+                          {option.kind === 'mega' ? 'Mega Evolution' : 'Evolution'}
+                        </span>
+                        <strong className="mt-0.5 block truncate text-base text-slate-950 sm:text-lg">{option.pokemon.species}</strong>
+                        <span className="mt-1 flex flex-wrap items-center gap-1.5">
+                          <TypeBadges types={option.pokemon.types} compact />
+                          <span className="rounded-full bg-white px-2 py-1 text-[9px] font-black text-emerald-700">+{bstGain} BST</span>
+                        </span>
+                        <span className="mt-1.5 block truncate text-[11px] font-bold text-slate-500">Ability · {option.pokemon.ability}</span>
+                        <span className={`mt-2 flex items-center justify-between rounded-lg px-3 py-2 text-xs font-black text-white ${option.kind === 'mega' ? 'bg-violet-700 group-hover:bg-violet-800' : 'bg-emerald-600 group-hover:bg-emerald-700'}`}>
+                          {option.kind === 'mega' ? 'Mega Evolve' : 'Evolve'} <ChevronRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+                        </span>
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="mx-auto mt-8 max-w-xl rounded-2xl border border-slate-200 bg-white p-6 text-center text-sm font-bold text-slate-600">
+          No party member can currently evolve or use the available Mega slot.
+        </div>
+      )}
+
+      <div className="mt-5 text-center">
+        <button
+          type="button"
+          onClick={close}
+          className="inline-flex items-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-black text-slate-700 shadow-sm transition hover:border-slate-400 hover:bg-slate-50"
+        >
+          <RotateCcw className="h-4 w-4" /> Back to recruits
+        </button>
+      </div>
+    </section>
+  );
+}
+
 function RunCompleteScreen({
   party,
   score,
@@ -1653,6 +1765,7 @@ export default function BattleRunGame() {
   const startRun = useBattleRunStore(state => state.startRun);
   const chooseStarter = useBattleRunStore(state => state.chooseStarter);
   const chooseReward = useBattleRunStore(state => state.chooseReward);
+  const openPartyDevelopment = useBattleRunStore(state => state.openPartyDevelopment);
   const rerollDraft = useBattleRunStore(state => state.rerollDraft);
 
   useEffect(() => {
@@ -1680,6 +1793,7 @@ export default function BattleRunGame() {
   const recommendedDraft = phase === 'reward-draft'
     ? getRecommendedDraftChoice(draftChoices, party)
     : null;
+  const developmentChoices = party.length >= 6 ? getPartyDevelopmentChoices(party) : [];
 
   return (
     <main className="battle-run-theme relative min-h-[calc(100svh-4rem)] overflow-hidden bg-slate-50 px-2 py-3 sm:bg-gradient-to-br sm:from-red-50 sm:via-sky-50 sm:to-emerald-50 sm:px-6 sm:py-4">
@@ -1744,6 +1858,28 @@ export default function BattleRunGame() {
             />
           )}
 
+          {phase === 'reward-draft' && party.length >= 6 && (
+            <div className="-mt-3 mb-5 overflow-hidden rounded-2xl border border-violet-200 bg-white shadow-sm">
+              <div className="flex flex-col items-center justify-between gap-4 bg-gradient-to-r from-violet-50 via-white to-emerald-50 px-4 py-4 sm:flex-row sm:px-5">
+                <div className="text-center sm:text-left">
+                  <p className="text-[9px] font-black uppercase tracking-[0.18em] text-violet-700">Party full · choose your reward path</p>
+                  <p className="mt-1 text-sm font-bold text-slate-700">Recruit a new Pokémon and replace a partner, or develop someone already on your team.</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={openPartyDevelopment}
+                  disabled={developmentChoices.length === 0}
+                  className="inline-flex min-w-48 items-center justify-center gap-2 rounded-xl bg-violet-700 px-4 py-2.5 text-sm font-black text-white shadow-md transition hover:-translate-y-0.5 hover:bg-violet-800 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-500 disabled:shadow-none disabled:hover:translate-y-0"
+                >
+                  <Zap className="h-4 w-4" /> {developmentChoices.length > 0 ? 'Develop party' : 'No developments'}
+                </button>
+              </div>
+              <div className="border-t border-violet-100 bg-violet-50/60 px-4 py-2 text-center text-[10px] font-bold text-violet-800 sm:text-left">
+                Choosing either path spends this stage reward. Recruit options remain available below.
+              </div>
+            </div>
+          )}
+
           {phase === 'reward-draft' && (
             <div className="-mt-3 mb-5 flex flex-col items-center justify-between gap-3 rounded-2xl border border-sky-200 bg-sky-50/90 px-4 py-3 sm:flex-row">
               <div className="text-center sm:text-left">
@@ -1770,7 +1906,7 @@ export default function BattleRunGame() {
                 <DraftCard
                   key={pokemon.species}
                   pokemon={pokemon}
-                  label={phase === 'starter-draft' ? 'Choose partner' : 'Recruit to party'}
+                  label={phase === 'starter-draft' ? 'Choose partner' : party.length >= 6 ? 'Recruit & replace' : 'Recruit to party'}
                   fit={phase === 'reward-draft' ? analyzeDraftFit(pokemon, party) : undefined}
                   recommended={recommendedDraft?.species === pokemon.species}
                   onChoose={() => phase === 'starter-draft' ? chooseStarter(pokemon) : chooseReward(pokemon)}
@@ -1801,6 +1937,7 @@ export default function BattleRunGame() {
       {phase === 'preparing-battle' && <VersusScreen />}
       {phase === 'battle' && <BattleArena />}
       {phase === 'replacement' && <ReplacementScreen />}
+      {phase === 'party-development' && <PartyDevelopmentScreen />}
 
       {phase === 'run-complete' && (
         <RunCompleteScreen

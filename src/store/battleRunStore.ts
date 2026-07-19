@@ -1,5 +1,12 @@
 import { create } from 'zustand';
-import { createDraftChoices, createEnemyParty, createRerolledDraftChoices, createRoutePreviews } from '../services/battle-content.service';
+import {
+  createDraftChoices,
+  createEnemyParty,
+  createRerolledDraftChoices,
+  createRoutePreviews,
+  developPartyPokemon,
+  getPartyDevelopmentChoices,
+} from '../services/battle-content.service';
 import { ShowdownBattleWorkerSession } from '../services/showdown-battle-worker.service';
 import { pickOpponentTrainer } from '../components/battle-game/trainer-profiles';
 import type {
@@ -111,6 +118,9 @@ interface BattleRunStore {
   chooseMove: (slot: number) => void;
   chooseSwitch: (slot: number) => void;
   chooseReward: (pokemon: RunPokemon) => void;
+  openPartyDevelopment: () => void;
+  closePartyDevelopment: () => void;
+  developPartyMember: (partyIndex: number, targetSpecies: string) => void;
   rerollDraft: () => void;
   replacePartyMember: (index: number) => void;
   consumeVisualEvent: (id: number) => void;
@@ -459,6 +469,28 @@ export const useBattleRunStore = create<BattleRunStore>((set, get) => {
         return;
       }
       advanceStage(addOrReplacePartyMember(party, pokemon));
+    },
+
+    openPartyDevelopment: () => {
+      const current = get();
+      if (
+        current.phase !== 'reward-draft'
+        || current.party.length < PARTY_LIMIT
+        || getPartyDevelopmentChoices(current.party).length === 0
+      ) return;
+      set({ phase: 'party-development' });
+    },
+
+    closePartyDevelopment: () => {
+      if (get().phase === 'party-development') set({ phase: 'reward-draft' });
+    },
+
+    developPartyMember: (partyIndex, targetSpecies) => {
+      const current = get();
+      if (current.phase !== 'party-development') return;
+      const party = developPartyPokemon(current.party, partyIndex, targetSpecies);
+      if (!party) return;
+      advanceStage(party);
     },
 
     rerollDraft: () => {

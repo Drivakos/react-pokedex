@@ -27,6 +27,7 @@ export const BattlePokemonImage = memo(function BattlePokemonImage({
 }: BattlePokemonImageProps) {
   const sources = useMemo(() => {
     const showdown = Sprites.getPokemon(species, { side, gen: variant === 'icon' ? 5 : 'ani' }).url;
+    const isMega = species.includes('-Mega');
     const front = `${spriteRoot}/${id}.png`;
     const back = `${spriteRoot}/back/${id}.png`;
     const artwork = `${spriteRoot}/other/official-artwork/${id}.png`;
@@ -34,8 +35,11 @@ export const BattlePokemonImage = memo(function BattlePokemonImage({
     const animatedBack = `${spriteRoot}/other/showdown/back/${id}.gif`;
 
     if (id <= 0) return [showdown];
-    if (variant === 'artwork') return [artwork, front, showdown];
-    if (variant === 'icon') return [front, artwork, showdown];
+    if (variant === 'artwork') return isMega ? [showdown, artwork, front] : [artwork, front, showdown];
+    if (variant === 'icon') return isMega ? [showdown, front, artwork] : [front, artwork, showdown];
+    if (isMega) return side === 'p1'
+      ? [showdown, animatedBack, back, artwork]
+      : [showdown, animatedFront, front, artwork];
     return side === 'p1'
       ? [animatedBack, back, animatedFront, front, artwork, showdown]
       : [animatedFront, front, artwork, showdown];
