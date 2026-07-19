@@ -341,6 +341,12 @@ export function levelUpSurvivors(party: RunPokemon[], levels = LEVELS_PER_STAGE)
   }));
 }
 
+export function rotatePartyToLead(party: RunPokemon[], leadIndex: number): RunPokemon[] {
+  if (!Number.isInteger(leadIndex) || leadIndex < 0 || leadIndex >= party.length) return party;
+  if (leadIndex === 0) return [...party];
+  return [party[leadIndex], ...party.slice(0, leadIndex), ...party.slice(leadIndex + 1)];
+}
+
 export function createStageChallenge(
   stage: number,
   partySize: number,

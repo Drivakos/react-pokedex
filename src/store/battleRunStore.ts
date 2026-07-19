@@ -38,6 +38,7 @@ import {
   isCheckpointStage,
   isFinalStage,
   levelUpSurvivors,
+  rotatePartyToLead,
 } from '../utils/battle-run-rules';
 import { canSubmitMove, canSubmitSwitch } from '../utils/battle-request-rules';
 import { getBattleAiProfile } from '../utils/battle-ai-profile';
@@ -104,6 +105,7 @@ interface BattleRunStore {
   lastReward: RunRewardSummary | null;
   startRun: () => void;
   chooseStarter: (pokemon: RunPokemon) => void;
+  chooseLead: (index: number) => void;
   selectRoute: (routeId: RunRouteId) => void;
   chooseUpgrade: (upgradeId: RunUpgradeId) => void;
   chooseMove: (slot: number) => void;
@@ -311,7 +313,7 @@ export const useBattleRunStore = create<BattleRunStore>((set, get) => {
         upgradeChoices: [],
         snapshot: null,
         battleLog: [],
-        phase: 'route-select',
+        phase: party.length > 1 ? 'lead-select' : 'route-select',
       };
     });
   };
@@ -391,6 +393,15 @@ export const useBattleRunStore = create<BattleRunStore>((set, get) => {
         party,
         draftChoices: [],
         ...encounter,
+        phase: 'route-select',
+      });
+    },
+
+    chooseLead: index => {
+      const current = get();
+      if (current.phase !== 'lead-select' || !Number.isInteger(index) || index < 0 || index >= current.party.length) return;
+      set({
+        party: rotatePartyToLead(current.party, index),
         phase: 'route-select',
       });
     },

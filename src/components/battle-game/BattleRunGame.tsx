@@ -959,9 +959,85 @@ function VersusScreen() {
   );
 }
 
+function LeadSelectionScreen() {
+  const stage = useBattleRunStore(state => state.stage);
+  const party = useBattleRunStore(state => state.party);
+  const chooseLead = useBattleRunStore(state => state.chooseLead);
+  const sector = getRunSector(stage);
+
+  return (
+    <section className="relative mx-auto max-w-5xl">
+      <div className="mb-7 text-center">
+        <p className="text-[10px] font-black uppercase tracking-[0.22em] text-blue-700">Stage {stage} formation</p>
+        <h2 className="mt-1 text-3xl font-black text-slate-950 sm:text-4xl">Choose your lead Pokémon</h2>
+        <p className="mx-auto mt-2 max-w-2xl text-slate-600">
+          Pick who enters battle first. The rest of your team keeps its current rotation, and opponent scouting opens after your lead is locked in.
+        </p>
+      </div>
+
+      <div className="mb-5 flex items-center justify-between gap-4 rounded-2xl border border-blue-200 bg-blue-50/90 px-4 py-3 text-blue-950 shadow-sm">
+        <span className="flex min-w-0 items-center gap-3">
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-600 text-white shadow-md shadow-blue-200">
+            <ArrowLeftRight className="h-5 w-5" />
+          </span>
+          <span>
+            <span className="block text-[9px] font-black uppercase tracking-[0.18em] text-blue-600">Rotation order</span>
+            <strong className="block text-sm sm:text-base">Lead selection comes before route and opponent selection</strong>
+          </span>
+        </span>
+        <span className="hidden shrink-0 rounded-full bg-white px-3 py-1.5 text-xs font-black text-blue-700 shadow-sm sm:block">
+          {sector.title}
+        </span>
+      </div>
+
+      <div className={`grid gap-4 ${party.length >= 4 ? 'md:grid-cols-2 xl:grid-cols-3' : 'sm:grid-cols-2 lg:grid-cols-3'}`}>
+        {party.map((pokemon, index) => (
+          <button
+            key={pokemon.species}
+            type="button"
+            onClick={() => chooseLead(index)}
+            className="group overflow-hidden rounded-2xl border border-slate-200 bg-white text-left shadow-lg transition duration-200 hover:-translate-y-1 hover:border-blue-400 hover:shadow-xl focus:outline-none focus:ring-4 focus:ring-blue-200"
+          >
+            <div className="relative flex h-40 items-center justify-center overflow-hidden bg-gradient-to-br from-blue-100 via-white to-emerald-100">
+              <span className="absolute left-3 top-3 rounded-full bg-slate-950/80 px-2.5 py-1 text-[10px] font-black uppercase tracking-wider text-white">
+                Slot {index + 1}
+              </span>
+              {index === 0 && (
+                <span className="absolute right-3 top-3 rounded-full bg-blue-600 px-2.5 py-1 text-[10px] font-black uppercase tracking-wider text-white shadow-sm">
+                  Current lead
+                </span>
+              )}
+              <BattlePokemonImage
+                id={pokemon.id}
+                species={pokemon.species}
+                variant="artwork"
+                className="h-36 w-36 drop-shadow-xl transition duration-200 group-hover:scale-105"
+              />
+            </div>
+            <div className="p-4">
+              <div className="flex items-start justify-between gap-3">
+                <span className="min-w-0">
+                  <strong className="block truncate text-xl text-slate-950">{pokemon.species}</strong>
+                  <span className="text-xs font-black text-slate-400">LV. {pokemon.level} · BST {pokemon.bst}</span>
+                </span>
+                <TypeBadges types={pokemon.types} compact />
+              </div>
+              <div className="mt-3 flex items-center justify-between rounded-xl bg-blue-600 px-3.5 py-2.5 text-sm font-black text-white transition-colors group-hover:bg-blue-700">
+                {index === 0 ? 'Keep as lead' : 'Send out first'}
+                <ChevronRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+              </div>
+            </div>
+          </button>
+        ))}
+      </div>
+    </section>
+  );
+}
+
 function RouteSelectionScreen() {
   const stage = useBattleRunStore(state => state.stage);
   const selectRoute = useBattleRunStore(state => state.selectRoute);
+  const party = useBattleRunStore(state => state.party);
   const upgrades = useBattleRunStore(state => state.upgrades);
   const activeChallenge = useBattleRunStore(state => state.activeChallenge);
   const contractStreak = useBattleRunStore(state => state.contractStreak);
@@ -985,6 +1061,21 @@ function RouteSelectionScreen() {
           {sector.objective} Higher-risk routes strengthen the opposing team, but multiply every point earned from the battle and its contract.
         </p>
       </div>
+
+      {party[0] && (
+        <div className="mx-auto mb-4 flex max-w-4xl items-center justify-between gap-4 rounded-2xl border border-blue-200 bg-blue-50/90 px-4 py-3 text-blue-950 shadow-sm">
+          <span className="flex min-w-0 items-center gap-3">
+            <span className="h-12 w-12 shrink-0 overflow-hidden rounded-full bg-white shadow-sm">
+              <BattlePokemonImage id={party[0].id} species={party[0].species} variant="icon" className="h-full w-full" />
+            </span>
+            <span className="min-w-0">
+              <span className="block text-[9px] font-black uppercase tracking-[0.18em] text-blue-600">Lead locked</span>
+              <strong className="block truncate text-base">{party[0].species} will enter first</strong>
+            </span>
+          </span>
+          <PartyStrip party={party} />
+        </div>
+      )}
 
       {trainer && (
         <div className="mx-auto mb-4 flex max-w-4xl items-center gap-4 overflow-hidden rounded-2xl border border-[var(--battle-panel-border)] bg-[var(--battle-panel-surface)] px-4 text-[var(--battle-panel-title)] shadow-lg shadow-slate-200/60">
@@ -1067,7 +1158,7 @@ function RouteSelectionScreen() {
               key={route.id}
               type="button"
               onClick={() => selectRoute(route.id)}
-              className="group overflow-hidden rounded-2xl border border-slate-200 bg-white text-left shadow-lg transition duration-200 hover:-translate-y-1 hover:border-slate-400 hover:shadow-xl focus:outline-none focus:ring-4 focus:ring-red-200"
+              className="group flex h-full flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white text-left shadow-lg transition duration-200 hover:-translate-y-1 hover:border-slate-400 hover:shadow-xl focus:outline-none focus:ring-4 focus:ring-red-200"
             >
               <div className={`flex items-center justify-between border-b p-4 ${accent}`}>
                 <span className="flex items-center gap-3">
@@ -1079,9 +1170,9 @@ function RouteSelectionScreen() {
                 </span>
                 <span className="rounded-full bg-white/80 px-3 py-1 text-sm font-black text-slate-800 shadow-sm">x{route.scoreMultiplier}</span>
               </div>
-              <div className="p-5">
+              <div className="flex flex-1 flex-col p-5">
                 <p className="text-xs font-black uppercase tracking-[0.16em] text-slate-400">{route.label}</p>
-                <p className="mt-2 min-h-10 text-sm leading-relaxed text-slate-600">{routeDescription}</p>
+                <p className="mt-2 min-h-10 text-sm leading-relaxed text-slate-600 lg:min-h-[4.5rem]">{routeDescription}</p>
 
                 {finalStage ? (
                   <div className="mt-4 flex items-center justify-between gap-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5 text-amber-950">
@@ -1398,7 +1489,7 @@ export default function BattleRunGame() {
   }, [seed, startRun]);
 
   useEffect(() => {
-    if (phase === 'starter-draft' || phase === 'reward-draft' || phase === 'route-select') {
+    if (phase === 'starter-draft' || phase === 'reward-draft' || phase === 'lead-select' || phase === 'route-select') {
       prewarmShowdownBattleWorker();
       preloadMoveAnimationAssets();
     }
@@ -1529,6 +1620,7 @@ export default function BattleRunGame() {
       )}
 
       {phase === 'upgrade-draft' && <UpgradeDraftScreen />}
+      {phase === 'lead-select' && <LeadSelectionScreen />}
       {phase === 'route-select' && <RouteSelectionScreen />}
       {phase === 'preparing-battle' && <VersusScreen />}
       {phase === 'battle' && <BattleArena />}

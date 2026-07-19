@@ -30,6 +30,7 @@ import {
   levelForStage,
   levelUpSurvivors,
   recruitmentChoiceCount,
+  rotatePartyToLead,
   targetBstForStage,
 } from '../battle-run-rules';
 import type { RunPokemon } from '../../types/battle-run';
@@ -276,6 +277,15 @@ describe('battle run rules', () => {
     const leveled = levelUpSurvivors(party);
     expect(leveled[0].level).toBe(100);
     expect(party[0].level).toBe(99);
+  });
+
+  it('rotates a selected Pokémon into the lead slot without changing the original party', () => {
+    const party = [pokemon('Eevee'), pokemon('Pikachu'), pokemon('Bulbasaur')];
+    const rotated = rotatePartyToLead(party, 2);
+
+    expect(rotated.map(member => member.species)).toEqual(['Bulbasaur', 'Eevee', 'Pikachu']);
+    expect(party.map(member => member.species)).toEqual(['Eevee', 'Pikachu', 'Bulbasaur']);
+    expect(rotatePartyToLead(party, 99)).toBe(party);
   });
 
   it('generates repeatable random sequences from the same seed', () => {

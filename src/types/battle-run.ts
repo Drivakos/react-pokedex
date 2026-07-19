@@ -1,5 +1,6 @@
 export type BattleRunPhase =
   | 'starter-draft'
+  | 'lead-select'
   | 'route-select'
   | 'preparing-battle'
   | 'battle'
