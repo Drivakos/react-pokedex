@@ -1,4 +1,4 @@
-import { memo, useEffect, useRef, useState } from 'react';
+import { memo, useCallback, useEffect, useRef, useState } from 'react';
 import {
   ArrowLeftRight,
   Bot,
@@ -49,6 +49,7 @@ import {
 import { BattlePokemonImage } from './BattlePokemonImage';
 import { MoveBattleEffect } from './MoveBattleEffect';
 import { ShowdownStage } from './ShowdownStage';
+import { loadShowdownClient } from './showdown-client';
 import { TrainerImage } from './TrainerImage';
 import { getRunArenaTheme } from './arena-themes';
 import { preloadMoveAnimationAssets } from './move-animation-recipes';
@@ -784,8 +785,10 @@ function BattleArena() {
   const [displaySnapshot, setDisplaySnapshot] = useState(snapshot);
   const [activeVisual, setActiveVisual] = useState<BattleVisualEvent | null>(null);
   // Adopt Showdown's BattleScene for the arena; fall back to the stylized fx arena
-  // if its client bundle can't load.
+  // if its client bundle can't load. Memoized so the scene isn't torn down and
+  // recreated on every re-render (e.g. hovering a move to inspect it).
   const [showdownFailed, setShowdownFailed] = useState(false);
+  const handleShowdownError = useCallback(() => setShowdownFailed(true), []);
   const [inspectedMoveSlot, setInspectedMoveSlot] = useState<number | null>(null);
   const nextVisual = visualEvents[0];
   const controlsLocked = activeVisual !== null || visualEvents.length > 0;
@@ -829,7 +832,7 @@ function BattleArena() {
     <div className="mx-auto grid w-full max-w-7xl gap-3 xl:grid-cols-[minmax(0,1fr)_340px] xl:gap-5">
       <section className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-lg sm:rounded-[2rem] sm:shadow-2xl">
         <div className="battle-stage relative h-[min(46svh,360px)] min-h-[310px] overflow-hidden bg-slate-950 sm:h-[clamp(430px,52svh,500px)]">
-          {!showdownFailed && <ShowdownStage onLoadError={() => setShowdownFailed(true)} />}
+          {!showdownFailed && <ShowdownStage onLoadError={handleShowdownError} />}
 
           {showdownFailed && (
             <>
@@ -1736,6 +1739,11 @@ function RunCompleteScreen({
 }
 
 export default function BattleRunGame() {
+  // Warm the Showdown client bundle while the player is still on the draft/route
+  // screens, so the first battle streams live instead of buffering a cold load.
+  useEffect(() => {
+    void loadShowdownClient().catch(() => undefined);
+  }, []);
   const phase = useBattleRunStore(state => state.phase);
   const stage = useBattleRunStore(state => state.stage);
   const score = useBattleRunStore(state => state.score);

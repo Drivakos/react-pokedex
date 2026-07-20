@@ -74,7 +74,20 @@ export function loadShowdownClient(): Promise<ShowdownGlobals> {
       w.Dex.resourcePrefix = `${window.location.origin}/ps/`;
       w.Dex.fxPrefix = `${window.location.origin}/ps/fx/`;
     }
-    w.BattleSound?.setMute?.(true);
+    // Hard-disable the sound module: browser autoplay policy makes audio.play()
+    // reject, and those rejections fire from inside animSummon/animFaint, which can
+    // abort sprite creation. No-op every entry point so animations run cleanly.
+    if (w.BattleSound) {
+      w.BattleSound.setMute?.(true);
+      w.BattleSound.muted = true;
+      const noop = () => undefined;
+      w.BattleSound.playEffect = noop;
+      w.BattleSound.playSound = noop;
+      w.BattleSound.loadEffect = noop;
+      w.BattleSound.loadBgm = () => ({ play: noop, stop: noop, resume: noop, pause: noop, setVolume: noop });
+      w.BattleSound.playBgm = noop;
+      w.BattleSound.setBgm = noop;
+    }
 
     return { Battle: w.Battle, jQuery: w.jQuery };
   })();

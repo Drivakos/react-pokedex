@@ -62,9 +62,25 @@ let session: BattleSession | null = null;
 let random: (() => number) | null = null;
 
 // Raw Showdown protocol feed — a streaming side channel (not React state) so the
-// Showdown BattleScene can animate turns in order without re-render churn.
+// Showdown BattleScene can animate turns in order without re-render churn. The
+// current battle's chunks are retained and replayed to any late subscriber, so a
+// scene that mounts after the opening |switch| lines still receives the full log
+// (the SIM protocol is one ordered sequence from |start| onward).
 const battleProtocolListeners = new Set<(chunk: string) => void>();
+let currentBattleProtocol: string[] = [];
+
+function resetBattleProtocol(): void {
+  currentBattleProtocol = [];
+}
+
+function emitBattleProtocol(chunk: string): void {
+  currentBattleProtocol.push(chunk);
+  battleProtocolListeners.forEach(listener => listener(chunk));
+}
+
 export function subscribeBattleProtocol(listener: (chunk: string) => void): () => void {
+  // Replay everything so far so the subscriber never misses the battle opening.
+  for (const chunk of currentBattleProtocol) listener(chunk);
   battleProtocolListeners.add(listener);
   return () => battleProtocolListeners.delete(listener);
 }
@@ -294,9 +310,10 @@ export const useBattleRunStore = create<BattleRunStore>((set, get) => {
     });
 
     session?.dispose();
+    resetBattleProtocol();
     set(current => ({ battleNonce: current.battleNonce + 1 }));
     const battleSession = new ShowdownBattleWorkerSession(state.party, enemyParty, state.stage, {
-      onProtocol: chunk => battleProtocolListeners.forEach(listener => listener(chunk)),
+      onProtocol: chunk => emitBattleProtocol(chunk),
       onSnapshot: snapshot => set({ snapshot, phase: 'battle' }),
       onDecision: decision => set({ decision, phase: 'battle', error: null }),
       onLog: message => set(current => ({
