@@ -1,3 +1,23 @@
+# [1.6.0](https://github.com/Drivakos/react-pokedex/compare/v1.5.0...v1.6.0) (2026-07-20)
+
+
+### Bug Fixes
+
+* **battle:** create Showdown scene deterministically on opening completion ([5a5ac38](https://github.com/Drivakos/react-pokedex/commit/5a5ac38de0bfdad6dff66db4714bc89420f118ad))
+* **battle:** remove mobile contract-progress overlay from battle scene ([af8497a](https://github.com/Drivakos/react-pokedex/commit/af8497af7f6e86c0acf9105998b765f739fd14e0))
+* **battle:** render scene opening without waiting for first move ([ec53572](https://github.com/Drivakos/react-pokedex/commit/ec53572a4ec1860f5c9b14e5425c1058ae58761a))
+* **battle:** render Showdown sprites in embed; fix hover-restart ([4908f3f](https://github.com/Drivakos/react-pokedex/commit/4908f3f24308f39381f4e961051cb269f7d3c5ab))
+* **lint:** remove unused RECOVERY constant and has() helper ([fd9d8ec](https://github.com/Drivakos/react-pokedex/commit/fd9d8ec575904aeed79272545b386ec57e0db76f))
+
+
+### Features
+
+* add battle logs ([aba04eb](https://github.com/Drivakos/react-pokedex/commit/aba04eb75fcb79ff885993148e58ceaec344212e))
+* **battle:** expand self-hosted move fx sprites and remap recipes ([d1070a7](https://github.com/Drivakos/react-pokedex/commit/d1070a7abf58ab9d9fa36ab9d78b98c749f5d949))
+* **battle:** move Showdown log to its own panel; square-edge battle cards ([c6ae7f7](https://github.com/Drivakos/react-pokedex/commit/c6ae7f7354341bbc01ecbe1bc9902eac81a0461d))
+* **battle:** stream worker protocol into Showdown BattleScene (spike) ([bf6282b](https://github.com/Drivakos/react-pokedex/commit/bf6282b982c5e959a006c8b7323029430296e57a))
+* competitive movesets by archetype and grounded battle sprites ([6ceeee9](https://github.com/Drivakos/react-pokedex/commit/6ceeee9909aed6e1690a69a2381004d3d808dd9e))
+
 # [1.5.0](https://github.com/Drivakos/react-pokedex/compare/v1.4.1...v1.5.0) (2026-07-19)
 
 
