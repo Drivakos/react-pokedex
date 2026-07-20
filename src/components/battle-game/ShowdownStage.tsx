@@ -69,23 +69,58 @@ export function ShowdownStage({
     const globals = globalsRef.current;
     if (!globals || !frameRef.current || !logEl) return;
 
+    const store = useBattleRunStore.getState();
+    // The Battle constructor (and destroy) fire the subscription synchronously with
+    // an empty queue; `live` suppresses those so only real playback drives the gate.
+    let live = false;
+    // On (re)subscribe the store replays the whole buffered backlog synchronously.
+    // The opening's team-preview chunk is all instant lines, so the queue drains
+    // between it and the switch-in chunk — a transient 'atqueueend' that would
+    // falsely read as "caught up". Suppress reports until the backlog is fully in,
+    // then evaluate the real queue state once.
+    let replaying = false;
+    // Report whether the scene's animation queue is drained so the store can hold
+    // the next decision / battle result until the on-screen animation catches up.
+    const reportIdle = (idle: boolean) => {
+      if (live && !replaying) store.reportBattleScenePlayback(idle);
+    };
+
+    store.attachBattleScene();
     const battle = new globals.Battle({
       id: 'battle-run',
       $frame: globals.jQuery(frameRef.current),
       $logFrame: globals.jQuery(logEl),
       paused: false,
       autoresize: false, // we scale to the arena container ourselves, not the window
+      // 'atqueueend'/'paused' → the queue has drained (idle); 'playing'/'turn' → the
+      // scene is still animating. 'ended'/'callback'/'error' don't change idleness.
+      subscription: (state: string) => {
+        if (state === 'atqueueend' || state === 'paused') reportIdle(true);
+        else if (state === 'playing' || state === 'turn') reportIdle(false);
+      },
     });
     battle.setMute?.(true);
     battleRef.current = battle;
+    live = true; // construction finished — playback signals are now meaningful
 
+    replaying = true;
     const unsubscribe = subscribeBattleProtocol(chunk => {
       if (battleRef.current !== battle) return;
       feedShowdownProtocol(battle, chunk);
+      // The subscription's 'playing' signal doesn't fire on add(); read the queue
+      // state directly so a freshly-fed turn registers as busy before its decision
+      // is processed in the same synchronous batch. (No-op while replaying.)
+      reportIdle(Boolean(battle.atQueueEnd));
     });
+    // Backlog fully fed: now report the real queue state (busy if the opening's
+    // switch-ins are still animating, so the turn-1 decision stays held).
+    replaying = false;
+    reportIdle(Boolean(battle.atQueueEnd));
 
     return () => {
+      live = false;
       unsubscribe();
+      store.detachBattleScene();
       try {
         battle.destroy?.();
       } catch {

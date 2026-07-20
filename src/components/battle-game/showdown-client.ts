@@ -124,11 +124,18 @@ export function loadShowdownClient(): Promise<ShowdownGlobals> {
   return loadPromise;
 }
 
-// Feed a raw protocol chunk into a live Battle, skipping side-channel lines
-// (choice requests / errors) that aren't renderable battle events.
+// Feed a raw protocol chunk into a live Battle, skipping:
+//  - side-channel lines (choice requests / errors) that aren't renderable events;
+//  - the team-preview block (|clearpoke, |poke|…, |teampreview). gen9customgame
+//    always opens with team preview, which makes the scene flash every party member
+//    for a beat before the battle starts. We drop it so the scene goes straight to
+//    the lead switch-ins; the |teamsize lines that follow keep the ball indicators
+//    correct. (The worker's own client still receives the full protocol, so battle
+//    state is unaffected — this only shapes what the scene renders.)
 export function feedShowdownProtocol(battle: Any, chunk: string): void {
   for (const line of chunk.split('\n')) {
     if (!line || line.startsWith('|request') || line.startsWith('|error')) continue;
+    if (line.startsWith('|clearpoke') || line.startsWith('|poke|') || line.startsWith('|teampreview')) continue;
     battle.add(line);
   }
 }

@@ -794,13 +794,18 @@ function BattleArena() {
   const [logEl, setLogEl] = useState<HTMLDivElement | null>(null);
   const [inspectedMoveSlot, setInspectedMoveSlot] = useState<number | null>(null);
   const nextVisual = visualEvents[0];
-  const controlsLocked = activeVisual !== null || visualEvents.length > 0;
+  // With the live Showdown scene, pacing is driven by the scene's real animation
+  // clock (the store holds the decision as 'wait' until the queue drains), so the
+  // guessed-duration visual-event queue is only used for the fallback renderer.
+  const controlsLocked = showdownFailed && (activeVisual !== null || visualEvents.length > 0);
   const inspectedMove = decision.kind === 'move'
     ? decision.moves.find(move => move.slot === inspectedMoveSlot)
     : undefined;
 
   useEffect(() => {
-    if (!nextVisual) return undefined;
+    // The Showdown scene animates these events itself; only the fallback arena
+    // replays them through this fixed-duration queue.
+    if (!showdownFailed || !nextVisual) return undefined;
     const event = nextVisual;
     setActiveVisual(event);
     setDisplaySnapshot(event.snapshot);
@@ -816,11 +821,17 @@ function BattleArena() {
       setActiveVisual(null);
     }, duration);
     return () => window.clearTimeout(timer);
-  }, [consumeVisualEvent, nextVisual]);
+  }, [consumeVisualEvent, nextVisual, showdownFailed]);
 
   useEffect(() => {
+    // In Showdown mode the HP/turn readouts follow the live snapshot directly; the
+    // fallback arena instead freezes the readout on the visual event being replayed.
+    if (!showdownFailed) {
+      setDisplaySnapshot(snapshot);
+      return;
+    }
     if (!activeVisual && visualEvents.length === 0) setDisplaySnapshot(snapshot);
-  }, [activeVisual, snapshot, visualEvents.length]);
+  }, [showdownFailed, activeVisual, snapshot, visualEvents.length]);
 
   useEffect(() => {
     if (decision.kind !== 'move') setInspectedMoveSlot(null);

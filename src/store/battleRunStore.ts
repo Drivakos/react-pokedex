@@ -84,6 +84,18 @@ export function subscribeBattleProtocol(listener: (chunk: string) => void): () =
   battleProtocolListeners.add(listener);
   return () => battleProtocolListeners.delete(listener);
 }
+
+// --- Showdown scene playback gate ------------------------------------------
+// The worker resolves each turn instantly and hands us the next decision (and the
+// final result) long before the Showdown scene — which animates in real time —
+// catches up. Releasing them immediately makes the move UI reappear mid-animation
+// and cuts the final KO off abruptly. So while a live scene is attached we buffer
+// the next decision / end result and release them only when the scene reports its
+// animation queue has drained ('atqueueend'). Without a live scene (fallback
+// renderer) the gate is inactive and the old visual-event pacing applies.
+let sceneGateActive = false;
+let sceneIdle = true;
+let bufferedDecision: BattleDecision | null = null;
 let pendingBattleResult: BattleResult | null = null;
 const BEST_SCORE_KEY = 'battle-run-best-score';
 
@@ -150,6 +162,11 @@ interface BattleRunStore {
   rerollDraft: () => void;
   replacePartyMember: (index: number) => void;
   consumeVisualEvent: (id: number) => void;
+  // Wired up by the live Showdown scene so battle pacing follows the real
+  // on-screen animation rather than the (instant) worker / guessed durations.
+  attachBattleScene: () => void;
+  detachBattleScene: () => void;
+  reportBattleScenePlayback: (idle: boolean) => void;
 }
 
 function newSeed(): string {
@@ -183,7 +200,21 @@ function prepareStageEncounter(
 }
 
 export const useBattleRunStore = create<BattleRunStore>((set, get) => {
+  // Flush a decision that was held back while the scene animated the previous turn.
+  const releaseBufferedDecision = () => {
+    if (!bufferedDecision) return;
+    const decision = bufferedDecision;
+    bufferedDecision = null;
+    set({ decision, phase: 'battle', error: null });
+  };
+
   const finishBattle = (result: BattleResult) => {
+    // The scene gate and consumeVisualEvent can both race here at battle end;
+    // pendingBattleResult is our single-fire guard (cleared on the first call).
+    if (pendingBattleResult === null && get().phase !== 'battle') return;
+    // Any held-back turn decision is moot once the battle is over.
+    bufferedDecision = null;
+    sceneGateActive = false;
     const current = get();
     const rng = random ?? Math.random;
     const fainted = new Set(result.faintedPlayerSpecies);
@@ -315,7 +346,17 @@ export const useBattleRunStore = create<BattleRunStore>((set, get) => {
     const battleSession = new ShowdownBattleWorkerSession(state.party, enemyParty, state.stage, {
       onProtocol: chunk => emitBattleProtocol(chunk),
       onSnapshot: snapshot => set({ snapshot, phase: 'battle' }),
-      onDecision: decision => set({ decision, phase: 'battle', error: null }),
+      onDecision: decision => {
+        // Hold an actionable decision until the scene has finished animating the
+        // turn it belongs to; a bare 'wait' can pass straight through to lock the UI.
+        if (sceneGateActive && !sceneIdle && decision.kind !== 'wait') {
+          bufferedDecision = decision;
+          set({ decision: emptyDecision, phase: 'battle', error: null });
+        } else {
+          bufferedDecision = null;
+          set({ decision, phase: 'battle', error: null });
+        }
+      },
       onLog: message => set(current => ({
         battleLog: [...current.battleLog, message].slice(-12),
       })),
@@ -326,7 +367,11 @@ export const useBattleRunStore = create<BattleRunStore>((set, get) => {
       onEnd: result => {
         if (session === battleSession) session = null;
         pendingBattleResult = result;
-        if (get().visualEvents.length === 0) finishBattle(result);
+        // With a live scene, wait for it to finish animating the final KO
+        // ('atqueueend' → reportBattleScenePlayback(true)); otherwise fall back to
+        // the visual-event queue draining.
+        const finishNow = sceneGateActive ? sceneIdle : get().visualEvents.length === 0;
+        if (finishNow) finishBattle(result);
       },
     });
     session = battleSession;
@@ -559,6 +604,32 @@ export const useBattleRunStore = create<BattleRunStore>((set, get) => {
         return { visualEvents };
       });
       if (completedResult) finishBattle(completedResult);
+    },
+
+    attachBattleScene: () => {
+      sceneGateActive = true;
+      // The scene is about to (re)play its buffered opening, so treat it as busy and
+      // hold any decision that already arrived until the opening finishes animating.
+      sceneIdle = false;
+      const current = get().decision;
+      bufferedDecision = current.kind === 'wait' ? null : current;
+      if (bufferedDecision) set({ decision: emptyDecision });
+    },
+
+    detachBattleScene: () => {
+      sceneGateActive = false;
+      sceneIdle = true;
+      bufferedDecision = null;
+    },
+
+    reportBattleScenePlayback: idle => {
+      if (!sceneGateActive) return;
+      sceneIdle = idle;
+      if (!idle) return;
+      // Queue drained: the on-screen animation has caught up — release the held
+      // turn decision and, if the battle already ended, finish it now.
+      releaseBufferedDecision();
+      if (pendingBattleResult) finishBattle(pendingBattleResult);
     },
   };
 });
