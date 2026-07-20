@@ -60,6 +60,14 @@ interface BattleSession {
 
 let session: BattleSession | null = null;
 let random: (() => number) | null = null;
+
+// Raw Showdown protocol feed — a streaming side channel (not React state) so the
+// Showdown BattleScene can animate turns in order without re-render churn.
+const battleProtocolListeners = new Set<(chunk: string) => void>();
+export function subscribeBattleProtocol(listener: (chunk: string) => void): () => void {
+  battleProtocolListeners.add(listener);
+  return () => battleProtocolListeners.delete(listener);
+}
 let pendingBattleResult: BattleResult | null = null;
 const BEST_SCORE_KEY = 'battle-run-best-score';
 
@@ -108,6 +116,8 @@ interface BattleRunStore {
   decision: BattleDecision;
   battleLog: string[];
   visualEvents: BattleVisualEvent[];
+  // Bumped each time a new battle begins, so a Showdown scene can reset itself.
+  battleNonce: number;
   error: string | null;
   lastReward: RunRewardSummary | null;
   startRun: () => void;
@@ -284,7 +294,9 @@ export const useBattleRunStore = create<BattleRunStore>((set, get) => {
     });
 
     session?.dispose();
+    set(current => ({ battleNonce: current.battleNonce + 1 }));
     const battleSession = new ShowdownBattleWorkerSession(state.party, enemyParty, state.stage, {
+      onProtocol: chunk => battleProtocolListeners.forEach(listener => listener(chunk)),
       onSnapshot: snapshot => set({ snapshot, phase: 'battle' }),
       onDecision: decision => set({ decision, phase: 'battle', error: null }),
       onLog: message => set(current => ({
@@ -354,6 +366,7 @@ export const useBattleRunStore = create<BattleRunStore>((set, get) => {
     decision: emptyDecision,
     battleLog: [],
     visualEvents: [],
+    battleNonce: 0,
     error: null,
     lastReward: null,
 

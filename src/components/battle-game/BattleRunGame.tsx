@@ -48,6 +48,7 @@ import {
 } from '../../utils/battle-run-rules';
 import { BattlePokemonImage } from './BattlePokemonImage';
 import { MoveBattleEffect } from './MoveBattleEffect';
+import { ShowdownStage } from './ShowdownStage';
 import { TrainerImage } from './TrainerImage';
 import { getRunArenaTheme } from './arena-themes';
 import { preloadMoveAnimationAssets } from './move-animation-recipes';
@@ -782,6 +783,9 @@ function BattleArena() {
   const availableSwitches = decision.switches.filter(choice => !choice.active && !choice.fainted);
   const [displaySnapshot, setDisplaySnapshot] = useState(snapshot);
   const [activeVisual, setActiveVisual] = useState<BattleVisualEvent | null>(null);
+  // Adopt Showdown's BattleScene for the arena; fall back to the stylized fx arena
+  // if its client bundle can't load.
+  const [showdownFailed, setShowdownFailed] = useState(false);
   const [inspectedMoveSlot, setInspectedMoveSlot] = useState<number | null>(null);
   const nextVisual = visualEvents[0];
   const controlsLocked = activeVisual !== null || visualEvents.length > 0;
@@ -825,51 +829,58 @@ function BattleArena() {
     <div className="mx-auto grid w-full max-w-7xl gap-3 xl:grid-cols-[minmax(0,1fr)_340px] xl:gap-5">
       <section className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-lg sm:rounded-[2rem] sm:shadow-2xl">
         <div className="battle-stage relative h-[min(46svh,360px)] min-h-[310px] overflow-hidden bg-slate-950 sm:h-[clamp(430px,52svh,500px)]">
-          <div className={`pointer-events-none absolute inset-x-0 top-0 h-[47%] bg-gradient-to-b ${arenaTheme.skyClass}`} />
-          <div className={`pointer-events-none absolute left-[24%] -top-[12%] h-[56%] w-16 -rotate-12 blur-xl ${arenaTheme.beamClass}`} />
-          <div className={`pointer-events-none absolute right-[22%] -top-[12%] h-[56%] w-16 rotate-12 blur-xl ${arenaTheme.beamClass}`} />
-          <div className={`pointer-events-none absolute inset-x-0 top-[39%] h-16 shadow-[0_10px_30px_rgba(15,23,42,0.35)] ${arenaTheme.horizonClass}`} />
-          <div className="pointer-events-none absolute inset-x-0 top-[40%] flex h-12 items-center justify-around opacity-60">
-            {Array.from({ length: 14 }, (_, index) => <span key={index} className={`h-2 w-2 rounded-full ${arenaTheme.lightClass}`} />)}
-          </div>
-          <div className={`pointer-events-none absolute inset-x-0 bottom-0 h-[56%] bg-gradient-to-b ${arenaTheme.fieldClass}`} />
-          <div className="battle-field-grid pointer-events-none absolute inset-x-0 bottom-0 h-[54%] opacity-30" />
+          {!showdownFailed && <ShowdownStage onLoadError={() => setShowdownFailed(true)} />}
 
-          <div className={`pointer-events-none absolute right-[7%] top-[48%] h-16 w-[38%] rounded-[50%] border-2 ${arenaTheme.platformClass}`} />
-          <div className={`pointer-events-none absolute bottom-[8%] left-[3%] h-24 w-[48%] rounded-[50%] border-2 ${arenaTheme.platformClass}`} />
-          <div className={`pointer-events-none absolute inset-0 z-[2] border-[3px] ${arenaTheme.routeFrameClass}`} />
+          {showdownFailed && (
+            <>
+              <div className={`pointer-events-none absolute inset-x-0 top-0 h-[47%] bg-gradient-to-b ${arenaTheme.skyClass}`} />
+              <div className={`pointer-events-none absolute left-[24%] -top-[12%] h-[56%] w-16 -rotate-12 blur-xl ${arenaTheme.beamClass}`} />
+              <div className={`pointer-events-none absolute right-[22%] -top-[12%] h-[56%] w-16 rotate-12 blur-xl ${arenaTheme.beamClass}`} />
+              <div className={`pointer-events-none absolute inset-x-0 top-[39%] h-16 shadow-[0_10px_30px_rgba(15,23,42,0.35)] ${arenaTheme.horizonClass}`} />
+              <div className="pointer-events-none absolute inset-x-0 top-[40%] flex h-12 items-center justify-around opacity-60">
+                {Array.from({ length: 14 }, (_, index) => <span key={index} className={`h-2 w-2 rounded-full ${arenaTheme.lightClass}`} />)}
+              </div>
+              <div className={`pointer-events-none absolute inset-x-0 bottom-0 h-[56%] bg-gradient-to-b ${arenaTheme.fieldClass}`} />
+              <div className="battle-field-grid pointer-events-none absolute inset-x-0 bottom-0 h-[54%] opacity-30" />
 
-          <div className="absolute left-2.5 top-2.5 z-20 w-[min(61%,240px)] sm:left-5 sm:top-5 sm:w-[min(52%,260px)]">
-            <HealthPanel key={`opponent-${displaySnapshot?.opponent?.species ?? 'empty'}`} pokemon={displaySnapshot?.opponent ?? null} opponent />
-          </div>
+              <div className={`pointer-events-none absolute right-[7%] top-[48%] h-16 w-[38%] rounded-[50%] border-2 ${arenaTheme.platformClass}`} />
+              <div className={`pointer-events-none absolute bottom-[8%] left-[3%] h-24 w-[48%] rounded-[50%] border-2 ${arenaTheme.platformClass}`} />
+              <div className={`pointer-events-none absolute inset-0 z-[2] border-[3px] ${arenaTheme.routeFrameClass}`} />
+
+              <div className="absolute left-2.5 top-2.5 z-20 w-[min(61%,240px)] sm:left-5 sm:top-5 sm:w-[min(52%,260px)]">
+                <HealthPanel key={`opponent-${displaySnapshot?.opponent?.species ?? 'empty'}`} pokemon={displaySnapshot?.opponent ?? null} opponent />
+              </div>
+
+              <div className="absolute right-[7%] bottom-[41%] z-10 flex h-28 w-[38%] items-end justify-center sm:right-[10%] sm:bottom-[43%] sm:h-40 sm:w-[32%]">
+                {displaySnapshot?.opponent && (
+                  <div className={`relative h-full w-full ${pokemonMotion(activeVisual, 'opponent')}`}>
+                    <BattlePokemonImage id={displaySnapshot.opponent.id} species={displaySnapshot.opponent.species} side="p2" className="h-full w-full drop-shadow-2xl" />
+                  </div>
+                )}
+              </div>
+
+              <div className="absolute bottom-[10%] left-[3%] z-10 flex h-32 w-[39%] items-end justify-center sm:bottom-[9%] sm:left-[8%] sm:h-48 sm:w-[38%]">
+                {displaySnapshot?.player && (
+                  <div className={`relative h-full w-full ${pokemonMotion(activeVisual, 'player')}`}>
+                    <BattlePokemonImage id={displaySnapshot.player.id} species={displaySnapshot.player.species} side="p1" className="h-full w-full drop-shadow-2xl" />
+                  </div>
+                )}
+              </div>
+
+              <div className="absolute bottom-2.5 right-2.5 z-20 w-[56%] max-w-[240px] sm:bottom-5 sm:right-5 sm:w-[48%] sm:max-w-[260px]">
+                <HealthPanel key={`player-${displaySnapshot?.player?.species ?? 'empty'}`} pokemon={displaySnapshot?.player ?? null} />
+              </div>
+
+              <BattleEffect event={activeVisual} />
+            </>
+          )}
+
           {challengeProgress && (
             <div className={`absolute right-2.5 top-10 z-20 w-[34%] rounded-xl border px-2 py-1.5 text-right shadow-lg backdrop-blur sm:hidden ${contractProgressClasses[challengeProgress.status].panel}`}>
               <span className={`block text-[8px] font-black uppercase tracking-wider ${contractProgressClasses[challengeProgress.status].label}`}>{challengeProgress.label}</span>
               <strong className={`mt-0.5 block text-xs ${contractProgressClasses[challengeProgress.status].value}`}>{challengeProgress.metrics.map(metric => metric.value).join(' · ')}</strong>
             </div>
           )}
-
-          <div className="absolute right-[7%] bottom-[41%] z-10 flex h-28 w-[38%] items-end justify-center sm:right-[10%] sm:bottom-[43%] sm:h-40 sm:w-[32%]">
-            {displaySnapshot?.opponent && (
-              <div className={`relative h-full w-full ${pokemonMotion(activeVisual, 'opponent')}`}>
-                <BattlePokemonImage id={displaySnapshot.opponent.id} species={displaySnapshot.opponent.species} side="p2" className="h-full w-full drop-shadow-2xl" />
-              </div>
-            )}
-          </div>
-
-          <div className="absolute bottom-[10%] left-[3%] z-10 flex h-32 w-[39%] items-end justify-center sm:bottom-[9%] sm:left-[8%] sm:h-48 sm:w-[38%]">
-            {displaySnapshot?.player && (
-              <div className={`relative h-full w-full ${pokemonMotion(activeVisual, 'player')}`}>
-                <BattlePokemonImage id={displaySnapshot.player.id} species={displaySnapshot.player.species} side="p1" className="h-full w-full drop-shadow-2xl" />
-              </div>
-            )}
-          </div>
-
-          <div className="absolute bottom-2.5 right-2.5 z-20 w-[56%] max-w-[240px] sm:bottom-5 sm:right-5 sm:w-[48%] sm:max-w-[260px]">
-            <HealthPanel key={`player-${displaySnapshot?.player?.species ?? 'empty'}`} pokemon={displaySnapshot?.player ?? null} />
-          </div>
-
-          <BattleEffect event={activeVisual} />
 
           <div className="absolute right-2.5 top-2.5 z-20 flex items-center gap-1 whitespace-nowrap rounded-full border border-slate-200 bg-white/95 px-2 py-1 text-[7px] font-black text-slate-800 shadow-md backdrop-blur sm:right-5 sm:top-5">
             <span>TURN {displaySnapshot?.turn ?? 0}</span>
