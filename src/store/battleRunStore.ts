@@ -7,14 +7,11 @@ import {
   developPartyPokemon,
   getPartyDevelopmentChoices,
 } from '../services/battle-content.service';
-import { ShowdownBattleWorkerSession } from '../services/showdown-battle-worker.service';
+import { useBattleEngineStore } from './battleEngineStore';
 import { pickOpponentTrainer } from '../components/battle-game/trainer-profiles';
 import type {
-  BattleDecision,
   BattleRunPhase,
   BattleResult,
-  BattleSnapshot,
-  BattleVisualEvent,
   OpponentTrainer,
   RunChallenge,
   RunMilestoneId,
@@ -47,56 +44,14 @@ import {
   levelUpSurvivors,
   rotatePartyToLead,
 } from '../utils/battle-run-rules';
-import { canSubmitMove, canSubmitSwitch } from '../utils/battle-request-rules';
 import { getBattleAiProfile } from '../utils/battle-ai-profile';
 
-const emptyDecision: BattleDecision = { kind: 'wait', moves: [], switches: [], switchingBlocked: false };
-interface BattleSession {
-  start: () => void;
-  chooseMove: (slot: number) => void;
-  chooseSwitch: (slot: number) => void;
-  dispose: () => void;
-}
-
-let session: BattleSession | null = null;
+// The battle itself is run by the reusable battle engine (see battleEngineStore).
+// This store owns only the Battle Run "narrative" around it: the roguelike party,
+// stages, routes, upgrades, rewards, and drafts. It starts each battle through the
+// engine and reacts to the outcome — it never touches the sim directly.
 let random: (() => number) | null = null;
 
-// Raw Showdown protocol feed — a streaming side channel (not React state) so the
-// Showdown BattleScene can animate turns in order without re-render churn. The
-// current battle's chunks are retained and replayed to any late subscriber, so a
-// scene that mounts after the opening |switch| lines still receives the full log
-// (the SIM protocol is one ordered sequence from |start| onward).
-const battleProtocolListeners = new Set<(chunk: string) => void>();
-let currentBattleProtocol: string[] = [];
-
-function resetBattleProtocol(): void {
-  currentBattleProtocol = [];
-}
-
-function emitBattleProtocol(chunk: string): void {
-  currentBattleProtocol.push(chunk);
-  battleProtocolListeners.forEach(listener => listener(chunk));
-}
-
-export function subscribeBattleProtocol(listener: (chunk: string) => void): () => void {
-  // Replay everything so far so the subscriber never misses the battle opening.
-  for (const chunk of currentBattleProtocol) listener(chunk);
-  battleProtocolListeners.add(listener);
-  return () => battleProtocolListeners.delete(listener);
-}
-
-// --- Showdown scene playback gate ------------------------------------------
-// The worker resolves each turn instantly and hands us the next decision (and the
-// final result) long before the Showdown scene — which animates in real time —
-// catches up. Releasing them immediately makes the move UI reappear mid-animation
-// and cuts the final KO off abruptly. So while a live scene is attached we buffer
-// the next decision / end result and release them only when the scene reports its
-// animation queue has drained ('atqueueend'). Without a live scene (fallback
-// renderer) the gate is inactive and the old visual-event pacing applies.
-let sceneGateActive = false;
-let sceneIdle = true;
-let bufferedDecision: BattleDecision | null = null;
-let pendingBattleResult: BattleResult | null = null;
 const BEST_SCORE_KEY = 'battle-run-best-score';
 
 function readBestScore(): number {
@@ -140,33 +95,18 @@ interface BattleRunStore {
   upgradeChoices: RunUpgrade[];
   draftChoices: RunPokemon[];
   pendingRecruit: RunPokemon | null;
-  snapshot: BattleSnapshot | null;
-  decision: BattleDecision;
-  battleLog: string[];
-  visualEvents: BattleVisualEvent[];
-  // Bumped each time a new battle begins, so a Showdown scene can reset itself.
-  battleNonce: number;
-  error: string | null;
   lastReward: RunRewardSummary | null;
   startRun: () => void;
   chooseStarter: (pokemon: RunPokemon) => void;
   chooseLead: (index: number) => void;
   selectRoute: (routeId: RunRouteId) => void;
   chooseUpgrade: (upgradeId: RunUpgradeId) => void;
-  chooseMove: (slot: number) => void;
-  chooseSwitch: (slot: number) => void;
   chooseReward: (pokemon: RunPokemon) => void;
   openPartyDevelopment: () => void;
   closePartyDevelopment: () => void;
   developPartyMember: (partyIndex: number, targetSpecies: string) => void;
   rerollDraft: () => void;
   replacePartyMember: (index: number) => void;
-  consumeVisualEvent: (id: number) => void;
-  // Wired up by the live Showdown scene so battle pacing follows the real
-  // on-screen animation rather than the (instant) worker / guessed durations.
-  attachBattleScene: () => void;
-  detachBattleScene: () => void;
-  reportBattleScenePlayback: (idle: boolean) => void;
 }
 
 function newSeed(): string {
@@ -200,34 +140,20 @@ function prepareStageEncounter(
 }
 
 export const useBattleRunStore = create<BattleRunStore>((set, get) => {
-  // Flush a decision that was held back while the scene animated the previous turn.
-  const releaseBufferedDecision = () => {
-    if (!bufferedDecision) return;
-    const decision = bufferedDecision;
-    bufferedDecision = null;
-    set({ decision, phase: 'battle', error: null });
-  };
-
+  // The reward payout when a battle ends — handed to the engine as its onEnd
+  // callback. The engine guarantees this fires exactly once, after the on-screen
+  // KO animation has finished, so we only decide what the win/loss *means*.
   const finishBattle = (result: BattleResult) => {
-    // The scene gate and consumeVisualEvent can both race here at battle end;
-    // pendingBattleResult is our single-fire guard (cleared on the first call).
-    if (pendingBattleResult === null && get().phase !== 'battle') return;
-    // Any held-back turn decision is moot once the battle is over.
-    bufferedDecision = null;
-    sceneGateActive = false;
     const current = get();
     const rng = random ?? Math.random;
     const fainted = new Set(result.faintedPlayerSpecies);
     const survivingParty = current.party.filter(pokemon => !fainted.has(pokemon.species));
 
-    pendingBattleResult = null;
     if (result.winner !== 'player' || survivingParty.length === 0) {
       set({
         phase: 'game-over',
         party: survivingParty,
         routePreviews: emptyRoutePreviews(),
-        decision: emptyDecision,
-        visualEvents: [],
         lastReward: null,
         activeChallenge: null,
         activeRoute: null,
@@ -237,7 +163,7 @@ export const useBattleRunStore = create<BattleRunStore>((set, get) => {
 
     const baseReward = calculateBattleReward(
       current.stage,
-      current.snapshot?.turn ?? 1,
+      useBattleEngineStore.getState().snapshot?.turn ?? 1,
       current.party.length,
       fainted.size,
       current.activeChallenge,
@@ -299,9 +225,7 @@ export const useBattleRunStore = create<BattleRunStore>((set, get) => {
           recruitmentReward.choiceCount,
         ),
       upgradeChoices,
-      decision: emptyDecision,
       pendingRecruit: null,
-      visualEvents: [],
       lastReward: reward,
       activeChallenge: null,
       activeRoute: null,
@@ -312,7 +236,6 @@ export const useBattleRunStore = create<BattleRunStore>((set, get) => {
   const beginBattle = (route: RunRoute) => {
     const state = get();
     const rng = random ?? Math.random;
-    pendingBattleResult = null;
     const opponentTrainer = state.opponentTrainer ?? pickOpponentTrainer(state.stage, rng);
     const previewedParty = state.routePreviews[route.id];
     const enemyParty = previewedParty.length > 0
@@ -329,55 +252,24 @@ export const useBattleRunStore = create<BattleRunStore>((set, get) => {
       opponentTrainer,
       activeChallenge,
       activeRoute: route,
-      snapshot: null,
-      decision: emptyDecision,
-      battleLog: [
+    });
+
+    // Hand the fight to the reusable engine: it runs the sim, drives the scene,
+    // and calls finishBattle once the on-screen battle is over. We only supply the
+    // two parties, the difficulty (stage), the opening flavor lines, and flip to
+    // the 'battle' phase the moment the fight goes live.
+    useBattleEngineStore.getState().startBattle({
+      playerParty: state.party,
+      enemyParty,
+      level: state.stage,
+      introLog: [
         `${opponentTrainer.title} ${opponentTrainer.name} challenges you!`,
         `Opponent strategy: ${aiProfile.title}. ${aiProfile.description}`,
         ...(bossModifier ? [`Boss rule: ${bossModifier.title}. ${bossModifier.description}`] : []),
       ],
-      visualEvents: [],
-      error: null,
+      onActive: () => set(current => (current.phase === 'preparing-battle' ? { phase: 'battle' } : {})),
+      onEnd: finishBattle,
     });
-
-    session?.dispose();
-    resetBattleProtocol();
-    set(current => ({ battleNonce: current.battleNonce + 1 }));
-    const battleSession = new ShowdownBattleWorkerSession(state.party, enemyParty, state.stage, {
-      onProtocol: chunk => emitBattleProtocol(chunk),
-      onSnapshot: snapshot => set({ snapshot, phase: 'battle' }),
-      onDecision: decision => {
-        // Hold an actionable decision until the scene has finished animating the
-        // turn it belongs to; a bare 'wait' can pass straight through to lock the UI.
-        if (sceneGateActive && !sceneIdle && decision.kind !== 'wait') {
-          bufferedDecision = decision;
-          set({ decision: emptyDecision, phase: 'battle', error: null });
-        } else {
-          bufferedDecision = null;
-          set({ decision, phase: 'battle', error: null });
-        }
-      },
-      onLog: message => set(current => ({
-        battleLog: [...current.battleLog, message].slice(-12),
-      })),
-      onVisual: event => set(current => ({
-        visualEvents: [...current.visualEvents, event].slice(-40),
-      })),
-      onError: message => set({ error: message, phase: 'battle' }),
-      onEnd: result => {
-        if (session === battleSession) session = null;
-        pendingBattleResult = result;
-        // With a live scene, wait for it to finish animating the final KO
-        // ('atqueueend' → reportBattleScenePlayback(true)); otherwise fall back to
-        // the visual-event queue draining.
-        const finishNow = sceneGateActive ? sceneIdle : get().visualEvents.length === 0;
-        if (finishNow) finishBattle(result);
-      },
-    });
-    session = battleSession;
-    window.setTimeout(() => {
-      if (session === battleSession) battleSession.start();
-    }, 900);
   };
 
   const advanceStage = (party: RunPokemon[]) => {
@@ -395,8 +287,6 @@ export const useBattleRunStore = create<BattleRunStore>((set, get) => {
         ...encounter,
         activeRoute: null,
         upgradeChoices: [],
-        snapshot: null,
-        battleLog: [],
         phase: party.length > 1 ? 'lead-select' : 'route-select',
       };
     });
@@ -424,21 +314,13 @@ export const useBattleRunStore = create<BattleRunStore>((set, get) => {
     upgradeChoices: [],
     draftChoices: [],
     pendingRecruit: null,
-    snapshot: null,
-    decision: emptyDecision,
-    battleLog: [],
-    visualEvents: [],
-    battleNonce: 0,
-    error: null,
     lastReward: null,
 
     startRun: () => {
       const seed = newSeed();
       const bestScore = Math.max(get().bestScore, readBestScore());
       random = createSeededRandom(seed);
-      session?.dispose();
-      session = null;
-      pendingBattleResult = null;
+      useBattleEngineStore.getState().resetBattle();
       set({
         phase: 'starter-draft',
         stage: 1,
@@ -461,11 +343,6 @@ export const useBattleRunStore = create<BattleRunStore>((set, get) => {
         upgradeChoices: [],
         draftChoices: createDraftChoices(1, [], random, true),
         pendingRecruit: null,
-        snapshot: null,
-        decision: emptyDecision,
-        battleLog: [],
-        visualEvents: [],
-        error: null,
         lastReward: null,
       });
     },
@@ -521,20 +398,6 @@ export const useBattleRunStore = create<BattleRunStore>((set, get) => {
           recruitmentReward.choiceCount,
         ),
       });
-    },
-
-    chooseMove: slot => {
-      const decision = get().decision;
-      if (!session || !canSubmitMove(decision, slot)) return;
-      set({ decision: emptyDecision, error: null });
-      session.chooseMove(slot);
-    },
-
-    chooseSwitch: slot => {
-      const decision = get().decision;
-      if (!session || !canSubmitSwitch(decision, slot)) return;
-      set({ decision: emptyDecision, error: null });
-      session.chooseSwitch(slot);
     },
 
     chooseReward: pokemon => {
@@ -594,42 +457,6 @@ export const useBattleRunStore = create<BattleRunStore>((set, get) => {
       const { party, pendingRecruit } = get();
       if (!pendingRecruit) return;
       advanceStage(addOrReplacePartyMember(party, pendingRecruit, index));
-    },
-
-    consumeVisualEvent: id => {
-      let completedResult: BattleResult | null = null;
-      set(current => {
-        const visualEvents = current.visualEvents.filter(event => event.id !== id);
-        if (visualEvents.length === 0 && pendingBattleResult) completedResult = pendingBattleResult;
-        return { visualEvents };
-      });
-      if (completedResult) finishBattle(completedResult);
-    },
-
-    attachBattleScene: () => {
-      sceneGateActive = true;
-      // The scene is about to (re)play its buffered opening, so treat it as busy and
-      // hold any decision that already arrived until the opening finishes animating.
-      sceneIdle = false;
-      const current = get().decision;
-      bufferedDecision = current.kind === 'wait' ? null : current;
-      if (bufferedDecision) set({ decision: emptyDecision });
-    },
-
-    detachBattleScene: () => {
-      sceneGateActive = false;
-      sceneIdle = true;
-      bufferedDecision = null;
-    },
-
-    reportBattleScenePlayback: idle => {
-      if (!sceneGateActive) return;
-      sceneIdle = idle;
-      if (!idle) return;
-      // Queue drained: the on-screen animation has caught up — release the held
-      // turn decision and, if the battle already ended, finish it now.
-      releaseBufferedDecision();
-      if (pendingBattleResult) finishBattle(pendingBattleResult);
     },
   };
 });
