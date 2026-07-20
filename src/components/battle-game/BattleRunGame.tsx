@@ -881,13 +881,6 @@ function BattleArena() {
             </>
           )}
 
-          {challengeProgress && (
-            <div className={`absolute right-2.5 top-10 z-20 w-[34%] rounded-xl border px-2 py-1.5 text-right shadow-lg backdrop-blur sm:hidden ${contractProgressClasses[challengeProgress.status].panel}`}>
-              <span className={`block text-[8px] font-black uppercase tracking-wider ${contractProgressClasses[challengeProgress.status].label}`}>{challengeProgress.label}</span>
-              <strong className={`mt-0.5 block text-xs ${contractProgressClasses[challengeProgress.status].value}`}>{challengeProgress.metrics.map(metric => metric.value).join(' · ')}</strong>
-            </div>
-          )}
-
           <div className="absolute right-2.5 top-2.5 z-20 flex items-center gap-1 whitespace-nowrap rounded-full border border-slate-200 bg-white/95 px-2 py-1 text-[7px] font-black text-slate-800 shadow-md backdrop-blur sm:right-5 sm:top-5">
             <span>TURN {displaySnapshot?.turn ?? 0}</span>
             <span className="h-3 w-px bg-slate-300" />
