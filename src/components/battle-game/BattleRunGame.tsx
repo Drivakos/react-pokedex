@@ -789,6 +789,9 @@ function BattleArena() {
   // recreated on every re-render (e.g. hovering a move to inspect it).
   const [showdownFailed, setShowdownFailed] = useState(false);
   const handleShowdownError = useCallback(() => setShowdownFailed(true), []);
+  // The Showdown play-by-play log renders into this node, which we place in a
+  // full-height right column beside the arena + moves rather than inside the arena.
+  const [logEl, setLogEl] = useState<HTMLDivElement | null>(null);
   const [inspectedMoveSlot, setInspectedMoveSlot] = useState<number | null>(null);
   const nextVisual = visualEvents[0];
   const controlsLocked = activeVisual !== null || visualEvents.length > 0;
@@ -830,9 +833,10 @@ function BattleArena() {
 
   return (
     <div className="mx-auto grid w-full max-w-7xl gap-3 xl:grid-cols-[minmax(0,1fr)_340px] xl:gap-5">
-      <section className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-lg sm:rounded-[2rem] sm:shadow-2xl">
+      <section className="flex overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-lg sm:rounded-[2rem] sm:shadow-2xl">
+        <div className="min-w-0 flex-1">
         <div className="battle-stage relative h-[min(46svh,360px)] min-h-[310px] overflow-hidden bg-slate-950 sm:h-[clamp(430px,52svh,500px)]">
-          {!showdownFailed && <ShowdownStage onLoadError={handleShowdownError} />}
+          {!showdownFailed && <ShowdownStage onLoadError={handleShowdownError} logEl={logEl} />}
 
           {showdownFailed && (
             <>
@@ -993,6 +997,13 @@ function BattleArena() {
             </details>
           )}
         </div>
+        </div>
+
+        {!showdownFailed && (
+          <div className="showdown-log-col relative w-56 shrink-0 border-l border-slate-200 bg-slate-50 lg:w-72">
+            <div ref={setLogEl} className="showdown-log battle-log" />
+          </div>
+        )}
       </section>
 
       <MobileBattleSummary />

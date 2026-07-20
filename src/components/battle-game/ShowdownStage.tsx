@@ -1,138 +1,120 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { subscribeBattleProtocol, useBattleRunStore } from '../../store/battleRunStore';
 import { feedShowdownProtocol, loadShowdownClient, type ShowdownGlobals } from './showdown-client';
+import './showdown-stage.css';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Any = any;
+
+// The Showdown BattleScene renders into a fixed 640x360 frame.
+const SCENE_W = 640;
+const SCENE_H = 360;
 
 /**
  * Renders the Battle Run arena with Pokémon Showdown's real BattleScene, driven live
  * by the worker's protocol stream (via the store's replay-on-subscribe feed).
  *
- * The Battle is created by seeding its constructor with the buffered opening log
- * (|player|/|start|/|switch| …) — the well-tested replay path that builds sprites —
- * and only genuinely-live turns are add()-ed afterwards. Creation is triggered
- * deterministically once the opening completes (first |turn|/|win|/|tie|) rather than
- * on a timer, so the whole opening is always present before we build the scene.
+ * Drive model: the canonical *live* pattern the real Showdown client uses. We create
+ * one un-paused Battle up front, then feed every protocol line through battle.add().
+ * add() self-resumes playback whenever the queue was drained, so the scene builds its
+ * sprites from the opening (|player|/|switch| …) the instant those lines arrive and
+ * animates each turn as it streams — no replay/pause/buffer heuristics (those raced
+ * the async sprite preload and left the field grey). The store replays the buffered
+ * opening on subscribe, so a freshly-created Battle never misses the start.
+ *
+ * The Showdown play-by-play log renders into `logEl`, a DOM node owned by
+ * BattleRunGame so it can live in a full-height right column beside the moves UI
+ * rather than inside the arena box.
  */
-
-// The opening (players, team sizes, switch-ins) is complete once a turn/end marker
-// appears — that's when it's safe to seed the Battle with the buffered log.
-function openingComplete(chunks: string[]): boolean {
-  return chunks.some(chunk =>
-    chunk.split('\n').some(line =>
-      line.startsWith('|turn') || line.startsWith('|win') || line.startsWith('|tie')));
-}
-
-export function ShowdownStage({ onLoadError }: { onLoadError?: () => void }) {
+export function ShowdownStage({
+  onLoadError,
+  logEl,
+}: {
+  onLoadError?: () => void;
+  logEl: HTMLElement | null;
+}) {
   const frameRef = useRef<HTMLDivElement>(null);
-  const logRef = useRef<HTMLDivElement>(null);
+  const arenaRef = useRef<HTMLDivElement>(null);
   const battleRef = useRef<Any>(null);
   const globalsRef = useRef<ShowdownGlobals | null>(null);
-  const bufferRef = useRef<string[]>([]);
-  const fallbackTimer = useRef<number | null>(null);
-  const [failed, setFailed] = useState(false);
 
+  const [clientReady, setClientReady] = useState(false);
+  const [failed, setFailed] = useState(false);
   const battleNonce = useBattleRunStore(state => state.battleNonce);
 
-  const clearFallback = useCallback(() => {
-    if (fallbackTimer.current !== null) {
-      window.clearTimeout(fallbackTimer.current);
-      fallbackTimer.current = null;
-    }
-  }, []);
-
-  // Build the Battle from the buffered opening log.
-  const createBattle = useCallback(() => {
-    const globals = globalsRef.current;
-    if (!globals || !frameRef.current || battleRef.current) return;
-    const logLines = bufferRef.current
-      .flatMap(chunk => chunk.split('\n'))
-      .filter(line => line && !line.startsWith('|request') && !line.startsWith('|error'));
-    if (logLines.length === 0) return;
-
-    clearFallback();
-    // isReplay + paused, then play() is the config that reliably preloads assets and
-    // builds the scene before animating (paused:false auto-plays before preload and
-    // stalls on a grey field until a live add() wakes it up).
-    const battle = new globals.Battle({
-      id: 'battle-run',
-      $frame: globals.jQuery(frameRef.current),
-      $logFrame: globals.jQuery(logRef.current),
-      log: logLines,
-      isReplay: true,
-      paused: true,
-      autoresize: true,
-    });
-    battle.setMute?.(true);
-    battleRef.current = battle;
-    battle.play?.();
-    bufferRef.current = [];
-  }, [clearFallback]);
-
-  // Create as soon as the opening is complete; a safety net covers the rare case
-  // where no turn/end marker ever arrives.
-  const maybeCreate = useCallback(() => {
-    if (battleRef.current || !globalsRef.current || bufferRef.current.length === 0) return;
-    if (openingComplete(bufferRef.current)) {
-      createBattle();
-    } else if (fallbackTimer.current === null) {
-      fallbackTimer.current = window.setTimeout(() => {
-        fallbackTimer.current = null;
-        createBattle();
-      }, 800);
-    }
-  }, [createBattle]);
-
-  const destroyBattle = useCallback(() => {
-    clearFallback();
-    try {
-      battleRef.current?.destroy?.();
-    } catch {
-      /* noop */
-    }
-    battleRef.current = null;
-    bufferRef.current = [];
-  }, [clearFallback]);
-
-  // Subscribe to the protocol feed and load the client once, for the stage's lifetime.
+  // Load the Showdown client bundle once, for the component's lifetime.
   useEffect(() => {
     let disposed = false;
-    const unsubscribe = subscribeBattleProtocol(chunk => {
-      if (disposed) return;
-      if (battleRef.current) {
-        feedShowdownProtocol(battleRef.current, chunk);
-        battleRef.current.play?.(); // continue playing the newly appended turn
-      } else {
-        bufferRef.current.push(chunk);
-        maybeCreate();
-      }
-    });
-
     loadShowdownClient()
       .then(globals => {
         if (disposed) return;
         globalsRef.current = globals;
-        maybeCreate();
+        setClientReady(true);
       })
       .catch(() => {
         if (disposed) return;
         setFailed(true);
         onLoadError?.();
       });
-
     return () => {
       disposed = true;
-      unsubscribe();
-      destroyBattle();
     };
-  }, [maybeCreate, destroyBattle, onLoadError]);
+  }, [onLoadError]);
 
-  // A new battle resets the scene; the next protocol chunks rebuild it from scratch.
+  // Create a fresh Battle for each run (battleNonce) once the client is ready, and
+  // stream the protocol into it live. Re-runs on battleNonce so a new battle rebuilds
+  // the scene from scratch; the subscription replays the new opening on (re)subscribe.
   useEffect(() => {
-    destroyBattle();
-    maybeCreate();
-  }, [battleNonce, destroyBattle, maybeCreate]);
+    if (!clientReady || failed) return;
+    const globals = globalsRef.current;
+    if (!globals || !frameRef.current || !logEl) return;
+
+    const battle = new globals.Battle({
+      id: 'battle-run',
+      $frame: globals.jQuery(frameRef.current),
+      $logFrame: globals.jQuery(logEl),
+      paused: false,
+      autoresize: false, // we scale to the arena container ourselves, not the window
+    });
+    battle.setMute?.(true);
+    battleRef.current = battle;
+
+    const unsubscribe = subscribeBattleProtocol(chunk => {
+      if (battleRef.current !== battle) return;
+      feedShowdownProtocol(battle, chunk);
+    });
+
+    return () => {
+      unsubscribe();
+      try {
+        battle.destroy?.();
+      } catch {
+        /* noop */
+      }
+      if (battleRef.current === battle) battleRef.current = null;
+    };
+  }, [clientReady, failed, battleNonce, logEl]);
+
+  // Scale the fixed 640x360 frame to fit the arena region (contain: no cropping of
+  // HP bars or sprites), re-measuring whenever the container resizes.
+  useEffect(() => {
+    if (!clientReady || failed) return;
+    const arena = arenaRef.current;
+    const frame = frameRef.current;
+    if (!arena || !frame) return;
+
+    const fit = () => {
+      const { width, height } = arena.getBoundingClientRect();
+      if (!width || !height) return;
+      const scale = Math.min(width / SCENE_W, height / SCENE_H);
+      frame.style.transform = `translate(-50%, -50%) scale(${scale})`;
+    };
+
+    fit();
+    const observer = new ResizeObserver(fit);
+    observer.observe(arena);
+    return () => observer.disconnect();
+  }, [clientReady, failed, battleNonce]);
 
   if (failed) {
     return (
@@ -143,9 +125,10 @@ export function ShowdownStage({ onLoadError }: { onLoadError?: () => void }) {
   }
 
   return (
-    <div className="showdown-stage absolute inset-0 flex items-center justify-center">
-      <div ref={frameRef} className="battle" />
-      <div ref={logRef} className="battle-log" style={{ display: 'none' }} />
+    <div className="showdown-stage absolute inset-0">
+      <div ref={arenaRef} className="showdown-arena">
+        <div ref={frameRef} className="battle" />
+      </div>
     </div>
   );
 }

@@ -1,0 +1,50 @@
+/* Layout for the embedded Pokémon Showdown BattleScene inside Battle Run. */
+
+/* The log's right column. Own its display here rather than via Tailwind's
+   `hidden sm:block` — in this build `hidden` is ordered after `sm:block` and wins the
+   cascade even above the breakpoint, collapsing the column. Only hide below sm. */
+.showdown-log-col {
+  display: block;
+}
+@media (max-width: 639px) {
+  .showdown-log-col {
+    display: none;
+  }
+}
+
+/* The arena fills the battle-stage box. The Showdown log is rendered separately by
+   BattleRunGame (into a full-height right column), so the stage only owns the scene. */
+.showdown-stage {
+  background: #0f172a;
+}
+
+.showdown-arena {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+}
+
+/* The scene draws into a fixed 640x360 frame; we centre it and scale the whole
+   frame (JS sets the scale) so it fills the arena region without distortion. */
+.showdown-stage .battle {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 640px;
+  height: 360px;
+  transform-origin: center center;
+  transform: translate(-50%, -50%);
+}
+
+/* Showdown's own play-by-play log, docked by BattleRunGame as a full-height right
+   column. battle.css positions .battle-log absolutely (left:640px) so it would float
+   over the scene — reset that so it fills its column instead. Native light styling
+   kept for readability; we only own position, size, and scroll. */
+.showdown-log.battle-log {
+  position: absolute !important;
+  inset: 0 !important;
+  width: auto !important;
+  height: auto !important;
+  margin: 0 !important;
+  overflow-y: auto;
+}

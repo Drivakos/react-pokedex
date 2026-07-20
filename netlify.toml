@@ -145,6 +145,16 @@
   status = 301
   force = true
 
+# Same-origin proxy for the Pokémon Showdown client bundle + assets (scripts, move
+# fx, sprites, backdrops, styles). Serving them from our own origin keeps them within
+# the site CSP ('self') and avoids the CDN's cross-origin hotlink 503s. Mirrors the
+# dev /ps vite proxy so dev and prod resolve assets identically.
+[[redirects]]
+  from = "/ps/*"
+  to = "https://play.pokemonshowdown.com/:splat"
+  status = 200
+  force = true
+
 # Handle SPA routing for everything else (only if file doesn't exist)
 [[redirects]]
   from = "/*"
