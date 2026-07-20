@@ -9,23 +9,40 @@ type Any = any;
  * Renders the Battle Run arena with Pokémon Showdown's real BattleScene, driven live
  * by the worker's protocol stream (via the store's replay-on-subscribe feed).
  *
- * The battle is created by seeding its constructor with the buffered opening log
+ * The Battle is created by seeding its constructor with the buffered opening log
  * (|player|/|start|/|switch| …) — the well-tested replay path that builds sprites —
- * and only genuinely-live turns are add()-ed afterwards. Falls back via onLoadError
- * if the client bundle can't load.
+ * and only genuinely-live turns are add()-ed afterwards. Creation is triggered
+ * deterministically once the opening completes (first |turn|/|win|/|tie|) rather than
+ * on a timer, so the whole opening is always present before we build the scene.
  */
+
+// The opening (players, team sizes, switch-ins) is complete once a turn/end marker
+// appears — that's when it's safe to seed the Battle with the buffered log.
+function openingComplete(chunks: string[]): boolean {
+  return chunks.some(chunk =>
+    chunk.split('\n').some(line =>
+      line.startsWith('|turn') || line.startsWith('|win') || line.startsWith('|tie')));
+}
+
 export function ShowdownStage({ onLoadError }: { onLoadError?: () => void }) {
   const frameRef = useRef<HTMLDivElement>(null);
   const logRef = useRef<HTMLDivElement>(null);
   const battleRef = useRef<Any>(null);
   const globalsRef = useRef<ShowdownGlobals | null>(null);
   const bufferRef = useRef<string[]>([]);
-  const createTimer = useRef<number | null>(null);
+  const fallbackTimer = useRef<number | null>(null);
   const [failed, setFailed] = useState(false);
 
   const battleNonce = useBattleRunStore(state => state.battleNonce);
 
-  // Build the Battle from whatever protocol has buffered so far (the opening burst).
+  const clearFallback = useCallback(() => {
+    if (fallbackTimer.current !== null) {
+      window.clearTimeout(fallbackTimer.current);
+      fallbackTimer.current = null;
+    }
+  }, []);
+
+  // Build the Battle from the buffered opening log.
   const createBattle = useCallback(() => {
     const globals = globalsRef.current;
     if (!globals || !frameRef.current || battleRef.current) return;
@@ -34,6 +51,7 @@ export function ShowdownStage({ onLoadError }: { onLoadError?: () => void }) {
       .filter(line => line && !line.startsWith('|request') && !line.startsWith('|error'));
     if (logLines.length === 0) return;
 
+    clearFallback();
     const battle = new globals.Battle({
       id: 'battle-run',
       $frame: globals.jQuery(frameRef.current),
@@ -46,22 +64,24 @@ export function ShowdownStage({ onLoadError }: { onLoadError?: () => void }) {
     battle.play?.();
     battleRef.current = battle;
     bufferRef.current = [];
-  }, []);
+  }, [clearFallback]);
 
-  // Debounce creation so the whole opening burst is captured before we seed the log.
-  const scheduleCreate = useCallback(() => {
-    if (battleRef.current || createTimer.current !== null) return;
-    createTimer.current = window.setTimeout(() => {
-      createTimer.current = null;
+  // Create as soon as the opening is complete; a safety net covers the rare case
+  // where no turn/end marker ever arrives.
+  const maybeCreate = useCallback(() => {
+    if (battleRef.current || !globalsRef.current || bufferRef.current.length === 0) return;
+    if (openingComplete(bufferRef.current)) {
       createBattle();
-    }, 80);
+    } else if (fallbackTimer.current === null) {
+      fallbackTimer.current = window.setTimeout(() => {
+        fallbackTimer.current = null;
+        createBattle();
+      }, 800);
+    }
   }, [createBattle]);
 
   const destroyBattle = useCallback(() => {
-    if (createTimer.current !== null) {
-      window.clearTimeout(createTimer.current);
-      createTimer.current = null;
-    }
+    clearFallback();
     try {
       battleRef.current?.destroy?.();
     } catch {
@@ -69,7 +89,7 @@ export function ShowdownStage({ onLoadError }: { onLoadError?: () => void }) {
     }
     battleRef.current = null;
     bufferRef.current = [];
-  }, []);
+  }, [clearFallback]);
 
   // Subscribe to the protocol feed and load the client once, for the stage's lifetime.
   useEffect(() => {
@@ -80,7 +100,7 @@ export function ShowdownStage({ onLoadError }: { onLoadError?: () => void }) {
         feedShowdownProtocol(battleRef.current, chunk);
       } else {
         bufferRef.current.push(chunk);
-        if (globalsRef.current) scheduleCreate();
+        maybeCreate();
       }
     });
 
@@ -88,7 +108,7 @@ export function ShowdownStage({ onLoadError }: { onLoadError?: () => void }) {
       .then(globals => {
         if (disposed) return;
         globalsRef.current = globals;
-        if (bufferRef.current.length) scheduleCreate();
+        maybeCreate();
       })
       .catch(() => {
         if (disposed) return;
@@ -101,13 +121,13 @@ export function ShowdownStage({ onLoadError }: { onLoadError?: () => void }) {
       unsubscribe();
       destroyBattle();
     };
-  }, [scheduleCreate, destroyBattle, onLoadError]);
+  }, [maybeCreate, destroyBattle, onLoadError]);
 
   // A new battle resets the scene; the next protocol chunks rebuild it from scratch.
   useEffect(() => {
     destroyBattle();
-    if (globalsRef.current && bufferRef.current.length) scheduleCreate();
-  }, [battleNonce, destroyBattle, scheduleCreate]);
+    maybeCreate();
+  }, [battleNonce, destroyBattle, maybeCreate]);
 
   if (failed) {
     return (
