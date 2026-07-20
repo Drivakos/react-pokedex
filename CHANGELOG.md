@@ -1,3 +1,10 @@
+# [1.7.0](https://github.com/Drivakos/react-pokedex/compare/v1.6.1...v1.7.0) (2026-07-20)
+
+
+### Features
+
+* add battle audio (BGM + Pokémon cries) with a mute toggle ([954251e](https://github.com/Drivakos/react-pokedex/commit/954251e22b484fdf5e80b2ac7381c9b3b4eba9ab))
+
 ## [1.6.1](https://github.com/Drivakos/react-pokedex/compare/v1.6.0...v1.6.1) (2026-07-20)
 
 
