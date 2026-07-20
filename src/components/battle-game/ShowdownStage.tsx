@@ -52,17 +52,21 @@ export function ShowdownStage({ onLoadError }: { onLoadError?: () => void }) {
     if (logLines.length === 0) return;
 
     clearFallback();
+    // isReplay + paused, then play() is the config that reliably preloads assets and
+    // builds the scene before animating (paused:false auto-plays before preload and
+    // stalls on a grey field until a live add() wakes it up).
     const battle = new globals.Battle({
       id: 'battle-run',
       $frame: globals.jQuery(frameRef.current),
       $logFrame: globals.jQuery(logRef.current),
       log: logLines,
-      paused: false,
+      isReplay: true,
+      paused: true,
       autoresize: true,
     });
     battle.setMute?.(true);
-    battle.play?.();
     battleRef.current = battle;
+    battle.play?.();
     bufferRef.current = [];
   }, [clearFallback]);
 
@@ -98,6 +102,7 @@ export function ShowdownStage({ onLoadError }: { onLoadError?: () => void }) {
       if (disposed) return;
       if (battleRef.current) {
         feedShowdownProtocol(battleRef.current, chunk);
+        battleRef.current.play?.(); // continue playing the newly appended turn
       } else {
         bufferRef.current.push(chunk);
         maybeCreate();
