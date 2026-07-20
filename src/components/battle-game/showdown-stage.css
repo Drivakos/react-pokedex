@@ -1,14 +1,16 @@
 /* Layout for the embedded Pokémon Showdown BattleScene inside Battle Run. */
 
-/* The log's right column. Own its display here rather than via Tailwind's
-   `hidden sm:block` — in this build `hidden` is ordered after `sm:block` and wins the
-   cascade even above the breakpoint, collapsing the column. Only hide below sm. */
+/* The log's own panel, placed in the page grid's second (xl-only) column. Own its
+   display here rather than via Tailwind's `hidden xl:block` — in this build `hidden`
+   is ordered after the responsive variant and wins the cascade even above the
+   breakpoint. Show only at xl, where the grid has a column for it; below xl the
+   battle scene takes the full width. */
 .showdown-log-col {
-  display: block;
+  display: none;
 }
-@media (max-width: 639px) {
+@media (min-width: 1280px) {
   .showdown-log-col {
-    display: none;
+    display: block;
   }
 }
 

@@ -833,8 +833,7 @@ function BattleArena() {
 
   return (
     <div className="mx-auto grid w-full max-w-7xl gap-3 xl:grid-cols-[minmax(0,1fr)_340px] xl:gap-5">
-      <section className="flex overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-lg sm:rounded-[2rem] sm:shadow-2xl">
-        <div className="min-w-0 flex-1">
+      <section className="overflow-hidden border border-slate-200/80 bg-white shadow-lg sm:shadow-2xl">
         <div className="battle-stage relative h-[min(46svh,360px)] min-h-[310px] overflow-hidden bg-slate-950 sm:h-[clamp(430px,52svh,500px)]">
           {!showdownFailed && <ShowdownStage onLoadError={handleShowdownError} logEl={logEl} />}
 
@@ -997,14 +996,15 @@ function BattleArena() {
             </details>
           )}
         </div>
-        </div>
+      </section>
 
-        {!showdownFailed && (
-          <div className="showdown-log-col relative w-56 shrink-0 border-l border-slate-200 bg-slate-50 lg:w-72">
+      {!showdownFailed && (
+        <aside className="showdown-log-col h-full min-h-0 overflow-hidden border border-slate-200/80 bg-white shadow-lg sm:shadow-2xl">
+          <div className="relative h-full w-full">
             <div ref={setLogEl} className="showdown-log battle-log" />
           </div>
-        )}
-      </section>
+        </aside>
+      )}
 
       <MobileBattleSummary />
       <BattleSidebar />
