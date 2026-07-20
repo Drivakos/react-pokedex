@@ -43,4 +43,22 @@ describe('move animation recipes', () => {
       assets: ['/images/battle-fx/energyball.png'],
     });
   });
+
+  it('matches blades and claws to the dedicated sprites', () => {
+    expect(getMoveAnimationRecipe(event('Psycho Cut', 'Psychic', 'Physical'))).toMatchObject({
+      kind: 'slash',
+      assets: ['/images/battle-fx/sword.png'],
+    });
+    expect(getMoveAnimationRecipe(event('Dragon Claw', 'Dragon', 'Physical'))).toMatchObject({
+      kind: 'slash',
+      assets: ['/images/battle-fx/leftclaw.png', '/images/battle-fx/rightclaw.png'],
+    });
+  });
+
+  it('routes sound-based Bug moves to sound, not the Bug blade fallback', () => {
+    // Regression: "Bug Buzz" must not pick up the sword sprite via the Bug type.
+    expect(getMoveAnimationRecipe(event('Bug Buzz', 'Bug')).kind).toBe('sound');
+    expect(getMoveAnimationRecipe(event('Steel Wing', 'Steel', 'Physical')).assets)
+      .toContain('/images/battle-fx/feather.png');
+  });
 });
