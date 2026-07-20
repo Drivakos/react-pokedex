@@ -1,3 +1,10 @@
+## [1.6.1](https://github.com/Drivakos/react-pokedex/compare/v1.6.0...v1.6.1) (2026-07-20)
+
+
+### Bug Fixes
+
+* pace battle UI on showdown scene clock and drop team-preview flash ([bdfccca](https://github.com/Drivakos/react-pokedex/commit/bdfcccaef40c019382e663a81ea8ffb783a15ac5))
+
 # [1.6.0](https://github.com/Drivakos/react-pokedex/compare/v1.5.0...v1.6.0) (2026-07-20)
 
 
