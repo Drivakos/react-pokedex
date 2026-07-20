@@ -131,6 +131,9 @@ export class ShowdownBattleWorkerSession {
       case 'visual':
         this.callbacks.onVisual(event.event);
         break;
+      case 'protocol':
+        this.callbacks.onProtocol?.(event.chunk);
+        break;
       case 'end':
         this.callbacks.onEnd(event.result);
         this.dispose();

@@ -118,6 +118,7 @@ export class ShowdownBattleSession {
   private async consumePlayerStream(): Promise<void> {
     try {
       for await (const chunk of this.streams.p1) {
+        this.callbacks.onProtocol?.(chunk);
         for (const message of Protocol.parse(chunk)) {
           const { args, kwArgs } = message;
           const formatted = cleanLogMessage(this.formatter.formatText(args, kwArgs));

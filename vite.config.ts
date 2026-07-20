@@ -66,6 +66,14 @@ export default defineConfig(({ mode }) => {
     port: 64444,
     strictPort: true,
     proxy: {
+      // PROTOTYPE ONLY: same-origin proxy to Pokémon Showdown so the browser can load
+      // its client bundle + sprites (their CDN 503s cross-origin browser hotlinks).
+      '/ps': {
+        target: 'https://play.pokemonshowdown.com',
+        changeOrigin: true,
+        secure: true,
+        rewrite: (path) => path.replace(/^\/ps/, ''),
+      },
       // Proxy external API requests to avoid CORS issues in development
       '/api/pokeapi': {
         target: 'https://pokeapi.co',

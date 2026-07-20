@@ -17,6 +17,7 @@ const Teams = React.lazy(() => import('./components/teams/Teams'));
 const TeamEditor = React.lazy(() => import('./components/teams/TeamEditor'));
 const PokéGridChallenge = React.lazy(() => import('./components/PokéGridChallenge'));
 const BattleRunGame = React.lazy(() => import('./components/battle-game/BattleRunGame'));
+const BattleAnimLab = React.lazy(() => import('./components/battle-anim-lab/BattleAnimLab'));
 
 const LoadingFallback = ({ message = 'Loading...' }: { message?: string }) => (
   <div className="min-h-screen flex items-center justify-center bg-gray-50">
@@ -59,6 +60,7 @@ function AppContent() {
           } />
           <Route path="/pkmn-grid-challenge" element={<div data-testid="pokegrid-challenge"><PokéGridChallenge /></div>} />
           <Route path="/battle-run" element={<div data-testid="battle-run-game"><BattleRunGame /></div>} />
+          <Route path="/battle-anim-lab" element={<BattleAnimLab />} />
         </Routes>
       </Suspense>
     </>

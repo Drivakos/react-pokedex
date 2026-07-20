@@ -17,6 +17,7 @@ workerScope.onmessage = ({ data }: MessageEvent<BattleWorkerRequest>) => {
           onDecision: decision => send({ type: 'decision', decision }),
           onLog: message => send({ type: 'log', message }),
           onVisual: event => send({ type: 'visual', event }),
+          onProtocol: chunk => send({ type: 'protocol', chunk }),
           onEnd: result => send({ type: 'end', result }),
           onError: message => send({ type: 'error', message }),
         }, data.stage);
