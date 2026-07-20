@@ -22,6 +22,8 @@ import {
   Trophy,
   Target,
   Users,
+  Volume2,
+  VolumeX,
   XCircle,
   Zap,
 } from 'lucide-react';
@@ -49,7 +51,7 @@ import {
 import { BattlePokemonImage } from './BattlePokemonImage';
 import { MoveBattleEffect } from './MoveBattleEffect';
 import { ShowdownStage } from './ShowdownStage';
-import { loadShowdownClient } from './showdown-client';
+import { isShowdownMuted, loadShowdownClient, setShowdownMuted } from './showdown-client';
 import { TrainerImage } from './TrainerImage';
 import { getRunArenaTheme } from './arena-themes';
 import { preloadMoveAnimationAssets } from './move-animation-recipes';
@@ -793,6 +795,16 @@ function BattleArena() {
   // full-height right column beside the arena + moves rather than inside the arena.
   const [logEl, setLogEl] = useState<HTMLDivElement | null>(null);
   const [inspectedMoveSlot, setInspectedMoveSlot] = useState<number | null>(null);
+  // Battle audio (BGM + Pokémon cries) is on by default; this toggle mutes it live
+  // and remembers the choice. Only meaningful while the Showdown scene is driving.
+  const [muted, setMuted] = useState(() => isShowdownMuted());
+  const toggleMuted = useCallback(() => {
+    setMuted(prev => {
+      const next = !prev;
+      setShowdownMuted(next);
+      return next;
+    });
+  }, []);
   const nextVisual = visualEvents[0];
   // With the live Showdown scene, pacing is driven by the scene's real animation
   // clock (the store holds the decision as 'wait' until the queue drains), so the
@@ -890,6 +902,19 @@ function BattleArena() {
 
               <BattleEffect event={activeVisual} />
             </>
+          )}
+
+          {!showdownFailed && (
+            <button
+              type="button"
+              onClick={toggleMuted}
+              aria-label={muted ? 'Unmute battle sound' : 'Mute battle sound'}
+              aria-pressed={muted}
+              title={muted ? 'Unmute battle sound' : 'Mute battle sound'}
+              className="absolute bottom-2.5 left-2.5 z-20 flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 bg-white/95 text-slate-800 shadow-md backdrop-blur transition hover:bg-white sm:bottom-5 sm:left-5"
+            >
+              {muted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
+            </button>
           )}
 
           <div className="absolute right-2.5 top-2.5 z-20 flex items-center gap-1 whitespace-nowrap rounded-full border border-slate-200 bg-white/95 px-2 py-1 text-[7px] font-black text-slate-800 shadow-md backdrop-blur sm:right-5 sm:top-5">

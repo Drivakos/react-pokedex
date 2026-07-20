@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { subscribeBattleProtocol, useBattleRunStore } from '../../store/battleRunStore';
-import { feedShowdownProtocol, loadShowdownClient, type ShowdownGlobals } from './showdown-client';
+import { feedShowdownProtocol, isShowdownMuted, loadShowdownClient, type ShowdownGlobals } from './showdown-client';
 import './showdown-stage.css';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -97,9 +97,22 @@ export function ShowdownStage({
       subscription: (state: string) => {
         if (state === 'atqueueend' || state === 'paused') reportIdle(true);
         else if (state === 'playing' || state === 'turn') reportIdle(false);
+        // Stripping the team-preview block also removed Showdown's own BGM trigger
+        // (it fires on the |teampreview step; its |start fallback never sees |start
+        // as the lookahead line because we feed protocol one line at a time). So
+        // start the music ourselves once the battle is actually playing. updateBgm
+        // is idempotent (rolls a theme only if none yet, resume() is safe to repeat)
+        // and honours mute, so calling it each turn just keeps the loop alive.
+        if (state === 'turn' && live) {
+          try {
+            if (!battle.ended && battle.turn >= 0) battle.scene?.updateBgm?.();
+          } catch {
+            /* BGM is best-effort; never let it disrupt playback */
+          }
+        }
       },
     });
-    battle.setMute?.(true);
+    battle.setMute?.(isShowdownMuted());
     battleRef.current = battle;
     live = true; // construction finished — playback signals are now meaningful
 

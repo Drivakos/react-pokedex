@@ -16,6 +16,41 @@ export interface ShowdownGlobals {
 
 const PS = '/ps';
 
+// Battle audio (looping BGM + Pokémon cries). Volumes are 0–100 amplitude, read
+// directly by BattleSound as volume/100. Music sits under the cries so a long run
+// doesn't get fatiguing. Mute state is persisted; sound is on by default.
+const MUTE_KEY = 'battle-run-muted';
+const BGM_VOLUME = 22;
+const EFFECT_VOLUME = 52;
+
+function readMuted(): boolean {
+  if (typeof window === 'undefined') return false;
+  try {
+    return window.localStorage.getItem(MUTE_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
+
+/** Current persisted mute preference (defaults to unmuted). */
+export function isShowdownMuted(): boolean {
+  return readMuted();
+}
+
+/**
+ * Persist the mute preference and apply it live. BattleSound.setMute pauses/resumes
+ * the current BGM, so toggling mid-battle takes effect immediately. Safe to call
+ * before the client bundle has loaded — the value is persisted and re-applied then.
+ */
+export function setShowdownMuted(muted: boolean): void {
+  try {
+    window.localStorage.setItem(MUTE_KEY, muted ? '1' : '0');
+  } catch {
+    // A restricted browser session can still toggle sound for the current battle.
+  }
+  (window as Any).BattleSound?.setMute?.(muted);
+}
+
 // The client resolves every asset (sprites, fx, backdrops, icons) from
 // `Config.routes.client`. battledata.js bakes `Dex.resourcePrefix`/`Dex.fxPrefix`
 // from it the moment it loads, and graphics.js bakes every `BattleEffects[*].url`
@@ -104,19 +139,43 @@ export function loadShowdownClient(): Promise<ShowdownGlobals> {
       w.Dex.fxPrefix = `${window.location.origin}/ps/fx/`;
     }
 
-    // Hard-disable the sound module: browser autoplay policy makes audio.play()
-    // reject, and those rejections fire from inside animSummon/animFaint, which can
-    // abort sprite creation. No-op every entry point so animations run cleanly.
+    // Enable Showdown's audio: a looping battle theme plus Pokémon cries on
+    // switch-in / faint. Cries and BGM resolve through Config.routes.client, so they
+    // stream from the same-origin /ps proxy like every other asset (no CSP change).
+    // We wrap playSound to swallow audio.play() rejections — the browser autoplay
+    // policy can reject a cry, and that unhandled rejection was what previously fired
+    // from inside animSummon/animFaint and aborted sprite creation. With it caught,
+    // a blocked sound is harmless. Mute state comes from the persisted preference.
     if (w.BattleSound) {
-      w.BattleSound.setMute?.(true);
-      w.BattleSound.muted = true;
-      const noop = () => undefined;
-      w.BattleSound.playEffect = noop;
-      w.BattleSound.playSound = noop;
-      w.BattleSound.loadEffect = noop;
-      w.BattleSound.loadBgm = () => ({ play: noop, stop: noop, resume: noop, pause: noop, setVolume: noop });
-      w.BattleSound.playBgm = noop;
-      w.BattleSound.setBgm = noop;
+      w.BattleSound.bgmVolume = BGM_VOLUME;
+      w.BattleSound.effectVolume = EFFECT_VOLUME;
+      // BattleSound.getSound hardcodes `https://` + Config.routes.client, which
+      // fails on the http dev server (and needlessly ignores the page scheme). Build
+      // the URL from the page origin instead — same-origin /ps, correct scheme in
+      // both dev and prod — mirroring how sprites resolve via Dex.resourcePrefix.
+      const audioPrefix = `${window.location.origin}/ps/`;
+      w.BattleSound.getSound = function getSound(this: Any, url: string) {
+        if (!window.HTMLAudioElement) return undefined;
+        if (this.soundCache[url]) return this.soundCache[url];
+        try {
+          const sound = document.createElement('audio');
+          sound.src = `${audioPrefix}${url}`;
+          sound.volume = this.effectVolume / 100;
+          this.soundCache[url] = sound;
+          return sound;
+        } catch {
+          return undefined;
+        }
+      };
+      w.BattleSound.playSound = function playSound(this: Any, url: string, volume: number) {
+        if (!volume) return;
+        const effect = this.getSound(url);
+        if (!effect) return;
+        effect.volume = volume / 100;
+        const played = effect.play?.();
+        if (played && typeof played.catch === 'function') played.catch(() => undefined);
+      };
+      w.BattleSound.setMute(readMuted());
     }
 
     return { Battle: w.Battle, jQuery: w.jQuery };
