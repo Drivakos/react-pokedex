@@ -18,7 +18,6 @@ const species = dex.species.all().filter(entry => (
 // Curated utility move pools (Showdown move ids), ordered by competitive preference.
 // Reliable recovery is what defines a true wall; Rest is a fallback that should not.
 const RELIABLE_RECOVERY = ['recover', 'roost', 'slackoff', 'softboiled', 'milkdrink', 'synthesis', 'moonlight', 'morningsun', 'shoreup', 'strengthsap', 'junglehealing', 'lifedew'];
-const RECOVERY = [...RELIABLE_RECOVERY, 'rest'];
 const HAZARDS = ['stealthrock', 'spikes', 'toxicspikes', 'stickyweb'];
 const STATUS_UTILITY = ['willowisp', 'thunderwave', 'toxic', 'spore', 'sleeppowder', 'nuzzle', 'glare', 'leechseed', 'taunt', 'defog', 'knockoff'];
 const PIVOT = ['uturn', 'voltswitch', 'flipturn', 'partingshot', 'chillyreception', 'teleport'];
@@ -106,7 +105,6 @@ function addAttacks(selected, attacks, target) {
 
 function pickMoves(entry) {
   const pool = buildMovePool(entry);
-  const has = id => pool.some(move => move.id === id);
   const find = id => pool.find(move => move.id === id);
   const firstAvailable = ids => ids.map(find).find(Boolean) ?? null;
 
