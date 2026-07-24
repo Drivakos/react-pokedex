@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { subscribeBattleProtocol, useBattleRunStore } from '../../store/battleRunStore';
+import { subscribeBattleProtocol, useBattleEngineStore } from '../../store/battleEngineStore';
 import { feedShowdownProtocol, isShowdownMuted, loadShowdownClient, type ShowdownGlobals } from './showdown-client';
 import './showdown-stage.css';
 
@@ -40,7 +40,7 @@ export function ShowdownStage({
 
   const [clientReady, setClientReady] = useState(false);
   const [failed, setFailed] = useState(false);
-  const battleNonce = useBattleRunStore(state => state.battleNonce);
+  const battleNonce = useBattleEngineStore(state => state.battleNonce);
 
   // Load the Showdown client bundle once, for the component's lifetime.
   useEffect(() => {
@@ -69,7 +69,7 @@ export function ShowdownStage({
     const globals = globalsRef.current;
     if (!globals || !frameRef.current || !logEl) return;
 
-    const store = useBattleRunStore.getState();
+    const store = useBattleEngineStore.getState();
     // The Battle constructor (and destroy) fire the subscription synchronously with
     // an empty queue; `live` suppresses those so only real playback drives the gate.
     let live = false;

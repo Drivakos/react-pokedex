@@ -28,6 +28,7 @@ import {
   Zap,
 } from 'lucide-react';
 import { useBattleRunStore } from '../../store/battleRunStore';
+import { useBattleEngineStore } from '../../store/battleEngineStore';
 import {
   disposePrewarmedShowdownBattleWorker,
   prewarmShowdownBattleWorker,
@@ -640,7 +641,7 @@ function pokemonMotion(event: BattleVisualEvent | null, side: BattleSide): strin
 }
 
 const BattleLogPanel = memo(function BattleLogPanel() {
-  const battleLog = useBattleRunStore(state => state.battleLog);
+  const battleLog = useBattleEngineStore(state => state.battleLog);
   const logRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -680,7 +681,7 @@ const BattleSidebar = memo(function BattleSidebar() {
   const activeChallenge = useBattleRunStore(state => state.activeChallenge);
   const activeRoute = useBattleRunStore(state => state.activeRoute);
   const contractStreak = useBattleRunStore(state => state.contractStreak);
-  const snapshot = useBattleRunStore(state => state.snapshot);
+  const snapshot = useBattleEngineStore(state => state.snapshot);
   const partySize = useBattleRunStore(state => state.party.length);
   const challengeProgress = activeChallenge && snapshot
     ? getStageChallengeProgress(activeChallenge, snapshot.turn, partySize, snapshot.playerRemaining)
@@ -731,7 +732,7 @@ function MobileBattleSummary() {
   const trainer = useBattleRunStore(state => state.opponentTrainer);
   const activeChallenge = useBattleRunStore(state => state.activeChallenge);
   const activeRoute = useBattleRunStore(state => state.activeRoute);
-  const battleLog = useBattleRunStore(state => state.battleLog);
+  const battleLog = useBattleEngineStore(state => state.battleLog);
   const stage = useBattleRunStore(state => state.stage);
 
   if (!trainer) return null;
@@ -772,17 +773,17 @@ function MobileBattleSummary() {
 }
 
 function BattleArena() {
-  const snapshot = useBattleRunStore(state => state.snapshot);
+  const snapshot = useBattleEngineStore(state => state.snapshot);
   const stage = useBattleRunStore(state => state.stage);
   const activeChallenge = useBattleRunStore(state => state.activeChallenge);
   const activeRoute = useBattleRunStore(state => state.activeRoute);
   const partySize = useBattleRunStore(state => state.party.length);
-  const decision = useBattleRunStore(state => state.decision);
-  const error = useBattleRunStore(state => state.error);
-  const visualEvents = useBattleRunStore(state => state.visualEvents);
-  const consumeVisualEvent = useBattleRunStore(state => state.consumeVisualEvent);
-  const chooseMove = useBattleRunStore(state => state.chooseMove);
-  const chooseSwitch = useBattleRunStore(state => state.chooseSwitch);
+  const decision = useBattleEngineStore(state => state.decision);
+  const error = useBattleEngineStore(state => state.error);
+  const visualEvents = useBattleEngineStore(state => state.visualEvents);
+  const consumeVisualEvent = useBattleEngineStore(state => state.consumeVisualEvent);
+  const chooseMove = useBattleEngineStore(state => state.chooseMove);
+  const chooseSwitch = useBattleEngineStore(state => state.chooseSwitch);
   const availableSwitches = decision.switches.filter(choice => !choice.active && !choice.fainted);
   const [displaySnapshot, setDisplaySnapshot] = useState(snapshot);
   const [activeVisual, setActiveVisual] = useState<BattleVisualEvent | null>(null);
