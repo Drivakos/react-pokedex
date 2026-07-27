@@ -15,8 +15,17 @@ interface BattleCatalogPokemon {
   types: string[];
   ability: string;
   moves: string[];
+  item?: string;
+  builds?: BattlePokemonBuild[];
   bst: number;
   isMega?: boolean;
+}
+
+interface BattlePokemonBuild {
+  name: string;
+  ability: string;
+  moves: string[];
+  item: string;
 }
 
 interface BattleProgressionEntry {
@@ -34,20 +43,37 @@ function getExcludedSpecies(party: RunPokemon[]): Set<string> {
   )));
 }
 
-function materializePokemon(pokemon: BattleCatalogPokemon, level: number, baseSpecies?: string): RunPokemon {
+function materializePokemon(
+  pokemon: BattleCatalogPokemon,
+  level: number,
+  baseSpecies?: string,
+  random?: () => number,
+): RunPokemon {
+  const build = pokemon.builds?.length
+    ? pokemon.builds[Math.floor((random?.() ?? 0) * pokemon.builds.length)] ?? pokemon.builds[0]
+    : null;
   return {
-    ...pokemon,
+    id: pokemon.id,
+    species: pokemon.species,
+    ability: build?.ability ?? pokemon.ability,
     types: [...pokemon.types],
-    moves: [...pokemon.moves],
+    moves: [...(build?.moves ?? pokemon.moves)],
+    bst: pokemon.bst,
+    ...((build?.item ?? pokemon.item) ? { item: build?.item ?? pokemon.item } : {}),
+    ...(build ? { buildName: build.name } : {}),
     level,
     ...(pokemon.isMega ? { isMega: true, baseSpecies } : {}),
   };
 }
 
-export function createRunPokemon(speciesName: string, stage: number): RunPokemon {
+export function createRunPokemon(
+  speciesName: string,
+  stage: number,
+  random?: () => number,
+): RunPokemon {
   const pokemon = speciesByName.get(speciesName);
   if (!pokemon) throw new Error(`Unknown Pokémon: ${speciesName}`);
-  return materializePokemon(pokemon, levelForStage(stage));
+  return materializePokemon(pokemon, levelForStage(stage), undefined, random);
 }
 
 export function getPokemonDevelopmentOptions(pokemon: RunPokemon): PartyDevelopmentOption[] {
@@ -100,8 +126,10 @@ function sampleSpecies(
   excluded: Set<string>,
   random: () => number,
   starter: boolean,
+  targetAdjustment = 0,
+  megaAllowed = true,
 ): RunPokemon[] {
-  const target = starter ? 350 : targetBstForStage(stage);
+  const target = starter ? 350 : targetBstForStage(stage) + targetAdjustment;
   const tolerance = starter ? 70 : Math.min(120, 70 + stage * 3);
   let pool = allSpecies.filter(pokemon => (
     !excluded.has(pokemon.species) && Math.abs(pokemon.bst - target) <= tolerance
@@ -114,10 +142,23 @@ function sampleSpecies(
   const choices: RunPokemon[] = [];
   const available = [...pool];
   while (choices.length < count && available.length > 0) {
-    const index = Math.floor(random() * available.length);
-    const [pokemon] = available.splice(index, 1);
+    const megaCandidates = megaAllowed
+      ? available.filter(candidate => progressionBySpecies[candidate.species]?.megas.length > 0)
+      : [];
+    const megaRoll = !starter && megaCandidates.length > 0 && random() < 0.01;
+    const selectionPool = megaRoll ? megaCandidates : available;
+    const index = Math.floor(random() * selectionPool.length);
+    const pokemon = selectionPool[index] ?? selectionPool[0];
+    available.splice(available.indexOf(pokemon), 1);
     excluded.add(pokemon.species);
-    choices.push(createRunPokemon(pokemon.species, stage));
+    const progression = progressionBySpecies[pokemon.species];
+    if (megaRoll) {
+      const mega = progression.megas[Math.floor(random() * progression.megas.length)] ?? progression.megas[0];
+      choices.push(materializePokemon(mega, levelForStage(stage), pokemon.species, random));
+      megaAllowed = false;
+    } else {
+      choices.push(createRunPokemon(pokemon.species, stage, random));
+    }
   }
 
   return choices;
@@ -130,7 +171,15 @@ export function createDraftChoices(
   starter = false,
   count = 3,
 ): RunPokemon[] {
-  return sampleSpecies(stage, count, getExcludedSpecies(party), random, starter);
+  return sampleSpecies(
+    stage,
+    count,
+    getExcludedSpecies(party),
+    random,
+    starter,
+    0,
+    !party.some(pokemon => pokemon.isMega),
+  );
 }
 
 export function createRerolledDraftChoices(
@@ -149,19 +198,21 @@ export function createEnemyParty(
   random: () => number = Math.random,
   route: RunRoute | null = null,
 ): RunPokemon[] {
+  const bossModifier = getBossModifier(stage);
+  const routeScaling = bossModifier ? null : route;
   const party = sampleSpecies(
     stage,
-    Math.min(3, enemyPartySize(stage) + (route?.partySizeBonus ?? 0)),
+    Math.min(3, enemyPartySize(stage) + (routeScaling?.partySizeBonus ?? 0)),
     getExcludedSpecies(playerParty),
     random,
     false,
+    routeScaling?.bstBonus ?? 0,
+    true,
   );
 
-  const bossModifier = getBossModifier(stage);
-  if (!route?.levelBonus && !bossModifier) return party;
   return party.map(pokemon => ({
     ...pokemon,
-    level: Math.min(100, pokemon.level + (route?.levelBonus ?? 0)),
+    level: Math.max(1, Math.min(100, pokemon.level + (bossModifier ? 4 : routeScaling?.levelBonus ?? 0))),
     ...(bossModifier ? { item: bossModifier.item } : {}),
   }));
 }
@@ -171,6 +222,14 @@ export function createRoutePreviews(
   playerParty: RunPokemon[],
   random: () => number = Math.random,
 ): RunRoutePreviewMap {
+  if (getBossModifier(stage)) {
+    const bossParty = createEnemyParty(stage, playerParty, random, RUN_ROUTES[2]);
+    return {
+      trail: bossParty.map(pokemon => ({ ...pokemon })),
+      rival: bossParty.map(pokemon => ({ ...pokemon })),
+      apex: bossParty.map(pokemon => ({ ...pokemon })),
+    };
+  }
   return RUN_ROUTES.reduce<RunRoutePreviewMap>((previews, route) => {
     previews[route.id] = createEnemyParty(stage, playerParty, random, route);
     return previews;

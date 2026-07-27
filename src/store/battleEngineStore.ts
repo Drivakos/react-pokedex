@@ -5,6 +5,7 @@ import type {
   BattleResult,
   BattleSnapshot,
   BattleVisualEvent,
+  RunDifficulty,
   RunPokemon,
 } from '../types/battle-run';
 import { canSubmitMove, canSubmitSwitch } from '../utils/battle-request-rules';
@@ -31,6 +32,8 @@ export interface StartBattleConfig {
   enemyParty: RunPokemon[];
   /** Difficulty/level context for the worker (higher = tougher AI and levels). */
   level: number;
+  /** AI decision profile selected by the narrative. */
+  difficulty?: RunDifficulty;
   /** Opening lines shown in the battle feed before the first turn (flavor text). */
   introLog?: string[];
   /** Fired once the battle is actually live on screen (first event from the worker). */
@@ -134,7 +137,15 @@ export const useBattleEngineStore = create<BattleEngineStore>((set, get) => {
     battleNonce: 0,
     error: null,
 
-    startBattle: ({ playerParty, enemyParty, level, introLog = [], onActive, onEnd }) => {
+    startBattle: ({
+      playerParty,
+      enemyParty,
+      level,
+      difficulty = 'medium',
+      introLog = [],
+      onActive,
+      onEnd,
+    }) => {
       session?.dispose();
       resetBattleProtocol();
       sceneGateActive = false;
@@ -188,7 +199,7 @@ export const useBattleEngineStore = create<BattleEngineStore>((set, get) => {
           const finishNow = sceneGateActive ? sceneIdle : get().visualEvents.length === 0;
           if (finishNow) finishBattle(result);
         },
-      });
+      }, difficulty);
       session = battleSession;
       window.setTimeout(() => {
         if (session === battleSession) battleSession.start();

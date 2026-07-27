@@ -23,7 +23,7 @@ describe('Showdown Pokémon set adapter', () => {
     });
   });
 
-  it('keeps ordinary recruits itemless', () => {
+  it('keeps explicitly itemless sets itemless', () => {
     expect(toPokemonSet({ ...bossPokemon, item: undefined }).item).toBe('');
   });
 });

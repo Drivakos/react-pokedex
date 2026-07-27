@@ -22,6 +22,7 @@ export interface RunPokemon {
   item?: string;
   isMega?: boolean;
   baseSpecies?: string;
+  buildName?: string;
 }
 
 export type PartyDevelopmentKind = 'evolution' | 'mega';
@@ -41,7 +42,7 @@ export interface BattleMoveChoice {
   slot: number;
   name: string;
   type: string;
-  category: string;
+  category: 'Physical' | 'Special' | 'Status';
   description: string;
   power: number;
   accuracy: number | true;
@@ -139,15 +140,18 @@ export interface RunChallengeProgress {
 }
 
 export type RunRouteId = 'trail' | 'rival' | 'apex';
+export type RunDifficulty = 'easy' | 'medium' | 'hard';
 
 export type RunRoutePreviewMap = Record<RunRouteId, RunPokemon[]>;
 
 export interface RunRoute {
   id: RunRouteId;
+  difficulty: RunDifficulty;
   title: string;
   label: string;
   description: string;
   levelBonus: number;
+  bstBonus: number;
   partySizeBonus: number;
   scoreMultiplier: number;
   recruitmentStageBonus: number;

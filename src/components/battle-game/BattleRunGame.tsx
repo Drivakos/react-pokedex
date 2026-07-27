@@ -10,6 +10,7 @@ import {
   Flame,
   Gauge,
   Heart,
+  Info,
   Loader2,
   LockKeyhole,
   Medal,
@@ -69,6 +70,29 @@ const typeClasses: Record<string, string> = {
   Steel: 'bg-slate-500', Water: 'bg-blue-600',
 };
 
+function MoveCategoryBadge({
+  category,
+  compact = false,
+}: {
+  category: BattleMoveChoice['category'];
+  compact?: boolean;
+}) {
+  return (
+    <span
+      className="inline-flex shrink-0 items-center"
+      aria-label={`${category} move`}
+      title={`${category} move`}
+    >
+      <img
+        src={`/ps/sprites/categories/${category}.png`}
+        alt=""
+        className={compact ? 'h-3.5 w-8 object-contain' : 'h-4 w-9 object-contain'}
+        aria-hidden="true"
+      />
+    </span>
+  );
+}
+
 const contractProgressClasses: Record<RunChallengeProgress['status'], {
   panel: string;
   label: string;
@@ -114,34 +138,34 @@ function getEffectivenessPresentation(effectiveness: number | null): {
   if (effectiveness === null) {
     return {
       label: 'Status move · no damage multiplier',
-      shortLabel: 'Status',
+      shortLabel: '—',
       classes: 'border-slate-200 bg-slate-100 text-slate-600',
     };
   }
   if (effectiveness === 0) {
     return {
       label: 'No effect · 0×',
-      shortLabel: 'No effect',
+      shortLabel: 'x0',
       classes: 'border-slate-300 bg-slate-200 text-slate-700',
     };
   }
   if (effectiveness > 1) {
     return {
       label: `Super effective · ${effectiveness}×`,
-      shortLabel: `${effectiveness}× effective`,
+      shortLabel: `x${effectiveness}`,
       classes: 'border-emerald-200 bg-emerald-100 text-emerald-800',
     };
   }
   if (effectiveness < 1) {
     return {
       label: `Not very effective · ${effectiveness}×`,
-      shortLabel: `${effectiveness}× effective`,
+      shortLabel: `x${effectiveness}`,
       classes: 'border-amber-200 bg-amber-100 text-amber-800',
     };
   }
   return {
     label: 'Neutral damage · 1×',
-    shortLabel: '1× effective',
+    shortLabel: 'x1',
     classes: 'border-blue-200 bg-blue-50 text-blue-700',
   };
 }
@@ -160,7 +184,14 @@ function MoveDetails({ move, opponent }: { move: BattleMoveChoice; opponent?: st
           <div className="flex flex-wrap items-center gap-2">
             <strong className="text-sm text-slate-950">{move.name}</strong>
             <span className={`${typeClasses[move.type] ?? 'bg-slate-400'} rounded px-1.5 py-0.5 text-[9px] font-black uppercase text-white`}>{move.type}</span>
-            <span className={`rounded-full border px-2 py-0.5 text-[10px] font-black ${effectiveness.classes}`}>{effectiveness.label}</span>
+            <MoveCategoryBadge category={move.category} />
+            <span
+              className={`rounded-full border px-2 py-0.5 text-[10px] font-black ${effectiveness.classes}`}
+              title={effectiveness.label}
+              aria-label={effectiveness.label}
+            >
+              {effectiveness.shortLabel}
+            </span>
           </div>
           <p className="mt-1.5 text-xs leading-relaxed text-slate-600">{move.description || 'No move description is available.'}</p>
         </div>
@@ -170,7 +201,7 @@ function MoveDetails({ move, opponent }: { move: BattleMoveChoice; opponent?: st
       </div>
       <dl className="mt-2 grid grid-cols-5 gap-2 border-t border-slate-100 pt-2 text-[10px]">
         <div><dt className="font-bold text-slate-400">Category</dt><dd className="font-black text-slate-700">{move.category}</dd></div>
-        <div><dt className="font-bold text-slate-400">Power</dt><dd className="font-black text-slate-700">{move.power || '—'}</dd></div>
+        <div><dt className="font-bold text-slate-400">{move.category === 'Status' ? 'Effect' : 'Power'}</dt><dd className="font-black text-slate-700">{move.category === 'Status' ? 'Utility' : move.power || '—'}</dd></div>
         <div><dt className="font-bold text-slate-400">Accuracy</dt><dd className="font-black text-slate-700">{move.accuracy === true ? 'Always' : `${move.accuracy}%`}</dd></div>
         <div><dt className="font-bold text-slate-400">Priority</dt><dd className="font-black text-slate-700">{move.priority > 0 ? `+${move.priority}` : move.priority}</dd></div>
         <div><dt className="font-bold text-slate-400">PP</dt><dd className="font-black text-slate-700">{move.pp}/{move.maxpp}</dd></div>
@@ -290,6 +321,11 @@ function DraftCard({ pokemon, onChoose, label, fit, recommended = false }: {
         <span className="absolute left-2 top-2 rounded-full bg-slate-950/80 px-2 py-1 text-[10px] font-black text-white backdrop-blur sm:left-4 sm:top-4 sm:px-3 sm:py-1.5 sm:text-xs">
           LV. {pokemon.level}
         </span>
+        {pokemon.isMega && (
+          <span className="absolute bottom-2 right-2 rounded-full bg-violet-600 px-2 py-1 text-[8px] font-black uppercase tracking-wider text-white shadow-md sm:bottom-4 sm:right-4 sm:px-3 sm:text-[10px]">
+            Rare Mega
+          </span>
+        )}
         {recommended && (
           <span className="absolute bottom-2 left-2 flex items-center gap-1 rounded-full bg-amber-400 px-2 py-1 text-[8px] font-black uppercase tracking-wider text-amber-950 shadow-md sm:bottom-auto sm:left-auto sm:right-4 sm:top-4 sm:px-3 sm:py-1.5 sm:text-[10px]">
             <Star className="h-3 w-3 fill-current sm:h-3.5 sm:w-3.5" /> Best fit
@@ -301,10 +337,15 @@ function DraftCard({ pokemon, onChoose, label, fit, recommended = false }: {
           <h3 className="min-w-0 flex-1 truncate text-lg font-black text-slate-950 sm:text-2xl">{pokemon.species}</h3>
           <div className="shrink-0"><TypeBadges types={pokemon.types} compact /></div>
         </div>
-        <p className="text-xs font-bold text-slate-400 sm:text-sm">BST {pokemon.bst}</p>
+        <p className="text-xs font-bold text-slate-400 sm:text-sm">
+          BST {pokemon.bst}{pokemon.buildName ? ` · ${pokemon.buildName}` : ''}
+        </p>
         <div className="mt-2 rounded-xl bg-slate-50 p-2.5 sm:mt-3 sm:p-3">
           <p className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">Ability</p>
           <p className="mt-0.5 truncate text-xs font-extrabold text-slate-700 sm:text-sm">{pokemon.ability}</p>
+          {pokemon.item && (
+            <p className="mt-1 truncate text-[10px] font-black text-amber-700 sm:text-xs">Holding · {pokemon.item}</p>
+          )}
           <div className="mt-1.5 flex flex-wrap gap-1">
             {pokemon.moves.slice(0, 4).map((move, index) => (
               <span key={move} className={`${index > 1 ? 'hidden sm:inline' : ''} truncate rounded-md bg-white px-1.5 py-0.5 text-[9px] font-bold text-slate-500 shadow-sm sm:px-2 sm:py-1 sm:text-[11px]`}>{move}</span>
@@ -687,7 +728,7 @@ const BattleSidebar = memo(function BattleSidebar() {
     ? getStageChallengeProgress(activeChallenge, snapshot.turn, partySize, snapshot.playerRemaining)
     : null;
   const bossModifier = getBossModifier(stage);
-  const aiProfile = getBattleAiProfile(stage);
+  const aiProfile = getBattleAiProfile(stage, activeRoute?.difficulty);
 
   return (
     <aside className="hidden h-full min-h-0 flex-col overflow-hidden rounded-2xl border border-white/80 bg-white/75 text-slate-900 shadow-xl backdrop-blur-xl xl:flex">
@@ -814,6 +855,15 @@ function BattleArena() {
   const inspectedMove = decision.kind === 'move'
     ? decision.moves.find(move => move.slot === inspectedMoveSlot)
     : undefined;
+  const toggleMoveInspection = (slot: number) => {
+    const nextSlot = inspectedMoveSlot === slot ? null : slot;
+    setInspectedMoveSlot(nextSlot);
+    if (nextSlot === null) return;
+    window.requestAnimationFrame(() => {
+      document.getElementById(`battle-move-details-${nextSlot}`)
+        ?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    });
+  };
 
   useEffect(() => {
     // The Showdown scene animates these events itself; only the fallback arena
@@ -952,7 +1002,7 @@ function BattleArena() {
                   <span className="hidden text-xs font-bold text-slate-400 sm:inline">Switch options below</span>
                 )}
               </div>
-              <div className="mb-3 hidden min-h-[124px] sm:block">
+              <div className={`mb-3 min-h-[124px] ${inspectedMove ? '' : 'max-sm:hidden'}`}>
                 {inspectedMove ? (
                   <MoveDetails move={inspectedMove} opponent={displaySnapshot?.opponent?.species} />
                 ) : (
@@ -965,36 +1015,53 @@ function BattleArena() {
                 {decision.moves.map(move => {
                   const effectiveness = getEffectivenessPresentation(move.effectiveness);
                   return (
-                    <button
-                      key={move.slot}
-                      type="button"
-                      disabled={move.disabled || controlsLocked}
-                      onClick={() => chooseMove(move.slot)}
-                      onMouseEnter={() => setInspectedMoveSlot(move.slot)}
-                      onMouseLeave={() => setInspectedMoveSlot(current => current === move.slot ? null : current)}
-                      onFocus={() => setInspectedMoveSlot(move.slot)}
-                      onBlur={() => setInspectedMoveSlot(current => current === move.slot ? null : current)}
-                      aria-describedby={inspectedMoveSlot === move.slot ? `battle-move-details-${move.slot}` : undefined}
-                      className="group relative min-h-[92px] touch-manipulation overflow-hidden rounded-xl border border-slate-200 bg-white p-2.5 text-left transition active:scale-[0.98] hover:border-red-300 hover:shadow-md focus-visible:border-red-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-200 disabled:cursor-not-allowed disabled:opacity-40 sm:rounded-2xl sm:p-3 xl:min-h-[108px]"
-                    >
-                      <span className={`absolute inset-y-0 left-0 w-1.5 ${typeClasses[move.type] ?? 'bg-slate-400'}`} />
-                      <span className="flex items-start justify-between gap-3 pl-2">
-                        <span>
-                          <span className="block text-sm font-black leading-tight text-slate-900 sm:text-base">{move.name}</span>
-                          <span className="mt-1 flex flex-wrap items-center gap-1 text-[10px] font-bold text-slate-500 sm:text-[11px]">
-                            <span className={`${typeClasses[move.type] ?? 'bg-slate-400'} rounded px-1.5 py-0.5 text-[9px] uppercase text-white`}>{move.type}</span>
-                            <span className="hidden sm:inline">{move.category} · </span>{move.power || '—'} power
+                    <div key={move.slot} className="flex min-w-0 flex-col">
+                      <button
+                        type="button"
+                        disabled={move.disabled || controlsLocked}
+                        onClick={() => chooseMove(move.slot)}
+                        onMouseEnter={() => setInspectedMoveSlot(move.slot)}
+                        onMouseLeave={() => setInspectedMoveSlot(current => current === move.slot ? null : current)}
+                        onFocus={() => setInspectedMoveSlot(move.slot)}
+                        onBlur={() => setInspectedMoveSlot(current => current === move.slot ? null : current)}
+                        title={move.description || `${move.category} ${move.type} move`}
+                        aria-label={`${move.name}. ${move.category} ${move.type} move. ${move.description || 'No description available.'}`}
+                        aria-describedby={inspectedMoveSlot === move.slot ? `battle-move-details-${move.slot}` : undefined}
+                        className="group relative min-h-[92px] w-full touch-manipulation overflow-hidden rounded-xl border border-slate-200 bg-white p-2.5 text-left transition active:scale-[0.98] hover:border-red-300 hover:shadow-md focus-visible:border-red-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-200 disabled:cursor-not-allowed disabled:opacity-40 max-sm:rounded-b-none sm:rounded-2xl sm:p-3 xl:min-h-[108px]"
+                      >
+                        <span className={`absolute inset-y-0 left-0 w-1.5 ${typeClasses[move.type] ?? 'bg-slate-400'}`} />
+                        <span className="flex items-start justify-between gap-3 pl-2">
+                          <span>
+                            <span className="block text-sm font-black leading-tight text-slate-900 sm:text-base">{move.name}</span>
+                            <span className="mt-1 flex flex-wrap items-center gap-1 text-[10px] font-bold text-slate-500 sm:text-[11px]">
+                              <span className={`${typeClasses[move.type] ?? 'bg-slate-400'} rounded px-1.5 py-0.5 text-[9px] uppercase text-white`}>{move.type}</span>
+                              <MoveCategoryBadge category={move.category} compact />
+                            </span>
+                          </span>
+                          <span className="shrink-0 text-right text-[11px] font-black text-slate-500">
+                            {move.pp}/{move.maxpp}<span className="block font-bold text-slate-400">PP</span>
                           </span>
                         </span>
-                        <span className="shrink-0 text-right text-[11px] font-black text-slate-500">
-                          {move.pp}/{move.maxpp}<span className="block font-bold text-slate-400">PP</span>
+                        <span className="mt-2 flex items-center justify-between gap-1 pl-2 text-[9px] font-bold sm:text-[10px]">
+                          <span className="text-slate-400">
+                            {move.category === 'Status'
+                              ? 'Effect move'
+                              : `${move.power || '—'} power · ${move.accuracy === true ? 'Always hits' : `${move.accuracy}%`}`}
+                          </span>
+                          <span className={`rounded-full border px-1.5 py-0.5 font-black ${effectiveness.classes}`}>{effectiveness.shortLabel}</span>
                         </span>
-                      </span>
-                      <span className="mt-2 flex items-center justify-between gap-1 pl-2 text-[9px] font-bold sm:text-[10px]">
-                        <span className="hidden text-slate-400 sm:inline">Accuracy {move.accuracy === true ? '—' : `${move.accuracy}%`}</span>
-                        <span className={`rounded-full border px-1.5 py-0.5 font-black ${effectiveness.classes}`}>{effectiveness.shortLabel}</span>
-                      </span>
-                    </button>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => toggleMoveInspection(move.slot)}
+                        aria-expanded={inspectedMoveSlot === move.slot}
+                        aria-controls={`battle-move-details-${move.slot}`}
+                        className="flex min-h-9 items-center justify-center gap-1.5 rounded-b-xl border border-t-0 border-slate-200 bg-slate-100 px-2 text-[10px] font-black text-slate-600 active:bg-slate-200 sm:hidden"
+                      >
+                        <Info className="h-3.5 w-3.5" aria-hidden="true" />
+                        {inspectedMoveSlot === move.slot ? 'Hide details' : 'Inspect move'}
+                      </button>
+                    </div>
                   );
                 })}
               </div>
@@ -1077,7 +1144,7 @@ function VersusScreen() {
   const sector = getRunSector(stage);
   const finalStage = isFinalStage(stage);
   const bossModifier = getBossModifier(stage);
-  const aiProfile = getBattleAiProfile(stage);
+  const aiProfile = getBattleAiProfile(stage, activeRoute?.difficulty);
   if (!trainer) return null;
 
   return (
@@ -1201,6 +1268,11 @@ function LeadSelectionScreen() {
               <div className="min-w-0">
                 <strong className="block truncate text-lg text-slate-950 sm:text-xl">{pokemon.species}</strong>
                 <span className="text-xs font-black text-slate-400">LV. {pokemon.level} · BST {pokemon.bst}</span>
+                {(pokemon.buildName || pokemon.item) && (
+                  <span className="mt-0.5 block truncate text-[10px] font-black text-amber-700">
+                    {[pokemon.buildName, pokemon.item].filter(Boolean).join(' · ')}
+                  </span>
+                )}
               </div>
 
               <div className="mt-2">
@@ -1248,14 +1320,19 @@ function RouteSelectionScreen() {
   const bossModifier = getBossModifier(stage);
   const chainMultiplier = getContractChainMultiplier(contractStreak);
   const aiProfile = getBattleAiProfile(stage);
+  const availableRoutes = checkpoint ? [RUN_ROUTES[2]] : RUN_ROUTES;
 
   return (
     <section className="relative mx-auto max-w-6xl">
       <div className="mb-4 text-center sm:mb-6">
         <p className="text-[10px] font-black uppercase tracking-[0.22em] text-red-600">Sector {sector.number} of {RUN_SECTORS.length} · {sector.title}</p>
-        <h2 className="mt-1 text-2xl font-black text-slate-950 sm:text-4xl">{finalStage ? 'Choose the stakes for the final boss' : `Set the stakes for stage ${stage}`}</h2>
+        <h2 className="mt-1 text-2xl font-black text-slate-950 sm:text-4xl">
+          {checkpoint ? (finalStage ? 'Challenge the Run Champion' : `Challenge the ${sector.bossTitle}`) : `Choose a difficulty for stage ${stage}`}
+        </h2>
         <p className="mx-auto mt-2 max-w-2xl text-sm text-slate-600 sm:text-base">
-          {sector.objective} Higher-risk routes strengthen the opposing team, but multiply every point earned from the battle and its contract.
+          {checkpoint
+            ? `${sector.objective} Bosses use a fixed elite roster, gain four levels, and always fight with perfect decision-making.`
+            : `${sector.objective} Easy, Medium, and Hard now scale roster power, levels, team size, and trainer decision-making.`}
         </p>
       </div>
 
@@ -1325,7 +1402,7 @@ function RouteSelectionScreen() {
               <span className="mt-1 block text-xs font-semibold leading-relaxed text-amber-800">
                 {finalStage
                   ? `Clear this final objective for x${chainMultiplier.toFixed(2)} contract score and secure the completed chain.`
-                  : `Clear this objective for x${chainMultiplier.toFixed(2)} contract score and a Scout Pass. Apex awards two; a miss resets the chain.`}
+                  : `Clear this objective for x${chainMultiplier.toFixed(2)} contract score and a Scout Pass. Hard awards two; a miss resets the chain.`}
               </span>
             </span>
           </div>
@@ -1353,16 +1430,12 @@ function RouteSelectionScreen() {
         </div>
       )}
 
-      <div className="grid gap-3 sm:gap-4 lg:grid-cols-3">
-        {RUN_ROUTES.map((route, index) => {
+      <div className={`grid gap-3 sm:gap-4 ${checkpoint ? 'mx-auto max-w-xl' : 'lg:grid-cols-3'}`}>
+        {availableRoutes.map((route, index) => {
           const preview = routePreviews[route.id];
           const recruitmentReward = getRecruitmentRewardProfile(stage + 1, route, upgrades);
-          const routeDescription = finalStage
-            ? route.id === 'trail'
-              ? 'Face the Run Champion at normal strength and protect the score already secured.'
-              : route.id === 'rival'
-                ? 'The Run Champion gains two levels. Win the final battle for 25% more score.'
-                : 'The Run Champion gains four levels and may add one team member. Win for 60% more score.'
+          const routeDescription = checkpoint
+            ? `This boss cannot be weakened: every opponent is four levels above the stage curve, uses a competitive build, and carries ${bossModifier?.item ?? 'a boss item'}.`
             : route.description;
           const Icon = route.id === 'trail' ? Shield : route.id === 'rival' ? Swords : Crown;
           const accent = route.id === 'trail'
@@ -1381,8 +1454,8 @@ function RouteSelectionScreen() {
                 <span className="flex items-center gap-3">
                   <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/80"><Icon className="h-5 w-5" /></span>
                   <span>
-                    <span className="block text-[9px] font-black uppercase tracking-[0.2em]">Route {index + 1}</span>
-                    <strong className="block text-lg text-slate-950">{route.title}</strong>
+                    <span className="block text-[9px] font-black uppercase tracking-[0.2em]">{checkpoint ? 'Boss battle' : `Difficulty ${index + 1}`}</span>
+                    <strong className="block text-lg text-slate-950">{checkpoint ? sector.bossTitle : route.title}</strong>
                   </span>
                 </span>
                 <span className="rounded-full bg-white/80 px-3 py-1 text-sm font-black text-slate-800 shadow-sm">x{route.scoreMultiplier}</span>

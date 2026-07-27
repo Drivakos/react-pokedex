@@ -1,4 +1,5 @@
 import { Dex, RandomPlayerAI } from '@pkmn/sim';
+import type { RunDifficulty } from '../types/battle-run';
 import { getBattleAiProfile } from '../utils/battle-ai-profile';
 
 export interface AiMoveOption {
@@ -133,8 +134,12 @@ function normalizeSwitchOptions(options: unknown[]): AiSwitchOption[] {
 export class ChallengePlayerAI extends RandomPlayerAI {
   private readonly smartChance: number;
 
-  constructor(playerStream: ConstructorParameters<typeof RandomPlayerAI>[0], stage: number) {
-    const profile = getBattleAiProfile(stage);
+  constructor(
+    playerStream: ConstructorParameters<typeof RandomPlayerAI>[0],
+    stage: number,
+    difficulty: RunDifficulty = 'medium',
+  ) {
+    const profile = getBattleAiProfile(stage, difficulty);
     super(playerStream, { move: profile.moveChance });
     this.smartChance = profile.smartChance;
   }

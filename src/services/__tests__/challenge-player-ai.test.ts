@@ -13,6 +13,16 @@ describe('Battle Run challenge AI', () => {
     expect(getBattleAiProfile(11)).toMatchObject({ title: 'Mastermind', smartChance: 1 });
   });
 
+  it('separates route decision-making and never weakens checkpoint bosses', () => {
+    expect(getBattleAiProfile(6, 'easy').smartChance).toBeLessThan(
+      getBattleAiProfile(6, 'medium').smartChance,
+    );
+    expect(getBattleAiProfile(6, 'hard').smartChance).toBeGreaterThan(
+      getBattleAiProfile(6, 'medium').smartChance,
+    );
+    expect(getBattleAiProfile(5, 'easy')).toMatchObject({ title: 'Boss', smartChance: 1 });
+  });
+
   it('reads the active matchup from the simulator protocol log', () => {
     expect(findLastActiveSpecies(activeLog, 'p1')).toBe('Venusaur');
     expect(findLastActiveSpecies(activeLog, 'p2')).toBe('Charizard');

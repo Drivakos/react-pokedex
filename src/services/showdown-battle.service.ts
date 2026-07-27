@@ -9,6 +9,7 @@ import type {
   BattleSnapshot,
   BattleSide,
   BattleVisualEvent,
+  RunDifficulty,
   RunPokemon,
 } from '../types/battle-run';
 import type { ShowdownBattleCallbacks } from '../types/battle-worker';
@@ -54,15 +55,18 @@ export class ShowdownBattleSession {
   private ended = false;
   private visualId = 0;
   private readonly stage: number;
+  private readonly difficulty: RunDifficulty;
 
   constructor(
     playerParty: RunPokemon[],
     opponentParty: RunPokemon[],
     callbacks: ShowdownBattleCallbacks,
     stage = 1,
+    difficulty: RunDifficulty = 'medium',
   ) {
     this.callbacks = callbacks;
     this.stage = stage;
+    this.difficulty = difficulty;
     this.playerSets = playerParty.map(toPokemonSet);
     this.opponentSets = opponentParty.map(toPokemonSet);
 
@@ -73,7 +77,7 @@ export class ShowdownBattleSession {
   }
 
   start(): void {
-    const ai = new ChallengePlayerAI(this.streams.p2, this.stage);
+    const ai = new ChallengePlayerAI(this.streams.p2, this.stage, this.difficulty);
     void ai.start().catch(error => this.fail(error));
     void this.consumePlayerStream();
 

@@ -4,6 +4,7 @@ import type {
   BattleSnapshot,
   BattleVisualEvent,
   RunPokemon,
+  RunDifficulty,
 } from './battle-run';
 
 export interface ShowdownBattleCallbacks {
@@ -19,7 +20,7 @@ export interface ShowdownBattleCallbacks {
 }
 
 export type BattleWorkerRequest =
-  | { type: 'init'; playerParty: RunPokemon[]; opponentParty: RunPokemon[]; stage: number }
+  | { type: 'init'; playerParty: RunPokemon[]; opponentParty: RunPokemon[]; stage: number; difficulty?: RunDifficulty }
   | { type: 'start' }
   | { type: 'choose-move'; slot: number }
   | { type: 'choose-switch'; slot: number };

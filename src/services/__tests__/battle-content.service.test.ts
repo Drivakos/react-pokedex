@@ -19,7 +19,25 @@ describe('battle content catalog', () => {
       types: ['Electric'],
       ability: 'Static',
       moves: ['Volt Tackle', 'Surf', 'Volt Switch', 'Thunder Wave'],
+      item: 'Heavy-Duty Boots',
+      buildName: 'Signature',
       bst: 320,
+    });
+  });
+
+  it('offers distinct coherent builds with matching held items for one species', () => {
+    const signature = createRunPokemon('Pikachu', 4, () => 0);
+    const physicalBreaker = createRunPokemon('Pikachu', 4, () => 0.4);
+
+    expect(signature).toMatchObject({
+      buildName: 'Signature',
+      item: 'Heavy-Duty Boots',
+      moves: ['Volt Tackle', 'Surf', 'Volt Switch', 'Thunder Wave'],
+    });
+    expect(physicalBreaker).toMatchObject({
+      buildName: 'Physical breaker',
+      item: 'Choice Band',
+      moves: ['Volt Tackle', 'Play Rough', 'Knock Off', 'Brick Break'],
     });
   });
 
@@ -136,7 +154,7 @@ describe('battle content catalog', () => {
     expect(apex).toBeDefined();
     const enemies = createEnemyParty(1, [], createSeededRandom('apex-seed'), apex);
     expect(enemies).toHaveLength(2);
-    expect(enemies.every(pokemon => pokemon.level === 9)).toBe(true);
+    expect(enemies.every(pokemon => pokemon.level === 8)).toBe(true);
   });
 
   it('prepares deterministic, route-specific rosters for scouting', () => {
@@ -147,9 +165,11 @@ describe('battle content catalog', () => {
     expect(first.trail).toHaveLength(1);
     expect(first.rival).toHaveLength(1);
     expect(first.apex).toHaveLength(2);
-    expect(first.trail.every(pokemon => pokemon.level === 5)).toBe(true);
-    expect(first.rival.every(pokemon => pokemon.level === 7)).toBe(true);
-    expect(first.apex.every(pokemon => pokemon.level === 9)).toBe(true);
+    expect(first.trail.every(pokemon => pokemon.level === 3)).toBe(true);
+    expect(first.rival.every(pokemon => pokemon.level === 5)).toBe(true);
+    expect(first.apex.every(pokemon => pokemon.level === 8)).toBe(true);
+    expect(Math.max(...first.trail.map(pokemon => pokemon.bst)))
+      .toBeLessThan(Math.max(...first.apex.map(pokemon => pokemon.bst)));
   });
 
   it('equips checkpoint rosters with their boss mechanic item', () => {
@@ -158,5 +178,17 @@ describe('battle content catalog', () => {
 
     expect(stageFive.every(pokemon => pokemon.item === 'Sitrus Berry')).toBe(true);
     expect(stageTen.every(pokemon => pokemon.item === 'Life Orb')).toBe(true);
+    expect(stageFive.every(pokemon => pokemon.level === 17)).toBe(true);
+  });
+
+  it('uses one fixed tough roster for every checkpoint route', () => {
+    const previews = createRoutePreviews(5, [], createSeededRandom('fixed-boss'));
+    expect(previews.trail).toEqual(previews.rival);
+    expect(previews.rival).toEqual(previews.apex);
+  });
+
+  it('has a one-percent roll that can turn an eligible encounter into a Mega', () => {
+    const choices = createDraftChoices(15, [], () => 0, false, 1);
+    expect(choices[0]).toMatchObject({ isMega: true, baseSpecies: 'Venusaur' });
   });
 });

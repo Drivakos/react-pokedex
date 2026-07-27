@@ -20,7 +20,7 @@ workerScope.onmessage = ({ data }: MessageEvent<BattleWorkerRequest>) => {
           onProtocol: chunk => send({ type: 'protocol', chunk }),
           onEnd: result => send({ type: 'end', result }),
           onError: message => send({ type: 'error', message }),
-        }, data.stage);
+        }, data.stage, data.difficulty);
         send({ type: 'ready' });
         break;
       case 'start':

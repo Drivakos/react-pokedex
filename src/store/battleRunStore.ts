@@ -244,7 +244,7 @@ export const useBattleRunStore = create<BattleRunStore>((set, get) => {
     const activeChallenge = state.activeChallenge
       ?? prepareStageChallenge(state.stage, state.party.length, state.upgrades, rng);
     const bossModifier = getBossModifier(state.stage);
-    const aiProfile = getBattleAiProfile(state.stage);
+    const aiProfile = getBattleAiProfile(state.stage, route.difficulty);
 
     set({
       phase: 'preparing-battle',
@@ -262,6 +262,7 @@ export const useBattleRunStore = create<BattleRunStore>((set, get) => {
       playerParty: state.party,
       enemyParty,
       level: state.stage,
+      difficulty: route.difficulty,
       introLog: [
         `${opponentTrainer.title} ${opponentTrainer.name} challenges you!`,
         `Opponent strategy: ${aiProfile.title}. ${aiProfile.description}`,

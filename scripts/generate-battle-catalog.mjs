@@ -151,13 +151,90 @@ function pickMoves(entry) {
   return names.length > 0 ? names : ['Tackle'];
 }
 
+function movesFromRankedAttacks(attacks, offset = 0) {
+  const selected = [];
+  const rotated = [...attacks.slice(offset), ...attacks.slice(0, offset)];
+  addAttacks(selected, rotated, 4);
+  return [...new Set(selected.map(move => move.name))].slice(0, 4);
+}
+
+function itemForMoves(moves, entry) {
+  const moveData = moves.map(move => dex.moves.get(move));
+  const statusMoves = moveData.filter(move => move.category === 'Status');
+  if (statusMoves.some(move => RELIABLE_RECOVERY.includes(move.id))) return 'Leftovers';
+  if (statusMoves.some(move => [...SETUP_PHYSICAL, ...SETUP_SPECIAL, ...SETUP_EITHER].includes(move.id))) {
+    return 'Lum Berry';
+  }
+  if (statusMoves.length > 0 || moveData.some(move => PIVOT.includes(move.id))) return 'Heavy-Duty Boots';
+
+  const damaging = moveData.filter(move => move.category !== 'Status');
+  if (damaging.length > 0 && damaging.every(move => move.category === 'Physical')) return 'Choice Band';
+  if (damaging.length > 0 && damaging.every(move => move.category === 'Special')) return 'Choice Specs';
+  if (entry.baseStats.hp + entry.baseStats.def + entry.baseStats.spd >= 285) return 'Assault Vest';
+  return 'Life Orb';
+}
+
+function pickBuilds(entry) {
+  const pool = buildMovePool(entry);
+  const find = id => pool.find(move => move.id === id);
+  const firstAvailable = ids => ids.map(find).find(Boolean) ?? null;
+  const attacks = rankedAttacks(pool, entry);
+  const physicalAttacks = attacks.filter(({ move }) => move.category === 'Physical');
+  const specialAttacks = attacks.filter(({ move }) => move.category === 'Special');
+  const physical = entry.baseStats.atk >= entry.baseStats.spa;
+  const setup = firstAvailable(physical
+    ? [...SETUP_PHYSICAL, ...SETUP_EITHER]
+    : [...SETUP_SPECIAL, ...SETUP_EITHER]);
+  const recovery = firstAvailable(RELIABLE_RECOVERY);
+  const utility = firstAvailable([...STATUS_UTILITY, ...HAZARDS, ...PIVOT]);
+  const builds = [];
+
+  const addBuild = (name, moves, item = itemForMoves(moves, entry)) => {
+    if (moves.length === 0) return;
+    const key = moves.join('|');
+    if (builds.some(build => build.moves.join('|') === key)) return;
+    builds.push({ name, ability: entry.abilities[0], moves, item });
+  };
+
+  const primaryMoves = pickMoves(entry);
+  addBuild('Signature', primaryMoves);
+
+  const preferredAttacks = physical ? physicalAttacks : specialAttacks;
+  const preferredMoves = movesFromRankedAttacks(preferredAttacks);
+  if (preferredMoves.length >= 4) {
+    addBuild(physical ? 'Physical breaker' : 'Special breaker', preferredMoves);
+  }
+
+  if (setup) {
+    const selected = [setup];
+    addAttacks(selected, preferredAttacks.length >= 3 ? preferredAttacks : attacks, 4);
+    addBuild('Setup sweeper', selected.map(move => move.name).slice(0, 4), 'Lum Berry');
+  }
+
+  if (recovery && utility) {
+    const selected = [];
+    addAttacks(selected, attacks.filter(({ move }) => !move.recoil), 2);
+    selected.push(recovery, utility);
+    addBuild('Bulky utility', [...new Set(selected.map(move => move.name))].slice(0, 4), 'Leftovers');
+  }
+
+  const alternateMoves = movesFromRankedAttacks(attacks, Math.min(2, Math.max(0, attacks.length - 1)));
+  if (alternateMoves.length >= 4) addBuild('Coverage attacker', alternateMoves);
+
+  return builds.slice(0, 3);
+}
+
 function toCatalogPokemon(entry) {
+  const builds = pickBuilds(entry);
+  const primary = builds[0];
   return {
     id: entry.num,
     species: entry.name,
     types: [...entry.types],
-    ability: entry.abilities[0],
-    moves: pickMoves(entry),
+    ability: primary.ability,
+    moves: primary.moves,
+    item: primary.item,
+    builds,
     bst: Object.values(entry.baseStats).reduce((total, stat) => total + stat, 0),
   };
 }

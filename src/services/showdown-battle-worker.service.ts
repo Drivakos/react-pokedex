@@ -3,7 +3,7 @@ import type {
   BattleWorkerRequest,
   ShowdownBattleCallbacks,
 } from '../types/battle-worker';
-import type { RunPokemon } from '../types/battle-run';
+import type { RunDifficulty, RunPokemon } from '../types/battle-run';
 import { compactBattleWorkerEvents } from '../utils/battle-worker-events';
 
 let prewarmedWorker: Worker | null = null;
@@ -52,6 +52,7 @@ export class ShowdownBattleWorkerSession {
     opponentParty: RunPokemon[],
     stage: number,
     callbacks: ShowdownBattleCallbacks,
+    difficulty: RunDifficulty = 'medium',
   ) {
     this.callbacks = callbacks;
     this.worker = acquireBattleWorker();
@@ -60,7 +61,7 @@ export class ShowdownBattleWorkerSession {
       this.callbacks.onError(event.message || 'The battle engine failed to load.');
       this.dispose();
     };
-    this.send({ type: 'init', playerParty, opponentParty, stage });
+    this.send({ type: 'init', playerParty, opponentParty, stage, difficulty });
   }
 
   start(): void {
