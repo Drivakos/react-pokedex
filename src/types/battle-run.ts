@@ -253,6 +253,7 @@ export interface RunBossModifier {
   title: string;
   label: string;
   description: string;
+  levelBonus: number;
   item: 'Sitrus Berry' | 'Life Orb' | 'Leftovers';
 }
 

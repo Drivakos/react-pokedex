@@ -156,9 +156,13 @@ describe('battle content catalog', () => {
   it('applies the selected route to opponent levels and roster size', () => {
     const apex = RUN_ROUTES.find(route => route.id === 'apex');
     expect(apex).toBeDefined();
-    const enemies = createEnemyParty(1, [], createSeededRandom('apex-seed'), apex);
-    expect(enemies).toHaveLength(2);
-    expect(enemies.every(pokemon => pokemon.level === 8)).toBe(true);
+    const soloParty = [createRunPokemon('Pikachu', 1)];
+    const duoParty = [...soloParty, createRunPokemon('Bulbasaur', 1)];
+    const soloEnemies = createEnemyParty(1, soloParty, createSeededRandom('apex-seed'), apex);
+    const duoEnemies = createEnemyParty(1, duoParty, createSeededRandom('apex-seed'), apex);
+    expect(soloEnemies).toHaveLength(1);
+    expect(duoEnemies).toHaveLength(2);
+    expect(soloEnemies.every(pokemon => pokemon.level === 5)).toBe(true);
   });
 
   it('prepares deterministic, route-specific rosters for scouting', () => {
@@ -168,10 +172,10 @@ describe('battle content catalog', () => {
     expect(first).toEqual(second);
     expect(first.trail).toHaveLength(1);
     expect(first.rival).toHaveLength(1);
-    expect(first.apex).toHaveLength(2);
+    expect(first.apex).toHaveLength(1);
     expect(first.trail.every(pokemon => pokemon.level === 3)).toBe(true);
     expect(first.rival.every(pokemon => pokemon.level === 5)).toBe(true);
-    expect(first.apex.every(pokemon => pokemon.level === 8)).toBe(true);
+    expect(first.apex.every(pokemon => pokemon.level === 5)).toBe(true);
     expect(Math.max(...first.trail.map(pokemon => pokemon.bst)))
       .toBeLessThan(Math.max(...first.apex.map(pokemon => pokemon.bst)));
   });

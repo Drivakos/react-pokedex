@@ -3,7 +3,7 @@ jest.mock('../../services/showdown-battle-worker.service', () => ({
 }));
 
 import { createRunPokemon } from '../../services/battle-content.service';
-import { useBattleRunStore } from '../battleRunStore';
+import { BATTLE_RUN_SAVE_KEY, useBattleRunStore } from '../battleRunStore';
 import { RUN_UPGRADES } from '../../utils/battle-run-rules';
 
 const fullParty = () => [
@@ -130,5 +130,119 @@ describe('Battle Run checkpoint rewards', () => {
     });
     expect(useBattleRunStore.getState().party[0].species).toBe('Ivysaur');
     expect(useBattleRunStore.getState().draftChoices.length).toBeGreaterThan(0);
+  });
+});
+
+describe('Battle Run checkpoint persistence', () => {
+  beforeEach(() => {
+    window.localStorage.clear();
+    useBattleRunStore.getState().startRun();
+  });
+
+  it('preserves the initial three starter choices across a module reload', async () => {
+    const starterChoices = useBattleRunStore.getState().draftChoices.map(pokemon => pokemon.species);
+    const checkpoint = JSON.parse(window.localStorage.getItem(BATTLE_RUN_SAVE_KEY) ?? '{}');
+    expect(checkpoint).toMatchObject({
+      version: 1,
+      state: {
+        phase: 'starter-draft',
+        party: [],
+      },
+    });
+    expect(checkpoint.state.draftChoices.map((pokemon: { species: string }) => pokemon.species))
+      .toEqual(starterChoices);
+
+    jest.resetModules();
+    const reloadedModule = await import('../battleRunStore');
+    expect(reloadedModule.useBattleRunStore.getState().resumeAvailable).toBe(true);
+
+    reloadedModule.useBattleRunStore.getState().resumeRun();
+    expect(reloadedModule.useBattleRunStore.getState().draftChoices.map(pokemon => pokemon.species))
+      .toEqual(starterChoices);
+  });
+
+  it('automatically saves meaningful progress after choosing a starter', () => {
+    const starter = useBattleRunStore.getState().draftChoices[0];
+    useBattleRunStore.getState().chooseStarter(starter);
+
+    const checkpoint = JSON.parse(window.localStorage.getItem(BATTLE_RUN_SAVE_KEY) ?? '{}');
+    expect(checkpoint).toMatchObject({
+      version: 1,
+      state: {
+        phase: 'route-select',
+        stage: 1,
+        party: [expect.objectContaining({ species: starter.species })],
+      },
+    });
+    expect(checkpoint.randomCalls).toBeGreaterThan(0);
+  });
+
+  it('offers the saved run when the store module loads after a refresh', async () => {
+    const starter = useBattleRunStore.getState().draftChoices[0];
+    useBattleRunStore.getState().chooseStarter(starter);
+
+    jest.resetModules();
+    const reloadedModule = await import('../battleRunStore');
+    const reloadedState = reloadedModule.useBattleRunStore.getState();
+
+    expect(reloadedState.resumeAvailable).toBe(true);
+    expect(reloadedState.savedRunSummary).toMatchObject({
+      stage: 1,
+      party: [expect.objectContaining({ species: starter.species })],
+    });
+    expect(reloadedState.seed).toBe('');
+  });
+
+  it('keeps the pre-battle checkpoint while a battle is in progress', () => {
+    const starter = useBattleRunStore.getState().draftChoices[0];
+    useBattleRunStore.getState().chooseStarter(starter);
+    const safeCheckpoint = window.localStorage.getItem(BATTLE_RUN_SAVE_KEY);
+
+    useBattleRunStore.setState({ phase: 'battle', score: 999999 });
+
+    expect(window.localStorage.getItem(BATTLE_RUN_SAVE_KEY)).toBe(safeCheckpoint);
+  });
+
+  it('restores the run and seeded random cursor for future drafts', () => {
+    const starter = useBattleRunStore.getState().draftChoices[0];
+    useBattleRunStore.getState().chooseStarter(starter);
+    useBattleRunStore.setState({
+      phase: 'reward-draft',
+      scoutPasses: 1,
+      draftChoices: [createRunPokemon('Pikachu', 3)],
+    });
+    const checkpoint = window.localStorage.getItem(BATTLE_RUN_SAVE_KEY);
+    expect(checkpoint).not.toBeNull();
+
+    useBattleRunStore.getState().rerollDraft();
+    const firstReroll = useBattleRunStore.getState().draftChoices.map(pokemon => pokemon.species);
+
+    window.localStorage.setItem(BATTLE_RUN_SAVE_KEY, checkpoint ?? '');
+    useBattleRunStore.setState({
+      seed: '',
+      party: [],
+      draftChoices: [],
+      resumeAvailable: true,
+    });
+    useBattleRunStore.getState().resumeRun();
+    useBattleRunStore.getState().rerollDraft();
+    const resumedReroll = useBattleRunStore.getState().draftChoices.map(pokemon => pokemon.species);
+
+    expect(resumedReroll).toEqual(firstReroll);
+    expect(useBattleRunStore.getState()).toMatchObject({
+      phase: 'reward-draft',
+      resumeAvailable: false,
+      scoutPasses: 0,
+    });
+  });
+
+  it('removes the checkpoint when a run reaches a terminal state', () => {
+    const starter = useBattleRunStore.getState().draftChoices[0];
+    useBattleRunStore.getState().chooseStarter(starter);
+    expect(window.localStorage.getItem(BATTLE_RUN_SAVE_KEY)).not.toBeNull();
+
+    useBattleRunStore.setState({ phase: 'game-over', party: [] });
+
+    expect(window.localStorage.getItem(BATTLE_RUN_SAVE_KEY)).toBeNull();
   });
 });

@@ -56,6 +56,14 @@ function cleanLogMessage(message: string): string {
     .trim();
 }
 
+function isRecoverableClientProjectionError(error: unknown): boolean {
+  if (!(error instanceof TypeError)) return false;
+  return (
+    error.message.includes("reading 'abilities'")
+    && (error.stack ?? '').includes('getPressurePP')
+  );
+}
+
 export class ShowdownBattleSession {
   private readonly callbacks: ShowdownBattleCallbacks;
   private readonly playerSets: PokemonSet[];
@@ -141,7 +149,16 @@ export class ShowdownBattleSession {
           const formatted = cleanLogMessage(this.formatter.formatText(args, kwArgs));
           if (formatted && args[0] !== 'error') this.callbacks.onLog(formatted);
 
-          this.client.add(args, kwArgs);
+          try {
+            this.client.add(args, kwArgs);
+          } catch (error) {
+            if (!isRecoverableClientProjectionError(error)) throw error;
+            this.callbacks.onError(
+              'The battle display skipped a transient form update and recovered.',
+              false,
+              error,
+            );
+          }
           this.emitVisual(args);
 
           if (args[0] === 'request') {

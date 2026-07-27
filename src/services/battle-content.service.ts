@@ -205,19 +205,32 @@ export function createEnemyParty(
 ): RunPokemon[] {
   const bossModifier = getBossModifier(stage);
   const routeScaling = bossModifier ? null : route;
+  const hardRamp = routeScaling?.difficulty === 'hard'
+    ? Math.min(1, Math.max(0, stage - 1) / 3)
+    : 1;
+  const bstAdjustment = routeScaling?.difficulty === 'hard'
+    ? Math.round(20 + (routeScaling.bstBonus - 20) * hardRamp)
+    : routeScaling?.bstBonus ?? 0;
+  const levelAdjustment = routeScaling?.difficulty === 'hard'
+    ? Math.round(routeScaling.levelBonus * hardRamp)
+    : routeScaling?.levelBonus ?? 0;
+  const requestedPartySize = enemyPartySize(stage) + (routeScaling?.partySizeBonus ?? 0);
+  const partySize = routeScaling
+    ? Math.min(3, requestedPartySize, Math.max(1, playerParty.length))
+    : Math.min(3, requestedPartySize);
   const party = sampleSpecies(
     stage,
-    Math.min(3, enemyPartySize(stage) + (routeScaling?.partySizeBonus ?? 0)),
+    partySize,
     getExcludedSpecies(playerParty),
     random,
     false,
-    routeScaling?.bstBonus ?? 0,
+    bstAdjustment,
     true,
   );
 
   return party.map(pokemon => ({
     ...pokemon,
-    level: Math.max(1, Math.min(100, pokemon.level + (bossModifier ? 4 : routeScaling?.levelBonus ?? 0))),
+    level: Math.max(1, Math.min(100, pokemon.level + (bossModifier?.levelBonus ?? levelAdjustment))),
     ...(bossModifier ? { item: bossModifier.item } : {}),
   }));
 }

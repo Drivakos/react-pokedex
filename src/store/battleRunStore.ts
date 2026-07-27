@@ -51,8 +51,118 @@ import { getBattleAiProfile } from '../utils/battle-ai-profile';
 // stages, routes, upgrades, rewards, and drafts. It starts each battle through the
 // engine and reacts to the outcome — it never touches the sim directly.
 let random: (() => number) | null = null;
+let randomCalls = 0;
 
 const BEST_SCORE_KEY = 'battle-run-best-score';
+export const BATTLE_RUN_SAVE_KEY = 'battle-run-checkpoint-v1';
+const BATTLE_RUN_SAVE_VERSION = 1;
+const RESTORABLE_PHASES = new Set<BattleRunPhase>([
+  'starter-draft',
+  'lead-select',
+  'route-select',
+  'upgrade-draft',
+  'reward-draft',
+  'party-development',
+  'replacement',
+]);
+
+export interface SavedBattleRunSummary {
+  stage: number;
+  score: number;
+  party: RunPokemon[];
+  savedAt: number;
+}
+
+type PersistedBattleRunState = Pick<BattleRunStore,
+  | 'phase'
+  | 'stage'
+  | 'score'
+  | 'personalBestReached'
+  | 'winStreak'
+  | 'contractStreak'
+  | 'scoutPasses'
+  | 'runStats'
+  | 'unlockedMilestoneIds'
+  | 'seed'
+  | 'party'
+  | 'enemyParty'
+  | 'routePreviews'
+  | 'opponentTrainer'
+  | 'activeChallenge'
+  | 'activeRoute'
+  | 'upgrades'
+  | 'upgradeChoices'
+  | 'draftChoices'
+  | 'pendingRecruit'
+  | 'developmentRewardPending'
+  | 'lastReward'
+>;
+
+interface SavedBattleRunCheckpoint {
+  version: number;
+  savedAt: number;
+  randomCalls: number;
+  state: PersistedBattleRunState;
+}
+
+function setRunRandom(seed: string, calls = 0): () => number {
+  const seeded = createSeededRandom(seed);
+  const restoredCalls = Math.max(0, Math.floor(calls));
+  for (let index = 0; index < restoredCalls; index += 1) seeded();
+  randomCalls = restoredCalls;
+  random = () => {
+    randomCalls += 1;
+    return seeded();
+  };
+  return random;
+}
+
+function readSavedBattleRun(): SavedBattleRunCheckpoint | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    const raw = window.localStorage.getItem(BATTLE_RUN_SAVE_KEY);
+    if (!raw) return null;
+    const checkpoint = JSON.parse(raw) as Partial<SavedBattleRunCheckpoint>;
+    if (
+      checkpoint.version !== BATTLE_RUN_SAVE_VERSION
+      || typeof checkpoint.savedAt !== 'number'
+      || typeof checkpoint.randomCalls !== 'number'
+      || !checkpoint.state
+      || typeof checkpoint.state.seed !== 'string'
+      || checkpoint.state.seed.length === 0
+      || !Array.isArray(checkpoint.state.party)
+      || !RESTORABLE_PHASES.has(checkpoint.state.phase as BattleRunPhase)
+    ) {
+      window.localStorage.removeItem(BATTLE_RUN_SAVE_KEY);
+      return null;
+    }
+    return checkpoint as SavedBattleRunCheckpoint;
+  } catch {
+    window.localStorage.removeItem(BATTLE_RUN_SAVE_KEY);
+    return null;
+  }
+}
+
+function savedRunSummary(checkpoint: SavedBattleRunCheckpoint | null): SavedBattleRunSummary | null {
+  if (!checkpoint) return null;
+  return {
+    stage: checkpoint.state.stage,
+    score: checkpoint.state.score,
+    party: checkpoint.state.party,
+    savedAt: checkpoint.savedAt,
+  };
+}
+
+function clearSavedBattleRun(): void {
+  if (typeof window === 'undefined') return;
+  try {
+    window.localStorage.removeItem(BATTLE_RUN_SAVE_KEY);
+  } catch {
+    // Saving is optional in private or restricted browser sessions.
+  }
+}
+
+const initialSavedRun = readSavedBattleRun();
 
 function readBestScore(): number {
   if (typeof window === 'undefined') return 0;
@@ -74,6 +184,8 @@ function persistBestScore(score: number): void {
 }
 
 interface BattleRunStore {
+  resumeAvailable: boolean;
+  savedRunSummary: SavedBattleRunSummary | null;
   phase: BattleRunPhase;
   stage: number;
   score: number;
@@ -98,6 +210,7 @@ interface BattleRunStore {
   developmentRewardPending: boolean;
   lastReward: RunRewardSummary | null;
   startRun: () => void;
+  resumeRun: () => void;
   chooseStarter: (pokemon: RunPokemon) => void;
   chooseLead: (index: number) => void;
   selectRoute: (routeId: RunRouteId) => void;
@@ -300,6 +413,8 @@ export const useBattleRunStore = create<BattleRunStore>((set, get) => {
   };
 
   return {
+    resumeAvailable: Boolean(initialSavedRun),
+    savedRunSummary: savedRunSummary(initialSavedRun),
     phase: 'starter-draft',
     stage: 1,
     score: 0,
@@ -327,9 +442,12 @@ export const useBattleRunStore = create<BattleRunStore>((set, get) => {
     startRun: () => {
       const seed = newSeed();
       const bestScore = Math.max(get().bestScore, readBestScore());
-      random = createSeededRandom(seed);
+      clearSavedBattleRun();
+      const rng = setRunRandom(seed);
       useBattleEngineStore.getState().resetBattle();
       set({
+        resumeAvailable: false,
+        savedRunSummary: null,
         phase: 'starter-draft',
         stage: 1,
         score: 0,
@@ -349,10 +467,26 @@ export const useBattleRunStore = create<BattleRunStore>((set, get) => {
         activeRoute: null,
         upgrades: [],
         upgradeChoices: [],
-        draftChoices: createDraftChoices(1, [], random, true),
+        draftChoices: createDraftChoices(1, [], rng, true),
         pendingRecruit: null,
         developmentRewardPending: false,
         lastReward: null,
+      });
+    },
+
+    resumeRun: () => {
+      const checkpoint = readSavedBattleRun();
+      if (!checkpoint) {
+        get().startRun();
+        return;
+      }
+      setRunRandom(checkpoint.state.seed, checkpoint.randomCalls);
+      useBattleEngineStore.getState().resetBattle();
+      set({
+        ...checkpoint.state,
+        bestScore: Math.max(get().bestScore, readBestScore()),
+        resumeAvailable: false,
+        savedRunSummary: null,
       });
     },
 
@@ -518,3 +652,52 @@ export const useBattleRunStore = create<BattleRunStore>((set, get) => {
     },
   };
 });
+
+function persistBattleRunCheckpoint(state: BattleRunStore): void {
+  if (typeof window === 'undefined' || !state.seed) return;
+  if (state.phase === 'game-over' || state.phase === 'run-complete') {
+    clearSavedBattleRun();
+    return;
+  }
+  if (state.phase === 'preparing-battle' || state.phase === 'battle') return;
+  const hasStarterDraft = state.phase === 'starter-draft' && state.draftChoices.length > 0;
+  if (state.party.length === 0 && !hasStarterDraft) return;
+
+  const persistedState: PersistedBattleRunState = {
+    phase: state.phase,
+    stage: state.stage,
+    score: state.score,
+    personalBestReached: state.personalBestReached,
+    winStreak: state.winStreak,
+    contractStreak: state.contractStreak,
+    scoutPasses: state.scoutPasses,
+    runStats: state.runStats,
+    unlockedMilestoneIds: state.unlockedMilestoneIds,
+    seed: state.seed,
+    party: state.party,
+    enemyParty: state.enemyParty,
+    routePreviews: state.routePreviews,
+    opponentTrainer: state.opponentTrainer,
+    activeChallenge: state.activeChallenge,
+    activeRoute: state.activeRoute,
+    upgrades: state.upgrades,
+    upgradeChoices: state.upgradeChoices,
+    draftChoices: state.draftChoices,
+    pendingRecruit: state.pendingRecruit,
+    developmentRewardPending: state.developmentRewardPending,
+    lastReward: state.lastReward,
+  };
+
+  try {
+    window.localStorage.setItem(BATTLE_RUN_SAVE_KEY, JSON.stringify({
+      version: BATTLE_RUN_SAVE_VERSION,
+      savedAt: Date.now(),
+      randomCalls,
+      state: persistedState,
+    } satisfies SavedBattleRunCheckpoint));
+  } catch {
+    // The run remains playable if storage is unavailable or full.
+  }
+}
+
+useBattleRunStore.subscribe(persistBattleRunCheckpoint);

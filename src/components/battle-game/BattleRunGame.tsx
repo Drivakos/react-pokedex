@@ -14,8 +14,10 @@ import {
   Loader2,
   LockKeyhole,
   Medal,
+  Play,
   RefreshCw,
   RotateCcw,
+  Save,
   Shield,
   ShieldCheck,
   Star,
@@ -28,7 +30,7 @@ import {
   XCircle,
   Zap,
 } from 'lucide-react';
-import { useBattleRunStore } from '../../store/battleRunStore';
+import { type SavedBattleRunSummary, useBattleRunStore } from '../../store/battleRunStore';
 import { useBattleEngineStore } from '../../store/battleEngineStore';
 import {
   disposePrewarmedShowdownBattleWorker,
@@ -1475,7 +1477,7 @@ function RouteSelectionScreen() {
           const preview = routePreviews[route.id];
           const recruitmentReward = getRecruitmentRewardProfile(stage + 1, route, upgrades);
           const routeDescription = checkpoint
-            ? `This boss cannot be weakened: every opponent is four levels above the stage curve, uses a competitive build, and carries ${bossModifier?.item ?? 'a boss item'}.`
+            ? `This boss cannot be weakened: every opponent is ${bossModifier?.levelBonus ?? 0} levels above the stage curve, uses a competitive build, and carries ${bossModifier?.item ?? 'a boss item'}.`
             : route.description;
           const Icon = route.id === 'trail' ? Shield : route.id === 'rival' ? Swords : Crown;
           const accent = route.id === 'trail'
@@ -1504,7 +1506,7 @@ function RouteSelectionScreen() {
               </div>
               <div className="flex flex-1 flex-col p-3.5 sm:p-5">
                 <p className="text-xs font-black uppercase tracking-[0.16em] text-slate-400">{checkpoint ? 'One fixed opponent · no difficulty choice' : route.label}</p>
-                <p className="mt-2 text-sm leading-relaxed text-slate-600 lg:min-h-[4.5rem]">{routeDescription}</p>
+                <p className="mt-2 text-sm leading-relaxed text-slate-600 lg:min-h-[7.5rem]">{routeDescription}</p>
 
                 {finalStage ? (
                   <div className="mt-4 flex items-center justify-between gap-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5 text-amber-950">
@@ -1551,7 +1553,7 @@ function RouteSelectionScreen() {
                   </div>
                 </div>
 
-                <div className="mt-3 grid grid-cols-3 gap-2 text-center sm:mt-5">
+                <div className="mt-auto grid grid-cols-3 gap-2 pt-3 text-center sm:pt-5">
                   <div className="rounded-xl bg-slate-50 p-2">
                     <span className="block text-[9px] font-black uppercase text-slate-400">Level</span>
                     <strong className="text-sm text-slate-800">{preview[0] ? `L${preview[0].level}` : '—'}</strong>
@@ -1923,6 +1925,153 @@ function RunCompleteScreen({
   );
 }
 
+function ResumeRunScreen({
+  summary,
+  onResume,
+  onStartNew,
+}: {
+  summary: SavedBattleRunSummary;
+  onResume: () => void;
+  onStartNew: () => void;
+}) {
+  const [confirmNewRun, setConfirmNewRun] = useState(false);
+  const sector = getRunSector(summary.stage);
+  const progress = Math.max(0, Math.min(100, (summary.stage / RUN_STAGE_LIMIT) * 100));
+  const savedLabel = new Intl.DateTimeFormat(undefined, {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+  }).format(new Date(summary.savedAt));
+
+  return (
+    <main className="battle-run-theme relative flex min-h-[calc(100svh-4rem)] items-center justify-center overflow-hidden bg-slate-950 px-3 py-5 sm:px-6 sm:py-8">
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(239,68,68,0.18),transparent_38%),radial-gradient(circle_at_bottom_right,rgba(14,165,233,0.18),transparent_42%)]" />
+      <section
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="resume-run-title"
+        className="relative w-full max-w-3xl overflow-hidden rounded-2xl border border-white/15 bg-white shadow-2xl shadow-black/40 sm:rounded-[1.75rem]"
+      >
+        <div className="h-1.5 bg-gradient-to-r from-red-600 via-amber-400 to-sky-500" />
+        <div className="border-b border-slate-200 bg-slate-50/80 px-4 py-4 sm:px-7 sm:py-5">
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex min-w-0 items-start gap-3.5">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-slate-950 text-white shadow-md">
+                <Trophy className="h-5 w-5" />
+              </div>
+              <div className="min-w-0">
+                <div className="flex flex-wrap items-center gap-2">
+                  <p className="text-[10px] font-black uppercase tracking-[0.2em] text-red-600">Battle Run</p>
+                  <span className="inline-flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[9px] font-black uppercase tracking-wider text-emerald-700">
+                    <Save className="h-3 w-3" /> Autosaved
+                  </span>
+                </div>
+                <h1 id="resume-run-title" className="mt-1 text-2xl font-black tracking-tight text-slate-950 sm:text-3xl">
+                  Continue your run
+                </h1>
+                <p className="mt-1 text-xs font-semibold text-slate-500 sm:text-sm">
+                  Resume exactly where you left off in the {sector.title}.
+                </p>
+              </div>
+            </div>
+            <span className="max-sm:hidden shrink-0 text-right text-[10px] font-bold text-slate-400">
+              Last saved<br /><strong className="text-slate-600">{savedLabel}</strong>
+            </span>
+          </div>
+        </div>
+
+        <div className="px-4 py-5 sm:px-7 sm:py-6">
+          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 sm:p-5">
+            <div className="flex items-end justify-between gap-3">
+              <div>
+                <p className="text-[9px] font-black uppercase tracking-[0.18em] text-slate-400">Run progress</p>
+                <p className="mt-1 text-lg font-black text-slate-950">Stage {summary.stage} of {RUN_STAGE_LIMIT}</p>
+              </div>
+              <p className="text-right text-xs font-bold text-slate-500">{sector.title}</p>
+            </div>
+            <div className="mt-3 h-2 overflow-hidden rounded-full bg-slate-200">
+              <div
+                className="h-full rounded-full bg-gradient-to-r from-red-600 via-amber-500 to-emerald-500"
+                style={{ width: `${progress}%` }}
+              />
+            </div>
+          </div>
+
+          <div className="mt-3 grid grid-cols-2 gap-3">
+            <div className="rounded-xl border border-amber-200/70 bg-amber-50 px-4 py-3">
+              <p className="text-[9px] font-black uppercase tracking-wider text-amber-700">Current score</p>
+              <p className="mt-0.5 text-xl font-black tabular-nums text-amber-950">{summary.score.toLocaleString()}</p>
+            </div>
+            <div className="rounded-xl border border-sky-200/70 bg-sky-50 px-4 py-3">
+              <p className="text-[9px] font-black uppercase tracking-wider text-sky-700">Active roster</p>
+              <p className="mt-0.5 text-xl font-black text-sky-950">{summary.party.length} <span className="text-sm text-sky-600">of 6</span></p>
+            </div>
+          </div>
+
+          <div className="mt-5">
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-500">Your team</p>
+              <p className="text-[10px] font-bold text-slate-400 sm:hidden">{savedLabel}</p>
+            </div>
+            <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3">
+              {summary.party.map(pokemon => (
+                <div key={pokemon.species} className="flex min-w-0 items-center gap-2 rounded-xl border border-slate-200 bg-white p-2 shadow-sm">
+                  <BattlePokemonImage id={pokemon.id} species={pokemon.species} variant="icon" className="h-10 w-10 shrink-0" />
+                  <span className="min-w-0">
+                    <strong className="block truncate text-xs text-slate-900">{pokemon.species}</strong>
+                    <span className="block text-[10px] font-bold text-slate-400">Level {pokemon.level}</span>
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {!confirmNewRun ? (
+            <div className="mt-6 grid gap-2.5 sm:grid-cols-[1fr_auto]">
+              <button
+                type="button"
+                onClick={onResume}
+                className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-slate-950 px-6 py-3 font-black text-white shadow-lg shadow-slate-300 transition hover:-translate-y-0.5 hover:bg-slate-800 focus:outline-none focus:ring-4 focus:ring-slate-200"
+              >
+                <Play className="h-4 w-4 fill-current" /> Continue stage {summary.stage}
+              </button>
+              <button
+                type="button"
+                onClick={() => setConfirmNewRun(true)}
+                className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl px-5 py-3 text-sm font-black text-slate-500 transition hover:bg-red-50 hover:text-red-700 focus:outline-none focus:ring-4 focus:ring-red-100"
+              >
+                <RotateCcw className="h-4 w-4" /> Start new
+              </button>
+            </div>
+          ) : (
+            <div className="mt-6 rounded-xl border border-red-200 bg-red-50 p-3 sm:flex sm:items-center sm:justify-between sm:gap-4">
+              <div>
+                <p className="text-sm font-black text-red-950">Replace this saved run?</p>
+                <p className="mt-0.5 text-xs font-semibold text-red-700">Your current Stage {summary.stage} checkpoint will be permanently replaced.</p>
+              </div>
+              <div className="mt-3 grid grid-cols-2 gap-2 sm:mt-0 sm:flex">
+                <button
+                  type="button"
+                  onClick={() => setConfirmNewRun(false)}
+                  className="min-h-10 rounded-lg border border-red-200 bg-white px-4 text-xs font-black text-slate-700 hover:bg-slate-50"
+                >
+                  Keep save
+                </button>
+                <button
+                  type="button"
+                  onClick={onStartNew}
+                  className="min-h-10 rounded-lg bg-red-600 px-4 text-xs font-black text-white shadow-sm hover:bg-red-700"
+                >
+                  Replace & start
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      </section>
+    </main>
+  );
+}
+
 export default function BattleRunGame() {
   // Warm the Showdown client bundle while the player is still on the draft/route
   // screens, so the first battle streams live instead of buffering a cold load.
@@ -1944,15 +2093,19 @@ export default function BattleRunGame() {
   const party = useBattleRunStore(state => state.party);
   const draftChoices = useBattleRunStore(state => state.draftChoices);
   const seed = useBattleRunStore(state => state.seed);
+  const resumeAvailable = useBattleRunStore(state => state.resumeAvailable);
+  const savedRunSummary = useBattleRunStore(state => state.savedRunSummary);
   const startRun = useBattleRunStore(state => state.startRun);
+  const resumeRun = useBattleRunStore(state => state.resumeRun);
   const chooseStarter = useBattleRunStore(state => state.chooseStarter);
   const chooseReward = useBattleRunStore(state => state.chooseReward);
   const openPartyDevelopment = useBattleRunStore(state => state.openPartyDevelopment);
   const rerollDraft = useBattleRunStore(state => state.rerollDraft);
 
   useEffect(() => {
-    if (!seed) startRun();
-  }, [seed, startRun]);
+    if (!seed && !resumeAvailable) startRun();
+    if (!seed && resumeAvailable && savedRunSummary?.party.length === 0) resumeRun();
+  }, [resumeAvailable, resumeRun, savedRunSummary, seed, startRun]);
 
   useEffect(() => {
     if (phase === 'starter-draft' || phase === 'reward-draft' || phase === 'lead-select' || phase === 'route-select') {
@@ -1976,6 +2129,16 @@ export default function BattleRunGame() {
     ? getRecommendedDraftChoice(draftChoices, party)
     : null;
   const developmentChoices = party.length >= 6 ? getPartyDevelopmentChoices(party) : [];
+
+  if (!seed && resumeAvailable && savedRunSummary) {
+    return (
+      <ResumeRunScreen
+        summary={savedRunSummary}
+        onResume={resumeRun}
+        onStartNew={startRun}
+      />
+    );
+  }
 
   return (
     <main className="battle-run-theme relative min-h-[calc(100svh-4rem)] overflow-hidden bg-slate-50 px-2 py-3 sm:bg-gradient-to-br sm:from-red-50 sm:via-sky-50 sm:to-emerald-50 sm:px-6 sm:py-4">

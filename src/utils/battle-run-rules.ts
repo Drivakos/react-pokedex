@@ -40,6 +40,7 @@ export const RUN_BOSS_MODIFIERS: RunBossModifier[] = [
     title: 'Reserve protocol',
     label: 'One-time recovery',
     description: 'Every opposing Pokémon carries a Sitrus Berry and restores health once at or below half HP.',
+    levelBonus: 4,
     item: 'Sitrus Berry',
   },
   {
@@ -47,6 +48,7 @@ export const RUN_BOSS_MODIFIERS: RunBossModifier[] = [
     title: 'Overdrive protocol',
     label: 'Damage with recoil',
     description: 'Every opposing Pokémon carries a Life Orb, increasing attack damage while taking recoil after damaging moves.',
+    levelBonus: 4,
     item: 'Life Orb',
   },
   {
@@ -54,6 +56,7 @@ export const RUN_BOSS_MODIFIERS: RunBossModifier[] = [
     title: 'Champion endurance',
     label: 'Sustained recovery',
     description: 'Every opposing Pokémon carries Leftovers and restores health at the end of each turn.',
+    levelBonus: 5,
     item: 'Leftovers',
   },
 ];
@@ -64,12 +67,12 @@ export const RUN_ROUTES: RunRoute[] = [
     difficulty: 'easy',
     title: 'Easy route',
     label: 'Forgiving battle',
-    description: 'Face a smaller, lower-level roster with a less decisive trainer.',
+    description: 'Face a smaller, lower-level roster with a less decisive trainer. Recruitment remains strong enough to prepare for fixed boss checkpoints.',
     levelBonus: -2,
     bstBonus: -55,
     partySizeBonus: 0,
     scoreMultiplier: 1,
-    recruitmentStageBonus: 0,
+    recruitmentStageBonus: 1,
     recruitmentChoiceBonus: 0,
   },
   {
@@ -90,7 +93,7 @@ export const RUN_ROUTES: RunRoute[] = [
     difficulty: 'hard',
     title: 'Hard route',
     label: 'Severe battle',
-    description: 'Face stronger opponents three levels above the stage with an extra team member. Earn 60% more score, a two-stage recruitment boost, and one extra choice.',
+    description: 'Face stronger opponents that ramp up to three bonus levels by stage 4, with an extra team member once your roster can answer it. Earn 60% more score, a two-stage recruitment boost, and one extra choice.',
     levelBonus: 3,
     bstBonus: 55,
     partySizeBonus: 1,
