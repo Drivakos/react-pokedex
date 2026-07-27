@@ -220,6 +220,7 @@ interface BattleRunStore {
   closePartyDevelopment: () => void;
   developPartyMember: (partyIndex: number, targetSpecies: string) => void;
   rerollDraft: () => void;
+  cancelReplacement: () => void;
   replacePartyMember: (index: number) => void;
 }
 
@@ -642,6 +643,14 @@ export const useBattleRunStore = create<BattleRunStore>((set, get) => {
       set({
         draftChoices,
         scoutPasses: current.scoutPasses - 1,
+      });
+    },
+
+    cancelReplacement: () => {
+      if (get().phase !== 'replacement') return;
+      set({
+        phase: 'reward-draft',
+        pendingRecruit: null,
       });
     },
 

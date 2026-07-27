@@ -57,6 +57,41 @@ describe('Battle Run party development', () => {
   });
 });
 
+describe('Battle Run full-party recruitment', () => {
+  beforeEach(() => {
+    useBattleRunStore.getState().startRun();
+  });
+
+  it('returns from replacement selection without changing or rerolling recruits', () => {
+    const party = fullParty();
+    const draftChoices = [
+      createRunPokemon('Mew', 4),
+      createRunPokemon('Lucario', 4),
+      createRunPokemon('Dragonite', 4),
+    ];
+    useBattleRunStore.setState({
+      phase: 'reward-draft',
+      party,
+      draftChoices,
+    });
+
+    useBattleRunStore.getState().chooseReward(draftChoices[0]);
+    expect(useBattleRunStore.getState()).toMatchObject({
+      phase: 'replacement',
+      pendingRecruit: expect.objectContaining({ species: 'Mew' }),
+    });
+
+    useBattleRunStore.getState().cancelReplacement();
+
+    expect(useBattleRunStore.getState()).toMatchObject({
+      phase: 'reward-draft',
+      pendingRecruit: null,
+      party,
+      draftChoices,
+    });
+  });
+});
+
 describe('Battle Run boss route selection', () => {
   beforeEach(() => {
     useBattleRunStore.getState().startRun();

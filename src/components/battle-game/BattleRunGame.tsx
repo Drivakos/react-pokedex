@@ -1663,11 +1663,21 @@ function UpgradeDraftScreen() {
 function ReplacementScreen() {
   const party = useBattleRunStore(state => state.party);
   const recruit = useBattleRunStore(state => state.pendingRecruit);
+  const cancel = useBattleRunStore(state => state.cancelReplacement);
   const replace = useBattleRunStore(state => state.replacePartyMember);
   if (!recruit) return null;
 
   return (
     <section className="mx-auto max-w-6xl text-center">
+      <div className="mb-4 flex justify-start">
+        <button
+          type="button"
+          onClick={cancel}
+          className="inline-flex items-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-black text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:border-slate-400 hover:bg-slate-50 focus:outline-none focus:ring-4 focus:ring-slate-200"
+        >
+          <RotateCcw className="h-4 w-4" /> Back to recruit options
+        </button>
+      </div>
       <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-blue-100 text-blue-700 sm:h-16 sm:w-16 sm:rounded-2xl"><ArrowLeftRight className="h-6 w-6 sm:h-8 sm:w-8" /></div>
       <h2 className="mt-3 text-2xl font-black text-slate-950 sm:mt-4 sm:text-3xl">Your party is full</h2>
       <p className="mx-auto mt-2 max-w-xl text-sm text-slate-600 sm:text-base">Choose a team member for <strong>{recruit.species}</strong> to replace. The replaced Pokémon permanently leaves this run.</p>
