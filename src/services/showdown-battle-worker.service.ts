@@ -46,6 +46,7 @@ export class ShowdownBattleWorkerSession {
   private disposed = false;
   private pendingEvents: BattleWorkerEvent[] = [];
   private flushFrame: number | null = null;
+  private readyTimer: number | null = null;
 
   constructor(
     playerParty: RunPokemon[],
@@ -58,9 +59,14 @@ export class ShowdownBattleWorkerSession {
     this.worker = acquireBattleWorker();
     this.worker.onmessage = ({ data }: MessageEvent<BattleWorkerEvent>) => this.enqueueEvent(data);
     this.worker.onerror = event => {
-      this.callbacks.onError(event.message || 'The battle engine failed to load.');
+      this.callbacks.onError(event.message || 'The battle engine failed to load.', true);
       this.dispose();
     };
+    this.readyTimer = window.setTimeout(() => {
+      if (this.ready || this.disposed) return;
+      this.callbacks.onError('The battle engine took too long to initialize.', true);
+      this.dispose();
+    }, 12_000);
     this.send({ type: 'init', playerParty, opponentParty, stage, difficulty });
   }
 
@@ -84,7 +90,9 @@ export class ShowdownBattleWorkerSession {
     if (this.disposed) return;
     this.disposed = true;
     if (this.flushFrame !== null) window.cancelAnimationFrame(this.flushFrame);
+    if (this.readyTimer !== null) window.clearTimeout(this.readyTimer);
     this.flushFrame = null;
+    this.readyTimer = null;
     this.pendingEvents = [];
     this.worker.terminate();
   }
@@ -118,6 +126,8 @@ export class ShowdownBattleWorkerSession {
     switch (event.type) {
       case 'ready':
         this.ready = true;
+        if (this.readyTimer !== null) window.clearTimeout(this.readyTimer);
+        this.readyTimer = null;
         if (this.startRequested) this.send({ type: 'start' });
         break;
       case 'snapshot':
@@ -140,7 +150,8 @@ export class ShowdownBattleWorkerSession {
         this.dispose();
         break;
       case 'error':
-        this.callbacks.onError(event.message);
+        this.callbacks.onError(event.message, event.fatal);
+        if (event.fatal) this.dispose();
         break;
     }
   }

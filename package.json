@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "generate:battle-catalog": "node scripts/generate-battle-catalog.mjs",
+    "balance:battle": "node scripts/simulate-battle-balance.mjs",
     "dev": "vite",
     "build": "tsc && vite build",
     "build:prod": "node scripts/build-prod.js",

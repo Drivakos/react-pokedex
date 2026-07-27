@@ -36,6 +36,7 @@ import {
 } from '../../services/showdown-battle-worker.service';
 import type { ActiveBattlePokemon, BattleMoveChoice, BattleSide, BattleVisualEvent, OpponentTrainer, RunChallenge, RunChallengeProgress, RunMilestoneId, RunPokemon, RunRewardSummary, RunStats, RunUpgrade } from '../../types/battle-run';
 import {
+  PARTY_LIMIT,
   RUN_MILESTONES,
   RUN_ROUTES,
   RUN_SECTORS,
@@ -843,11 +844,14 @@ function BattleArena() {
   const activeRoute = useBattleRunStore(state => state.activeRoute);
   const partySize = useBattleRunStore(state => state.party.length);
   const decision = useBattleEngineStore(state => state.decision);
+  const engineStatus = useBattleEngineStore(state => state.status);
   const error = useBattleEngineStore(state => state.error);
   const visualEvents = useBattleEngineStore(state => state.visualEvents);
   const consumeVisualEvent = useBattleEngineStore(state => state.consumeVisualEvent);
   const chooseMove = useBattleEngineStore(state => state.chooseMove);
   const chooseSwitch = useBattleEngineStore(state => state.chooseSwitch);
+  const retryBattle = useBattleEngineStore(state => state.retryBattle);
+  const forfeitBattle = useBattleEngineStore(state => state.forfeitBattle);
   const availableSwitches = decision.switches.filter(choice => !choice.active && !choice.fainted);
   const [displaySnapshot, setDisplaySnapshot] = useState(snapshot);
   const [activeVisual, setActiveVisual] = useState<BattleVisualEvent | null>(null);
@@ -996,7 +1000,29 @@ function BattleArena() {
         </div>
 
         <div className="relative border-t border-slate-200 bg-slate-50 p-3 sm:p-6">
-          {error && <div className="mb-4 rounded-xl border border-red-200 bg-red-50 p-3 text-sm font-semibold text-red-700">{error}</div>}
+          {error && (
+            <div className="mb-4 rounded-xl border border-red-200 bg-red-50 p-3 text-sm font-semibold text-red-700">
+              <p>{error}</p>
+              {engineStatus === 'error' && (
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={retryBattle}
+                    className="rounded-lg bg-red-600 px-3 py-2 text-xs font-black text-white transition hover:bg-red-700"
+                  >
+                    Restart battle
+                  </button>
+                  <button
+                    type="button"
+                    onClick={forfeitBattle}
+                    className="rounded-lg border border-red-200 bg-white px-3 py-2 text-xs font-black text-red-700 transition hover:bg-red-100"
+                  >
+                    End run
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
 
           {decision.kind === 'move' && !controlsLocked && (
             <div>
@@ -1094,7 +1120,7 @@ function BattleArena() {
             </div>
           )}
 
-          {(decision.kind === 'wait' || controlsLocked) && (
+          {engineStatus !== 'error' && (decision.kind === 'wait' || controlsLocked) && (
             <div className="flex min-h-24 items-center justify-center gap-3 text-sm font-black text-slate-500">
               <Loader2 className="h-5 w-5 animate-spin text-red-500" /> {controlsLocked ? 'Playing battle sequence…' : 'Resolving the turn…'}
             </div>

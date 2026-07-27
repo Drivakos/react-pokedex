@@ -174,6 +174,50 @@ function itemForMoves(moves, entry) {
   return 'Life Orb';
 }
 
+function trainingForBuild(name, moves, entry) {
+  const moveData = moves.map(move => dex.moves.get(move));
+  const physicalCount = moveData.filter(move => move.category === 'Physical').length;
+  const specialCount = moveData.filter(move => move.category === 'Special').length;
+  const statusCount = moveData.filter(move => move.category === 'Status').length;
+  const hasRecovery = moveData.some(move => RELIABLE_RECOVERY.includes(move.id));
+  const bulky = name === 'Bulky utility' || (hasRecovery && statusCount >= 2);
+  const evs = { hp: 0, atk: 0, def: 0, spa: 0, spd: 0, spe: 0 };
+
+  if (bulky) {
+    evs.hp = 252;
+    if (entry.baseStats.def <= entry.baseStats.spd) {
+      evs.def = 252;
+      evs.spd = 4;
+      return { nature: 'Bold', evs };
+    }
+    evs.spd = 252;
+    evs.def = 4;
+    return { nature: 'Calm', evs };
+  }
+
+  if (physicalCount > 0 && specialCount > 0) {
+    evs.hp = 2;
+    evs.atk = 128;
+    evs.spa = 128;
+    evs.spe = 252;
+    return { nature: 'Naive', evs };
+  }
+
+  const fast = entry.baseStats.spe >= 90 || name === 'Setup sweeper';
+  const investSpeed = fast || entry.baseStats.spe >= 60;
+  if (physicalCount >= specialCount) {
+    evs.atk = 252;
+    evs[investSpeed ? 'spe' : 'hp'] = 252;
+    evs[investSpeed ? 'hp' : 'spd'] = 4;
+    return { nature: fast ? 'Jolly' : 'Adamant', evs };
+  }
+
+  evs.spa = 252;
+  evs[investSpeed ? 'spe' : 'hp'] = 252;
+  evs[investSpeed ? 'hp' : 'spd'] = 4;
+  return { nature: fast ? 'Timid' : 'Modest', evs };
+}
+
 function pickBuilds(entry) {
   const pool = buildMovePool(entry);
   const find = id => pool.find(move => move.id === id);
@@ -193,7 +237,13 @@ function pickBuilds(entry) {
     if (moves.length === 0) return;
     const key = moves.join('|');
     if (builds.some(build => build.moves.join('|') === key)) return;
-    builds.push({ name, ability: entry.abilities[0], moves, item });
+    builds.push({
+      name,
+      ability: entry.abilities[0],
+      moves,
+      item,
+      ...trainingForBuild(name, moves, entry),
+    });
   };
 
   const primaryMoves = pickMoves(entry);

@@ -17,9 +17,9 @@ export function toPokemonSet(pokemon: RunPokemon): PokemonSet {
     item: pokemon.item ?? '',
     ability: pokemon.ability,
     moves: pokemon.moves,
-    nature: 'Hardy',
+    nature: pokemon.nature ?? 'Hardy',
     gender: '',
-    evs: statTable(85),
+    evs: pokemon.evs ?? statTable(85),
     ivs: statTable(31),
     level: pokemon.level,
   };

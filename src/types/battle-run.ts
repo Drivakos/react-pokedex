@@ -20,10 +20,29 @@ export interface RunPokemon {
   moves: string[];
   bst: number;
   item?: string;
+  nature?: string;
+  evs?: PokemonStatSpread;
   isMega?: boolean;
   baseSpecies?: string;
   buildName?: string;
 }
+
+export interface PokemonStatSpread {
+  hp: number;
+  atk: number;
+  def: number;
+  spa: number;
+  spd: number;
+  spe: number;
+}
+
+export type BattleEngineStatus =
+  | 'idle'
+  | 'starting'
+  | 'animating'
+  | 'awaiting-choice'
+  | 'finished'
+  | 'error';
 
 export type PartyDevelopmentKind = 'evolution' | 'mega';
 

@@ -19,7 +19,7 @@ workerScope.onmessage = ({ data }: MessageEvent<BattleWorkerRequest>) => {
           onVisual: event => send({ type: 'visual', event }),
           onProtocol: chunk => send({ type: 'protocol', chunk }),
           onEnd: result => send({ type: 'end', result }),
-          onError: message => send({ type: 'error', message }),
+          onError: (message, fatal) => send({ type: 'error', message, fatal }),
         }, data.stage, data.difficulty);
         send({ type: 'ready' });
         break;
@@ -37,6 +37,7 @@ workerScope.onmessage = ({ data }: MessageEvent<BattleWorkerRequest>) => {
     send({
       type: 'error',
       message: error instanceof Error ? error.message : 'The battle simulator stopped unexpectedly.',
+      fatal: true,
     });
   }
 };

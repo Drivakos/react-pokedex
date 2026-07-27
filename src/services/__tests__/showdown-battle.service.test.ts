@@ -39,4 +39,52 @@ describe('ShowdownBattleSession', () => {
       session.start();
     });
   });
+
+  it('survives transient client typing gaps during multi-Pokémon faint and switch batches', async () => {
+    const abomasnow = createRunPokemon('Abomasnow', 5);
+    const megaParty = developPartyPokemon([abomasnow], 0, 'Abomasnow-Mega');
+    expect(megaParty).not.toBeNull();
+
+    await new Promise<void>((resolve, reject) => {
+      const session = new ShowdownBattleSession(
+        [
+          createRunPokemon('Wugtrio', 5),
+          createRunPokemon('Gothorita', 5),
+          createRunPokemon('Gallade', 5),
+          createRunPokemon('Glalie', 5),
+          createRunPokemon('Squawkabilly', 5),
+        ],
+        [
+          createRunPokemon('Slowking', 5),
+          ...(megaParty ?? []),
+          createRunPokemon('Garganacl', 5),
+        ],
+        {
+          onSnapshot: () => undefined,
+          onDecision: decision => {
+            if (decision.kind === 'move') {
+              const move = decision.moves
+                .filter(option => !option.disabled)
+                .sort((left, right) => right.power - left.power)[0];
+              if (move) session.chooseMove(move.slot);
+            }
+            if (decision.kind === 'switch') {
+              const choice = decision.switches.find(option => !option.active && !option.fainted);
+              if (choice) session.chooseSwitch(choice.slot);
+            }
+          },
+          onLog: () => undefined,
+          onVisual: () => undefined,
+          onEnd: () => resolve(),
+          onError: (message, fatal) => {
+            if (fatal) reject(new Error(message));
+          },
+        },
+        5,
+        'hard',
+      );
+
+      session.start();
+    });
+  });
 });

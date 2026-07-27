@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { ShowdownBattleWorkerSession } from '../services/showdown-battle-worker.service';
 import type {
   BattleDecision,
+  BattleEngineStatus,
   BattleResult,
   BattleSnapshot,
   BattleVisualEvent,
@@ -44,8 +45,10 @@ export interface StartBattleConfig {
 
 // The live worker session for the current battle (null between battles).
 let session: ShowdownBattleWorkerSession | null = null;
+let startTimer: number | null = null;
 // The narrative's outcome callback for the current battle.
 let onBattleEnd: ((result: BattleResult) => void) | null = null;
+let lastBattleConfig: StartBattleConfig | null = null;
 
 // --- Raw Showdown protocol feed --------------------------------------------
 // A streaming side channel (not React state) so the Showdown BattleScene can
@@ -92,6 +95,7 @@ interface BattleEngineStore {
   visualEvents: BattleVisualEvent[];
   // Bumped each time a new battle begins, so a Showdown scene can reset itself.
   battleNonce: number;
+  status: BattleEngineStatus;
   error: string | null;
   startBattle: (config: StartBattleConfig) => void;
   chooseMove: (slot: number) => void;
@@ -99,6 +103,8 @@ interface BattleEngineStore {
   consumeVisualEvent: (id: number) => void;
   // Tear down the current battle (used when a narrative restarts from scratch).
   resetBattle: () => void;
+  retryBattle: () => void;
+  forfeitBattle: () => void;
   // Wired up by the live Showdown scene so pacing follows the real on-screen
   // animation rather than the (instant) worker / guessed durations.
   attachBattleScene: () => void;
@@ -112,7 +118,7 @@ export const useBattleEngineStore = create<BattleEngineStore>((set, get) => {
     if (!bufferedDecision) return;
     const decision = bufferedDecision;
     bufferedDecision = null;
-    set({ decision, error: null });
+    set({ decision, status: 'awaiting-choice', error: null });
   };
 
   // Report the battle outcome to the narrative — exactly once, when the on-screen
@@ -125,7 +131,7 @@ export const useBattleEngineStore = create<BattleEngineStore>((set, get) => {
     sceneGateActive = false;
     const notify = onBattleEnd;
     onBattleEnd = null;
-    set({ decision: emptyDecision, visualEvents: [] });
+    set({ decision: emptyDecision, visualEvents: [], status: 'finished', error: null });
     notify?.(result);
   };
 
@@ -135,62 +141,95 @@ export const useBattleEngineStore = create<BattleEngineStore>((set, get) => {
     battleLog: [],
     visualEvents: [],
     battleNonce: 0,
+    status: 'idle',
     error: null,
 
-    startBattle: ({
-      playerParty,
-      enemyParty,
-      level,
-      difficulty = 'medium',
-      introLog = [],
-      onActive,
-      onEnd,
-    }) => {
+    startBattle: config => {
+      const {
+        playerParty,
+        enemyParty,
+        level,
+        difficulty = 'medium',
+        introLog = [],
+        onActive,
+        onEnd,
+      } = config;
       session?.dispose();
+      if (startTimer !== null) window.clearTimeout(startTimer);
+      startTimer = null;
       resetBattleProtocol();
       sceneGateActive = false;
       sceneIdle = true;
       bufferedDecision = null;
       pendingBattleResult = null;
       onBattleEnd = onEnd;
+      lastBattleConfig = config;
       set(current => ({
         snapshot: null,
         decision: emptyDecision,
         battleLog: introLog,
         visualEvents: [],
+        status: 'starting',
         error: null,
         battleNonce: current.battleNonce + 1,
       }));
 
       const battleSession = new ShowdownBattleWorkerSession(playerParty, enemyParty, level, {
-        onProtocol: chunk => emitBattleProtocol(chunk),
+        onProtocol: chunk => {
+          if (session === battleSession) emitBattleProtocol(chunk);
+        },
         onSnapshot: snapshot => {
+          if (session !== battleSession) return;
           onActive?.();
-          set({ snapshot });
+          set(current => ({
+            snapshot,
+            status: current.status === 'starting' ? 'animating' : current.status,
+          }));
         },
         onDecision: decision => {
+          if (session !== battleSession) return;
           onActive?.();
           // Hold an actionable decision until the scene has finished animating the
           // turn it belongs to; a bare 'wait' can pass straight through to lock the UI.
           if (sceneGateActive && !sceneIdle && decision.kind !== 'wait') {
             bufferedDecision = decision;
-            set({ decision: emptyDecision, error: null });
+            set({ decision: emptyDecision, status: 'animating', error: null });
           } else {
             bufferedDecision = null;
-            set({ decision, error: null });
+            set({
+              decision,
+              status: decision.kind === 'wait' ? 'animating' : 'awaiting-choice',
+              error: null,
+            });
           }
         },
-        onLog: message => set(current => ({
-          battleLog: [...current.battleLog, message].slice(-12),
-        })),
-        onVisual: event => set(current => ({
-          visualEvents: [...current.visualEvents, event].slice(-40),
-        })),
-        onError: message => {
+        onLog: message => {
+          if (session !== battleSession) return;
+          set(current => ({ battleLog: [...current.battleLog, message].slice(-12) }));
+        },
+        onVisual: event => {
+          if (session !== battleSession) return;
+          set(current => ({ visualEvents: [...current.visualEvents, event].slice(-40) }));
+        },
+        onError: (message, fatal = false) => {
+          if (session !== battleSession) return;
           onActive?.();
-          set({ error: message });
+          if (!fatal) {
+            set({ error: message });
+            return;
+          }
+          battleSession.dispose();
+          session = null;
+          if (startTimer !== null) window.clearTimeout(startTimer);
+          startTimer = null;
+          pendingBattleResult = null;
+          bufferedDecision = null;
+          sceneGateActive = false;
+          sceneIdle = true;
+          set({ decision: emptyDecision, status: 'error', error: message });
         },
         onEnd: result => {
+          if (session !== battleSession) return;
           if (session === battleSession) session = null;
           pendingBattleResult = result;
           // With a live scene, wait for it to finish animating the final KO
@@ -201,7 +240,8 @@ export const useBattleEngineStore = create<BattleEngineStore>((set, get) => {
         },
       }, difficulty);
       session = battleSession;
-      window.setTimeout(() => {
+      startTimer = window.setTimeout(() => {
+        startTimer = null;
         if (session === battleSession) battleSession.start();
       }, 900);
     },
@@ -209,14 +249,14 @@ export const useBattleEngineStore = create<BattleEngineStore>((set, get) => {
     chooseMove: slot => {
       const decision = get().decision;
       if (!session || !canSubmitMove(decision, slot)) return;
-      set({ decision: emptyDecision, error: null });
+      set({ decision: emptyDecision, status: 'animating', error: null });
       session.chooseMove(slot);
     },
 
     chooseSwitch: slot => {
       const decision = get().decision;
       if (!session || !canSubmitSwitch(decision, slot)) return;
-      set({ decision: emptyDecision, error: null });
+      set({ decision: emptyDecision, status: 'animating', error: null });
       session.chooseSwitch(slot);
     },
 
@@ -232,14 +272,47 @@ export const useBattleEngineStore = create<BattleEngineStore>((set, get) => {
 
     resetBattle: () => {
       session?.dispose();
+      if (startTimer !== null) window.clearTimeout(startTimer);
+      startTimer = null;
       session = null;
       onBattleEnd = null;
+      lastBattleConfig = null;
       pendingBattleResult = null;
       bufferedDecision = null;
       sceneGateActive = false;
       sceneIdle = true;
       resetBattleProtocol();
-      set({ snapshot: null, decision: emptyDecision, battleLog: [], visualEvents: [], error: null });
+      set({
+        snapshot: null,
+        decision: emptyDecision,
+        battleLog: [],
+        visualEvents: [],
+        status: 'idle',
+        error: null,
+      });
+    },
+
+    retryBattle: () => {
+      const config = lastBattleConfig;
+      if (get().status !== 'error' || !config) return;
+      get().startBattle(config);
+    },
+
+    forfeitBattle: () => {
+      const config = lastBattleConfig;
+      if (!config || !onBattleEnd) return;
+      session?.dispose();
+      if (startTimer !== null) window.clearTimeout(startTimer);
+      startTimer = null;
+      session = null;
+      sceneGateActive = false;
+      sceneIdle = true;
+      bufferedDecision = null;
+      pendingBattleResult = {
+        winner: 'opponent',
+        faintedPlayerSpecies: config.playerParty.map(pokemon => pokemon.species),
+      };
+      finishBattle(pendingBattleResult);
     },
 
     attachBattleScene: () => {
@@ -249,13 +322,15 @@ export const useBattleEngineStore = create<BattleEngineStore>((set, get) => {
       sceneIdle = false;
       const current = get().decision;
       bufferedDecision = current.kind === 'wait' ? null : current;
-      if (bufferedDecision) set({ decision: emptyDecision });
+      if (bufferedDecision) set({ decision: emptyDecision, status: 'animating' });
     },
 
     detachBattleScene: () => {
+      if (!sceneGateActive) return;
       sceneGateActive = false;
       sceneIdle = true;
-      bufferedDecision = null;
+      releaseBufferedDecision();
+      if (pendingBattleResult && get().visualEvents.length === 0) finishBattle(pendingBattleResult);
     },
 
     reportBattleScenePlayback: idle => {

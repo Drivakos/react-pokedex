@@ -18,14 +18,27 @@ import { isSwitchingBlocked, isTrappedSwitchError } from '../utils/battle-reques
 import { calculateMoveEffectiveness } from '../utils/battle-move-effectiveness';
 import { ChallengePlayerAI } from './challenge-player-ai';
 
+function safeClientPokemonTypes(pokemon: ClientBattle['p1']['active'][number]): string[] {
+  if (!pokemon) return [];
+  const species = Dex.species.get(pokemon.speciesForme);
+  let types = species.types;
+  try {
+    if (pokemon.types?.length) types = pokemon.types;
+  } catch {
+    // @pkmn/client can briefly expose an active shell without a resolved species
+    // during a faint/switch batch. The canonical species typing is safe until the
+    // next protocol message completes that transition.
+  }
+  return [...types];
+}
+
 function toActivePokemon(pokemon: ClientBattle['p1']['active'][number]): ActiveBattlePokemon | null {
   if (!pokemon) return null;
-  const clientSpecies = pokemon.species;
-  const species = clientSpecies ?? Dex.species.get(pokemon.speciesForme);
+  const species = Dex.species.get(pokemon.speciesForme);
   return {
     id: species.num,
     species: pokemon.speciesForme,
-    types: clientSpecies ? [...pokemon.types] : [...species.types],
+    types: safeClientPokemonTypes(pokemon),
     level: pokemon.level,
     hp: pokemon.hp,
     maxhp: pokemon.maxhp,
@@ -111,10 +124,10 @@ export class ShowdownBattleSession {
       this.callbacks.onDecision({ kind: 'wait', moves: [], switches: [], switchingBlocked: false });
       void Promise.resolve(this.streams.p1.write(command)).catch(errorValue => {
         this.restorePendingRequest();
-        this.fail(errorValue);
+        this.fail(errorValue, false);
       });
     } catch (error) {
-      this.fail(error);
+      this.fail(error, false);
       if (!this.restorePendingRequest()) this.handleRequest(request);
     }
   }
@@ -139,7 +152,7 @@ export class ShowdownBattleSession {
           } else if (args[0] === 'tie') {
             this.finish('tie');
           } else if (args[0] === 'error') {
-            if (!this.restorePendingRequest(isTrappedSwitchError(args[1]))) this.callbacks.onError(args[1]);
+            if (!this.restorePendingRequest(isTrappedSwitchError(args[1]))) this.callbacks.onError(args[1], false);
           }
         }
         this.emitSnapshot();
@@ -159,7 +172,7 @@ export class ShowdownBattleSession {
     if (request.requestType === 'move') {
       const active = request.active[0];
       const switchingBlocked = switchingBlockedOverride || isSwitchingBlocked(active);
-      const opponentTypes = this.client.p2.active[0]?.types ?? [];
+      const opponentTypes = safeClientPokemonTypes(this.client.p2.active[0]);
       const moves = (active?.moves ?? []).map((move, index) => {
         const moveData = Dex.moves.get(move.id);
         return {
@@ -323,8 +336,9 @@ export class ShowdownBattleSession {
     });
   }
 
-  private fail(error: unknown): void {
+  private fail(error: unknown, fatal = true): void {
     const message = error instanceof Error ? error.message : 'The battle simulator stopped unexpectedly.';
-    this.callbacks.onError(message);
+    if (fatal) this.ended = true;
+    this.callbacks.onError(message, fatal, error);
   }
 }

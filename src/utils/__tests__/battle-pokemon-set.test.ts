@@ -26,4 +26,15 @@ describe('Showdown Pokémon set adapter', () => {
   it('keeps explicitly itemless sets itemless', () => {
     expect(toPokemonSet({ ...bossPokemon, item: undefined }).item).toBe('');
   });
+
+  it('passes build-specific nature and EV training into the simulator', () => {
+    const set = toPokemonSet({
+      ...bossPokemon,
+      nature: 'Adamant',
+      evs: { hp: 4, atk: 252, def: 0, spa: 0, spd: 0, spe: 252 },
+    });
+
+    expect(set.nature).toBe('Adamant');
+    expect(set.evs).toEqual({ hp: 4, atk: 252, def: 0, spa: 0, spd: 0, spe: 252 });
+  });
 });

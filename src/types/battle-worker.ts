@@ -13,7 +13,7 @@ export interface ShowdownBattleCallbacks {
   onLog: (message: string) => void;
   onVisual: (event: BattleVisualEvent) => void;
   onEnd: (result: BattleResult) => void;
-  onError: (message: string) => void;
+  onError: (message: string, fatal?: boolean, cause?: unknown) => void;
   // Raw Showdown protocol chunks (player POV), forwarded so a Showdown BattleScene
   // can render the real move animations. Optional — game logic never depends on it.
   onProtocol?: (chunk: string) => void;
@@ -33,4 +33,4 @@ export type BattleWorkerEvent =
   | { type: 'visual'; event: BattleVisualEvent }
   | { type: 'protocol'; chunk: string }
   | { type: 'end'; result: BattleResult }
-  | { type: 'error'; message: string };
+  | { type: 'error'; message: string; fatal?: boolean };

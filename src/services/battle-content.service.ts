@@ -3,6 +3,7 @@ import progressionData from '../data/battle-pokemon-progression.json';
 import type {
   PartyDevelopmentChoice,
   PartyDevelopmentOption,
+  PokemonStatSpread,
   RunPokemon,
   RunRoute,
   RunRoutePreviewMap,
@@ -26,6 +27,8 @@ interface BattlePokemonBuild {
   ability: string;
   moves: string[];
   item: string;
+  nature: string;
+  evs: PokemonStatSpread;
 }
 
 interface BattleProgressionEntry {
@@ -61,6 +64,8 @@ function materializePokemon(
     bst: pokemon.bst,
     ...((build?.item ?? pokemon.item) ? { item: build?.item ?? pokemon.item } : {}),
     ...(build ? { buildName: build.name } : {}),
+    ...(build?.nature ? { nature: build.nature } : {}),
+    ...(build?.evs ? { evs: { ...build.evs } } : {}),
     level,
     ...(pokemon.isMega ? { isMega: true, baseSpecies } : {}),
   };

@@ -21,6 +21,8 @@ describe('battle content catalog', () => {
       moves: ['Volt Tackle', 'Surf', 'Volt Switch', 'Thunder Wave'],
       item: 'Heavy-Duty Boots',
       buildName: 'Signature',
+      nature: 'Naive',
+      evs: { hp: 2, atk: 128, def: 0, spa: 128, spd: 0, spe: 252 },
       bst: 320,
     });
   });
@@ -37,6 +39,8 @@ describe('battle content catalog', () => {
     expect(physicalBreaker).toMatchObject({
       buildName: 'Physical breaker',
       item: 'Choice Band',
+      nature: 'Jolly',
+      evs: { hp: 4, atk: 252, def: 0, spa: 0, spd: 0, spe: 252 },
       moves: ['Volt Tackle', 'Play Rough', 'Knock Off', 'Brick Break'],
     });
   });
