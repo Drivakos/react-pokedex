@@ -1,3 +1,10 @@
+# [1.10.0](https://github.com/Drivakos/react-pokedex/compare/v1.9.0...v1.10.0) (2026-07-27)
+
+
+### Features
+
+* improve battle run progression and recovery ([c439a0c](https://github.com/Drivakos/react-pokedex/commit/c439a0c518a9d11835d3f91d68fb3303151c201a))
+
 # [1.9.0](https://github.com/Drivakos/react-pokedex/compare/v1.8.0...v1.9.0) (2026-07-27)
 
 
