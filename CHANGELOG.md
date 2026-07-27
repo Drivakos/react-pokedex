@@ -1,3 +1,10 @@
+## [1.11.1](https://github.com/Drivakos/react-pokedex/compare/v1.11.0...v1.11.1) (2026-07-27)
+
+
+### Bug Fixes
+
+* allow changing full-party recruit ([173badd](https://github.com/Drivakos/react-pokedex/commit/173baddc6fde84d978912267a10fbb4eb351a9a8))
+
 # [1.11.0](https://github.com/Drivakos/react-pokedex/compare/v1.10.0...v1.11.0) (2026-07-27)
 
 
