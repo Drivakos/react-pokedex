@@ -1,3 +1,10 @@
+# [1.8.0](https://github.com/Drivakos/react-pokedex/compare/v1.7.0...v1.8.0) (2026-07-27)
+
+
+### Features
+
+* improve battle run encounters and builds ([6f82363](https://github.com/Drivakos/react-pokedex/commit/6f82363acddfbc81d63edb30b917a31b2a7e860e))
+
 # [1.7.0](https://github.com/Drivakos/react-pokedex/compare/v1.6.1...v1.7.0) (2026-07-20)
 
 
