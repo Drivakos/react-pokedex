@@ -1,3 +1,11 @@
+# [1.9.0](https://github.com/Drivakos/react-pokedex/compare/v1.8.0...v1.9.0) (2026-07-27)
+
+
+### Features
+
+* harden battle engine and builds ([60ac723](https://github.com/Drivakos/react-pokedex/commit/60ac723e13c68e5f72fc25b563b7fcdf8d3b0c68))
+* improve battle run rewards and boss clarity ([68a3af9](https://github.com/Drivakos/react-pokedex/commit/68a3af961db33befb63fffe52655c875f3f0f69e))
+
 # [1.8.0](https://github.com/Drivakos/react-pokedex/compare/v1.7.0...v1.8.0) (2026-07-27)
 
 
