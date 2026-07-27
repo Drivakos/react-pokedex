@@ -1,3 +1,10 @@
+# [1.11.0](https://github.com/Drivakos/react-pokedex/compare/v1.10.0...v1.11.0) (2026-07-27)
+
+
+### Features
+
+* improve battle run opponent strategy ([ce67f62](https://github.com/Drivakos/react-pokedex/commit/ce67f62e58032b3f812c37a82ae9da6190492761))
+
 # [1.10.0](https://github.com/Drivakos/react-pokedex/compare/v1.9.0...v1.10.0) (2026-07-27)
 
 
