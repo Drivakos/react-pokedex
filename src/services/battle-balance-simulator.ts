@@ -1,4 +1,4 @@
-import { Dex } from '@pkmn/sim';
+import { Dex, type PRNGSeed } from '@pkmn/sim';
 import type {
   BattleDecision,
   BattleResult,
@@ -31,7 +31,10 @@ import {
   developPartyPokemon,
   getPartyDevelopmentChoices,
 } from './battle-content.service';
-import { ShowdownBattleSession } from './showdown-battle.service';
+import {
+  type BattleSimulationSeeds,
+  ShowdownBattleSession,
+} from './showdown-battle.service';
 
 export interface BattleBalanceScenario {
   stage: number;
@@ -106,6 +109,41 @@ interface HeadlessBattleOutcome {
   result: BattleResult;
   turns: number;
   survivors: number;
+}
+
+function createPrngSeed(seed: string): PRNGSeed {
+  const random = createSeededRandom(seed);
+  return Array.from({ length: 4 }, () => Math.floor(random() * 0x10000)).join(',') as PRNGSeed;
+}
+
+export function createBattleSimulationSeeds(
+  playerParty: RunPokemon[],
+  enemyParty: RunPokemon[],
+  stage: number,
+  difficulty: RunDifficulty,
+): BattleSimulationSeeds {
+  const battleKey = [
+    stage,
+    difficulty,
+    ...playerParty.flatMap(pokemon => [
+      pokemon.species,
+      pokemon.level,
+      pokemon.item ?? '',
+      ...pokemon.moves,
+    ]),
+    'versus',
+    ...enemyParty.flatMap(pokemon => [
+      pokemon.species,
+      pokemon.level,
+      pokemon.item ?? '',
+      ...pokemon.moves,
+    ]),
+  ].join(':');
+
+  return {
+    battle: createPrngSeed(`${battleKey}:battle`),
+    opponentAi: createPrngSeed(`${battleKey}:opponent-ai`),
+  };
 }
 
 export type HeadlessBattleRunner = (
@@ -341,6 +379,7 @@ function runHeadlessBattle(
       },
       stage,
       difficulty,
+      createBattleSimulationSeeds(playerParty, enemyParty, stage, difficulty),
     );
     session.start();
   });

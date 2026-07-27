@@ -209,12 +209,21 @@ export function createEnemyParty(
     ? Math.min(1, Math.max(0, stage - 1) / 3)
     : 1;
   const bstAdjustment = routeScaling?.difficulty === 'hard'
-    ? Math.round(20 + (routeScaling.bstBonus - 20) * hardRamp)
+    ? Math.round(10 + (routeScaling.bstBonus - 10) * hardRamp)
     : routeScaling?.bstBonus ?? 0;
   const levelAdjustment = routeScaling?.difficulty === 'hard'
     ? Math.round(routeScaling.levelBonus * hardRamp)
     : routeScaling?.levelBonus ?? 0;
-  const requestedPartySize = enemyPartySize(stage) + (routeScaling?.partySizeBonus ?? 0);
+  const hardRosterBonus = routeScaling?.difficulty === 'hard'
+    && stage >= 4
+    && playerParty.length >= 3
+    ? routeScaling.partySizeBonus
+    : 0;
+  const requestedPartySize = enemyPartySize(stage) + (
+    routeScaling?.difficulty === 'hard'
+      ? hardRosterBonus
+      : routeScaling?.partySizeBonus ?? 0
+  );
   const partySize = routeScaling
     ? Math.min(3, requestedPartySize, Math.max(1, playerParty.length))
     : Math.min(3, requestedPartySize);

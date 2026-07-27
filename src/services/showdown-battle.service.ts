@@ -1,7 +1,7 @@
 import { Battle as ClientBattle } from '@pkmn/client';
 import { Generations, type PokemonSet } from '@pkmn/data';
 import { Protocol } from '@pkmn/protocol';
-import { BattleStreams, Dex, Teams } from '@pkmn/sim';
+import { BattleStreams, Dex, Teams, type PRNGSeed } from '@pkmn/sim';
 import { ChoiceBuilder, LogFormatter } from '@pkmn/view';
 import type {
   ActiveBattlePokemon,
@@ -17,6 +17,11 @@ import { toPokemonSet } from '../utils/battle-pokemon-set';
 import { isSwitchingBlocked, isTrappedSwitchError } from '../utils/battle-request-rules';
 import { calculateMoveEffectiveness } from '../utils/battle-move-effectiveness';
 import { ChallengePlayerAI } from './challenge-player-ai';
+
+export interface BattleSimulationSeeds {
+  battle: PRNGSeed;
+  opponentAi: PRNGSeed;
+}
 
 function safeClientPokemonTypes(pokemon: ClientBattle['p1']['active'][number]): string[] {
   if (!pokemon) return [];
@@ -77,6 +82,7 @@ export class ShowdownBattleSession {
   private visualId = 0;
   private readonly stage: number;
   private readonly difficulty: RunDifficulty;
+  private readonly simulationSeeds?: BattleSimulationSeeds;
 
   constructor(
     playerParty: RunPokemon[],
@@ -84,10 +90,12 @@ export class ShowdownBattleSession {
     callbacks: ShowdownBattleCallbacks,
     stage = 1,
     difficulty: RunDifficulty = 'medium',
+    simulationSeeds?: BattleSimulationSeeds,
   ) {
     this.callbacks = callbacks;
     this.stage = stage;
     this.difficulty = difficulty;
+    this.simulationSeeds = simulationSeeds;
     this.playerSets = playerParty.map(toPokemonSet);
     this.opponentSets = opponentParty.map(toPokemonSet);
 
@@ -98,12 +106,20 @@ export class ShowdownBattleSession {
   }
 
   start(): void {
-    const ai = new ChallengePlayerAI(this.streams.p2, this.stage, this.difficulty);
+    const ai = new ChallengePlayerAI(
+      this.streams.p2,
+      this.stage,
+      this.difficulty,
+      this.simulationSeeds?.opponentAi,
+    );
     void ai.start().catch(error => this.fail(error));
     void this.consumePlayerStream();
 
     const commands = [
-      `>start ${JSON.stringify({ formatid: 'gen9customgame' })}`,
+      `>start ${JSON.stringify({
+        formatid: 'gen9customgame',
+        ...(this.simulationSeeds ? { seed: this.simulationSeeds.battle } : {}),
+      })}`,
       `>player p1 ${JSON.stringify({ name: 'Player', team: Teams.pack(this.playerSets) })}`,
       `>player p2 ${JSON.stringify({ name: 'NPC', team: Teams.pack(this.opponentSets) })}`,
     ].join('\n');

@@ -1,5 +1,6 @@
 import {
   chooseSimulatedPlayerAction,
+  createBattleSimulationSeeds,
   createBalanceScenarios,
   simulateFullBattleRuns,
 } from '../battle-balance-simulator';
@@ -28,6 +29,18 @@ function move(overrides: Partial<BattleMoveChoice>): BattleMoveChoice {
   };
 }
 
+function createRunPokemonFixture(species: string, moves: string[]): RunPokemon {
+  return {
+    id: 1,
+    species,
+    level: 10,
+    types: [],
+    ability: '',
+    moves,
+    bst: 500,
+  };
+}
+
 describe('battle balance simulator scenarios', () => {
   it('benchmarks every route normally and one fixed route for bosses', () => {
     const scenarios = createBalanceScenarios([1, 5, 10], 20);
@@ -40,6 +53,18 @@ describe('battle balance simulator scenarios', () => {
       '10:apex',
     ]);
     expect(scenarios.every(scenario => scenario.runs === 20)).toBe(true);
+  });
+
+  it('creates stable, matchup-specific battle and opponent AI seeds', () => {
+    const player = [createRunPokemonFixture('Charizard', ['Flamethrower'])];
+    const enemy = [createRunPokemonFixture('Venusaur', ['Giga Drain'])];
+    const first = createBattleSimulationSeeds(player, enemy, 4, 'medium');
+    const repeated = createBattleSimulationSeeds(player, enemy, 4, 'medium');
+    const differentStage = createBattleSimulationSeeds(player, enemy, 5, 'medium');
+
+    expect(repeated).toEqual(first);
+    expect(first.battle).not.toBe(first.opponentAi);
+    expect(differentStage).not.toEqual(first);
   });
 });
 

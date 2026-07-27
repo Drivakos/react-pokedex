@@ -158,10 +158,22 @@ describe('battle content catalog', () => {
     expect(apex).toBeDefined();
     const soloParty = [createRunPokemon('Pikachu', 1)];
     const duoParty = [...soloParty, createRunPokemon('Bulbasaur', 1)];
+    const developedParty = [
+      ...duoParty,
+      createRunPokemon('Squirtle', 4),
+      createRunPokemon('Charmander', 4),
+    ];
     const soloEnemies = createEnemyParty(1, soloParty, createSeededRandom('apex-seed'), apex);
     const duoEnemies = createEnemyParty(1, duoParty, createSeededRandom('apex-seed'), apex);
+    const developedEnemies = createEnemyParty(
+      4,
+      developedParty,
+      createSeededRandom('apex-seed'),
+      apex,
+    );
     expect(soloEnemies).toHaveLength(1);
-    expect(duoEnemies).toHaveLength(2);
+    expect(duoEnemies).toHaveLength(1);
+    expect(developedEnemies).toHaveLength(2);
     expect(soloEnemies.every(pokemon => pokemon.level === 5)).toBe(true);
   });
 
@@ -176,8 +188,13 @@ describe('battle content catalog', () => {
     expect(first.trail.every(pokemon => pokemon.level === 3)).toBe(true);
     expect(first.rival.every(pokemon => pokemon.level === 5)).toBe(true);
     expect(first.apex.every(pokemon => pokemon.level === 5)).toBe(true);
-    expect(Math.max(...first.trail.map(pokemon => pokemon.bst)))
-      .toBeLessThan(Math.max(...first.apex.map(pokemon => pokemon.bst)));
+    const sampledBst = Array.from({ length: 50 }, (_, index) => (
+      createRoutePreviews(1, [], createSeededRandom(`route-strength-${index}`))
+    )).reduce((totals, preview) => ({
+      trail: totals.trail + Math.max(...preview.trail.map(pokemon => pokemon.bst)),
+      apex: totals.apex + Math.max(...preview.apex.map(pokemon => pokemon.bst)),
+    }), { trail: 0, apex: 0 });
+    expect(sampledBst.trail).toBeLessThan(sampledBst.apex);
   });
 
   it('equips checkpoint rosters with their boss mechanic item', () => {
