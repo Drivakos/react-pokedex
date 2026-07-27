@@ -95,6 +95,7 @@ interface BattleRunStore {
   upgradeChoices: RunUpgrade[];
   draftChoices: RunPokemon[];
   pendingRecruit: RunPokemon | null;
+  developmentRewardPending: boolean;
   lastReward: RunRewardSummary | null;
   startRun: () => void;
   chooseStarter: (pokemon: RunPokemon) => void;
@@ -191,7 +192,10 @@ export const useBattleRunStore = create<BattleRunStore>((set, get) => {
     const survivors = levelUpSurvivors(survivingParty, reward.levelsGained);
     const runComplete = isFinalStage(current.stage);
     const upgradeChoices = !runComplete && isCheckpointStage(current.stage)
-      ? createRunUpgradeChoices(current.upgrades, rng)
+      ? createRunUpgradeChoices(current.upgrades, rng, 3, {
+        emptyPartySlots: PARTY_LIMIT - survivors.length,
+        canDevelop: getPartyDevelopmentChoices(survivors).length > 0,
+      })
       : [];
     const needsUpgradeChoice = upgradeChoices.length > 0;
     const recruitmentReward = getRecruitmentRewardProfile(
@@ -226,6 +230,7 @@ export const useBattleRunStore = create<BattleRunStore>((set, get) => {
         ),
       upgradeChoices,
       pendingRecruit: null,
+      developmentRewardPending: false,
       lastReward: reward,
       activeChallenge: null,
       activeRoute: null,
@@ -282,6 +287,7 @@ export const useBattleRunStore = create<BattleRunStore>((set, get) => {
         stage,
         party,
         pendingRecruit: null,
+        developmentRewardPending: false,
         draftChoices: [],
         lastReward: null,
         enemyParty: [],
@@ -315,6 +321,7 @@ export const useBattleRunStore = create<BattleRunStore>((set, get) => {
     upgradeChoices: [],
     draftChoices: [],
     pendingRecruit: null,
+    developmentRewardPending: false,
     lastReward: null,
 
     startRun: () => {
@@ -344,6 +351,7 @@ export const useBattleRunStore = create<BattleRunStore>((set, get) => {
         upgradeChoices: [],
         draftChoices: createDraftChoices(1, [], random, true),
         pendingRecruit: null,
+        developmentRewardPending: false,
         lastReward: null,
       });
     },
@@ -371,6 +379,7 @@ export const useBattleRunStore = create<BattleRunStore>((set, get) => {
 
     selectRoute: routeId => {
       if (get().phase !== 'route-select') return;
+      if (isCheckpointStage(get().stage) && routeId !== 'apex') return;
       const route = RUN_ROUTES.find(option => option.id === routeId);
       if (!route) return;
       beginBattle(route);
@@ -382,6 +391,32 @@ export const useBattleRunStore = create<BattleRunStore>((set, get) => {
       const upgrade = current.upgradeChoices.find(choice => choice.id === upgradeId);
       if (!upgrade) return;
       const upgrades = [...current.upgrades, upgrade];
+      const rng = random ?? Math.random;
+
+      if (upgrade.effect === 'develop-pokemon') {
+        if (getPartyDevelopmentChoices(current.party).length === 0) return;
+        set({
+          phase: 'party-development',
+          upgrades,
+          upgradeChoices: [],
+          draftChoices: [],
+          developmentRewardPending: true,
+        });
+        return;
+      }
+
+      const party = upgrade.effect === 'fill-roster'
+        ? [
+          ...current.party,
+          ...createDraftChoices(
+            current.stage + 1,
+            current.party,
+            rng,
+            false,
+            Math.max(0, PARTY_LIMIT - current.party.length),
+          ),
+        ].slice(0, PARTY_LIMIT)
+        : current.party;
       const recruitmentReward = getRecruitmentRewardProfile(
         current.stage + 1,
         current.lastReward?.route,
@@ -389,15 +424,17 @@ export const useBattleRunStore = create<BattleRunStore>((set, get) => {
       );
       set({
         phase: 'reward-draft',
+        party,
         upgrades,
         upgradeChoices: [],
         draftChoices: createDraftChoices(
           recruitmentReward.stage,
-          current.party,
-          random ?? Math.random,
+          party,
+          rng,
           false,
           recruitmentReward.choiceCount,
         ),
+        developmentRewardPending: false,
       });
     },
 
@@ -417,11 +454,11 @@ export const useBattleRunStore = create<BattleRunStore>((set, get) => {
         || current.party.length < PARTY_LIMIT
         || getPartyDevelopmentChoices(current.party).length === 0
       ) return;
-      set({ phase: 'party-development' });
+      set({ phase: 'party-development', developmentRewardPending: false });
     },
 
     closePartyDevelopment: () => {
-      if (get().phase === 'party-development') set({ phase: 'reward-draft' });
+      if (get().phase === 'party-development' && !get().developmentRewardPending) set({ phase: 'reward-draft' });
     },
 
     developPartyMember: (partyIndex, targetSpecies) => {
@@ -429,6 +466,26 @@ export const useBattleRunStore = create<BattleRunStore>((set, get) => {
       if (current.phase !== 'party-development') return;
       const party = developPartyPokemon(current.party, partyIndex, targetSpecies);
       if (!party) return;
+      if (current.developmentRewardPending) {
+        const recruitmentReward = getRecruitmentRewardProfile(
+          current.stage + 1,
+          current.lastReward?.route,
+          current.upgrades,
+        );
+        set({
+          phase: 'reward-draft',
+          party,
+          developmentRewardPending: false,
+          draftChoices: createDraftChoices(
+            recruitmentReward.stage,
+            party,
+            random ?? Math.random,
+            false,
+            recruitmentReward.choiceCount,
+          ),
+        });
+        return;
+      }
       advanceStage(party);
     },
 

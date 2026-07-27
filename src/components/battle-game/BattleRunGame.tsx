@@ -177,7 +177,7 @@ function MoveDetails({ move, opponent }: { move: BattleMoveChoice; opponent?: st
     <div
       id={`battle-move-details-${move.slot}`}
       role="tooltip"
-      className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm"
+      className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm sm:rounded-xl sm:p-2.5"
     >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
@@ -193,13 +193,13 @@ function MoveDetails({ move, opponent }: { move: BattleMoveChoice; opponent?: st
               {effectiveness.shortLabel}
             </span>
           </div>
-          <p className="mt-1.5 text-xs leading-relaxed text-slate-600">{move.description || 'No move description is available.'}</p>
+          <p className="mt-1.5 text-xs leading-relaxed text-slate-600 sm:mt-1 sm:text-[11px]">{move.description || 'No move description is available.'}</p>
         </div>
         <span className="shrink-0 text-[10px] font-black uppercase tracking-wider text-slate-400">
           vs {opponent ?? 'opponent'}
         </span>
       </div>
-      <dl className="mt-2 grid grid-cols-5 gap-2 border-t border-slate-100 pt-2 text-[10px]">
+      <dl className="mt-2 grid grid-cols-5 gap-2 border-t border-slate-100 pt-2 text-[10px] sm:mt-1.5 sm:pt-1.5 sm:text-[9px]">
         <div><dt className="font-bold text-slate-400">Category</dt><dd className="font-black text-slate-700">{move.category}</dd></div>
         <div><dt className="font-bold text-slate-400">{move.category === 'Status' ? 'Effect' : 'Power'}</dt><dd className="font-black text-slate-700">{move.category === 'Status' ? 'Utility' : move.power || '—'}</dd></div>
         <div><dt className="font-bold text-slate-400">Accuracy</dt><dd className="font-black text-slate-700">{move.accuracy === true ? 'Always' : `${move.accuracy}%`}</dd></div>
@@ -212,8 +212,12 @@ function MoveDetails({ move, opponent }: { move: BattleMoveChoice; opponent?: st
 
 function StageMeter({ stage, complete = false }: { stage: number; complete?: boolean }) {
   const sector = getRunSector(stage);
+  const nextBoss = RUN_SECTORS.find(runSector => runSector.endStage >= stage);
   return (
-    <div className="flex items-center gap-2" aria-label={`${sector.title}, stage ${Math.min(stage, RUN_STAGE_LIMIT)} of ${RUN_STAGE_LIMIT}`}>
+    <div
+      className="flex items-center gap-2"
+      aria-label={`${sector.title}, stage ${Math.min(stage, RUN_STAGE_LIMIT)} of ${RUN_STAGE_LIMIT}. ${nextBoss ? `Next boss is ${nextBoss.bossTitle} at stage ${nextBoss.endStage}.` : 'All bosses cleared.'}`}
+    >
       <span className="hidden text-[9px] font-black uppercase tracking-wider text-slate-400 xl:inline">{sector.title}</span>
       <div className="flex items-center gap-1">
         {RUN_SECTORS.map(runSector => (
@@ -222,10 +226,24 @@ function StageMeter({ stage, complete = false }: { stage: number; complete?: boo
               const candidateStage = runSector.startStage + index;
               const cleared = candidateStage < stage || (complete && candidateStage <= stage);
               const current = candidateStage === stage && !complete;
+              const boss = candidateStage === runSector.endStage;
               return (
                 <span
                   key={candidateStage}
-                  className={`h-1.5 rounded-full transition-all ${cleared ? 'w-2 bg-red-500' : current ? 'w-3 bg-amber-400' : 'w-1.5 bg-slate-200'}`}
+                  title={boss ? `Boss: ${runSector.bossTitle} · Stage ${candidateStage}` : `Stage ${candidateStage}`}
+                  className={`rounded-full transition-all ${
+                    boss
+                      ? cleared
+                        ? 'h-2.5 w-2.5 border-2 border-red-600 bg-red-600'
+                        : current
+                          ? 'h-3 w-3 border-2 border-amber-700 bg-amber-400 ring-2 ring-amber-200'
+                          : 'h-2.5 w-2.5 border-2 border-amber-500 bg-amber-50'
+                      : cleared
+                        ? 'h-1.5 w-2 bg-red-500'
+                        : current
+                          ? 'h-1.5 w-3 bg-amber-400'
+                          : 'h-1.5 w-1.5 bg-slate-200'
+                  }`}
                 />
               );
             })}
@@ -233,6 +251,11 @@ function StageMeter({ stage, complete = false }: { stage: number; complete?: boo
         ))}
       </div>
       <span className="text-[10px] font-black text-slate-500">{Math.min(stage, RUN_STAGE_LIMIT)}/{RUN_STAGE_LIMIT}</span>
+      {nextBoss && !complete && (
+        <span className="hidden items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[9px] font-black text-amber-800 sm:flex">
+          <Flag className="h-3 w-3" /> Boss {nextBoss.endStage}
+        </span>
+      )}
     </div>
   );
 }
@@ -858,11 +881,6 @@ function BattleArena() {
   const toggleMoveInspection = (slot: number) => {
     const nextSlot = inspectedMoveSlot === slot ? null : slot;
     setInspectedMoveSlot(nextSlot);
-    if (nextSlot === null) return;
-    window.requestAnimationFrame(() => {
-      document.getElementById(`battle-move-details-${nextSlot}`)
-        ?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-    });
   };
 
   useEffect(() => {
@@ -977,11 +995,16 @@ function BattleArena() {
           </div>
         </div>
 
-        <div className="border-t border-slate-200 bg-slate-50 p-3 sm:p-6">
+        <div className="relative border-t border-slate-200 bg-slate-50 p-3 sm:p-6">
           {error && <div className="mb-4 rounded-xl border border-red-200 bg-red-50 p-3 text-sm font-semibold text-red-700">{error}</div>}
 
           {decision.kind === 'move' && !controlsLocked && (
             <div>
+              {inspectedMove && (
+                <div className="absolute inset-x-2 bottom-full z-40 mb-2 sm:left-1/2 sm:right-auto sm:w-[min(680px,calc(100%-2rem))] sm:-translate-x-1/2 sm:mb-3">
+                  <MoveDetails move={inspectedMove} opponent={displaySnapshot?.opponent?.species} />
+                </div>
+              )}
               <div className="mb-3 flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-slate-950 text-white"><Swords className="h-4 w-4" /></span>
@@ -999,16 +1022,7 @@ function BattleArena() {
                     <Target className="h-3.5 w-3.5" /> {challengeProgress.label} · {challengeProgress.metrics.map(metric => metric.value).join(' / ')}
                   </span>
                 ) : (
-                  <span className="hidden text-xs font-bold text-slate-400 sm:inline">Switch options below</span>
-                )}
-              </div>
-              <div className={`mb-3 min-h-[124px] ${inspectedMove ? '' : 'max-sm:hidden'}`}>
-                {inspectedMove ? (
-                  <MoveDetails move={inspectedMove} opponent={displaySnapshot?.opponent?.species} />
-                ) : (
-                  <div className="flex min-h-[124px] items-center justify-center rounded-2xl border border-dashed border-slate-300 bg-white/60 px-4 text-center text-xs font-bold text-slate-500">
-                    Hover or focus a move to inspect its description, battle stats, and matchup against {displaySnapshot?.opponent?.species ?? 'the active opponent'}.
-                  </div>
+                  <span className="hidden text-xs font-bold text-slate-400 sm:inline">Hover or focus a move for details</span>
                 )}
               </div>
               <div className="grid grid-cols-2 gap-2 xl:grid-cols-4">
@@ -1454,14 +1468,16 @@ function RouteSelectionScreen() {
                 <span className="flex items-center gap-3">
                   <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/80"><Icon className="h-5 w-5" /></span>
                   <span>
-                    <span className="block text-[9px] font-black uppercase tracking-[0.2em]">{checkpoint ? 'Boss battle' : `Difficulty ${index + 1}`}</span>
+                    <span className="block text-[9px] font-black uppercase tracking-[0.2em]">{checkpoint ? 'Mandatory boss encounter' : `Difficulty ${index + 1}`}</span>
                     <strong className="block text-lg text-slate-950">{checkpoint ? sector.bossTitle : route.title}</strong>
                   </span>
                 </span>
-                <span className="rounded-full bg-white/80 px-3 py-1 text-sm font-black text-slate-800 shadow-sm">x{route.scoreMultiplier}</span>
+                <span className="rounded-full bg-white/80 px-3 py-1 text-sm font-black text-slate-800 shadow-sm">
+                  {checkpoint ? `Stage ${stage}` : `x${route.scoreMultiplier}`}
+                </span>
               </div>
               <div className="flex flex-1 flex-col p-3.5 sm:p-5">
-                <p className="text-xs font-black uppercase tracking-[0.16em] text-slate-400">{route.label}</p>
+                <p className="text-xs font-black uppercase tracking-[0.16em] text-slate-400">{checkpoint ? 'One fixed opponent · no difficulty choice' : route.label}</p>
                 <p className="mt-2 text-sm leading-relaxed text-slate-600 lg:min-h-[4.5rem]">{routeDescription}</p>
 
                 {finalStage ? (
@@ -1524,7 +1540,7 @@ function RouteSelectionScreen() {
                   </div>
                 </div>
                 <div className="mt-3 flex items-center justify-between rounded-xl bg-red-600 px-4 py-3 text-sm font-black text-white shadow-sm shadow-red-200 transition-colors group-hover:bg-red-700 sm:mt-4">
-                  Take this route <ChevronRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+                  {checkpoint ? `Challenge ${sector.bossTitle}` : 'Take this route'} <ChevronRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
                 </div>
               </div>
             </button>
@@ -1538,16 +1554,19 @@ function RouteSelectionScreen() {
 function UpgradeDraftScreen() {
   const stage = useBattleRunStore(state => state.stage);
   const score = useBattleRunStore(state => state.score);
+  const party = useBattleRunStore(state => state.party);
   const upgradeChoices = useBattleRunStore(state => state.upgradeChoices);
   const chooseUpgrade = useBattleRunStore(state => state.chooseUpgrade);
+  const developmentCount = getPartyDevelopmentChoices(party)
+    .reduce((total, choice) => total + choice.options.length, 0);
 
   return (
     <section className="relative mx-auto max-w-6xl">
       <div className="mb-4 text-center sm:mb-6">
         <p className="text-[10px] font-black uppercase tracking-[0.22em] text-amber-700">Checkpoint cleared</p>
-        <h2 className="mt-1 text-2xl font-black text-slate-950 sm:text-4xl">Choose a permanent run upgrade</h2>
+        <h2 className="mt-1 text-2xl font-black text-slate-950 sm:text-4xl">Choose your checkpoint reward</h2>
         <p className="mx-auto mt-2 max-w-2xl text-sm text-slate-600 sm:text-base">
-          Stage {stage} secured. This upgrade remains active until the run ends and changes every future encounter or reward.
+          Stage {stage} secured. Instant rewards change your party now; permanent rewards show exactly how they improve every future clear.
         </p>
         <div className="mt-3 inline-flex items-center gap-2 rounded-full border border-amber-200 bg-amber-50 px-4 py-2 text-xs font-black text-amber-900">
           <Trophy className="h-3.5 w-3.5 text-amber-600" /> Current score {score.toLocaleString()}
@@ -1558,6 +1577,10 @@ function UpgradeDraftScreen() {
         {upgradeChoices.map(upgrade => {
           const Icon = upgrade.id === 'veteran-training'
             ? Crown
+            : upgrade.id === 'full-roster'
+              ? Users
+              : upgrade.id === 'evolution-catalyst'
+                ? Zap
             : upgrade.id === 'expanded-scouting'
               ? Users
               : upgrade.id === 'contract-ledger'
@@ -1567,6 +1590,11 @@ function UpgradeDraftScreen() {
                   : upgrade.id === 'flawless-standard'
                     ? ShieldCheck
                     : Heart;
+          const impact = upgrade.id === 'full-roster'
+            ? `Adds ${Math.max(0, PARTY_LIMIT - party.length)} random, stage-scaled Pokémon now: ${party.length} → ${PARTY_LIMIT} party members.`
+            : upgrade.id === 'evolution-catalyst'
+              ? `Choose 1 of ${developmentCount} available evolutions or Mega Evolutions now. The selected partner keeps its current level.`
+              : upgrade.impact;
           return (
             <button
               key={upgrade.id}
@@ -1578,13 +1606,23 @@ function UpgradeDraftScreen() {
                 <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-100 text-amber-700">
                   <Icon className="h-6 w-6" />
                 </span>
-                <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[9px] font-black uppercase tracking-wider text-slate-500">Permanent</span>
+                <span className={`rounded-full px-2.5 py-1 text-[9px] font-black uppercase tracking-wider ${
+                  upgrade.effect === 'persistent'
+                    ? 'bg-slate-100 text-slate-500'
+                    : 'bg-emerald-100 text-emerald-700'
+                }`}>
+                  {upgrade.effect === 'persistent' ? 'Every future round' : 'Applies immediately'}
+                </span>
               </div>
               <p className="mt-3 text-[10px] font-black uppercase tracking-[0.18em] text-amber-700 sm:mt-5">{upgrade.label}</p>
               <h3 className="mt-1 text-xl font-black text-slate-950">{upgrade.title}</h3>
-              <p className="mt-2 flex-1 text-sm leading-relaxed text-slate-600">{upgrade.description}</p>
+              <p className="mt-2 text-sm leading-relaxed text-slate-600">{upgrade.description}</p>
+              <div className="mt-4 flex-1 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-3 text-emerald-950">
+                <span className="block text-[9px] font-black uppercase tracking-[0.18em] text-emerald-700">Visible impact</span>
+                <strong className="mt-1 block text-xs leading-relaxed">{impact}</strong>
+              </div>
               <div className="mt-5 flex items-center justify-between rounded-xl bg-amber-600 px-4 py-3 text-sm font-black text-white shadow-sm shadow-amber-200 transition-colors group-hover:bg-amber-700">
-                Claim upgrade <ChevronRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+                {upgrade.effect === 'persistent' ? 'Activate reward' : 'Apply reward now'} <ChevronRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
               </div>
             </button>
           );
@@ -1643,6 +1681,7 @@ function ReplacementScreen() {
 
 function PartyDevelopmentScreen() {
   const party = useBattleRunStore(state => state.party);
+  const developmentRewardPending = useBattleRunStore(state => state.developmentRewardPending);
   const develop = useBattleRunStore(state => state.developPartyMember);
   const close = useBattleRunStore(state => state.closePartyDevelopment);
   const choices = getPartyDevelopmentChoices(party);
@@ -1654,10 +1693,16 @@ function PartyDevelopmentScreen() {
         <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-violet-100 text-violet-700 sm:h-16 sm:w-16 sm:rounded-2xl">
           <Zap className="h-6 w-6 sm:h-8 sm:w-8" />
         </div>
-        <p className="mt-3 text-[10px] font-black uppercase tracking-[0.2em] text-violet-700">Party development</p>
-        <h2 className="mt-1 text-2xl font-black text-slate-950 sm:text-4xl">Evolve a current partner</h2>
+        <p className="mt-3 text-[10px] font-black uppercase tracking-[0.2em] text-violet-700">
+          {developmentRewardPending ? 'Evolution catalyst reward' : 'Party development'}
+        </p>
+        <h2 className="mt-1 text-2xl font-black text-slate-950 sm:text-4xl">
+          {developmentRewardPending ? 'Transform one partner now' : 'Evolve a current partner'}
+        </h2>
         <p className="mx-auto mt-2 max-w-2xl text-sm text-slate-600 sm:text-base">
-          Spend this stage reward to evolve one partner. Fully evolved Pokémon with a Mega form can permanently Mega Evolve for the rest of the run.
+          {developmentRewardPending
+            ? 'This checkpoint reward must be used on one eligible partner. Choose an evolution or use your one available Mega slot.'
+            : 'Spend this stage reward to evolve one partner. Fully evolved Pokémon with a Mega form can permanently Mega Evolve for the rest of the run.'}
         </p>
         <div className="mt-3 flex flex-wrap items-center justify-center gap-2 text-[10px] font-black">
           <span className="rounded-full bg-emerald-100 px-3 py-1 text-emerald-800">Level is preserved</span>
@@ -1725,7 +1770,7 @@ function PartyDevelopmentScreen() {
         </div>
       )}
 
-      <div className="mt-5 text-center">
+      {!developmentRewardPending && <div className="mt-5 text-center">
         <button
           type="button"
           onClick={close}
@@ -1733,7 +1778,7 @@ function PartyDevelopmentScreen() {
         >
           <RotateCcw className="h-4 w-4" /> Back to recruits
         </button>
-      </div>
+      </div>}
     </section>
   );
 }

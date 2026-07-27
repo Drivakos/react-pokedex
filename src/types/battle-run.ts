@@ -197,13 +197,19 @@ export type RunUpgradeId =
   | 'contract-ledger'
   | 'route-dividend'
   | 'flawless-standard'
-  | 'survivor-mark';
+  | 'survivor-mark'
+  | 'full-roster'
+  | 'evolution-catalyst';
+
+export type RunUpgradeEffect = 'persistent' | 'fill-roster' | 'develop-pokemon';
 
 export interface RunUpgrade {
   id: RunUpgradeId;
   title: string;
   label: string;
   description: string;
+  impact: string;
+  effect: RunUpgradeEffect;
 }
 
 export type RunGradeRank = 'S' | 'A' | 'B' | 'C' | 'D';

@@ -146,41 +146,74 @@ export const RUN_MILESTONES: RunMilestone[] = [
 export const RUN_UPGRADES: RunUpgrade[] = [
   {
     id: 'veteran-training',
-    title: 'Veteran training',
-    label: 'Team growth',
-    description: 'Surviving Pokémon gain one additional level after every victory.',
+    title: 'Survivor training',
+    label: 'Compounding team growth',
+    description: 'Every Pokémon that survives a future battle gains one additional level after that victory.',
+    impact: 'Survivors gain 3 levels per normal win instead of 2. A partner surviving five more battles earns 5 bonus levels.',
+    effect: 'persistent',
   },
   {
     id: 'expanded-scouting',
     title: 'Expanded scouting',
     label: 'Recruitment',
     description: 'Every recruitment draft offers one additional Pokémon.',
+    impact: 'Future recruitment boards show 4 choices instead of 3, before route bonuses.',
+    effect: 'persistent',
   },
   {
     id: 'contract-ledger',
     title: 'Contract ledger',
     label: 'Objectives',
     description: 'Future stage contract bounties are increased by 30%.',
+    impact: 'Every completed future contract pays 30% more score.',
+    effect: 'persistent',
   },
   {
     id: 'route-dividend',
     title: 'Route dividend',
     label: 'Risk reward',
     description: 'Medium and Hard battle bonuses are increased by 25%.',
+    impact: 'The bonus portion of every future Medium or Hard clear increases by 25%.',
+    effect: 'persistent',
   },
   {
     id: 'flawless-standard',
     title: 'Flawless standard',
     label: 'Precision',
     description: 'The score bonus for a victory without faints is doubled.',
+    impact: 'A flawless future victory awards 800 score instead of 400.',
+    effect: 'persistent',
   },
   {
     id: 'survivor-mark',
     title: 'Survivor mark',
     label: 'Endurance',
     description: 'Score earned from each surviving Pokémon is increased by 50%.',
+    impact: 'Each survivor is worth 225 score after future battles instead of 150.',
+    effect: 'persistent',
+  },
+  {
+    id: 'full-roster',
+    title: 'Emergency reinforcements',
+    label: 'Immediate roster',
+    description: 'Fill every empty party slot immediately with a random stage-scaled Pokémon.',
+    impact: 'Your party becomes a full team of 6 now. New partners arrive with complete builds and held items.',
+    effect: 'fill-roster',
+  },
+  {
+    id: 'evolution-catalyst',
+    title: 'Evolution catalyst',
+    label: 'Immediate development',
+    description: 'Choose one current partner to evolve, or Mega Evolve it when an eligible Mega slot is available.',
+    impact: 'One partner transforms now, keeps its level, and receives the evolved form’s stats, build, and held item.',
+    effect: 'develop-pokemon',
   },
 ];
+
+export interface RunUpgradeChoiceContext {
+  emptyPartySlots?: number;
+  canDevelop?: boolean;
+}
 
 export function hasRunUpgrade(upgrades: RunUpgrade[], id: RunUpgradeId): boolean {
   return upgrades.some(upgrade => upgrade.id === id);
@@ -190,9 +223,21 @@ export function createRunUpgradeChoices(
   owned: RunUpgrade[],
   random: () => number = Math.random,
   count = 3,
+  context: RunUpgradeChoiceContext = {},
 ): RunUpgrade[] {
-  const available = RUN_UPGRADES.filter(upgrade => !hasRunUpgrade(owned, upgrade.id));
+  const available = RUN_UPGRADES.filter(upgrade => {
+    if (hasRunUpgrade(owned, upgrade.id)) return false;
+    if (upgrade.effect === 'fill-roster') return (context.emptyPartySlots ?? 0) > 0;
+    if (upgrade.effect === 'develop-pokemon') return context.canDevelop === true;
+    return true;
+  });
   const choices: RunUpgrade[] = [];
+  const immediate = available.filter(upgrade => upgrade.effect !== 'persistent');
+  if (count > 0 && immediate.length > 0) {
+    const selected = immediate[Math.floor(random() * immediate.length)] ?? immediate[0];
+    choices.push(selected);
+    available.splice(available.indexOf(selected), 1);
+  }
   while (choices.length < count && available.length > 0) {
     const index = Math.floor(random() * available.length);
     const [upgrade] = available.splice(index, 1);

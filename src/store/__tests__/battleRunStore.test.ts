@@ -4,6 +4,7 @@ jest.mock('../../services/showdown-battle-worker.service', () => ({
 
 import { createRunPokemon } from '../../services/battle-content.service';
 import { useBattleRunStore } from '../battleRunStore';
+import { RUN_UPGRADES } from '../../utils/battle-run-rules';
 
 const fullParty = () => [
   createRunPokemon('Bulbasaur', 3),
@@ -53,5 +54,81 @@ describe('Battle Run party development', () => {
       phase: 'party-development',
       stage: 3,
     });
+  });
+});
+
+describe('Battle Run boss route selection', () => {
+  beforeEach(() => {
+    useBattleRunStore.getState().startRun();
+    useBattleRunStore.setState({
+      stage: 5,
+      phase: 'route-select',
+      party: fullParty(),
+    });
+  });
+
+  it('rejects normal difficulty routes at a boss checkpoint', () => {
+    useBattleRunStore.getState().selectRoute('trail');
+    expect(useBattleRunStore.getState()).toMatchObject({
+      phase: 'route-select',
+      activeRoute: null,
+    });
+
+    useBattleRunStore.getState().selectRoute('rival');
+    expect(useBattleRunStore.getState()).toMatchObject({
+      phase: 'route-select',
+      activeRoute: null,
+    });
+  });
+});
+
+describe('Battle Run checkpoint rewards', () => {
+  beforeEach(() => {
+    useBattleRunStore.getState().startRun();
+  });
+
+  it('fills every empty party slot with stage-scaled Pokémon immediately', () => {
+    const reward = RUN_UPGRADES.find(upgrade => upgrade.id === 'full-roster');
+    expect(reward).toBeDefined();
+    useBattleRunStore.setState({
+      stage: 5,
+      phase: 'upgrade-draft',
+      party: fullParty().slice(0, 2),
+      upgradeChoices: reward ? [reward] : [],
+    });
+
+    useBattleRunStore.getState().chooseUpgrade('full-roster');
+
+    const state = useBattleRunStore.getState();
+    expect(state.phase).toBe('reward-draft');
+    expect(state.party).toHaveLength(6);
+    expect(new Set(state.party.map(pokemon => pokemon.species))).toHaveProperty('size', 6);
+    expect(state.upgrades.map(upgrade => upgrade.id)).toContain('full-roster');
+  });
+
+  it('uses an evolution reward before returning to the recruitment draft', () => {
+    const reward = RUN_UPGRADES.find(upgrade => upgrade.id === 'evolution-catalyst');
+    expect(reward).toBeDefined();
+    useBattleRunStore.setState({
+      stage: 5,
+      phase: 'upgrade-draft',
+      party: [createRunPokemon('Bulbasaur', 3)],
+      upgradeChoices: reward ? [reward] : [],
+    });
+
+    useBattleRunStore.getState().chooseUpgrade('evolution-catalyst');
+    expect(useBattleRunStore.getState()).toMatchObject({
+      phase: 'party-development',
+      developmentRewardPending: true,
+    });
+
+    useBattleRunStore.getState().developPartyMember(0, 'Ivysaur');
+    expect(useBattleRunStore.getState()).toMatchObject({
+      phase: 'reward-draft',
+      developmentRewardPending: false,
+      stage: 5,
+    });
+    expect(useBattleRunStore.getState().party[0].species).toBe('Ivysaur');
+    expect(useBattleRunStore.getState().draftChoices.length).toBeGreaterThan(0);
   });
 });

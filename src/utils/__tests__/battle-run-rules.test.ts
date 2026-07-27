@@ -186,6 +186,27 @@ describe('battle run rules', () => {
     expect(applyRunUpgradesToChallenge(challenge, ledger).bounty).toBe(Math.round(challenge.bounty * 1.3));
   });
 
+  it('only offers immediate checkpoint rewards when they can change the party', () => {
+    const withoutImmediateRewards = createRunUpgradeChoices([], () => 0, RUN_UPGRADES.length);
+    expect(withoutImmediateRewards.map(choice => choice.id)).not.toEqual(
+      expect.arrayContaining(['full-roster', 'evolution-catalyst']),
+    );
+
+    const withImmediateRewards = createRunUpgradeChoices([], () => 0, RUN_UPGRADES.length, {
+      emptyPartySlots: 3,
+      canDevelop: true,
+    });
+    expect(withImmediateRewards.map(choice => choice.id)).toEqual(
+      expect.arrayContaining(['full-roster', 'evolution-catalyst']),
+    );
+    expect(createRunUpgradeChoices([], () => 0.99, 3, {
+      emptyPartySlots: 3,
+      canDevelop: true,
+    }).some(choice => choice.effect !== 'persistent')).toBe(true);
+    expect(withImmediateRewards.find(choice => choice.id === 'veteran-training')?.impact)
+      .toContain('5 bonus levels');
+  });
+
   it('creates stage contracts that match the current encounter', () => {
     const rapid = createStageChallenge(2, 1, () => 0);
     expect(rapid.kind).toBe('tempo');
