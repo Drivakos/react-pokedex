@@ -470,7 +470,7 @@ function DraftCard({ pokemon, onChoose, label, fit, recommended = false }: {
     <button
       type="button"
       onClick={onChoose}
-      className="group grid h-full self-stretch grid-cols-[112px_minmax(0,1fr)] overflow-hidden rounded-2xl border border-slate-200 bg-white text-left shadow-md transition-[border-color,box-shadow] duration-200 hover:border-red-300 hover:shadow-xl focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-inset focus-visible:ring-red-200 sm:grid-cols-1 sm:grid-rows-[12rem_minmax(0,1fr)]"
+      className="group grid h-full self-stretch grid-cols-[96px_minmax(0,1fr)] overflow-hidden rounded-2xl border border-slate-200 bg-white text-left shadow-md transition-[border-color,box-shadow] duration-200 hover:border-red-300 hover:shadow-xl focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-inset focus-visible:ring-red-200 sm:grid-cols-1 sm:grid-rows-[12rem_minmax(0,1fr)]"
     >
       <div className="relative flex min-h-full items-center justify-center overflow-hidden bg-gradient-to-br from-sky-100 via-white to-emerald-100 sm:h-48 sm:min-h-0">
         <div className="absolute -right-10 -top-10 h-32 w-32 rounded-full border-[18px] border-white/50" />
@@ -479,7 +479,7 @@ function DraftCard({ pokemon, onChoose, label, fit, recommended = false }: {
           id={pokemon.id}
           species={pokemon.species}
           variant="artwork"
-          className="relative z-10 h-28 w-28 drop-shadow-xl transition duration-300 group-hover:scale-105 sm:h-40 sm:w-40"
+          className="relative z-10 h-24 w-24 drop-shadow-xl transition duration-300 group-hover:scale-105 sm:h-40 sm:w-40"
         />
         <span className="absolute left-2 top-2 rounded-full bg-slate-950/80 px-2 py-1 text-[10px] font-black text-white backdrop-blur sm:left-4 sm:top-4 sm:px-3 sm:py-1.5 sm:text-xs">
           LV. {pokemon.level}
@@ -495,7 +495,7 @@ function DraftCard({ pokemon, onChoose, label, fit, recommended = false }: {
           </span>
         )}
       </div>
-      <div className="flex min-w-0 flex-col p-3.5 sm:p-4">
+      <div className="flex min-w-0 flex-col p-2.5 sm:p-4">
         <div className="flex min-w-0 items-center justify-between gap-3">
           <h3 className="min-w-0 flex-1 truncate text-lg font-black text-slate-950 sm:text-2xl">{pokemon.species}</h3>
           <div className="shrink-0"><TypeBadges types={pokemon.types} compact /></div>
@@ -503,7 +503,7 @@ function DraftCard({ pokemon, onChoose, label, fit, recommended = false }: {
         <p className="text-xs font-bold text-slate-400 sm:text-sm">
           BST {pokemon.bst}{pokemon.buildName ? ` · ${pokemon.buildName}` : ''}
         </p>
-        <div className="mt-2 rounded-xl bg-slate-50 p-2.5 sm:mt-3 sm:p-3">
+        <div className="mt-1.5 rounded-xl bg-slate-50 p-2 sm:mt-3 sm:p-3">
           <p className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">Ability</p>
           <p className="mt-0.5 truncate text-xs font-extrabold text-slate-700 sm:text-sm">{pokemon.ability}</p>
           {pokemon.item && (
@@ -511,7 +511,7 @@ function DraftCard({ pokemon, onChoose, label, fit, recommended = false }: {
           )}
           <div className="mt-1.5 flex flex-wrap gap-1">
             {pokemon.moves.slice(0, 4).map((move, index) => (
-              <span key={move} className={`${index > 1 ? 'hidden sm:inline' : ''} truncate rounded-md bg-white px-1.5 py-0.5 text-[9px] font-bold text-slate-500 shadow-sm sm:px-2 sm:py-1 sm:text-[11px]`}>{move}</span>
+              <span key={move} className={`${index > 1 ? 'max-sm:hidden' : ''} truncate rounded-md bg-white px-1.5 py-0.5 text-[9px] font-bold text-slate-500 shadow-sm sm:px-2 sm:py-1 sm:text-[11px]`}>{move}</span>
             ))}
           </div>
         </div>
@@ -534,7 +534,7 @@ function DraftCard({ pokemon, onChoose, label, fit, recommended = false }: {
             </div>
           </div>
         )}
-        <div className="mt-2.5 flex items-center justify-between rounded-xl bg-red-600 px-3 py-2.5 text-xs font-black text-white transition group-hover:bg-red-700 sm:mt-auto sm:px-4 sm:py-3 sm:text-sm">
+        <div className="mt-2 flex items-center justify-between rounded-xl bg-red-600 px-3 py-2 text-xs font-black text-white transition group-hover:bg-red-700 sm:mt-auto sm:px-4 sm:py-3 sm:text-sm">
           {label} <ChevronRight className="h-4 w-4 transition group-hover:translate-x-1" />
         </div>
       </div>
@@ -626,22 +626,22 @@ function RewardSummary({ reward, score, streak, upgrades, bestScore, personalBes
   ];
 
   return (
-    <div className="mb-6 overflow-hidden rounded-2xl border border-[var(--battle-panel-border)] bg-[var(--battle-panel-surface)] text-[var(--battle-panel-title)] shadow-xl shadow-slate-200/70">
-      <div className="flex flex-col justify-between gap-3 border-b border-[var(--battle-panel-border)] bg-gradient-to-r from-red-50 via-white to-sky-50 px-5 py-4 sm:flex-row sm:items-center">
+    <div className="mb-3 overflow-hidden rounded-2xl border border-[var(--battle-panel-border)] bg-[var(--battle-panel-surface)] text-[var(--battle-panel-title)] shadow-xl shadow-slate-200/70 sm:mb-6">
+      <div className="flex items-end justify-between gap-3 border-b border-[var(--battle-panel-border)] bg-gradient-to-r from-red-50 via-white to-sky-50 px-3 py-3 sm:items-center sm:px-5 sm:py-4">
         <div>
           <p className="text-[10px] font-black uppercase tracking-[0.2em] text-emerald-700">Stage {reward.stage} cleared</p>
-          <p className="mt-1 text-xl font-black">Performance reward</p>
+          <p className="mt-0.5 text-base font-black sm:mt-1 sm:text-xl">Performance reward</p>
         </div>
-        <div className="flex items-end gap-5">
+        <div className="flex items-end gap-3 sm:gap-5">
           <div className="text-right">
             <p className="text-[9px] font-black uppercase tracking-wider text-slate-500">Earned</p>
-            <p className="text-2xl font-black text-amber-700">+{reward.totalScore.toLocaleString()}</p>
+            <p className="text-xl font-black text-amber-700 sm:text-2xl">+{reward.totalScore.toLocaleString()}</p>
           </div>
-          <div className="text-right">
+          <div className="max-sm:hidden text-right">
             <p className="text-[9px] font-black uppercase tracking-wider text-slate-500">Run score</p>
             <p className="text-lg font-black">{score.toLocaleString()}</p>
           </div>
-          <div className="text-right">
+          <div className="max-sm:hidden text-right">
             <p className="text-[9px] font-black uppercase tracking-wider text-slate-500">Wins</p>
             <p className="flex items-center justify-end gap-1 text-lg font-black"><Flame className="h-4 w-4 text-orange-600" /> {streak}</p>
           </div>
@@ -655,15 +655,15 @@ function RewardSummary({ reward, score, streak, upgrades, bestScore, personalBes
       )}
       <div className="grid gap-px bg-[var(--battle-panel-border)] [grid-template-columns:repeat(auto-fit,minmax(150px,1fr))]">
         {bonuses.map(({ label, value, icon: Icon }) => (
-          <div key={label} className="flex items-center justify-between gap-3 bg-[var(--battle-panel-surface)] px-4 py-3">
-            <span className="flex items-center gap-2 text-xs font-bold text-[var(--battle-panel-copy)]"><Icon className="h-3.5 w-3.5 text-[var(--battle-panel-muted)]" /> {label}</span>
-            <strong className="text-sm text-[var(--battle-panel-title)]">+{value}</strong>
+          <div key={label} className="flex items-center justify-between gap-2 bg-[var(--battle-panel-surface)] px-3 py-2 sm:gap-3 sm:px-4 sm:py-3">
+            <span className="flex items-center gap-1.5 text-[11px] font-bold text-[var(--battle-panel-copy)] sm:gap-2 sm:text-xs"><Icon className="h-3.5 w-3.5 text-[var(--battle-panel-muted)]" /> {label}</span>
+            <strong className="text-xs text-[var(--battle-panel-title)] sm:text-sm">+{value}</strong>
           </div>
         ))}
       </div>
       {reward.challenge && (
-        <div className={`flex items-center justify-between gap-4 border-t px-5 py-3 ${reward.challengeCompleted ? 'border-[var(--battle-contract-success-border)] bg-[var(--battle-contract-success-surface)]' : 'border-[var(--battle-contract-danger-border)] bg-[var(--battle-contract-danger-surface)]'}`}>
-          <div className="flex items-center gap-3">
+        <div className={`flex items-center justify-between gap-2 border-t px-3 py-2 sm:gap-4 sm:px-5 sm:py-3 ${reward.challengeCompleted ? 'border-[var(--battle-contract-success-border)] bg-[var(--battle-contract-success-surface)]' : 'border-[var(--battle-contract-danger-border)] bg-[var(--battle-contract-danger-surface)]'}`}>
+          <div className="flex min-w-0 items-center gap-2 sm:gap-3">
             {reward.challengeCompleted
               ? <CheckCircle2 className="h-5 w-5 shrink-0 text-[var(--battle-contract-success)]" />
               : <XCircle className="h-5 w-5 shrink-0 text-[var(--battle-contract-danger)]" />}
@@ -671,7 +671,7 @@ function RewardSummary({ reward, score, streak, upgrades, bestScore, personalBes
               <p className={`text-xs font-black uppercase tracking-wider ${reward.challengeCompleted ? 'text-[var(--battle-contract-success)]' : 'text-[var(--battle-contract-danger)]'}`}>
                 {reward.challengeCompleted ? `Contract cleared · ${reward.contractStreak} chain` : 'Contract missed · chain reset'}
               </p>
-              <p className="text-sm font-bold text-[var(--battle-contract-title)]">{reward.challenge.title}</p>
+              <p className="truncate text-xs font-bold text-[var(--battle-contract-title)] sm:text-sm">{reward.challenge.title}</p>
             </div>
           </div>
           <span className="text-right">
@@ -690,7 +690,7 @@ function RewardSummary({ reward, score, streak, upgrades, bestScore, personalBes
         </div>
       )}
       {reward.milestonesUnlocked.length > 0 && (
-        <div className="flex items-center justify-between gap-4 border-t border-amber-200 bg-amber-50 px-5 py-3">
+        <div className="flex items-center justify-between gap-3 border-t border-amber-200 bg-amber-50 px-3 py-2 sm:gap-4 sm:px-5 sm:py-3">
           <span className="flex min-w-0 items-center gap-3">
             <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-amber-100 text-amber-700"><Medal className="h-5 w-5" /></span>
             <span className="min-w-0">
@@ -709,12 +709,12 @@ function RewardSummary({ reward, score, streak, upgrades, bestScore, personalBes
         </div>
       )}
       {!final && reward.route && (
-        <div className="flex items-center justify-between gap-4 border-t border-indigo-200 bg-indigo-50 px-5 py-3">
-          <span className="flex items-center gap-3">
+        <div className="flex items-center justify-between gap-2 border-t border-indigo-200 bg-indigo-50 px-3 py-2 sm:gap-4 sm:px-5 sm:py-3">
+          <span className="flex min-w-0 items-center gap-2 sm:gap-3">
             <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-100 text-indigo-700"><Medal className="h-4 w-4" /></span>
             <span>
               <span className="block text-[9px] font-black uppercase tracking-[0.18em] text-indigo-700">{reward.route.title} spoils secured</span>
-              <strong className="block text-sm text-indigo-950">Level {recruitmentReward.level} recruitment pool</strong>
+              <strong className="block truncate text-xs text-indigo-950 sm:text-sm">Level {recruitmentReward.level} recruitment pool</strong>
             </span>
           </span>
           <span className="text-right text-xs font-black text-indigo-700">
@@ -723,7 +723,7 @@ function RewardSummary({ reward, score, streak, upgrades, bestScore, personalBes
           </span>
         </div>
       )}
-      <div className="border-t border-emerald-200 bg-emerald-50 px-5 py-2.5 text-xs font-bold text-emerald-700">
+      <div className="border-t border-emerald-200 bg-emerald-50 px-3 py-2 text-[11px] font-bold text-emerald-700 sm:px-5 sm:py-2.5 sm:text-xs">
         {final ? 'Final checkpoint secured. The challenge is complete.' : `Surviving Pokémon gained ${reward.levelsGained} levels.`}
       </div>
     </div>
@@ -1402,22 +1402,22 @@ function LeadSelectionScreen() {
 
   return (
     <section className="relative mx-auto max-w-5xl">
-      <div className="mb-4 text-center sm:mb-7">
+      <div className="mb-3 text-center sm:mb-7">
         <p className="text-[10px] font-black uppercase tracking-[0.22em] text-blue-700">Stage {stage} formation</p>
         <h2 className="mt-1 text-2xl font-black text-slate-950 sm:text-4xl">Choose your lead Pokémon</h2>
-        <p className="mx-auto mt-2 max-w-2xl text-sm text-slate-600 sm:text-base">
+        <p className="mx-auto mt-1 max-w-2xl text-xs leading-relaxed text-slate-600 sm:mt-2 sm:text-base">
           Pick who enters battle first. The rest of your team keeps its current rotation, and opponent scouting opens after your lead is locked in.
         </p>
       </div>
 
-      <div className="mb-4 flex items-center justify-between gap-3 rounded-xl border border-blue-200 bg-blue-50/90 px-3 py-2.5 text-blue-950 shadow-sm sm:mb-5 sm:rounded-2xl sm:px-4 sm:py-3">
+      <div className="mb-3 flex items-center justify-between gap-2 rounded-xl border border-blue-200 bg-blue-50/90 px-2.5 py-2 text-blue-950 shadow-sm sm:mb-5 sm:gap-3 sm:rounded-2xl sm:px-4 sm:py-3">
         <span className="flex min-w-0 items-center gap-3">
-          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-600 text-white shadow-md shadow-blue-200">
-            <ArrowLeftRight className="h-5 w-5" />
+          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-blue-600 text-white shadow-md shadow-blue-200 sm:h-10 sm:w-10 sm:rounded-xl">
+            <ArrowLeftRight className="h-4 w-4 sm:h-5 sm:w-5" />
           </span>
           <span>
             <span className="block text-[9px] font-black uppercase tracking-[0.18em] text-blue-600">Rotation order</span>
-            <strong className="block text-sm sm:text-base">Lead selection comes before route and opponent selection</strong>
+            <strong className="block text-xs sm:text-base">Lead selection comes before route and opponent selection</strong>
           </span>
         </span>
         <span className="hidden shrink-0 rounded-full bg-white px-3 py-1.5 text-xs font-black text-blue-700 shadow-sm sm:block">
@@ -1431,7 +1431,7 @@ function LeadSelectionScreen() {
             key={pokemon.species}
             type="button"
             onClick={() => chooseLead(index)}
-            className="group grid grid-cols-[112px_minmax(0,1fr)] overflow-hidden rounded-2xl border border-slate-200 bg-white text-left shadow-md transition duration-200 hover:-translate-y-1 hover:border-blue-400 hover:shadow-xl focus:outline-none focus:ring-4 focus:ring-blue-200 sm:block"
+            className="group grid grid-cols-[96px_minmax(0,1fr)] overflow-hidden rounded-2xl border border-slate-200 bg-white text-left shadow-md transition duration-200 hover:-translate-y-1 hover:border-blue-400 hover:shadow-xl focus:outline-none focus:ring-4 focus:ring-blue-200 sm:block"
           >
             <div className="relative flex min-h-full items-center justify-center overflow-hidden bg-gradient-to-br from-blue-100 via-white to-emerald-100 sm:h-40 sm:min-h-0">
               <span className="absolute left-3 top-3 rounded-full bg-slate-950/80 px-2.5 py-1 text-[10px] font-black uppercase tracking-wider text-white">
@@ -1447,10 +1447,10 @@ function LeadSelectionScreen() {
                 id={pokemon.id}
                 species={pokemon.species}
                 variant="artwork"
-                className="h-28 w-28 drop-shadow-xl transition duration-200 group-hover:scale-105 sm:h-36 sm:w-36"
+                className="h-24 w-24 drop-shadow-xl transition duration-200 group-hover:scale-105 sm:h-36 sm:w-36"
               />
             </div>
-            <div className="min-w-0 p-3 sm:p-4">
+            <div className="min-w-0 p-2.5 sm:p-4">
               <div className="min-w-0">
                 <strong className="block truncate text-lg text-slate-950 sm:text-xl">{pokemon.species}</strong>
                 <span className="text-xs font-black text-slate-400">LV. {pokemon.level} · BST {pokemon.bst}</span>
@@ -1464,7 +1464,7 @@ function LeadSelectionScreen() {
                 <TypeBadges types={pokemon.types} />
               </div>
 
-              <div className="mt-3 rounded-xl border border-slate-200 bg-slate-50 p-2.5">
+              <div className="mt-2 rounded-xl border border-slate-200 bg-slate-50 p-2 sm:mt-3 sm:p-2.5">
                 <span className="block text-[9px] font-black uppercase tracking-[0.16em] text-slate-400">Ability</span>
                 <strong className="mt-0.5 block truncate text-xs text-slate-700">{pokemon.ability}</strong>
                 <span className="mt-2 block text-[9px] font-black uppercase tracking-[0.16em] text-slate-400">Moves</span>
@@ -1476,7 +1476,7 @@ function LeadSelectionScreen() {
                   ))}
                 </span>
               </div>
-              <div className="mt-3 flex items-center justify-between rounded-xl bg-blue-600 px-3 py-2.5 text-xs font-black text-white transition-colors group-hover:bg-blue-700 sm:px-3.5 sm:text-sm">
+              <div className="mt-2 flex items-center justify-between rounded-xl bg-blue-600 px-3 py-2 text-xs font-black text-white transition-colors group-hover:bg-blue-700 sm:mt-3 sm:px-3.5 sm:py-2.5 sm:text-sm">
                 {index === 0 ? 'Keep as lead' : 'Send out first'}
                 <ChevronRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
               </div>
@@ -1509,12 +1509,12 @@ function RouteSelectionScreen() {
 
   return (
     <section className="relative mx-auto max-w-6xl">
-      <div className="mb-4 text-center sm:mb-6">
+      <div className="mb-3 text-center sm:mb-6">
         <p className="text-[10px] font-black uppercase tracking-[0.22em] text-red-600">Sector {sector.number} of {RUN_SECTORS.length} · {sector.title}</p>
         <h2 className="mt-1 text-2xl font-black text-slate-950 sm:text-4xl">
           {checkpoint ? (finalStage ? 'Challenge the Run Champion' : `Challenge the ${sector.bossTitle}`) : `Choose a difficulty for stage ${stage}`}
         </h2>
-        <p className="mx-auto mt-2 max-w-2xl text-sm text-slate-600 sm:text-base">
+        <p className="mx-auto mt-1 max-w-2xl text-xs leading-relaxed text-slate-600 sm:mt-2 sm:text-base">
           {checkpoint
             ? `${sector.objective} Bosses use a fixed elite roster, gain four levels, and always fight with perfect decision-making.`
             : `${sector.objective} Easy, Medium, and Hard now scale roster power, levels, team size, and trainer decision-making.`}
@@ -1524,12 +1524,12 @@ function RouteSelectionScreen() {
       {party[0] && (
         <div className="mx-auto mb-3 flex max-w-4xl items-center justify-between gap-3 rounded-xl border border-blue-200 bg-blue-50/90 px-3 py-2 text-blue-950 shadow-sm sm:mb-4 sm:rounded-2xl sm:px-4 sm:py-3">
           <span className="flex min-w-0 items-center gap-3">
-            <span className="h-12 w-12 shrink-0 overflow-hidden rounded-full bg-white shadow-sm">
+            <span className="h-10 w-10 shrink-0 overflow-hidden rounded-full bg-white shadow-sm sm:h-12 sm:w-12">
               <BattlePokemonImage id={party[0].id} species={party[0].species} variant="icon" className="h-full w-full" />
             </span>
             <span className="min-w-0">
               <span className="block text-[9px] font-black uppercase tracking-[0.18em] text-blue-600">Lead locked</span>
-              <strong className="block truncate text-base">{party[0].species} will enter first</strong>
+              <strong className="block truncate text-sm sm:text-base">{party[0].species} will enter first</strong>
             </span>
           </span>
           <div className="hidden sm:block"><PartyStrip party={party} /></div>
@@ -1635,9 +1635,9 @@ function RouteSelectionScreen() {
               onClick={() => selectRoute(route.id)}
               className="group flex h-full flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white text-left shadow-md transition duration-200 hover:-translate-y-1 hover:border-slate-400 hover:shadow-xl focus:outline-none focus:ring-4 focus:ring-red-200"
             >
-              <div className={`flex items-center justify-between border-b p-3 sm:p-4 ${accent}`}>
+              <div className={`flex items-center justify-between border-b p-2.5 sm:p-4 ${accent}`}>
                 <span className="flex items-center gap-3">
-                  <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/80"><Icon className="h-5 w-5" /></span>
+                  <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/80 sm:h-10 sm:w-10"><Icon className="h-4.5 w-4.5 sm:h-5 sm:w-5" /></span>
                   <span>
                     <span className="block text-[9px] font-black uppercase tracking-[0.2em]">{checkpoint ? 'Mandatory boss encounter' : `Difficulty ${index + 1}`}</span>
                     <strong className="block text-lg text-slate-950">{checkpoint ? sector.bossTitle : route.title}</strong>
@@ -1647,12 +1647,12 @@ function RouteSelectionScreen() {
                   {checkpoint ? `Stage ${stage}` : `x${route.scoreMultiplier}`}
                 </span>
               </div>
-              <div className="flex flex-1 flex-col p-3.5 sm:p-5">
+              <div className="flex flex-1 flex-col p-2.5 sm:p-5">
                 <p className="text-xs font-black uppercase tracking-[0.16em] text-slate-400">{checkpoint ? 'One fixed opponent · no difficulty choice' : route.label}</p>
-                <p className="mt-2 text-sm leading-relaxed text-slate-600 lg:min-h-[7.5rem]">{routeDescription}</p>
+                <p className="mt-1 text-xs leading-relaxed text-slate-600 sm:mt-2 sm:text-sm lg:min-h-[7.5rem]">{routeDescription}</p>
 
                 {finalStage ? (
-                  <div className="mt-4 flex items-center justify-between gap-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5 text-amber-950">
+                  <div className="mt-2 flex items-center justify-between gap-3 rounded-xl border border-amber-200 bg-amber-50 px-2.5 py-2 text-amber-950 sm:mt-4 sm:px-3 sm:py-2.5">
                     <span className="flex items-center gap-2">
                       <Flag className="h-4 w-4 text-amber-700" />
                       <span>
@@ -1663,7 +1663,7 @@ function RouteSelectionScreen() {
                     <span className="shrink-0 rounded-full bg-white px-2.5 py-1 text-[10px] font-black text-amber-800 shadow-sm">No draft</span>
                   </div>
                 ) : (
-                  <div className="mt-4 flex items-center justify-between gap-3 rounded-xl border border-indigo-200 bg-indigo-50 px-3 py-2.5 text-indigo-950">
+                  <div className="mt-2 flex items-center justify-between gap-3 rounded-xl border border-indigo-200 bg-indigo-50 px-2.5 py-2 text-indigo-950 sm:mt-4 sm:px-3 sm:py-2.5">
                     <span className="flex items-center gap-2">
                       <Medal className="h-4 w-4 text-indigo-600" />
                       <span>
@@ -1675,7 +1675,7 @@ function RouteSelectionScreen() {
                   </div>
                 )}
 
-                <div className="mt-3 rounded-xl border border-slate-200 bg-slate-50 p-2.5 sm:mt-4 sm:p-3">
+                <div className="mt-2 rounded-xl border border-slate-200 bg-slate-50 p-2 sm:mt-4 sm:p-3">
                   <div className="mb-2 flex items-center justify-between gap-2">
                     <span className="flex items-center gap-1.5 text-[9px] font-black uppercase tracking-[0.16em] text-slate-500">
                       <Bot className="h-3.5 w-3.5" /> Scouted roster
@@ -1696,21 +1696,21 @@ function RouteSelectionScreen() {
                   </div>
                 </div>
 
-                <div className="mt-auto grid grid-cols-3 gap-2 pt-3 text-center sm:pt-5">
-                  <div className="rounded-xl bg-slate-50 p-2">
+                <div className="mt-auto grid grid-cols-3 gap-2 pt-2 text-center sm:pt-5">
+                  <div className="rounded-xl bg-slate-50 p-1.5 sm:p-2">
                     <span className="block text-[9px] font-black uppercase text-slate-400">Level</span>
                     <strong className="text-sm text-slate-800">{preview[0] ? `L${preview[0].level}` : '—'}</strong>
                   </div>
-                  <div className="rounded-xl bg-slate-50 p-2">
+                  <div className="rounded-xl bg-slate-50 p-1.5 sm:p-2">
                     <span className="block text-[9px] font-black uppercase text-slate-400">Roster</span>
                     <strong className="text-sm text-slate-800">{preview.length}</strong>
                   </div>
-                  <div className="rounded-xl bg-slate-50 p-2">
+                  <div className="rounded-xl bg-slate-50 p-1.5 sm:p-2">
                     <span className="block text-[9px] font-black uppercase text-slate-400">Score</span>
                     <strong className="text-sm text-slate-800">x{route.scoreMultiplier}</strong>
                   </div>
                 </div>
-                <div className="mt-3 flex items-center justify-between rounded-xl bg-red-600 px-4 py-3 text-sm font-black text-white shadow-sm shadow-red-200 transition-colors group-hover:bg-red-700 sm:mt-4">
+                <div className="mt-2 flex items-center justify-between rounded-xl bg-red-600 px-3 py-2.5 text-sm font-black text-white shadow-sm shadow-red-200 transition-colors group-hover:bg-red-700 sm:mt-4 sm:px-4 sm:py-3">
                   {checkpoint ? `Challenge ${sector.bossTitle}` : 'Take this route'} <ChevronRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
                 </div>
               </div>
@@ -1733,13 +1733,13 @@ function UpgradeDraftScreen() {
 
   return (
     <section className="relative mx-auto max-w-6xl">
-      <div className="mb-4 text-center sm:mb-6">
+      <div className="mb-3 text-center sm:mb-6">
         <p className="text-[10px] font-black uppercase tracking-[0.22em] text-amber-700">Checkpoint cleared</p>
         <h2 className="mt-1 text-2xl font-black text-slate-950 sm:text-4xl">Choose your checkpoint reward</h2>
-        <p className="mx-auto mt-2 max-w-2xl text-sm text-slate-600 sm:text-base">
+        <p className="mx-auto mt-1 max-w-2xl text-xs leading-relaxed text-slate-600 sm:mt-2 sm:text-base">
           Stage {stage} secured. Instant rewards change your party now; permanent rewards show exactly how they improve every future clear.
         </p>
-        <div className="mt-3 inline-flex items-center gap-2 rounded-full border border-amber-200 bg-amber-50 px-4 py-2 text-xs font-black text-amber-900">
+        <div className="mt-2 inline-flex items-center gap-2 rounded-full border border-amber-200 bg-amber-50 px-3 py-1.5 text-[11px] font-black text-amber-900 sm:mt-3 sm:px-4 sm:py-2 sm:text-xs">
           <Trophy className="h-3.5 w-3.5 text-amber-600" /> Current score {score.toLocaleString()}
         </div>
       </div>
@@ -1771,11 +1771,11 @@ function UpgradeDraftScreen() {
               key={upgrade.id}
               type="button"
               onClick={() => chooseUpgrade(upgrade.id)}
-              className="group flex min-h-0 flex-col rounded-2xl border border-slate-200 bg-white p-4 text-left shadow-md transition duration-200 hover:-translate-y-1 hover:border-amber-400 hover:shadow-xl focus:outline-none focus:ring-4 focus:ring-amber-200 sm:min-h-64 sm:p-5"
+              className="group flex min-h-0 flex-col rounded-2xl border border-slate-200 bg-white p-3 text-left shadow-md transition duration-200 hover:-translate-y-1 hover:border-amber-400 hover:shadow-xl focus:outline-none focus:ring-4 focus:ring-amber-200 sm:min-h-64 sm:p-5"
             >
               <div className="flex items-start justify-between gap-4">
-                <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-100 text-amber-700">
-                  <Icon className="h-6 w-6" />
+                <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-100 text-amber-700 sm:h-12 sm:w-12 sm:rounded-2xl">
+                  <Icon className="h-5 w-5 sm:h-6 sm:w-6" />
                 </span>
                 <span className={`rounded-full px-2.5 py-1 text-[9px] font-black uppercase tracking-wider ${
                   upgrade.effect === 'persistent'
@@ -1785,14 +1785,14 @@ function UpgradeDraftScreen() {
                   {upgrade.effect === 'persistent' ? 'Every future round' : 'Applies immediately'}
                 </span>
               </div>
-              <p className="mt-3 text-[10px] font-black uppercase tracking-[0.18em] text-amber-700 sm:mt-5">{upgrade.label}</p>
+              <p className="mt-2 text-[10px] font-black uppercase tracking-[0.18em] text-amber-700 sm:mt-5">{upgrade.label}</p>
               <h3 className="mt-1 text-xl font-black text-slate-950">{upgrade.title}</h3>
-              <p className="mt-2 text-sm leading-relaxed text-slate-600">{upgrade.description}</p>
-              <div className="mt-4 flex-1 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-3 text-emerald-950">
+              <p className="mt-1.5 text-xs leading-relaxed text-slate-600 sm:mt-2 sm:text-sm">{upgrade.description}</p>
+              <div className="mt-2 flex-1 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2.5 text-emerald-950 sm:mt-4 sm:py-3">
                 <span className="block text-[9px] font-black uppercase tracking-[0.18em] text-emerald-700">Visible impact</span>
                 <strong className="mt-1 block text-xs leading-relaxed">{impact}</strong>
               </div>
-              <div className="mt-5 flex items-center justify-between rounded-xl bg-amber-600 px-4 py-3 text-sm font-black text-white shadow-sm shadow-amber-200 transition-colors group-hover:bg-amber-700">
+              <div className="mt-3 flex items-center justify-between rounded-xl bg-amber-600 px-3 py-2.5 text-sm font-black text-white shadow-sm shadow-amber-200 transition-colors group-hover:bg-amber-700 sm:mt-5 sm:px-4 sm:py-3">
                 {upgrade.effect === 'persistent' ? 'Activate reward' : 'Apply reward now'} <ChevronRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
               </div>
             </button>
@@ -1872,7 +1872,7 @@ function PartyDevelopmentScreen() {
   return (
     <section className="relative mx-auto max-w-6xl">
       <div className="text-center">
-        <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-violet-100 text-violet-700 sm:h-16 sm:w-16 sm:rounded-2xl">
+        <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-xl bg-violet-100 text-violet-700 sm:h-16 sm:w-16 sm:rounded-2xl">
           <Zap className="h-6 w-6 sm:h-8 sm:w-8" />
         </div>
         <p className="mt-3 text-[10px] font-black uppercase tracking-[0.2em] text-violet-700">
@@ -1881,12 +1881,12 @@ function PartyDevelopmentScreen() {
         <h2 className="mt-1 text-2xl font-black text-slate-950 sm:text-4xl">
           {developmentRewardPending ? 'Transform one partner now' : 'Evolve a current partner'}
         </h2>
-        <p className="mx-auto mt-2 max-w-2xl text-sm text-slate-600 sm:text-base">
+        <p className="mx-auto mt-1 max-w-2xl text-xs leading-relaxed text-slate-600 sm:mt-2 sm:text-base">
           {developmentRewardPending
             ? 'This checkpoint reward must be used on one eligible partner. Choose an evolution or use your one available Mega slot.'
             : 'Spend this stage reward to evolve one partner. Fully evolved Pokémon with a Mega form can permanently Mega Evolve for the rest of the run.'}
         </p>
-        <div className="mt-3 flex flex-wrap items-center justify-center gap-2 text-[10px] font-black">
+        <div className="mt-2 flex flex-wrap items-center justify-center gap-1.5 text-[9px] font-black sm:mt-3 sm:gap-2 sm:text-[10px]">
           <span className="rounded-full bg-emerald-100 px-3 py-1 text-emerald-800">Level is preserved</span>
           <span className={`rounded-full px-3 py-1 ${hasMega ? 'bg-violet-100 text-violet-800' : 'bg-slate-100 text-slate-600'}`}>
             {hasMega ? 'Mega slot already used' : 'One Mega per party'}
@@ -1895,7 +1895,7 @@ function PartyDevelopmentScreen() {
       </div>
 
       {choices.length > 0 ? (
-        <div className="mt-6 space-y-4 sm:mt-8">
+        <div className="mt-4 space-y-3 sm:mt-8 sm:space-y-4">
           {choices.map(choice => (
             <div key={`${choice.partyIndex}-${choice.current.species}`} className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-md">
               <div className="flex items-center gap-3 border-b border-slate-200 bg-slate-50 px-3 py-3 sm:gap-4 sm:px-5">
@@ -1994,20 +1994,20 @@ function RunCompleteScreen({
 
   return (
     <section className="relative mx-auto max-w-5xl overflow-hidden rounded-[2rem] border border-white bg-white/90 shadow-2xl">
-      <div className="relative overflow-hidden bg-gradient-to-br from-amber-50 via-white to-emerald-50 px-6 py-9 text-center text-slate-950 sm:px-10 sm:py-12">
+      <div className="relative overflow-hidden bg-gradient-to-br from-amber-50 via-white to-emerald-50 px-4 py-6 text-center text-slate-950 sm:px-10 sm:py-12">
         <div className="pointer-events-none absolute inset-x-24 top-0 h-40 rounded-full bg-amber-200/40 blur-3xl" />
-        <div className="relative mx-auto flex h-16 w-16 items-center justify-center rounded-2xl border border-amber-200 bg-amber-100 text-amber-700">
-          <Medal className="h-8 w-8" />
+        <div className="relative mx-auto flex h-12 w-12 items-center justify-center rounded-xl border border-amber-200 bg-amber-100 text-amber-700 sm:h-16 sm:w-16 sm:rounded-2xl">
+          <Medal className="h-6 w-6 sm:h-8 sm:w-8" />
         </div>
-        <p className="relative mt-5 text-[10px] font-black uppercase tracking-[0.28em] text-amber-700">15-stage challenge complete</p>
-        <h2 className="relative mt-2 text-4xl font-black sm:text-5xl">Battle Run conquered</h2>
-        <p className="relative mx-auto mt-3 max-w-2xl text-sm leading-relaxed text-slate-600 sm:text-base">
+        <p className="relative mt-3 text-[9px] font-black uppercase tracking-[0.22em] text-amber-700 sm:mt-5 sm:text-[10px] sm:tracking-[0.28em]">15-stage challenge complete</p>
+        <h2 className="relative mt-1 text-3xl font-black sm:mt-2 sm:text-5xl">Battle Run conquered</h2>
+        <p className="relative mx-auto mt-2 max-w-2xl text-xs leading-relaxed text-slate-600 sm:mt-3 sm:text-base">
           You cleared every circuit, survived all three checkpoint bosses, and defeated the Run Champion.
         </p>
 
-        <div className="relative mx-auto mt-7 grid max-w-3xl gap-2 sm:grid-cols-3">
+        <div className="relative mx-auto mt-4 grid max-w-3xl gap-1.5 sm:mt-7 sm:grid-cols-3 sm:gap-2">
           {RUN_SECTORS.map(sector => (
-            <div key={sector.number} className="flex items-center gap-3 rounded-xl border border-emerald-200 bg-white/80 px-4 py-3 text-left shadow-sm">
+            <div key={sector.number} className="flex items-center gap-2 rounded-xl border border-emerald-200 bg-white/80 px-3 py-2 text-left shadow-sm sm:gap-3 sm:px-4 sm:py-3">
               <CheckCircle2 className="h-5 w-5 shrink-0 text-emerald-600" />
               <span>
                 <span className="block text-[9px] font-black uppercase tracking-wider text-slate-500">Sector {sector.number}</span>
@@ -2017,16 +2017,16 @@ function RunCompleteScreen({
           ))}
         </div>
 
-        <div className="relative mx-auto mt-7 grid max-w-xl grid-cols-3 gap-2">
-          <div className="rounded-xl border border-slate-200 bg-white/80 p-3">
+        <div className="relative mx-auto mt-4 grid max-w-xl grid-cols-3 gap-1.5 sm:mt-7 sm:gap-2">
+          <div className="rounded-xl border border-slate-200 bg-white/80 p-2 sm:p-3">
             <p className="text-[9px] font-black uppercase tracking-wider text-slate-500">Final score</p>
             <p className="mt-1 text-xl font-black text-slate-900">{score.toLocaleString()}</p>
           </div>
-          <div className="rounded-xl border border-slate-200 bg-white/80 p-3">
+          <div className="rounded-xl border border-slate-200 bg-white/80 p-2 sm:p-3">
             <p className="text-[9px] font-black uppercase tracking-wider text-slate-500">Survivors</p>
             <p className="mt-1 text-xl font-black text-slate-900">{party.length}/6</p>
           </div>
-          <div className="rounded-xl border border-amber-200 bg-amber-100 p-3">
+          <div className="rounded-xl border border-amber-200 bg-amber-100 p-2 sm:p-3">
             <p className="text-[9px] font-black uppercase tracking-wider text-amber-700">Run grade</p>
             <p className="mt-1 text-xl font-black text-amber-900">{grade.rank}</p>
           </div>
@@ -2034,7 +2034,7 @@ function RunCompleteScreen({
         <p className="relative mt-3 text-xs font-bold text-slate-500">{grade.title} · {grade.description}</p>
       </div>
 
-      <div className="p-5 sm:p-8">
+      <div className="p-3 sm:p-8">
         {reward && (
           <RewardSummary
             reward={reward}
@@ -2100,7 +2100,7 @@ function ResumeRunScreen({
   }).format(new Date(summary.savedAt));
 
   return (
-    <main className="battle-run-theme relative flex min-h-[calc(100svh-4rem)] items-center justify-center overflow-hidden bg-slate-950 px-3 py-5 sm:px-6 sm:py-8">
+    <main className="battle-run-theme relative flex min-h-[calc(100svh-4rem)] items-center justify-center overflow-hidden bg-slate-950 px-3 py-3 sm:px-6 sm:py-8">
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(239,68,68,0.18),transparent_38%),radial-gradient(circle_at_bottom_right,rgba(14,165,233,0.18),transparent_42%)]" />
       <section
         role="dialog"
@@ -2109,7 +2109,7 @@ function ResumeRunScreen({
         className="relative w-full max-w-3xl overflow-hidden rounded-2xl border border-white/15 bg-white shadow-2xl shadow-black/40 sm:rounded-[1.75rem]"
       >
         <div className="h-1.5 bg-gradient-to-r from-red-600 via-amber-400 to-sky-500" />
-        <div className="border-b border-slate-200 bg-slate-50/80 px-4 py-4 sm:px-7 sm:py-5">
+        <div className="border-b border-slate-200 bg-slate-50/80 px-4 py-3 sm:px-7 sm:py-5">
           <div className="flex items-start justify-between gap-4">
             <div className="flex min-w-0 items-start gap-3.5">
               <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-slate-950 text-white shadow-md">
@@ -2136,8 +2136,8 @@ function ResumeRunScreen({
           </div>
         </div>
 
-        <div className="px-4 py-5 sm:px-7 sm:py-6">
-          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 sm:p-5">
+        <div className="px-4 py-4 sm:px-7 sm:py-6">
+          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3 sm:p-5">
             <div className="flex items-end justify-between gap-3">
               <div>
                 <p className="text-[9px] font-black uppercase tracking-[0.18em] text-slate-400">Run progress</p>
@@ -2164,7 +2164,7 @@ function ResumeRunScreen({
             </div>
           </div>
 
-          <div className="mt-5">
+          <div className="mt-3 sm:mt-5">
             <div className="flex items-center justify-between gap-3">
               <p className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-500">Your team</p>
               <p className="text-[10px] font-bold text-slate-400 sm:hidden">{savedLabel}</p>
@@ -2184,7 +2184,7 @@ function ResumeRunScreen({
           </div>
 
           {!confirmNewRun ? (
-            <div className="mt-6 grid gap-2.5 sm:grid-cols-[1fr_auto]">
+            <div className="mt-4 grid gap-2.5 sm:mt-6 sm:grid-cols-[1fr_auto]">
               <button
                 type="button"
                 onClick={onResume}
@@ -2300,37 +2300,35 @@ export default function BattleRunGame() {
   }
 
   return (
-    <main className={`battle-run-theme relative min-h-[calc(100svh-4rem)] overflow-hidden bg-slate-50 px-2 sm:bg-gradient-to-br sm:from-red-50 sm:via-sky-50 sm:to-emerald-50 sm:px-6 sm:py-4 ${isBattleSimulation ? 'py-1.5' : 'py-3'}`}>
+    <main className={`battle-run-theme relative min-h-[calc(100svh-4rem)] overflow-hidden bg-slate-50 px-2 sm:bg-gradient-to-br sm:from-red-50 sm:via-sky-50 sm:to-emerald-50 sm:px-6 sm:py-4 ${isBattleSimulation ? 'py-1.5' : 'py-2'}`}>
       <div className="pointer-events-none absolute -left-32 top-20 h-96 w-96 rounded-full bg-red-200/30 blur-3xl" />
       <div className="pointer-events-none absolute -right-32 top-64 h-96 w-96 rounded-full bg-blue-200/30 blur-3xl" />
 
       <header className={`relative mx-auto max-w-7xl border border-slate-200 bg-white shadow-sm sm:mb-4 sm:rounded-2xl sm:border-white/80 sm:bg-white/75 sm:px-4 sm:py-2.5 sm:backdrop-blur ${
-        isBattleSimulation
-          ? 'mb-1.5 rounded-lg px-2 py-1'
-          : 'mb-3 rounded-xl px-3 py-2.5'
+        isBattleSimulation ? 'mb-1.5 rounded-lg px-2 py-1' : 'mb-2 rounded-lg px-2 py-1'
       }`}>
-        {isBattleSimulation && (
-          <div className="flex h-8 items-center justify-between gap-2 sm:hidden">
-            <div className="flex min-w-0 items-center gap-2">
-              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-red-600 text-white shadow-sm shadow-red-200">
-                <Trophy className="h-3.5 w-3.5" />
-              </span>
-              <strong className="truncate text-xs text-slate-950">Battle Run</strong>
-              <span className={`shrink-0 rounded-full px-2 py-0.5 text-[8px] font-black text-white ${isCheckpointStage(stage) ? 'bg-amber-600' : 'bg-slate-950'}`}>
-                {isFinalStage(stage) ? 'FINAL' : isCheckpointStage(stage) ? `BOSS ${stage}` : `STAGE ${stage}`}
-              </span>
-            </div>
-            <div className="flex shrink-0 items-center gap-2.5 text-[10px] font-black text-slate-600">
-              <span className="flex items-center gap-1" title="Current score">
-                <Trophy className="h-3 w-3 text-amber-500" /> {score.toLocaleString()}
-              </span>
-              <span className="flex items-center gap-1" title="Active party">
-                <Users className="h-3 w-3 text-sky-600" /> {party.length}/6
-              </span>
-            </div>
+        <div className="flex h-8 items-center justify-between gap-2 sm:hidden">
+          <div className="flex min-w-0 items-center gap-2">
+            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-red-600 text-white shadow-sm shadow-red-200">
+              <Trophy className="h-3.5 w-3.5" />
+            </span>
+            <strong className="truncate text-xs text-slate-950">Battle Run</strong>
+            <span className={`shrink-0 rounded-full px-2 py-0.5 text-[8px] font-black text-white ${
+              phase === 'run-complete' ? 'bg-emerald-600' : isCheckpointStage(stage) ? 'bg-amber-600' : 'bg-slate-950'
+            }`}>
+              {phase === 'run-complete' ? 'COMPLETE' : isFinalStage(stage) ? 'FINAL' : isCheckpointStage(stage) ? `BOSS ${stage}` : `STAGE ${stage}`}
+            </span>
           </div>
-        )}
-        <div className={`${isBattleSimulation ? 'max-sm:hidden ' : ''}flex flex-col justify-between gap-2 lg:flex-row lg:items-center`}>
+          <div className="flex shrink-0 items-center gap-2.5 text-[10px] font-black text-slate-600">
+            <span className="flex items-center gap-1" title="Current score">
+              <Trophy className="h-3 w-3 text-amber-500" /> {score.toLocaleString()}
+            </span>
+            <span className="flex items-center gap-1" title="Active party">
+              <Users className="h-3 w-3 text-sky-600" /> {party.length}/6
+            </span>
+          </div>
+        </div>
+        <div className="max-sm:hidden flex flex-col justify-between gap-2 lg:flex-row lg:items-center">
           <div className="flex items-center gap-3">
             <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-red-600 text-white shadow-md shadow-red-200">
               <Trophy className="h-4 w-4" />
@@ -2363,11 +2361,11 @@ export default function BattleRunGame() {
 
       {isDraft && (
         <section className="relative mx-auto max-w-6xl">
-          <div className="mb-4 text-center sm:mb-7">
+          <div className="mb-3 text-center sm:mb-7">
             <h2 className="text-2xl font-black text-slate-950 sm:text-4xl">
               {phase === 'starter-draft' ? 'Choose your first partner' : 'Victory reward'}
             </h2>
-            <p className="mx-auto mt-2 max-w-2xl text-sm text-slate-600 sm:text-base">
+            <p className="mx-auto mt-1 max-w-2xl text-xs leading-relaxed text-slate-600 sm:mt-2 sm:text-base">
               {phase === 'starter-draft'
                 ? 'Build a team capable of clearing 15 stages, three checkpoint bosses, and the final Run Champion.'
                 : party.length < 6
