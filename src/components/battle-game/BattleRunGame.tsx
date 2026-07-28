@@ -1,4 +1,5 @@
 import { memo, useCallback, useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import {
   ArrowLeftRight,
   Bot,
@@ -14,6 +15,7 @@ import {
   Loader2,
   LockKeyhole,
   Medal,
+  Package,
   Play,
   RefreshCw,
   RotateCcw,
@@ -64,6 +66,9 @@ import { analyzeDraftFit, analyzeReplacementImpact, getRecommendedDraftChoice } 
 import type { DraftFitAnalysis } from '../../utils/battle-run-draft';
 import { getBattleAiProfile } from '../../utils/battle-ai-profile';
 import { getPartyDevelopmentChoices } from '../../services/battle-content.service';
+import itemDescriptionsData from '../../data/battle-item-descriptions.json';
+
+const itemDescriptions = itemDescriptionsData as Record<string, string>;
 
 const typeClasses: Record<string, string> = {
   Bug: 'bg-lime-600', Dark: 'bg-slate-700', Dragon: 'bg-indigo-600', Electric: 'bg-yellow-500',
@@ -89,7 +94,7 @@ function MoveCategoryBadge({
       <img
         src={`/ps/sprites/categories/${category}.png`}
         alt=""
-        className={compact ? 'h-3.5 w-8 object-contain' : 'h-4 w-9 object-contain'}
+        className={compact ? 'h-2.5 w-6 object-contain sm:h-3.5 sm:w-8' : 'h-4 w-9 object-contain'}
         aria-hidden="true"
       />
     </span>
@@ -130,6 +135,138 @@ function TypeBadges({ types, compact = false }: { types: string[]; compact?: boo
         </span>
       ))}
     </div>
+  );
+}
+
+function HeldItemBadge({
+  item,
+  compact = false,
+  className = '',
+}: {
+  item: string;
+  compact?: boolean;
+  className?: string;
+}) {
+  const badgeRef = useRef<HTMLSpanElement>(null);
+  const [tooltip, setTooltip] = useState<{
+    left: number;
+    top: number;
+    placement: 'above' | 'below';
+  } | null>(null);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const description = itemDescriptions[item] ?? 'This Pokémon is holding this item.';
+
+  const showTooltip = () => {
+    const badge = badgeRef.current;
+    if (!badge) return;
+    const bounds = badge.getBoundingClientRect();
+    const tooltipHalfWidth = 128;
+    setTooltip({
+      left: Math.max(
+        tooltipHalfWidth + 8,
+        Math.min(window.innerWidth - tooltipHalfWidth - 8, bounds.left + bounds.width / 2),
+      ),
+      top: bounds.top > 140 ? bounds.top - 8 : bounds.bottom + 8,
+      placement: bounds.top > 140 ? 'above' : 'below',
+    });
+  };
+
+  const openItemDialog = () => {
+    setTooltip(null);
+    setDialogOpen(true);
+  };
+
+  return (
+    <>
+      <span
+        ref={badgeRef}
+        role="button"
+        tabIndex={0}
+        title={`${item}: ${description}`}
+        aria-label={`Held item: ${item}. ${description}`}
+        aria-haspopup="dialog"
+        aria-expanded={dialogOpen}
+        onMouseEnter={showTooltip}
+        onMouseLeave={() => setTooltip(null)}
+        onPointerDown={event => event.stopPropagation()}
+        onClick={event => {
+          event.preventDefault();
+          event.stopPropagation();
+          openItemDialog();
+        }}
+        onKeyDown={event => {
+          if (event.key !== 'Enter' && event.key !== ' ') return;
+          event.preventDefault();
+          event.stopPropagation();
+          openItemDialog();
+        }}
+        className={`inline-flex max-w-full cursor-help touch-manipulation items-center gap-1 rounded-md border border-amber-200 bg-amber-50 font-black text-amber-800 outline-none transition hover:border-amber-300 hover:bg-amber-100 focus-visible:ring-2 focus-visible:ring-amber-400 ${compact ? 'min-h-5 px-1.5 py-0.5 text-[9px]' : 'min-h-7 px-2 py-1 text-[10px] sm:text-xs'} ${className}`}
+      >
+        <Package className={compact ? 'h-2.5 w-2.5 shrink-0' : 'h-3 w-3 shrink-0'} aria-hidden="true" />
+        <span className="truncate">{item}</span>
+      </span>
+      {tooltip && createPortal(
+        <span
+          role="tooltip"
+          className={`pointer-events-none fixed z-[100] w-64 -translate-x-1/2 rounded-xl border border-slate-700 bg-slate-950 px-3 py-2.5 text-left text-white shadow-2xl ${
+            tooltip.placement === 'above' ? '-translate-y-full' : ''
+          }`}
+          style={{ left: tooltip.left, top: tooltip.top }}
+        >
+          <strong className="block text-xs text-amber-300">{item}</strong>
+          <span className="mt-1 block text-[11px] font-semibold leading-relaxed text-slate-200">{description}</span>
+        </span>,
+        document.body,
+      )}
+      {dialogOpen && createPortal(
+        <span
+          className="fixed inset-0 z-[110] flex items-end bg-slate-950/50 p-3 backdrop-blur-[2px] sm:items-center sm:justify-center"
+          onPointerDown={event => event.stopPropagation()}
+          onClick={event => {
+            event.preventDefault();
+            event.stopPropagation();
+            setDialogOpen(false);
+          }}
+        >
+          <span
+            role="dialog"
+            aria-modal="true"
+            aria-label={`${item} held item details`}
+            className="block w-full rounded-2xl border border-white/20 bg-white p-4 text-left shadow-2xl sm:max-w-sm sm:p-5"
+            onClick={event => event.stopPropagation()}
+          >
+            <span className="flex items-start justify-between gap-4">
+              <span className="flex min-w-0 items-center gap-3">
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-100 text-amber-700">
+                  <Package className="h-5 w-5" aria-hidden="true" />
+                </span>
+                <span className="min-w-0">
+                  <span className="block text-[9px] font-black uppercase tracking-[0.18em] text-amber-700">Held item</span>
+                  <strong className="block truncate text-lg text-slate-950">{item}</strong>
+                </span>
+              </span>
+              <button
+                type="button"
+                aria-label="Close item details"
+                onClick={event => {
+                  event.preventDefault();
+                  event.stopPropagation();
+                  setDialogOpen(false);
+                }}
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-slate-100 text-slate-500 transition hover:bg-slate-200 hover:text-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-300"
+              >
+                <XCircle className="h-5 w-5" />
+              </button>
+            </span>
+            <span className="mt-4 block rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm font-semibold leading-relaxed text-slate-600">
+              {description}
+            </span>
+            <span className="mt-3 block text-center text-[10px] font-bold text-slate-400 sm:hidden">Tap outside to close</span>
+          </span>
+        </span>,
+        document.body,
+      )}
+    </>
   );
 }
 
@@ -370,7 +507,7 @@ function DraftCard({ pokemon, onChoose, label, fit, recommended = false }: {
           <p className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">Ability</p>
           <p className="mt-0.5 truncate text-xs font-extrabold text-slate-700 sm:text-sm">{pokemon.ability}</p>
           {pokemon.item && (
-            <p className="mt-1 truncate text-[10px] font-black text-amber-700 sm:text-xs">Holding · {pokemon.item}</p>
+            <HeldItemBadge item={pokemon.item} compact className="mt-1.5" />
           )}
           <div className="mt-1.5 flex flex-wrap gap-1">
             {pokemon.moves.slice(0, 4).map((move, index) => (
@@ -414,6 +551,7 @@ function PartyStrip({ party }: { party: RunPokemon[] }) {
             <BattlePokemonImage id={pokemon.id} species={pokemon.species} variant="icon" className="h-full w-full" />
           </div>
           <span className="text-[11px] font-black text-slate-700">{pokemon.species} <span className="text-slate-400">L{pokemon.level}</span></span>
+          {pokemon.item && <HeldItemBadge item={pokemon.item} compact />}
         </div>
       ))}
     </div>
@@ -1001,7 +1139,7 @@ function BattleArena() {
           </div>
         </div>
 
-        <div className="relative border-t border-slate-200 bg-slate-50 p-3 sm:p-6">
+        <div className="relative border-t border-slate-200 bg-slate-50 p-1.5 sm:p-6">
           {error && (
             <div className="mb-4 rounded-xl border border-red-200 bg-red-50 p-3 text-sm font-semibold text-red-700">
               <p>{error}</p>
@@ -1033,31 +1171,24 @@ function BattleArena() {
                   <MoveDetails move={inspectedMove} opponent={displaySnapshot?.opponent?.species} />
                 </div>
               )}
-              <div className="mb-3 flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-slate-950 text-white"><Swords className="h-4 w-4" /></span>
-                  <span>
-                    <span className="block text-[10px] font-black uppercase tracking-[0.18em] text-red-500">Command phase</span>
-                    <span className="block text-sm font-black text-slate-800">Choose your move</span>
-                  </span>
-                </div>
+              <div className="mb-2 hidden items-center justify-end sm:flex">
                 {decision.switchingBlocked ? (
-                  <span className="hidden items-center gap-1.5 rounded-full bg-amber-100 px-2.5 py-1 text-xs font-black text-amber-800 sm:flex">
+                  <span className="flex items-center gap-1.5 rounded-full bg-amber-100 px-2.5 py-1 text-xs font-black text-amber-800">
                     <LockKeyhole className="h-3.5 w-3.5" /> Active Pokémon is trapped
                   </span>
                 ) : challengeProgress ? (
-                  <span className={`hidden items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-black sm:flex ${challengeProgress.status === 'failed' ? 'bg-red-100 text-red-800' : challengeProgress.status === 'at-risk' ? 'bg-amber-100 text-amber-800' : 'bg-emerald-100 text-emerald-800'}`}>
+                  <span className={`flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-black ${challengeProgress.status === 'failed' ? 'bg-red-100 text-red-800' : challengeProgress.status === 'at-risk' ? 'bg-amber-100 text-amber-800' : 'bg-emerald-100 text-emerald-800'}`}>
                     <Target className="h-3.5 w-3.5" /> {challengeProgress.label} · {challengeProgress.metrics.map(metric => metric.value).join(' / ')}
                   </span>
                 ) : (
-                  <span className="hidden text-xs font-bold text-slate-400 sm:inline">Hover or focus a move for details</span>
+                  <span className="text-xs font-bold text-slate-400">Hover or focus a move for details</span>
                 )}
               </div>
-              <div className="grid grid-cols-2 gap-2 xl:grid-cols-4">
+              <div className="grid grid-cols-2 gap-1 sm:gap-2 xl:grid-cols-4">
                 {decision.moves.map(move => {
                   const effectiveness = getEffectivenessPresentation(move.effectiveness);
                   return (
-                    <div key={move.slot} className="flex min-w-0 flex-col">
+                    <div key={move.slot} className="relative flex min-w-0 flex-col">
                       <button
                         type="button"
                         disabled={move.disabled || controlsLocked}
@@ -1069,28 +1200,35 @@ function BattleArena() {
                         title={move.description || `${move.category} ${move.type} move`}
                         aria-label={`${move.name}. ${move.category} ${move.type} move. ${move.description || 'No description available.'}`}
                         aria-describedby={inspectedMoveSlot === move.slot ? `battle-move-details-${move.slot}` : undefined}
-                        className="group relative min-h-[92px] w-full touch-manipulation overflow-hidden rounded-xl border border-slate-200 bg-white p-2.5 text-left transition active:scale-[0.98] hover:border-red-300 hover:shadow-md focus-visible:border-red-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-200 disabled:cursor-not-allowed disabled:opacity-40 max-sm:rounded-b-none sm:rounded-2xl sm:p-3 xl:min-h-[108px]"
+                        className="group relative min-h-[70px] w-full touch-manipulation overflow-hidden rounded-lg border border-slate-200 bg-white p-1.5 text-left transition active:scale-[0.98] hover:border-red-300 hover:shadow-md focus-visible:border-red-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-200 disabled:cursor-not-allowed disabled:opacity-40 sm:min-h-[92px] sm:rounded-2xl sm:p-3 xl:min-h-[108px]"
                       >
-                        <span className={`absolute inset-y-0 left-0 w-1.5 ${typeClasses[move.type] ?? 'bg-slate-400'}`} />
-                        <span className="flex items-start justify-between gap-3 pl-2">
-                          <span>
-                            <span className="block text-sm font-black leading-tight text-slate-900 sm:text-base">{move.name}</span>
-                            <span className="mt-1 flex flex-wrap items-center gap-1 text-[10px] font-bold text-slate-500 sm:text-[11px]">
-                              <span className={`${typeClasses[move.type] ?? 'bg-slate-400'} rounded px-1.5 py-0.5 text-[9px] uppercase text-white`}>{move.type}</span>
+                        <span className={`absolute inset-y-0 left-0 w-1 sm:w-1.5 ${typeClasses[move.type] ?? 'bg-slate-400'}`} />
+                        <span className="flex items-start justify-between gap-1 pl-1.5 sm:gap-3 sm:pl-2">
+                          <span className="min-w-0">
+                            <span className="block truncate text-[11px] font-black leading-tight text-slate-900 sm:text-base">{move.name}</span>
+                            <span className="mt-0.5 flex items-center gap-0.5 text-[8px] font-bold text-slate-500 sm:mt-1 sm:gap-1 sm:text-[11px]">
+                              <span className={`${typeClasses[move.type] ?? 'bg-slate-400'} rounded px-1 py-0.5 text-[7px] uppercase text-white sm:px-1.5 sm:text-[9px]`}>{move.type}</span>
                               <MoveCategoryBadge category={move.category} compact />
                             </span>
                           </span>
-                          <span className="shrink-0 text-right text-[11px] font-black text-slate-500">
-                            {move.pp}/{move.maxpp}<span className="block font-bold text-slate-400">PP</span>
+                          <span className="shrink-0 text-right text-[9px] font-black leading-none text-slate-500 sm:text-[11px] sm:leading-normal">
+                            {move.pp}/{move.maxpp}<span className="ml-0.5 font-bold text-slate-400 sm:ml-0 sm:block">PP</span>
                           </span>
                         </span>
-                        <span className="mt-2 flex items-center justify-between gap-1 pl-2 text-[9px] font-bold sm:text-[10px]">
-                          <span className="text-slate-400">
+                        <span className="mt-1 flex items-center justify-between gap-1 pl-1.5 pr-7 text-[8px] font-bold sm:mt-2 sm:pl-2 sm:pr-0 sm:text-[10px]">
+                          <span className="truncate text-slate-400">
+                            <span className="sm:hidden">
+                              {move.category === 'Status'
+                                ? 'Status'
+                                : `${move.power || '—'} PWR · ${move.accuracy === true ? 'Always' : `${move.accuracy}%`}`}
+                            </span>
+                            <span className="max-sm:hidden">
                             {move.category === 'Status'
                               ? 'Effect move'
                               : `${move.power || '—'} power · ${move.accuracy === true ? 'Always hits' : `${move.accuracy}%`}`}
+                            </span>
                           </span>
-                          <span className={`rounded-full border px-1.5 py-0.5 font-black ${effectiveness.classes}`}>{effectiveness.shortLabel}</span>
+                          <span className={`shrink-0 rounded-full border px-1 py-0.5 font-black sm:px-1.5 ${effectiveness.classes}`}>{effectiveness.shortLabel}</span>
                         </span>
                       </button>
                       <button
@@ -1098,18 +1236,19 @@ function BattleArena() {
                         onClick={() => toggleMoveInspection(move.slot)}
                         aria-expanded={inspectedMoveSlot === move.slot}
                         aria-controls={`battle-move-details-${move.slot}`}
-                        className="flex min-h-9 items-center justify-center gap-1.5 rounded-b-xl border border-t-0 border-slate-200 bg-slate-100 px-2 text-[10px] font-black text-slate-600 active:bg-slate-200 sm:hidden"
+                        title={inspectedMoveSlot === move.slot ? 'Hide move details' : `Inspect ${move.name}`}
+                        aria-label={inspectedMoveSlot === move.slot ? `Hide ${move.name} details` : `Inspect ${move.name}`}
+                        className="absolute bottom-1 right-1 z-10 flex h-6 w-6 items-center justify-center rounded-full border border-slate-200 bg-slate-100 text-slate-600 shadow-sm active:bg-slate-200 sm:hidden"
                       >
-                        <Info className="h-3.5 w-3.5" aria-hidden="true" />
-                        {inspectedMoveSlot === move.slot ? 'Hide details' : 'Inspect move'}
+                        <Info className="h-3 w-3" aria-hidden="true" />
                       </button>
                     </div>
                   );
                 })}
               </div>
               {decision.switchingBlocked && (
-                <div className="mt-2 flex items-center gap-2 rounded-xl bg-amber-100 px-3 py-2 text-xs font-black text-amber-800 sm:hidden">
-                  <LockKeyhole className="h-3.5 w-3.5" /> Active Pokémon is trapped and cannot switch
+                <div className="mt-1 flex items-center gap-1.5 rounded-lg bg-amber-100 px-2 py-1.5 text-[10px] font-black text-amber-800 sm:hidden">
+                  <LockKeyhole className="h-3 w-3" /> Active Pokémon is trapped and cannot switch
                 </div>
               )}
             </div>
@@ -1129,9 +1268,9 @@ function BattleArena() {
           )}
 
           {decision.kind === 'move' && availableSwitches.length > 0 && !controlsLocked && (
-            <details className="mt-3 rounded-xl border border-blue-100 bg-blue-50/70 p-3">
-              <summary className="min-h-6 cursor-pointer text-sm font-black text-blue-800">Switch Pokémon instead</summary>
-              <div className="mt-3"><SwitchChoices choices={availableSwitches} onChoose={chooseSwitch} /></div>
+            <details className="mt-1 rounded-lg border border-blue-100 bg-blue-50/70 px-2 py-1.5 sm:mt-3 sm:rounded-xl sm:p-3">
+              <summary className="min-h-4 cursor-pointer text-[10px] font-black text-blue-800 sm:min-h-6 sm:text-sm">Switch Pokémon instead</summary>
+              <div className="mt-1.5 sm:mt-3"><SwitchChoices choices={availableSwitches} onChoose={chooseSwitch} /></div>
             </details>
           )}
         </div>
@@ -1238,7 +1377,11 @@ function VersusScreen() {
         )}
         <div className="mt-5 flex justify-center gap-2">
           {enemyParty.map(pokemon => (
-            <div key={pokemon.species} className="h-14 w-14 rounded-full border border-slate-200 bg-slate-50 p-1 shadow-sm" title={pokemon.species}>
+            <div
+              key={pokemon.species}
+              className="h-14 w-14 rounded-full border border-slate-200 bg-slate-50 p-1 shadow-sm"
+              title={`${pokemon.species}${pokemon.item ? ` · Holding ${pokemon.item}` : ''}`}
+            >
               <BattlePokemonImage id={pokemon.id} species={pokemon.species} variant="icon" className="h-full w-full" />
             </div>
           ))}
@@ -1295,8 +1438,9 @@ function LeadSelectionScreen() {
                 Slot {index + 1}
               </span>
               {index === 0 && (
-                <span className="absolute right-3 top-3 rounded-full bg-blue-600 px-2.5 py-1 text-[10px] font-black uppercase tracking-wider text-white shadow-sm">
-                  Current lead
+                <span className="absolute right-1.5 top-1.5 rounded-full bg-blue-600 px-1.5 py-0.5 text-[7px] font-black uppercase tracking-[0.08em] text-white shadow-sm sm:right-3 sm:top-3 sm:px-2.5 sm:py-1 sm:text-[10px] sm:tracking-wider">
+                  <span className="sm:hidden">Lead</span>
+                  <span className="max-sm:hidden">Current lead</span>
                 </span>
               )}
               <BattlePokemonImage
@@ -1310,11 +1454,10 @@ function LeadSelectionScreen() {
               <div className="min-w-0">
                 <strong className="block truncate text-lg text-slate-950 sm:text-xl">{pokemon.species}</strong>
                 <span className="text-xs font-black text-slate-400">LV. {pokemon.level} · BST {pokemon.bst}</span>
-                {(pokemon.buildName || pokemon.item) && (
-                  <span className="mt-0.5 block truncate text-[10px] font-black text-amber-700">
-                    {[pokemon.buildName, pokemon.item].filter(Boolean).join(' · ')}
-                  </span>
+                {pokemon.buildName && (
+                  <span className="mt-0.5 block truncate text-[10px] font-black text-slate-500">{pokemon.buildName}</span>
                 )}
+                {pokemon.item && <HeldItemBadge item={pokemon.item} compact className="mt-1" />}
               </div>
 
               <div className="mt-2">
@@ -1546,7 +1689,7 @@ function RouteSelectionScreen() {
                         <span className="min-w-0">
                           <strong className="block truncate text-[10px] text-slate-800">{pokemon.species}</strong>
                           <span className="block text-[9px] font-black text-slate-400">LV. {pokemon.level}</span>
-                          {pokemon.item && <span className="mt-1 hidden truncate rounded bg-amber-100 px-1 py-0.5 text-[8px] font-black text-amber-800 sm:block">{pokemon.item}</span>}
+                          {pokemon.item && <HeldItemBadge item={pokemon.item} compact className="mt-1" />}
                         </span>
                       </div>
                     ))}
@@ -1699,6 +1842,7 @@ function ReplacementScreen() {
               <span className="min-w-0 flex-1">
                 <strong className="block text-lg text-slate-900">{pokemon.species}</strong>
                 <span className="text-sm font-semibold text-slate-500">Level {pokemon.level} · BST {pokemon.bst}</span>
+                {pokemon.item && <HeldItemBadge item={pokemon.item} compact className="mt-1" />}
                 <span className="mt-2 flex flex-wrap gap-1">
                   <span className={`rounded-full px-2 py-1 text-[9px] font-black ${impact.powerDelta > 0 ? 'bg-emerald-100 text-emerald-700' : impact.powerDelta < 0 ? 'bg-red-100 text-red-700' : 'bg-slate-100 text-slate-600'}`}>
                     {impact.powerDelta === 0 ? 'BST unchanged' : `${impact.powerDelta > 0 ? '+' : ''}${impact.powerDelta} BST`}
@@ -1765,6 +1909,7 @@ function PartyDevelopmentScreen() {
                     <TypeBadges types={choice.current.types} compact />
                   </div>
                   <span className="text-xs font-bold text-slate-500">Level {choice.current.level} · BST {choice.current.bst} · {choice.current.ability}</span>
+                  {choice.current.item && <HeldItemBadge item={choice.current.item} compact className="mt-1" />}
                 </div>
               </div>
 
@@ -1791,6 +1936,7 @@ function PartyDevelopmentScreen() {
                           <span className="rounded-full bg-white px-2 py-1 text-[9px] font-black text-emerald-700">+{bstGain} BST</span>
                         </span>
                         <span className="mt-1.5 block truncate text-[11px] font-bold text-slate-500">Ability · {option.pokemon.ability}</span>
+                        {option.pokemon.item && <HeldItemBadge item={option.pokemon.item} compact className="mt-1" />}
                         <span className={`mt-2 flex items-center justify-between rounded-lg px-3 py-2 text-xs font-black text-white ${option.kind === 'mega' ? 'bg-violet-700 group-hover:bg-violet-800' : 'bg-emerald-600 group-hover:bg-emerald-700'}`}>
                           {option.kind === 'mega' ? 'Mega Evolve' : 'Evolve'} <ChevronRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
                         </span>
@@ -1921,6 +2067,7 @@ function RunCompleteScreen({
                   <span className="text-left">
                     <strong className="block text-xs text-slate-900">{pokemon.species}</strong>
                     <span className="block text-[10px] font-bold text-slate-400">Level {pokemon.level}</span>
+                    {pokemon.item && <HeldItemBadge item={pokemon.item} compact className="mt-1" />}
                   </span>
                 </div>
               ))}
@@ -2029,6 +2176,7 @@ function ResumeRunScreen({
                   <span className="min-w-0">
                     <strong className="block truncate text-xs text-slate-900">{pokemon.species}</strong>
                     <span className="block text-[10px] font-bold text-slate-400">Level {pokemon.level}</span>
+                    {pokemon.item && <HeldItemBadge item={pokemon.item} compact className="mt-1" />}
                   </span>
                 </div>
               ))}
@@ -2133,6 +2281,7 @@ export default function BattleRunGame() {
   }, [phase]);
 
   const isDraft = phase === 'starter-draft' || phase === 'reward-draft';
+  const isBattleSimulation = phase === 'preparing-battle' || phase === 'battle';
   const runGrade = getRunGrade(score, winStreak);
   const sector = getRunSector(stage);
   const recommendedDraft = phase === 'reward-draft'
@@ -2151,12 +2300,37 @@ export default function BattleRunGame() {
   }
 
   return (
-    <main className="battle-run-theme relative min-h-[calc(100svh-4rem)] overflow-hidden bg-slate-50 px-2 py-3 sm:bg-gradient-to-br sm:from-red-50 sm:via-sky-50 sm:to-emerald-50 sm:px-6 sm:py-4">
+    <main className={`battle-run-theme relative min-h-[calc(100svh-4rem)] overflow-hidden bg-slate-50 px-2 sm:bg-gradient-to-br sm:from-red-50 sm:via-sky-50 sm:to-emerald-50 sm:px-6 sm:py-4 ${isBattleSimulation ? 'py-1.5' : 'py-3'}`}>
       <div className="pointer-events-none absolute -left-32 top-20 h-96 w-96 rounded-full bg-red-200/30 blur-3xl" />
       <div className="pointer-events-none absolute -right-32 top-64 h-96 w-96 rounded-full bg-blue-200/30 blur-3xl" />
 
-      <header className="relative mx-auto mb-3 max-w-7xl rounded-xl border border-slate-200 bg-white px-3 py-2.5 shadow-sm sm:mb-4 sm:rounded-2xl sm:border-white/80 sm:bg-white/75 sm:px-4 sm:backdrop-blur">
-        <div className="flex flex-col justify-between gap-2 lg:flex-row lg:items-center">
+      <header className={`relative mx-auto max-w-7xl border border-slate-200 bg-white shadow-sm sm:mb-4 sm:rounded-2xl sm:border-white/80 sm:bg-white/75 sm:px-4 sm:py-2.5 sm:backdrop-blur ${
+        isBattleSimulation
+          ? 'mb-1.5 rounded-lg px-2 py-1'
+          : 'mb-3 rounded-xl px-3 py-2.5'
+      }`}>
+        {isBattleSimulation && (
+          <div className="flex h-8 items-center justify-between gap-2 sm:hidden">
+            <div className="flex min-w-0 items-center gap-2">
+              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-red-600 text-white shadow-sm shadow-red-200">
+                <Trophy className="h-3.5 w-3.5" />
+              </span>
+              <strong className="truncate text-xs text-slate-950">Battle Run</strong>
+              <span className={`shrink-0 rounded-full px-2 py-0.5 text-[8px] font-black text-white ${isCheckpointStage(stage) ? 'bg-amber-600' : 'bg-slate-950'}`}>
+                {isFinalStage(stage) ? 'FINAL' : isCheckpointStage(stage) ? `BOSS ${stage}` : `STAGE ${stage}`}
+              </span>
+            </div>
+            <div className="flex shrink-0 items-center gap-2.5 text-[10px] font-black text-slate-600">
+              <span className="flex items-center gap-1" title="Current score">
+                <Trophy className="h-3 w-3 text-amber-500" /> {score.toLocaleString()}
+              </span>
+              <span className="flex items-center gap-1" title="Active party">
+                <Users className="h-3 w-3 text-sky-600" /> {party.length}/6
+              </span>
+            </div>
+          </div>
+        )}
+        <div className={`${isBattleSimulation ? 'max-sm:hidden ' : ''}flex flex-col justify-between gap-2 lg:flex-row lg:items-center`}>
           <div className="flex items-center gap-3">
             <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-red-600 text-white shadow-md shadow-red-200">
               <Trophy className="h-4 w-4" />

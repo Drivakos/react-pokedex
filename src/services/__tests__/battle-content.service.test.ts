@@ -9,6 +9,7 @@ import {
   getPokemonDevelopmentOptions,
 } from '../battle-content.service';
 import { RUN_ROUTES, createSeededRandom, enemyPartySize, getRecruitmentRewardProfile } from '../../utils/battle-run-rules';
+import itemDescriptions from '../../data/battle-item-descriptions.json';
 
 describe('battle content catalog', () => {
   it('creates battle-ready Pokémon without loading the simulator', () => {
@@ -68,6 +69,11 @@ describe('battle content catalog', () => {
     expect(createRunPokemon('Pelipper', 6, () => 0)).toMatchObject({
       ability: 'Drizzle',
       item: 'Damp Rock',
+    });
+    expect(itemDescriptions).toMatchObject({
+      'Toxic Orb': expect.stringContaining('badly poison'),
+      'White Herb': expect.stringContaining('lowered stat stages'),
+      'Damp Rock': expect.stringContaining('Rain Dance'),
     });
   });
 

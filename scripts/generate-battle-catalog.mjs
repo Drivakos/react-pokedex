@@ -5,6 +5,7 @@ import { Dex } from '@pkmn/sim';
 const dex = Dex.forGen(9);
 const output = fileURLToPath(new URL('../src/data/battle-pokemon-catalog.json', import.meta.url));
 const progressionOutput = fileURLToPath(new URL('../src/data/battle-pokemon-progression.json', import.meta.url));
+const itemDescriptionsOutput = fileURLToPath(new URL('../src/data/battle-item-descriptions.json', import.meta.url));
 
 const species = dex.species.all().filter(entry => (
   entry.exists &&
@@ -646,13 +647,26 @@ const progression = Object.fromEntries(species.flatMap(entry => {
     ? [[entry.name, { evolutions, megas }]]
     : [];
 }));
+const generatedPokemon = [
+  ...catalog,
+  ...Object.values(progression).flatMap(entry => entry.megas),
+];
+const generatedItemNames = [...new Set(generatedPokemon.flatMap(pokemon => (
+  pokemon.builds.map(build => build.item)
+)))].sort();
+const itemDescriptions = Object.fromEntries(generatedItemNames.map(itemName => {
+  const item = dex.items.get(itemName);
+  return [itemName, item.shortDesc || item.desc || 'This Pokémon is holding this item.'];
+}));
 
 async function main() {
   await mkdir(fileURLToPath(new URL('../src/data', import.meta.url)), { recursive: true });
   await writeFile(output, `${JSON.stringify(catalog)}\n`);
   await writeFile(progressionOutput, `${JSON.stringify(progression)}\n`);
+  await writeFile(itemDescriptionsOutput, `${JSON.stringify(itemDescriptions, null, 2)}\n`);
   console.log(`Generated ${catalog.length} Battle Run Pokémon at ${output}`);
   console.log(`Generated ${Object.keys(progression).length} progression entries at ${progressionOutput}`);
+  console.log(`Generated ${generatedItemNames.length} held-item descriptions at ${itemDescriptionsOutput}`);
 }
 
 void main();
