@@ -1,3 +1,10 @@
+# [1.13.0](https://github.com/Drivakos/react-pokedex/compare/v1.12.0...v1.13.0) (2026-07-28)
+
+
+### Features
+
+* polish battle cards and mobile controls ([9c0a753](https://github.com/Drivakos/react-pokedex/commit/9c0a75354190444e3cb23e0427646265f64731be))
+
 # [1.12.0](https://github.com/Drivakos/react-pokedex/compare/v1.11.1...v1.12.0) (2026-07-28)
 
 
