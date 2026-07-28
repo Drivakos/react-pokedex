@@ -1,3 +1,10 @@
+# [1.14.0](https://github.com/Drivakos/react-pokedex/compare/v1.13.0...v1.14.0) (2026-07-28)
+
+
+### Features
+
+* polish battle run mobile views ([147b7ab](https://github.com/Drivakos/react-pokedex/commit/147b7abbf3a8f3973d604275d8ad46b136aa6e15))
+
 # [1.13.0](https://github.com/Drivakos/react-pokedex/compare/v1.12.0...v1.13.0) (2026-07-28)
 
 
