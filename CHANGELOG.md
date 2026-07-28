@@ -1,3 +1,10 @@
+# [1.12.0](https://github.com/Drivakos/react-pokedex/compare/v1.11.1...v1.12.0) (2026-07-28)
+
+
+### Features
+
+* diversify competitive battle builds ([d2cc273](https://github.com/Drivakos/react-pokedex/commit/d2cc27309bd16b6c6611ca79237a82aa79062799))
+
 ## [1.11.1](https://github.com/Drivakos/react-pokedex/compare/v1.11.0...v1.11.1) (2026-07-27)
 
 
