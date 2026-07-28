@@ -17,31 +17,57 @@ describe('battle content catalog', () => {
       species: 'Pikachu',
       level: 11,
       types: ['Electric'],
-      ability: 'Static',
+      ability: 'Lightning Rod',
       moves: ['Volt Tackle', 'Surf', 'Volt Switch', 'Thunder Wave'],
-      item: 'Heavy-Duty Boots',
-      buildName: 'Signature',
+      item: 'Light Ball',
+      buildName: 'Offensive pivot',
       nature: 'Naive',
-      evs: { hp: 2, atk: 128, def: 0, spa: 128, spd: 0, spe: 252 },
+      evs: { hp: 0, atk: 4, def: 0, spa: 252, spd: 0, spe: 252 },
       bst: 320,
     });
   });
 
-  it('offers distinct coherent builds with matching held items for one species', () => {
-    const signature = createRunPokemon('Pikachu', 4, () => 0);
-    const physicalBreaker = createRunPokemon('Pikachu', 4, () => 0.4);
+  it('offers distinct competitive goals with matching held items for one species', () => {
+    const pivot = createRunPokemon('Grimmsnarl', 4, () => 0);
+    const screens = createRunPokemon('Grimmsnarl', 4, () => 0.3);
+    const cleaner = createRunPokemon('Grimmsnarl', 4, () => 0.9);
 
-    expect(signature).toMatchObject({
-      buildName: 'Signature',
+    expect(pivot).toMatchObject({
+      buildName: 'Offensive pivot',
+      ability: 'Prankster',
       item: 'Heavy-Duty Boots',
-      moves: ['Volt Tackle', 'Surf', 'Volt Switch', 'Thunder Wave'],
+      moves: ['Play Rough', 'Crunch', 'Parting Shot', 'Thunder Wave'],
     });
-    expect(physicalBreaker).toMatchObject({
-      buildName: 'Physical breaker',
-      item: 'Choice Band',
-      nature: 'Jolly',
-      evs: { hp: 4, atk: 252, def: 0, spa: 0, spd: 0, spe: 252 },
-      moves: ['Volt Tackle', 'Play Rough', 'Knock Off', 'Brick Break'],
+    expect(screens).toMatchObject({
+      buildName: 'Screens support',
+      ability: 'Prankster',
+      item: 'Light Clay',
+      nature: 'Bold',
+      evs: { hp: 252, atk: 0, def: 252, spa: 0, spd: 4, spe: 0 },
+      moves: ['Reflect', 'Light Screen', 'Thunder Wave', 'Play Rough'],
+    });
+    expect(cleaner).toMatchObject({
+      buildName: 'Choice cleaner',
+      item: 'Choice Scarf',
+      moves: ['Play Rough', 'Crunch', 'Hammer Arm', 'Leech Life'],
+    });
+  });
+
+  it('pairs ability- and move-specific builds with their competitive items', () => {
+    expect(createRunPokemon('Gliscor', 6, () => 0)).toMatchObject({
+      ability: 'Poison Heal',
+      item: 'Toxic Orb',
+      buildName: 'Hazard pivot',
+    });
+    expect(createRunPokemon('Cloyster', 6, () => 0.3)).toMatchObject({
+      ability: 'Skill Link',
+      item: 'White Herb',
+      buildName: 'Multi-hit sweeper',
+      moves: ['Shell Smash', 'Icicle Spear', 'Rock Blast', 'Liquidation'],
+    });
+    expect(createRunPokemon('Pelipper', 6, () => 0)).toMatchObject({
+      ability: 'Drizzle',
+      item: 'Damp Rock',
     });
   });
 
@@ -79,6 +105,9 @@ describe('battle content catalog', () => {
       'Charizard-Mega-X', 'Charizard-Mega-Y',
     ]);
     expect(charizardMegas.every(option => option.kind === 'mega' && option.pokemon.isMega)).toBe(true);
+    expect(charizardMegas.map(option => option.pokemon.item)).toEqual([
+      'Charizardite X', 'Charizardite Y',
+    ]);
 
     const developed = developPartyPokemon([venusaur, charizard], 0, 'Venusaur-Mega');
     expect(developed?.[0]).toMatchObject({
