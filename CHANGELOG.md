@@ -1,3 +1,10 @@
+# [1.15.0](https://github.com/Drivakos/react-pokedex/compare/v1.14.0...v1.15.0) (2026-08-19)
+
+
+### Features
+
+* add vs mode ([30c4701](https://github.com/Drivakos/react-pokedex/commit/30c4701f120668266ffb357b0c3d68bccba10a96))
+
 # [1.14.0](https://github.com/Drivakos/react-pokedex/compare/v1.13.0...v1.14.0) (2026-07-28)
 
 
