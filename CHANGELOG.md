@@ -1,3 +1,10 @@
+# [1.18.0](https://github.com/Drivakos/react-pokedex/compare/v1.17.0...v1.18.0) (2026-08-19)
+
+
+### Features
+
+* add reorder functionality ([63071a7](https://github.com/Drivakos/react-pokedex/commit/63071a726f71c933c4810031dbc8e1312d907219))
+
 # [1.17.0](https://github.com/Drivakos/react-pokedex/compare/v1.16.0...v1.17.0) (2026-08-19)
 
 
