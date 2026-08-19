@@ -30,11 +30,12 @@ interface MovesetBuildData {
 const TeamEditor: React.FC = () => {
   const { teamId } = useParams<{ teamId: string }>();
   const navigate = useNavigate();
-  const { user, getTeamMembers, addPokemonToTeam, removePokemonFromTeam, updateTeamMemberBuild, teams } = useAuth();
+  const { user, getTeamMembers, addPokemonToTeam, removePokemonFromTeam, updateTeamMemberBuild, reorderTeamMembers, teams } = useAuth();
 
   const store = useTeamStore();
   const [memberToRemove, setMemberToRemove] = useState<TeamMember | null>(null);
   const [addingPokemonId, setAddingPokemonId] = useState<number | null>(null);
+  const [reorderingMemberId, setReorderingMemberId] = useState<number | null>(null);
 
   const formatName = useCallback((name: string) => {
     return name.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
@@ -108,6 +109,27 @@ const TeamEditor: React.FC = () => {
   const handleEditPokemon = (member: TeamMember) => {
     store.setSelectedMember(member);
     store.setShowMovesetEditor(true);
+  };
+
+  const handleMovePokemon = async (member: TeamMember, direction: -1 | 1) => {
+    if (!teamId || reorderingMemberId !== null) return;
+    const orderedMembers = [...store.teamMembers].sort((a, b) => a.position - b.position);
+    const currentIndex = orderedMembers.findIndex(entry => entry.id === member.id);
+    const targetIndex = currentIndex + direction;
+    if (currentIndex < 0 || targetIndex < 0 || targetIndex >= orderedMembers.length) return;
+
+    [orderedMembers[currentIndex], orderedMembers[targetIndex]] = [orderedMembers[targetIndex], orderedMembers[currentIndex]];
+    setReorderingMemberId(member.id);
+    try {
+      await store.reorderMembers(
+        parseInt(teamId),
+        orderedMembers.map(entry => entry.id),
+        reorderTeamMembers,
+        getTeamMembers,
+      );
+    } finally {
+      setReorderingMemberId(null);
+    }
   };
 
   const handleSaveBuild = async (buildData: MovesetBuildData) => {
@@ -236,6 +258,8 @@ const TeamEditor: React.FC = () => {
         showMovesetEditor={store.showMovesetEditor}
         onEditMember={handleEditPokemon}
         onRemoveClick={(m) => setMemberToRemove(m)}
+        onMoveMember={(member, direction) => void handleMovePokemon(member, direction)}
+        reorderingMemberId={reorderingMemberId}
         onShowSearch={() => store.setShowPokemonSearch(true)}
         formatName={formatName}
       />

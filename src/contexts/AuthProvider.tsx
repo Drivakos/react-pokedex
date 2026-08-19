@@ -44,6 +44,7 @@ interface AuthContextType {
   removePokemonFromTeam: (teamId: number, position: number) => Promise<void>;
   getTeamMembers: (teamId: number) => Promise<TeamMember[]>;
   updateTeamMemberBuild: (teamId: number, position: number, buildData: Partial<TeamMember>) => Promise<void>;
+  reorderTeamMembers: (teamId: number, memberIds: number[]) => Promise<void>;
 }
 
 export const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -481,6 +482,33 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, [user, fetchTeams]);
 
+  const reorderTeamMembers = useCallback(async (teamId: number, memberIds: number[]) => {
+    if (!user) {
+      toast.error('You must be logged in to reorder a team');
+      return;
+    }
+
+    const result = await withAuthSession(async () => {
+      const { error } = await supabase.rpc('reorder_team_members', {
+        p_team_id: teamId,
+        p_member_ids: memberIds,
+      });
+
+      if (error) {
+        console.error('Failed to reorder team members:', error);
+        toast.error('Failed to change Pokémon positions');
+        return false;
+      }
+
+      return true;
+    });
+
+    if (result.data) {
+      await fetchTeams();
+      toast.success('Pokémon positions updated');
+    }
+  }, [user, fetchTeams]);
+
   useEffect(() => {
     const initAuth = async () => {
       setLoading(true);
@@ -611,14 +639,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     addPokemonToTeam,
     removePokemonFromTeam,
     getTeamMembers,
-    updateTeamMemberBuild
+    updateTeamMemberBuild,
+    reorderTeamMembers
   }), [
     session, user, profile, favorites, teams, teamsLoaded, loading,
     signUp, signIn, signInWithGoogle, signInWithMagicLink, signOut, 
     resetPassword, updatePassword, updateProfile,
     addFavorite, removeFavorite, isFavorite,
     fetchTeams, createTeam, updateTeam, deleteTeam, 
-    addPokemonToTeam, removePokemonFromTeam, getTeamMembers, updateTeamMemberBuild
+    addPokemonToTeam, removePokemonFromTeam, getTeamMembers, updateTeamMemberBuild,
+    reorderTeamMembers
   ]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

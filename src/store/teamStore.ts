@@ -65,6 +65,12 @@ interface TeamStore {
     updateMethod: (teamId: number, position: number, buildData: Partial<TeamMember>) => Promise<void>,
     getMembersMethod: (teamId: number) => Promise<TeamMember[]>
   ) => Promise<void>;
+  reorderMembers: (
+    teamId: number,
+    memberIds: number[],
+    reorderMethod: (teamId: number, memberIds: number[]) => Promise<void>,
+    getMembersMethod: (teamId: number) => Promise<TeamMember[]>
+  ) => Promise<void>;
 }
 
 export const useTeamStore = create<TeamStore>()(
@@ -230,6 +236,18 @@ export const useTeamStore = create<TeamStore>()(
       } catch (error) {
         toast.error('Failed to save build');
       }
+    },
+
+    reorderMembers: async (teamId, memberIds, reorderMethod, getMembersMethod) => {
+      await reorderMethod(teamId, memberIds);
+      const members = await getMembersMethod(teamId);
+      const selectedMemberId = get().selectedMember?.id;
+      set({
+        teamMembers: members,
+        selectedMember: selectedMemberId
+          ? members.find(member => member.id === selectedMemberId) ?? null
+          : null,
+      });
     }
   }))
 );

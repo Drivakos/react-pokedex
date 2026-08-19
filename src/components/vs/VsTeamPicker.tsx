@@ -1,4 +1,5 @@
 import type { TeamWithJoinedMembers } from '../../lib/supabase';
+import { TeamRosterPreview } from '../teams/TeamRosterPreview';
 
 export function VsTeamPicker({
   teams,
@@ -40,6 +41,7 @@ export function VsTeamPicker({
             <span className="mt-1 block text-sm text-slate-500">
               {count} Pokémon · Level 50 rules
             </span>
+            <TeamRosterPreview members={team.team_members} />
           </button>
         );
       })}
