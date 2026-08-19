@@ -1,3 +1,10 @@
+## [1.15.1](https://github.com/Drivakos/react-pokedex/compare/v1.15.0...v1.15.1) (2026-08-19)
+
+
+### Bug Fixes
+
+* update netlify.toml ([b511e8b](https://github.com/Drivakos/react-pokedex/commit/b511e8b2d05cfadef633fd95624cc5c28c77efa0))
+
 # [1.15.0](https://github.com/Drivakos/react-pokedex/compare/v1.14.0...v1.15.0) (2026-08-19)
 
 
