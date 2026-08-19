@@ -30,6 +30,7 @@ jest.mock('../../services/showdown-battle-worker.service', () => ({
 }));
 
 import type { BattleDecision, BattleResult, RunPokemon } from '../../types/battle-run';
+import type { BattleSession, BattleSessionFactoryConfig } from '../../types/battle-worker';
 import { useBattleEngineStore } from '../battleEngineStore';
 
 const pokemon: RunPokemon = {
@@ -175,5 +176,38 @@ describe('battle engine pacing and recovery', () => {
       error: null,
       decision: { kind: 'wait' },
     });
+  });
+
+  it('can run an injected session and forwards forfeits before teardown', () => {
+    let factoryConfig: BattleSessionFactoryConfig | null = null;
+    const injectedSession: BattleSession = {
+      start: jest.fn(),
+      chooseMove: jest.fn(),
+      chooseSwitch: jest.fn(),
+      forfeit: jest.fn(),
+      dispose: jest.fn(),
+    };
+
+    useBattleEngineStore.getState().startBattle({
+      playerParty: [pokemon],
+      enemyParty: [{ ...pokemon, species: 'Raichu', id: 26 }],
+      level: 50,
+      onEnd: jest.fn(),
+      sessionFactory: config => {
+        factoryConfig = config;
+        return injectedSession;
+      },
+    });
+
+    expect(factoryConfig).toMatchObject({
+      playerParty: [pokemon],
+      opponentParty: [{ ...pokemon, species: 'Raichu', id: 26 }],
+      level: 50,
+      difficulty: 'medium',
+    });
+
+    useBattleEngineStore.getState().forfeitBattle();
+    expect(injectedSession.forfeit).toHaveBeenCalledTimes(1);
+    expect(injectedSession.dispose).toHaveBeenCalledTimes(1);
   });
 });

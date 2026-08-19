@@ -10,6 +10,7 @@ import type {
   RunPokemon,
 } from '../types/battle-run';
 import { canSubmitMove, canSubmitSwitch } from '../utils/battle-request-rules';
+import type { BattleSession, BattleSessionFactory, ShowdownBattleCallbacks } from '../types/battle-worker';
 
 /**
  * The reusable battle engine.
@@ -41,10 +42,12 @@ export interface StartBattleConfig {
   onActive?: () => void;
   /** Fired exactly once when the on-screen battle is over (final KO animation done). */
   onEnd: (result: BattleResult) => void;
+  /** Optional transport/simulator implementation. Battle Run uses the local AI session. */
+  sessionFactory?: BattleSessionFactory;
 }
 
 // The live worker session for the current battle (null between battles).
-let session: ShowdownBattleWorkerSession | null = null;
+let session: BattleSession | null = null;
 let startTimer: number | null = null;
 // The narrative's outcome callback for the current battle.
 let onBattleEnd: ((result: BattleResult) => void) | null = null;
@@ -87,6 +90,14 @@ let sceneGateActive = false;
 let sceneIdle = true;
 let bufferedDecision: BattleDecision | null = null;
 let pendingBattleResult: BattleResult | null = null;
+
+const createLocalAiSession: BattleSessionFactory = ({
+  playerParty,
+  opponentParty,
+  level,
+  callbacks,
+  difficulty,
+}) => new ShowdownBattleWorkerSession(playerParty, opponentParty, level, callbacks, difficulty);
 
 interface BattleEngineStore {
   snapshot: BattleSnapshot | null;
@@ -174,7 +185,7 @@ export const useBattleEngineStore = create<BattleEngineStore>((set, get) => {
         battleNonce: current.battleNonce + 1,
       }));
 
-      const battleSession = new ShowdownBattleWorkerSession(playerParty, enemyParty, level, {
+      const callbacks: ShowdownBattleCallbacks = {
         onProtocol: chunk => {
           if (session === battleSession) emitBattleProtocol(chunk);
         },
@@ -238,7 +249,14 @@ export const useBattleEngineStore = create<BattleEngineStore>((set, get) => {
           const finishNow = sceneGateActive ? sceneIdle : get().visualEvents.length === 0;
           if (finishNow) finishBattle(result);
         },
-      }, difficulty);
+      };
+      const battleSession = (config.sessionFactory ?? createLocalAiSession)({
+        playerParty,
+        opponentParty: enemyParty,
+        level,
+        callbacks,
+        difficulty,
+      });
       session = battleSession;
       startTimer = window.setTimeout(() => {
         startTimer = null;
@@ -248,14 +266,28 @@ export const useBattleEngineStore = create<BattleEngineStore>((set, get) => {
 
     chooseMove: slot => {
       const decision = get().decision;
-      if (!session || !canSubmitMove(decision, slot)) return;
+      if (!session) {
+        set({ error: 'The battle session disconnected. Reload to reconnect.' });
+        return;
+      }
+      if (!canSubmitMove(decision, slot)) {
+        set({ error: 'That move is no longer available. Choose another action.' });
+        return;
+      }
       set({ decision: emptyDecision, status: 'animating', error: null });
       session.chooseMove(slot);
     },
 
     chooseSwitch: slot => {
       const decision = get().decision;
-      if (!session || !canSubmitSwitch(decision, slot)) return;
+      if (!session) {
+        set({ error: 'The battle session disconnected. Reload to reconnect.' });
+        return;
+      }
+      if (!canSubmitSwitch(decision, slot)) {
+        set({ error: 'That switch is no longer available. Choose another action.' });
+        return;
+      }
       set({ decision: emptyDecision, status: 'animating', error: null });
       session.chooseSwitch(slot);
     },
@@ -301,6 +333,7 @@ export const useBattleEngineStore = create<BattleEngineStore>((set, get) => {
     forfeitBattle: () => {
       const config = lastBattleConfig;
       if (!config || !onBattleEnd) return;
+      session?.forfeit?.();
       session?.dispose();
       if (startTimer !== null) window.clearTimeout(startTimer);
       startTimer = null;

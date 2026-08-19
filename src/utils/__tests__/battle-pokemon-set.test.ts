@@ -37,4 +37,23 @@ describe('Showdown Pokémon set adapter', () => {
     expect(set.nature).toBe('Adamant');
     expect(set.evs).toEqual({ hp: 4, atk: 252, def: 0, spa: 0, spd: 0, spe: 252 });
   });
+
+  it('preserves saved-team IVs and presentation fields', () => {
+    const set = toPokemonSet({
+      ...bossPokemon,
+      nickname: 'Tank',
+      ivs: { hp: 31, atk: 0, def: 30, spa: 31, spd: 29, spe: 1 },
+      gender: 'F',
+      teraType: 'Ghost',
+      shiny: true,
+    });
+
+    expect(set).toMatchObject({
+      name: 'Tank',
+      ivs: { hp: 31, atk: 0, def: 30, spa: 31, spd: 29, spe: 1 },
+      gender: 'F',
+      teraType: 'Ghost',
+      shiny: true,
+    });
+  });
 });

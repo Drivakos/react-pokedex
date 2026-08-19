@@ -1,4 +1,5 @@
 import type {
+  BattleSession,
   BattleWorkerEvent,
   BattleWorkerRequest,
   ShowdownBattleCallbacks,
@@ -38,7 +39,7 @@ export function disposePrewarmedShowdownBattleWorker(): void {
   prewarmedWorker = null;
 }
 
-export class ShowdownBattleWorkerSession {
+export class ShowdownBattleWorkerSession implements BattleSession {
   private readonly worker: Worker;
   private readonly callbacks: ShowdownBattleCallbacks;
   private ready = false;

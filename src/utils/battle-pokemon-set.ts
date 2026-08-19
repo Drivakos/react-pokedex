@@ -12,15 +12,17 @@ const statTable = (value: number) => ({
 
 export function toPokemonSet(pokemon: RunPokemon): PokemonSet {
   return {
-    name: pokemon.species,
+    name: pokemon.nickname || pokemon.species,
     species: pokemon.species,
     item: pokemon.item ?? '',
     ability: pokemon.ability,
     moves: pokemon.moves,
     nature: pokemon.nature ?? 'Hardy',
-    gender: '',
+    gender: pokemon.gender ?? '',
     evs: pokemon.evs ?? statTable(85),
-    ivs: statTable(31),
+    ivs: pokemon.ivs ?? statTable(31),
     level: pokemon.level,
+    ...(pokemon.teraType ? { teraType: pokemon.teraType } : {}),
+    ...(pokemon.shiny !== undefined ? { shiny: pokemon.shiny } : {}),
   };
 }

@@ -22,6 +22,11 @@ export interface RunPokemon {
   item?: string;
   nature?: string;
   evs?: PokemonStatSpread;
+  ivs?: PokemonStatSpread;
+  gender?: 'M' | 'F' | 'N';
+  teraType?: string;
+  shiny?: boolean;
+  nickname?: string;
   isMega?: boolean;
   baseSpecies?: string;
   buildName?: string;
@@ -82,6 +87,8 @@ export interface BattleSwitchChoice {
 }
 
 export interface BattleDecision {
+  /** Showdown's shared request id; used by lockstep multiplayer coordination. */
+  requestId?: number;
   kind: 'move' | 'switch' | 'wait';
   moves: BattleMoveChoice[];
   switches: BattleSwitchChoice[];
