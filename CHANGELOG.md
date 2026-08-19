@@ -1,3 +1,10 @@
+# [1.17.0](https://github.com/Drivakos/react-pokedex/compare/v1.16.0...v1.17.0) (2026-08-19)
+
+
+### Features
+
+* add recommended builds ([129651e](https://github.com/Drivakos/react-pokedex/commit/129651efbfde02a721cdb10e5adf05b2ef3a5f10))
+
 # [1.16.0](https://github.com/Drivakos/react-pokedex/compare/v1.15.1...v1.16.0) (2026-08-19)
 
 
