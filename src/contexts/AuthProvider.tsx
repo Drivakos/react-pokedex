@@ -476,9 +476,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     });
 
     if (result.data) {
+      await fetchTeams();
       toast.success('Build saved successfully!');
     }
-  }, [user]);
+  }, [user, fetchTeams]);
 
   useEffect(() => {
     const initAuth = async () => {

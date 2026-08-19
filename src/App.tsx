@@ -18,6 +18,9 @@ const TeamEditor = React.lazy(() => import('./components/teams/TeamEditor'));
 const PokéGridChallenge = React.lazy(() => import('./components/PokéGridChallenge'));
 const BattleRunGame = React.lazy(() => import('./components/battle-game/BattleRunGame'));
 const BattleAnimLab = React.lazy(() => import('./components/battle-anim-lab/BattleAnimLab'));
+const VsHome = React.lazy(() => import('./components/vs/VsHome'));
+const VsInvite = React.lazy(() => import('./components/vs/VsInvite'));
+const VsMatch = React.lazy(() => import('./components/vs/VsMatch'));
 
 const LoadingFallback = ({ message = 'Loading...' }: { message?: string }) => (
   <div className="min-h-screen flex items-center justify-center bg-gray-50">
@@ -60,6 +63,21 @@ function AppContent() {
           } />
           <Route path="/pkmn-grid-challenge" element={<div data-testid="pokegrid-challenge"><PokéGridChallenge /></div>} />
           <Route path="/battle-run" element={<div data-testid="battle-run-game"><BattleRunGame /></div>} />
+          <Route path="/vs" element={
+            <ProtectedRoute>
+              <div data-testid="vs-home"><VsHome /></div>
+            </ProtectedRoute>
+          } />
+          <Route path="/vs/invite/:token" element={
+            <ProtectedRoute>
+              <div data-testid="vs-invite"><VsInvite /></div>
+            </ProtectedRoute>
+          } />
+          <Route path="/vs/match/:matchId" element={
+            <ProtectedRoute>
+              <div data-testid="vs-match"><VsMatch /></div>
+            </ProtectedRoute>
+          } />
           <Route path="/battle-anim-lab" element={<BattleAnimLab />} />
         </Routes>
       </Suspense>
