@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { CheckCircle2, Copy, Save, Upload, UserRound } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { formatName } from '../../utils/helpers';
@@ -59,6 +59,15 @@ interface MoveDetails {
     name: string;
   };
   priority: number;
+}
+
+type MoveCategoryFilter = 'all' | 'physical' | 'special' | 'status';
+type MoveSortKey = 'name' | 'type' | 'category' | 'power' | 'accuracy' | 'pp';
+type SortDirection = 'asc' | 'desc';
+
+interface BuildValidationErrors {
+  ability?: string;
+  moves?: string;
 }
 
 interface Nature {
@@ -273,6 +282,12 @@ const MovesetEditorContent: React.FC<MovesetEditorProps> = ({ pokemon, teamId, i
   const [availableMoves, setAvailableMoves] = useState<string[]>([]);
   const [moveDetails, setMoveDetails] = useState<Record<string, MoveDetails>>(moveDetailsCache);
   const [searchTerm, setSearchTerm] = useState('');
+  const [typeFilter, setTypeFilter] = useState('all');
+  const [categoryFilter, setCategoryFilter] = useState<MoveCategoryFilter>('all');
+  const [sortKey, setSortKey] = useState<MoveSortKey>('name');
+  const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
+  const [selectedOnly, setSelectedOnly] = useState(false);
+  const [validationErrors, setValidationErrors] = useState<BuildValidationErrors>({});
   const [loading, setLoading] = useState(true);
 
 
@@ -356,7 +371,7 @@ const MovesetEditorContent: React.FC<MovesetEditorProps> = ({ pokemon, teamId, i
         ]);
 
         // Process moves
-        const moveNames = movesData.map((m) => m.move.name);
+        const moveNames = [...new Set(movesData.map((m) => m.move.name))];
         setAvailableMoves(moveNames);
 
         const newMoveDetails: Record<string, MoveDetails> = { ...moveDetailsCache };
@@ -466,6 +481,20 @@ const MovesetEditorContent: React.FC<MovesetEditorProps> = ({ pokemon, teamId, i
   }, [pokemon.id, teamId]);
 
   const handleSaveBuild = () => {
+    const errors: BuildValidationErrors = {};
+    if (!pokemonBuild.ability.trim()) {
+      errors.ability = 'Choose an ability before saving.';
+    }
+    if (selectedMoves.length < 1 || selectedMoves.length > 4) {
+      errors.moves = 'Choose between one and four moves before saving.';
+    }
+
+    setValidationErrors(errors);
+    if (Object.keys(errors).length > 0) {
+      toast.error('Complete the required battle fields before saving.');
+      return;
+    }
+
     const completeBuild = {
       ...pokemonBuild,
       moves: selectedMoves
@@ -643,7 +672,15 @@ const MovesetEditorContent: React.FC<MovesetEditorProps> = ({ pokemon, teamId, i
       }
 
       setSelectedMoves(prev => [...prev, moveName]);
+      setValidationErrors(prev => ({ ...prev, moves: undefined }));
       await loadMoveDetails(moveName);
+    }
+  };
+
+  const handleAbilityChange = (ability: string) => {
+    setPokemonBuild(prev => ({ ...prev, ability }));
+    if (ability.trim()) {
+      setValidationErrors(prev => ({ ...prev, ability: undefined }));
     }
   };
 
@@ -667,9 +704,77 @@ const MovesetEditorContent: React.FC<MovesetEditorProps> = ({ pokemon, teamId, i
     return move.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
   };
 
-  const filteredMoves = availableMoves.filter(move =>
-    move.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const availableMoveTypes = useMemo(() => (
+    [...new Set(availableMoves
+      .map((moveName) => moveDetails[moveName]?.type.name)
+      .filter((typeName): typeName is string => Boolean(typeName)))]
+      .sort((a, b) => a.localeCompare(b))
+  ), [availableMoves, moveDetails]);
+
+  const filteredMoves = useMemo(() => {
+    const normalizedSearch = searchTerm.trim().toLowerCase();
+    const filtered = availableMoves.filter((moveName) => {
+      const details = moveDetails[moveName];
+
+      return (!normalizedSearch || formatMoveName(moveName).toLowerCase().includes(normalizedSearch))
+        && (typeFilter === 'all' || details?.type.name === typeFilter)
+        && (categoryFilter === 'all' || details?.damage_class.name === categoryFilter)
+        && (!selectedOnly || selectedMoves.includes(moveName));
+    });
+
+    return filtered.sort((aName, bName) => {
+      const a = moveDetails[aName];
+      const b = moveDetails[bName];
+      let comparison = 0;
+
+      if (sortKey === 'name') {
+        comparison = formatMoveName(aName).localeCompare(formatMoveName(bName));
+      } else if (sortKey === 'type' || sortKey === 'category') {
+        const aValue = sortKey === 'type' ? a?.type.name : a?.damage_class.name;
+        const bValue = sortKey === 'type' ? b?.type.name : b?.damage_class.name;
+        comparison = (aValue || '').localeCompare(bValue || '');
+      } else {
+        const aValue = a?.[sortKey];
+        const bValue = b?.[sortKey];
+
+        if (aValue == null && bValue != null) return 1;
+        if (aValue != null && bValue == null) return -1;
+        comparison = (aValue || 0) - (bValue || 0);
+      }
+
+      if (comparison === 0) {
+        comparison = formatMoveName(aName).localeCompare(formatMoveName(bName));
+      }
+
+      return sortDirection === 'asc' ? comparison : -comparison;
+    });
+  }, [availableMoves, categoryFilter, moveDetails, searchTerm, selectedMoves, selectedOnly, sortDirection, sortKey, typeFilter]);
+
+  const hasMoveFilters = searchTerm.trim() !== ''
+    || typeFilter !== 'all'
+    || categoryFilter !== 'all'
+    || selectedOnly;
+
+  const resetMoveFilters = () => {
+    setSearchTerm('');
+    setTypeFilter('all');
+    setCategoryFilter('all');
+    setSelectedOnly(false);
+  };
+
+  const handleMoveSort = (nextSortKey: MoveSortKey) => {
+    if (sortKey === nextSortKey) {
+      setSortDirection((current) => current === 'asc' ? 'desc' : 'asc');
+      return;
+    }
+
+    setSortKey(nextSortKey);
+    setSortDirection(nextSortKey === 'name' || nextSortKey === 'type' || nextSortKey === 'category' ? 'asc' : 'desc');
+  };
+
+  const sortIndicator = (column: MoveSortKey) => sortKey === column
+    ? (sortDirection === 'asc' ? ' ↑' : ' ↓')
+    : '';
 
   const getCategoryLabel = (cat: string) => {
     if (cat === 'physical') return 'Phys';
@@ -785,9 +890,13 @@ const MovesetEditorContent: React.FC<MovesetEditorProps> = ({ pokemon, teamId, i
             </div>
 
             <div>
-              <div className="sd-field-group">
-                <span className="sd-field-label">Moves</span>
-                <div className="sd-moves-list">
+              <div className={`sd-field-group${validationErrors.moves ? ' sd-field-group--invalid' : ''}`}>
+                <span className="sd-field-label">Moves <span aria-hidden="true">*</span></span>
+                <div
+                  className="sd-moves-list"
+                  aria-invalid={Boolean(validationErrors.moves)}
+                  aria-describedby={validationErrors.moves ? 'moves-validation-error' : undefined}
+                >
                   {[0, 1, 2, 3].map((i) => (
                     <div key={i} className="sd-move-slot">
                       <span className="sd-move-slot-input" style={{ background: selectedMoves[i] ? '#fff' : '#f8f8f8' }}>
@@ -805,6 +914,11 @@ const MovesetEditorContent: React.FC<MovesetEditorProps> = ({ pokemon, teamId, i
                     </div>
                   ))}
                 </div>
+                {validationErrors.moves && (
+                  <span id="moves-validation-error" className="sd-field-error" role="alert">
+                    {validationErrors.moves}
+                  </span>
+                )}
               </div>
             </div>
 
@@ -857,12 +971,14 @@ const MovesetEditorContent: React.FC<MovesetEditorProps> = ({ pokemon, teamId, i
                 ))}
               </select>
             </div>
-            <div className="sd-field-group">
-              <span className="sd-field-label">Ability</span>
+            <div className={`sd-field-group${validationErrors.ability ? ' sd-field-group--invalid' : ''}`}>
+              <span className="sd-field-label">Ability <span aria-hidden="true">*</span></span>
               <select
                 className="sd-field-select"
                 value={pokemonBuild.ability}
-                onChange={(e) => setPokemonBuild(prev => ({ ...prev, ability: e.target.value }))}
+                onChange={(e) => handleAbilityChange(e.target.value)}
+                aria-invalid={Boolean(validationErrors.ability)}
+                aria-describedby={validationErrors.ability ? 'ability-validation-error' : undefined}
               >
                 <option value="">Select</option>
                 {availableAbilities.map((ability) => (
@@ -872,6 +988,11 @@ const MovesetEditorContent: React.FC<MovesetEditorProps> = ({ pokemon, teamId, i
                   </option>
                 ))}
               </select>
+              {validationErrors.ability && (
+                <span id="ability-validation-error" className="sd-field-error" role="alert">
+                  {validationErrors.ability}
+                </span>
+              )}
             </div>
           </div>
         </div>
@@ -996,27 +1117,88 @@ const MovesetEditorContent: React.FC<MovesetEditorProps> = ({ pokemon, teamId, i
 
       {/* Moves Table */}
       <div className="sd-panel">
-        <div className="sd-search-bar">
-          <input
-            className="sd-search-input"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder="Search moves..."
-          />
-        </div>
         <div className="sd-section-header">
-          Moves
+          <span>Moves</span>
+          <span className="sd-move-count">
+            {filteredMoves.length} of {availableMoves.length} · {selectedMoves.length}/4 selected
+          </span>
+        </div>
+        <div className="sd-move-toolbar">
+          <label className="sd-move-search">
+            <span className="sr-only">Search moves</span>
+            <input
+              className="sd-search-input"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="Search moves..."
+            />
+          </label>
+          <label className="sd-move-filter">
+            <span>Type</span>
+            <select aria-label="Move type" value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)}>
+              <option value="all">All types</option>
+              {availableMoveTypes.map((typeName) => (
+                <option key={typeName} value={typeName}>{formatName(typeName)}</option>
+              ))}
+            </select>
+          </label>
+          <label className="sd-move-filter">
+            <span>Category</span>
+            <select
+              aria-label="Move category"
+              value={categoryFilter}
+              onChange={(e) => setCategoryFilter(e.target.value as MoveCategoryFilter)}
+            >
+              <option value="all">All categories</option>
+              <option value="physical">Physical</option>
+              <option value="special">Special</option>
+              <option value="status">Status</option>
+            </select>
+          </label>
+          <label className="sd-move-filter">
+            <span>Sort</span>
+            <select aria-label="Sort moves by" value={sortKey} onChange={(e) => handleMoveSort(e.target.value as MoveSortKey)}>
+              <option value="name">Name</option>
+              <option value="type">Type</option>
+              <option value="category">Category</option>
+              <option value="power">Power</option>
+              <option value="accuracy">Accuracy</option>
+              <option value="pp">PP</option>
+            </select>
+          </label>
+          <button
+            type="button"
+            className="sd-move-toolbar-btn"
+            onClick={() => setSortDirection((current) => current === 'asc' ? 'desc' : 'asc')}
+            aria-label={`Sort ${sortDirection === 'asc' ? 'descending' : 'ascending'}`}
+            title={`Sort ${sortDirection === 'asc' ? 'descending' : 'ascending'}`}
+          >
+            {sortDirection === 'asc' ? '↑ Asc' : '↓ Desc'}
+          </button>
+          <button
+            type="button"
+            className={`sd-move-toolbar-btn${selectedOnly ? ' sd-move-toolbar-btn--active' : ''}`}
+            onClick={() => setSelectedOnly((current) => !current)}
+            aria-pressed={selectedOnly}
+          >
+            Selected only
+          </button>
+          {hasMoveFilters && (
+            <button type="button" className="sd-move-reset" onClick={resetMoveFilters}>
+              Clear filters
+            </button>
+          )}
         </div>
         <div className="sd-moves-scroll">
           <table className="sd-moves-table">
             <thead>
               <tr>
-                <th>Name</th>
-                <th>Type</th>
-                <th>Cat</th>
-                <th>Pow</th>
-                <th>Acc</th>
-                <th>PP</th>
+                <th><button type="button" className="sd-sort-header" onClick={() => handleMoveSort('name')}>Name{sortIndicator('name')}</button></th>
+                <th><button type="button" className="sd-sort-header" onClick={() => handleMoveSort('type')}>Type{sortIndicator('type')}</button></th>
+                <th><button type="button" className="sd-sort-header" onClick={() => handleMoveSort('category')}>Cat{sortIndicator('category')}</button></th>
+                <th><button type="button" className="sd-sort-header" onClick={() => handleMoveSort('power')}>Pow{sortIndicator('power')}</button></th>
+                <th><button type="button" className="sd-sort-header" onClick={() => handleMoveSort('accuracy')}>Acc{sortIndicator('accuracy')}</button></th>
+                <th><button type="button" className="sd-sort-header" onClick={() => handleMoveSort('pp')}>PP{sortIndicator('pp')}</button></th>
                 <th>Effect</th>
               </tr>
             </thead>
@@ -1054,6 +1236,16 @@ const MovesetEditorContent: React.FC<MovesetEditorProps> = ({ pokemon, teamId, i
                   </tr>
                 );
               })}
+              {filteredMoves.length === 0 && (
+                <tr className="sd-moves-empty">
+                  <td colSpan={7}>
+                    <strong>No moves match these filters.</strong>
+                    {hasMoveFilters && (
+                      <button type="button" onClick={resetMoveFilters}>Clear filters</button>
+                    )}
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>
