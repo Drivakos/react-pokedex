@@ -1,3 +1,10 @@
+# [1.16.0](https://github.com/Drivakos/react-pokedex/compare/v1.15.1...v1.16.0) (2026-08-19)
+
+
+### Features
+
+* add filtering on pokemon builder ([b5ea51e](https://github.com/Drivakos/react-pokedex/commit/b5ea51e1d6f489af2ecf916b81cc4ca16f773ac2))
+
 ## [1.15.1](https://github.com/Drivakos/react-pokedex/compare/v1.15.0...v1.15.1) (2026-08-19)
 
 
