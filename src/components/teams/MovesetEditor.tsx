@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { CheckCircle2, Copy, Save, Upload, UserRound } from 'lucide-react';
+import { CheckCircle2, Copy, Save, Upload, UserRound, Wand2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { formatName } from '../../utils/helpers';
 import { fetchMoveDetails, fetchPokemonAbilities, fetchCompetitiveItems, fetchPokemonById, fetchPokemonMoves } from '../../services/api';
+import type { PremadePokemonBuild } from '../../services/premade-builds.service';
 import PokemonImage from '../PokemonImage';
 import './ShowdownStyles.css';
 
@@ -276,6 +277,7 @@ const HELD_ITEMS = [
 
 // Module-level in-memory cache for move details (persists across re-mounts)
 const moveDetailsCache: Record<string, MoveDetails> = {};
+const toShowdownId = (value: string): string => value.toLowerCase().replace(/[^a-z0-9]+/g, '');
 
 const MovesetEditorContent: React.FC<MovesetEditorProps> = ({ pokemon, teamId, initialBuild, onSave }) => {
   const [selectedMoves, setSelectedMoves] = useState<string[]>([]);
@@ -288,6 +290,9 @@ const MovesetEditorContent: React.FC<MovesetEditorProps> = ({ pokemon, teamId, i
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
   const [selectedOnly, setSelectedOnly] = useState(false);
   const [validationErrors, setValidationErrors] = useState<BuildValidationErrors>({});
+  const [premadeBuilds, setPremadeBuilds] = useState<PremadePokemonBuild[]>([]);
+  const [showPremadeBuilds, setShowPremadeBuilds] = useState(false);
+  const [premadeBuildsLoading, setPremadeBuildsLoading] = useState(false);
   const [loading, setLoading] = useState(true);
 
 
@@ -688,6 +693,69 @@ const MovesetEditorContent: React.FC<MovesetEditorProps> = ({ pokemon, teamId, i
     setSelectedMoves(prev => prev.filter(move => move !== moveName));
   };
 
+  const handlePremadeBuildsToggle = async () => {
+    if (premadeBuilds.length > 0) {
+      setShowPremadeBuilds(current => !current);
+      return;
+    }
+
+    setPremadeBuildsLoading(true);
+    try {
+      const { fetchPremadeBuilds } = await import('../../services/premade-builds.service');
+      const builds = await fetchPremadeBuilds(pokemon.name);
+      setPremadeBuilds(builds);
+      setShowPremadeBuilds(builds.length > 0);
+
+      if (builds.length === 0) {
+        toast.error(`No premade builds are available for ${formatName(pokemon.name)} yet.`);
+      }
+    } catch (error) {
+      console.error('Error loading premade builds:', error);
+      toast.error('Could not load premade builds. Please try again.');
+    } finally {
+      setPremadeBuildsLoading(false);
+    }
+  };
+
+  const handleApplyPremadeBuild = (build: PremadePokemonBuild) => {
+    const resolvedMoves = build.moves.flatMap((moveName) => {
+      const moveId = toShowdownId(moveName);
+      const match = availableMoves.find(availableMove => toShowdownId(availableMove) === moveId);
+      return match ? [match] : [];
+    }).slice(0, 4);
+
+    if (resolvedMoves.length === 0) {
+      toast.error('This build has no moves that the current editor recognizes.');
+      return;
+    }
+
+    const resolvedAbility = build.ability
+      ? availableAbilities.find(ability => toShowdownId(ability) === toShowdownId(build.ability || ''))
+      : undefined;
+
+    setSelectedMoves(resolvedMoves);
+    setPokemonBuild(current => ({
+      ...current,
+      ability: resolvedAbility || current.ability || availableAbilities[0] || '',
+      heldItem: build.item || current.heldItem,
+      nature: build.nature?.toLowerCase() || current.nature,
+      teraType: build.teraType || current.teraType,
+      evs: { ...current.evs, ...build.evs },
+      ivs: { ...current.ivs, ...build.ivs },
+    }));
+    setValidationErrors(current => ({
+      ...current,
+      moves: undefined,
+      ability: resolvedAbility || pokemonBuild.ability || availableAbilities[0] ? undefined : current.ability,
+    }));
+    setShowPremadeBuilds(false);
+    toast.success(
+      resolvedMoves.length < build.moves.length
+        ? `${build.name} applied with ${resolvedMoves.length} compatible moves. Review it before saving.`
+        : `${build.name} applied. You can still customize it before saving.`,
+    );
+  };
+
   // Existing helper functions...
   const getTypeColor = (typeName: string) => {
     const typeColors: Record<string, string> = {
@@ -710,6 +778,10 @@ const MovesetEditorContent: React.FC<MovesetEditorProps> = ({ pokemon, teamId, i
       .filter((typeName): typeName is string => Boolean(typeName)))]
       .sort((a, b) => a.localeCompare(b))
   ), [availableMoves, moveDetails]);
+
+  const availableHeldItems = useMemo(() => (
+    [...new Set([pokemonBuild.heldItem, ...HELD_ITEMS].filter(Boolean))]
+  ), [pokemonBuild.heldItem]);
 
   const filteredMoves = useMemo(() => {
     const normalizedSearch = searchTerm.trim().toLowerCase();
@@ -819,6 +891,15 @@ const MovesetEditorContent: React.FC<MovesetEditorProps> = ({ pokemon, teamId, i
       <div className="sd-panel">
         {/* Action bar */}
         <div className="sd-actions" style={{ borderTop: 'none', borderBottom: '1px solid #ddd' }}>
+          <button
+            className="sd-action-btn sd-action-btn--autofill"
+            onClick={handlePremadeBuildsToggle}
+            disabled={premadeBuildsLoading}
+            aria-expanded={showPremadeBuilds}
+          >
+            <Wand2 size={12} aria-hidden="true" />
+            {premadeBuildsLoading ? 'Finding builds…' : 'Auto-fill'}
+          </button>
           <button className="sd-action-btn" onClick={exportCurrentPokemon}>
             <Copy size={12} /> Copy
           </button>
@@ -829,6 +910,39 @@ const MovesetEditorContent: React.FC<MovesetEditorProps> = ({ pokemon, teamId, i
             <Save size={12} /> Save
           </button>
         </div>
+
+        {showPremadeBuilds && (
+          <section className="sd-premade-picker" aria-label="Premade builds">
+            <div className="sd-premade-picker__header">
+              <div>
+                <strong>Choose a build</strong>
+                <span>Applying a build replaces moves and battle settings, but does not save it.</span>
+              </div>
+              <button type="button" onClick={() => setShowPremadeBuilds(false)} aria-label="Close premade builds">×</button>
+            </div>
+            <div className="sd-premade-grid">
+              {premadeBuilds.map(build => (
+                <button
+                  type="button"
+                  key={build.id}
+                  className="sd-premade-card"
+                  onClick={() => handleApplyPremadeBuild(build)}
+                >
+                  <span className="sd-premade-card__title">{build.name}</span>
+                  <span className="sd-premade-card__meta">
+                    {build.source === 'smogon' ? build.format.toUpperCase() : 'Random Battle role'}
+                    {build.item ? ` · ${build.item}` : ''}
+                  </span>
+                  <span className="sd-premade-card__moves">{build.moves.map(formatMoveName).join(' · ')}</span>
+                </button>
+              ))}
+            </div>
+            <p className="sd-premade-attribution">
+              Competitive sets from <a href="https://www.smogon.com/" target="_blank" rel="noreferrer">Smogon</a>;
+              fallback roles from <a href="https://github.com/pkmn/randbats" target="_blank" rel="noreferrer">Pokémon Showdown Random Battles</a>.
+            </p>
+          </section>
+        )}
 
         <div className="sd-build-card">
           {/* Sprite */}
@@ -963,7 +1077,7 @@ const MovesetEditorContent: React.FC<MovesetEditorProps> = ({ pokemon, teamId, i
                 onChange={(e) => setPokemonBuild(prev => ({ ...prev, heldItem: e.target.value }))}
               >
                 <option value="">None</option>
-                {HELD_ITEMS.map((item) => (
+                {availableHeldItems.map((item) => (
                   <option key={item} value={item}>
                     {formatName(item)}
                     {itemDescriptions[item] && ` - ${itemDescriptions[item]}`}

@@ -693,6 +693,142 @@
   }
 }
 
+/* Premade build picker */
+.sd-action-btn--autofill {
+  color: #5b3aa4;
+  font-weight: 700;
+}
+
+.sd-action-btn:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+
+.sd-premade-picker {
+  padding: 10px;
+  border-bottom: 1px solid #d7cdef;
+  background: linear-gradient(180deg, #faf8ff 0%, #f4f0fc 100%);
+}
+
+.sd-premade-picker__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+  color: #322550;
+}
+
+.sd-premade-picker__header strong,
+.sd-premade-picker__header span {
+  display: block;
+}
+
+.sd-premade-picker__header span {
+  margin-top: 2px;
+  color: #6d647d;
+  font-size: 10px;
+}
+
+.sd-premade-picker__header button {
+  border: 0;
+  background: transparent;
+  color: #6d647d;
+  cursor: pointer;
+  font-size: 18px;
+  line-height: 1;
+}
+
+.sd-premade-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 6px;
+}
+
+.sd-premade-card {
+  min-width: 0;
+  padding: 8px 9px;
+  border: 1px solid #d8cfeb;
+  border-radius: 5px;
+  background: #fff;
+  color: #302645;
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 120ms ease, box-shadow 120ms ease, transform 120ms ease;
+}
+
+.sd-premade-card:hover,
+.sd-premade-card:focus-visible {
+  border-color: #8062bd;
+  box-shadow: 0 2px 8px rgb(68 43 112 / 14%);
+  outline: none;
+  transform: translateY(-1px);
+}
+
+.sd-premade-card__title,
+.sd-premade-card__meta,
+.sd-premade-card__moves {
+  display: block;
+}
+
+.sd-premade-card__title {
+  font-weight: 700;
+}
+
+.sd-premade-card__meta {
+  margin-top: 2px;
+  color: #7355ad;
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.sd-premade-card__moves {
+  margin-top: 5px;
+  overflow: hidden;
+  color: #655d70;
+  font-size: 10px;
+  line-height: 1.35;
+  text-overflow: ellipsis;
+}
+
+.sd-premade-attribution {
+  margin: 8px 0 0;
+  color: #746b80;
+  font-size: 9px;
+}
+
+.sd-premade-attribution a {
+  color: #5b3aa4;
+  text-decoration: underline;
+}
+
+.sd-search-table tr[aria-disabled="true"] {
+  cursor: wait;
+  opacity: 0.55;
+  pointer-events: none;
+}
+
+.sd-search-table tr.sd-search-row--building {
+  background: #f4f0fc;
+  opacity: 1;
+}
+
+.sd-building-label {
+  display: block;
+  margin-top: 2px;
+  color: #6b46a1;
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+@media (max-width: 480px) {
+  .sd-premade-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 .sd-ev-panel {
   padding: 8px;
 }

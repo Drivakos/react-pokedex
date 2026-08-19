@@ -51,7 +51,7 @@ interface TeamStore {
     pokemon: TeamPokemonData,
     addMethod: (teamId: number, pokemonId: number, position: number) => Promise<void>,
     getMembersMethod: (teamId: number) => Promise<TeamMember[]>
-  ) => Promise<void>;
+  ) => Promise<number | null>;
   removePokemon: (
     teamId: number,
     position: number,
@@ -182,7 +182,7 @@ export const useTeamStore = create<TeamStore>()(
 
       if (nextPosition > 6) {
         toast.error('Team is full (6 Pokémon maximum)');
-        return;
+        return null;
       }
 
       try {
@@ -190,14 +190,20 @@ export const useTeamStore = create<TeamStore>()(
         const members = await getMembersMethod(teamId);
         set({ teamMembers: members, showPokemonSearch: false, searchQuery: '' });
 
+        if (!members.some(member => member.position === nextPosition && member.pokemon_id === pokemon.id)) {
+          return null;
+        }
+
         // Ensure we have the pokemon data
         if (!get().pokemonData[pokemon.id]) {
           set(state => {
             state.pokemonData[pokemon.id] = pokemon;
           });
         }
+        return nextPosition;
       } catch (error) {
         toast.error('Failed to add Pokemon to team');
+        return null;
       }
     },
 

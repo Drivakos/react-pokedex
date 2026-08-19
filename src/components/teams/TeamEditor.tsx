@@ -34,6 +34,7 @@ const TeamEditor: React.FC = () => {
 
   const store = useTeamStore();
   const [memberToRemove, setMemberToRemove] = useState<TeamMember | null>(null);
+  const [addingPokemonId, setAddingPokemonId] = useState<number | null>(null);
 
   const formatName = useCallback((name: string) => {
     return name.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
@@ -56,7 +57,46 @@ const TeamEditor: React.FC = () => {
 
   const handleAddPokemon = async (pokemon: TeamPokemonData) => {
     if (!teamId) return;
-    await store.addPokemon(parseInt(teamId), pokemon, addPokemonToTeam, getTeamMembers);
+    const numericTeamId = parseInt(teamId);
+    let addedPosition: number | null = null;
+    setAddingPokemonId(pokemon.id);
+
+    try {
+      const position = await store.addPokemon(numericTeamId, pokemon, addPokemonToTeam, getTeamMembers);
+      if (position === null) return;
+      addedPosition = position;
+
+      const { fetchAutomaticPokemonBuild } = await import('../../services/premade-builds.service');
+      const build = await fetchAutomaticPokemonBuild(pokemon);
+      if (!build.ability || build.moves.length === 0) {
+        throw new Error('Automatic build is missing required battle fields');
+      }
+
+      await store.updateMemberBuild(
+        numericTeamId,
+        position,
+        build,
+        updateTeamMemberBuild,
+        getTeamMembers,
+      );
+
+      const addedMember = useTeamStore.getState().teamMembers.find(member => member.position === position);
+      if (addedMember) {
+        store.setSelectedMember(addedMember);
+        store.setShowMovesetEditor(true);
+      }
+    } catch (error) {
+      console.error('Failed to create an automatic Pokémon build:', error);
+      toast.error('Pokémon added, but its automatic build could not be completed. Please review it.');
+
+      const addedMember = useTeamStore.getState().teamMembers.find(member => member.position === addedPosition);
+      if (addedMember) {
+        store.setSelectedMember(addedMember);
+        store.setShowMovesetEditor(true);
+      }
+    } finally {
+      setAddingPokemonId(null);
+    }
   };
 
   const handleRemoveConfirm = async () => {
@@ -258,6 +298,7 @@ const TeamEditor: React.FC = () => {
           onSearchChange={(q) => store.setSearchQuery(q)}
           searchResults={store.searchResults}
           onAddPokemon={handleAddPokemon}
+          addingPokemonId={addingPokemonId}
           onClose={() => { store.setShowPokemonSearch(false); store.setSearchQuery(''); }}
           formatName={formatName}
         />

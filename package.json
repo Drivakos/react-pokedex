@@ -31,6 +31,7 @@
     "@pkmn/img": "^0.3.4",
     "@pkmn/protocol": "^0.7.3",
     "@pkmn/sim": "^0.10.11",
+    "@pkmn/smogon": "^0.5.31",
     "@pkmn/view": "^0.7.3",
     "@sentry/react": "^10.40.0",
     "@supabase/supabase-js": "^2.49.4",

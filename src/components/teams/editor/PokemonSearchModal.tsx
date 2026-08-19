@@ -7,7 +7,8 @@ interface PokemonSearchModalProps {
   searchQuery: string;
   onSearchChange: (query: string) => void;
   searchResults: TeamPokemonData[];
-  onAddPokemon: (pokemon: TeamPokemonData) => void;
+  onAddPokemon: (pokemon: TeamPokemonData) => Promise<void>;
+  addingPokemonId: number | null;
   onClose: () => void;
   formatName: (name: string) => string;
 }
@@ -17,6 +18,7 @@ export const PokemonSearchModal: React.FC<PokemonSearchModalProps> = ({
   onSearchChange,
   searchResults,
   onAddPokemon,
+  addingPokemonId,
   onClose,
   formatName
 }) => {
@@ -36,7 +38,7 @@ export const PokemonSearchModal: React.FC<PokemonSearchModalProps> = ({
       <div className="sd-panel" style={{ maxWidth: 600, width: '100%', maxHeight: '80vh', display: 'flex', flexDirection: 'column' }}>
         <div className="sd-header">
           <span style={{ fontWeight: 'bold', flex: 1 }}>Add Pokémon to Team</span>
-          <button className="sd-header-btn inline-flex items-center justify-center" onClick={onClose} aria-label="Close Pokémon search">
+          <button className="sd-header-btn inline-flex items-center justify-center" onClick={onClose} aria-label="Close Pokémon search" disabled={addingPokemonId !== null}>
             <X size={14} aria-hidden="true" />
           </button>
         </div>
@@ -50,6 +52,7 @@ export const PokemonSearchModal: React.FC<PokemonSearchModalProps> = ({
               onChange={(e) => onSearchChange(e.target.value)}
               placeholder="Pokémon"
               autoFocus
+              disabled={addingPokemonId !== null}
             />
           </div>
         </div>
@@ -71,11 +74,19 @@ export const PokemonSearchModal: React.FC<PokemonSearchModalProps> = ({
               </thead>
               <tbody>
                 {searchResults.map((pokemon) => (
-                  <tr key={pokemon.id} onClick={() => onAddPokemon(pokemon)}>
+                  <tr
+                    key={pokemon.id}
+                    onClick={() => addingPokemonId === null && void onAddPokemon(pokemon)}
+                    aria-disabled={addingPokemonId !== null}
+                    className={addingPokemonId === pokemon.id ? 'sd-search-row--building' : undefined}
+                  >
                     <td style={{ width: 32 }}>
                       <PokemonImage pokemonId={pokemon.id} alt={pokemon.name} className="w-6 h-6" />
                     </td>
-                    <td className="sd-pokemon-name">{formatName(pokemon.name)}</td>
+                    <td className="sd-pokemon-name">
+                      {formatName(pokemon.name)}
+                      {addingPokemonId === pokemon.id && <span className="sd-building-label">Building…</span>}
+                    </td>
                     <td>
                       <div style={{ display: 'flex', gap: 2 }}>
                         {pokemon.types?.map((t, i: number) => {
