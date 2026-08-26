@@ -4,6 +4,7 @@ import { Swords } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { useVsMatchStore } from '../../store/vsMatchStore';
 import { VsTeamPicker } from './VsTeamPicker';
+import { resolveVsSelectedTeamId } from './vs-team-selection';
 import { getVsTeamErrors } from './vs-team-validation';
 
 export default function VsInvite() {
@@ -17,6 +18,11 @@ export default function VsInvite() {
   useEffect(() => {
     void fetchTeams();
   }, [fetchTeams]);
+
+  useEffect(() => {
+    if (!teamsLoaded) return;
+    setSelectedTeamId(current => resolveVsSelectedTeamId(teams, current));
+  }, [teams, teamsLoaded]);
 
   useEffect(() => {
     if (!token) return;
