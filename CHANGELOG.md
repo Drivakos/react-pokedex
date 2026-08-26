@@ -1,3 +1,10 @@
+# [1.19.0](https://github.com/Drivakos/react-pokedex/compare/v1.18.1...v1.19.0) (2026-08-26)
+
+
+### Features
+
+* **vs:** auto-select sole team ([2a7b883](https://github.com/Drivakos/react-pokedex/commit/2a7b883deee08716379e9634fe8b95afc3033d9c))
+
 ## [1.18.1](https://github.com/Drivakos/react-pokedex/compare/v1.18.0...v1.18.1) (2026-08-26)
 
 
