@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { Check, Copy, Link2, X } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -12,11 +12,21 @@ export default function VsMatch() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { match, loading, error, loadMatch, setReady, cancelInvite, subscribe } = useVsMatchStore();
+  const [loadedMatchId, setLoadedMatchId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!matchId) return;
-    void loadMatch(matchId).catch(() => undefined);
-    return subscribe(matchId);
+    let active = true;
+    void loadMatch(matchId)
+      .catch(() => undefined)
+      .finally(() => {
+        if (active) setLoadedMatchId(matchId);
+      });
+    const unsubscribe = subscribe(matchId);
+    return () => {
+      active = false;
+      unsubscribe();
+    };
   }, [loadMatch, matchId, subscribe]);
 
   const isHost = match?.host_user_id === user?.id;
@@ -26,8 +36,12 @@ export default function VsMatch() {
 
   const copyInvite = useCallback(async () => {
     if (!inviteUrl) return;
-    await navigator.clipboard.writeText(inviteUrl);
-    toast.success('Invite link copied');
+    try {
+      await navigator.clipboard.writeText(inviteUrl);
+      toast.success('Invite link copied');
+    } catch {
+      toast.error('The invite link could not be copied. Select it and copy it manually.');
+    }
   }, [inviteUrl]);
 
   const handleCancel = async () => {
@@ -39,7 +53,7 @@ export default function VsMatch() {
     }
   };
 
-  if (!match && loading) {
+  if (loadedMatchId !== matchId || (!match && loading)) {
     return <main className="min-h-screen bg-slate-100 py-20 text-center text-slate-600">Loading VS lobby…</main>;
   }
 

@@ -107,6 +107,15 @@ export class VsBattleSession implements BattleSession {
     this.pendingDecision = decision;
     this.callbacks.onDecision(decision);
 
+    // Reconnecting clients may already have this completed pair in the durable
+    // log. Apply it only after the local simulator has exposed its matching
+    // request; applying from the opponent stream can race `currentRequest` and
+    // permanently drop the resolution.
+    if (this.pairs.has(decision.requestId)) {
+      this.tryAdvance();
+      return;
+    }
+
     if (decision.kind === 'wait') {
       void this.submitLocalChoice('default');
     } else {
@@ -124,13 +133,11 @@ export class VsBattleSession implements BattleSession {
 
   private handleOpponentRequest(requestId: number): void {
     if (this.disposed) return;
-    this.observed.add(requestId);
-    window.setTimeout(() => {
-      if (this.disposed || this.submitted.has(requestId)) return;
-      if (this.requestIndex === requestId && this.pendingDecision?.kind !== 'wait') return;
-      void this.submitChoiceAt(requestId, 'default', null);
-    }, 50);
-    this.tryAdvance();
+    // The remote request is only a synchronization hint. Every local stream
+    // produces its own move, switch, or explicit wait decision for the same
+    // request id. Submitting `default` here used to race a slightly delayed local
+    // move request and auto-select a move before the player could act.
+    if (this.requestIndex === requestId) this.tryAdvance();
   }
 
   private async submitChoiceAt(index: number, choice: string, decision: BattleDecision | null): Promise<void> {

@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ChevronRight, Info, Loader2, LockKeyhole, LogOut, Swords, Volume2, VolumeX } from 'lucide-react';
-import { Link } from 'react-router-dom';
 import { forfeitVsMatch, reportVsResult } from '../../services/vs-match.service';
 import { VsBattleSession } from '../../services/vs-battle-session';
 import { useBattleEngineStore } from '../../store/battleEngineStore';
 import { useVsMatchStore } from '../../store/vsMatchStore';
-import type { BattleMoveChoice, BattleResult, PokemonStatSpread, RunPokemon } from '../../types/battle-run';
-import type { VsCanonicalResult, VsMatch, VsTeamSnapshotMember } from '../../types/vs';
+import type { BattleMoveChoice, BattleResult } from '../../types/battle-run';
+import type { VsMatch } from '../../types/vs';
+import { toCanonicalVsResult, toVsRunPokemon } from '../../utils/vs-battle';
 import { isShowdownMuted, setShowdownMuted } from '../battle-game/showdown-client';
 import { BattlePokemonImage } from '../battle-game/BattlePokemonImage';
 import { ShowdownStage } from '../battle-game/ShowdownStage';
@@ -35,44 +35,16 @@ function effectivenessPresentation(effectiveness: number | null) {
   return { label: 'x1', classes: 'border-blue-200 bg-blue-50 text-blue-700' };
 }
 
-const STAT_KEYS: Array<keyof PokemonStatSpread> = ['hp', 'atk', 'def', 'spa', 'spd', 'spe'];
-
-function statSpread(values: Record<string, number>, fallback: number): PokemonStatSpread {
-  return Object.fromEntries(STAT_KEYS.map(stat => [stat, values[stat] ?? fallback])) as unknown as PokemonStatSpread;
-}
-
-function toRunPokemon(member: VsTeamSnapshotMember): RunPokemon {
-  return {
-    id: member.pokemonId,
-    species: member.species,
-    types: member.types,
-    level: member.level,
-    ability: member.ability,
-    moves: member.moves,
-    item: member.item,
-    nature: member.nature,
-    evs: statSpread(member.evs, 0),
-    ivs: statSpread(member.ivs, 31),
-    gender: member.gender === 'M' || member.gender === 'F' || member.gender === 'N' ? member.gender : undefined,
-    teraType: member.teraType,
-    shiny: member.isShiny,
-    nickname: member.nickname,
-    bst: 0,
-  };
-}
-
-function canonicalResult(result: BattleResult, isHost: boolean): VsCanonicalResult {
-  if (result.winner === 'tie') return 'tie';
-  if (result.winner === 'player') return isHost ? 'host' : 'guest';
-  return isHost ? 'guest' : 'host';
-}
-
 export function VsBattle({ match, userId }: { match: VsMatch; userId: string }) {
-  const isHost = match.host_user_id === userId;
-  const playerTeam = isHost ? match.host_team_snapshot : match.guest_team_snapshot;
-  const opponentTeam = isHost ? match.guest_team_snapshot : match.host_team_snapshot;
-  const playerName = isHost ? match.hostName || 'Host' : match.guestName || 'Challenger';
-  const opponentName = isHost ? match.guestName || 'Challenger' : match.hostName || 'Host';
+  // Active-match snapshots are immutable. Keeping the initial active payload
+  // stable prevents Realtime result updates from tearing down and replaying the
+  // entire local battle while the other trainer is still confirming the result.
+  const [battleMatch] = useState(match);
+  const isHost = battleMatch.host_user_id === userId;
+  const playerTeam = isHost ? battleMatch.host_team_snapshot : battleMatch.guest_team_snapshot;
+  const opponentTeam = isHost ? battleMatch.guest_team_snapshot : battleMatch.host_team_snapshot;
+  const playerName = isHost ? battleMatch.hostName || 'Host' : battleMatch.guestName || 'Challenger';
+  const opponentName = isHost ? battleMatch.guestName || 'Challenger' : battleMatch.hostName || 'Host';
   const loadMatch = useVsMatchStore(state => state.loadMatch);
   const snapshot = useBattleEngineStore(state => state.snapshot);
   const decision = useBattleEngineStore(state => state.decision);
@@ -87,34 +59,51 @@ export function VsBattle({ match, userId }: { match: VsMatch; userId: string }) 
   const [showdownFailed, setShowdownFailed] = useState(false);
   const [muted, setMuted] = useState(() => isShowdownMuted());
   const [resultMessage, setResultMessage] = useState<string | null>(null);
+  const [terminalResult, setTerminalResult] = useState<BattleResult | null>(null);
+  const [resultError, setResultError] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
+  const [reportingResult, setReportingResult] = useState(false);
+  const [forfeiting, setForfeiting] = useState(false);
   const [forfeitArmed, setForfeitArmed] = useState(false);
   const [submittingChoice, setSubmittingChoice] = useState(false);
   const [inspectedMoveSlot, setInspectedMoveSlot] = useState<number | null>(null);
 
-  const playerParty = useMemo(() => playerTeam?.members.map(toRunPokemon) ?? [], [playerTeam]);
-  const opponentParty = useMemo(() => opponentTeam?.members.map(toRunPokemon) ?? [], [opponentTeam]);
+  const playerParty = useMemo(() => playerTeam?.members.map(toVsRunPokemon) ?? [], [playerTeam]);
+  const opponentParty = useMemo(() => opponentTeam?.members.map(toVsRunPokemon) ?? [], [opponentTeam]);
+
+  const submitResult = useCallback(async (result: BattleResult) => {
+    setReportingResult(true);
+    setResultError(null);
+    try {
+      await reportVsResult(battleMatch.id, toCanonicalVsResult(result, isHost));
+      await loadMatch(battleMatch.id);
+    } catch (error) {
+      setResultError(error instanceof Error ? error.message : 'The result could not be confirmed.');
+    } finally {
+      setReportingResult(false);
+    }
+  }, [battleMatch.id, isHost, loadMatch]);
 
   const handleEnd = useCallback((result: BattleResult) => {
     const won = result.winner === 'player';
+    setTerminalResult(result);
     setResultMessage(result.winner === 'tie' ? 'The battle ended in a tie.' : won ? 'You won the battle!' : 'You lost the battle.');
-    void reportVsResult(match.id, canonicalResult(result, isHost))
-      .then(() => loadMatch(match.id))
-      .catch(() => undefined);
-  }, [isHost, loadMatch, match.id]);
+    void submitResult(result);
+  }, [submitResult]);
 
   useEffect(() => {
-    if (!playerTeam || !opponentTeam || !match.battle_seed) return undefined;
+    if (!playerTeam || !opponentTeam || !battleMatch.battle_seed) return undefined;
     startBattle({
       playerParty,
       enemyParty: opponentParty,
       level: 50,
       introLog: [`${playerName} challenged ${opponentName}!`],
       sessionFactory: ({ callbacks }) => new VsBattleSession({
-        matchId: match.id,
+        matchId: battleMatch.id,
         isHost,
         playerParty,
         opponentParty,
-        battleSeed: match.battle_seed as [number, number, number, number],
+        battleSeed: battleMatch.battle_seed,
         playerName,
         opponentName,
         callbacks,
@@ -122,7 +111,7 @@ export function VsBattle({ match, userId }: { match: VsMatch; userId: string }) 
       onEnd: handleEnd,
     });
     return resetBattle;
-  }, [handleEnd, isHost, match.battle_seed, match.id, opponentName, opponentParty, opponentTeam, playerName, playerParty, playerTeam, resetBattle, startBattle]);
+  }, [battleMatch.battle_seed, battleMatch.id, handleEnd, isHost, opponentName, opponentParty, opponentTeam, playerName, playerParty, playerTeam, resetBattle, startBattle]);
 
   const toggleMuted = () => {
     const next = !muted;
@@ -132,15 +121,20 @@ export function VsBattle({ match, userId }: { match: VsMatch; userId: string }) 
 
   const handleForfeit = async () => {
     if (!forfeitArmed) {
+      setActionError(null);
       setForfeitArmed(true);
       return;
     }
+    setForfeiting(true);
     try {
+      await forfeitVsMatch(battleMatch.id);
       resetBattle();
-      await forfeitVsMatch(match.id);
-      await loadMatch(match.id);
-    } catch {
+      await loadMatch(battleMatch.id);
+    } catch (error) {
+      setActionError(error instanceof Error ? error.message : 'The match could not be forfeited.');
       setForfeitArmed(false);
+    } finally {
+      setForfeiting(false);
     }
   };
 
@@ -162,7 +156,7 @@ export function VsBattle({ match, userId }: { match: VsMatch; userId: string }) 
     chooseSwitch(slot);
   };
 
-  if (!playerTeam || !opponentTeam || !match.battle_seed) {
+  if (!playerTeam || !opponentTeam || !battleMatch.battle_seed) {
     return <p className="py-16 text-center text-red-700">This match is missing its locked battle data.</p>;
   }
 
@@ -211,12 +205,21 @@ export function VsBattle({ match, userId }: { match: VsMatch; userId: string }) 
             </div>
 
             <div className="relative border-t border-slate-200 bg-slate-50 p-1.5 sm:p-6">
-              {engineError && <p className="mb-3 rounded-lg border border-red-200 bg-red-50 p-3 text-sm font-bold text-red-800">{engineError}</p>}
+              {(engineError || actionError) && <p className="mb-3 rounded-lg border border-red-200 bg-red-50 p-3 text-sm font-bold text-red-800">{actionError || engineError}</p>}
               {resultMessage ? (
                 <div className="py-5 text-center text-slate-900">
                   <Swords className="mx-auto mb-2 text-red-600" />
                   <p className="text-lg font-black">{resultMessage}</p>
-                  <p className="mt-1 text-sm font-semibold text-slate-500">Confirming the result with your opponent…</p>
+                  {resultError ? (
+                    <div className="mt-3">
+                      <p className="text-sm font-semibold text-red-700">{resultError}</p>
+                      <button type="button" disabled={reportingResult || !terminalResult} onClick={() => terminalResult && void submitResult(terminalResult)} className="mt-3 rounded-lg bg-red-600 px-4 py-2 text-sm font-bold text-white disabled:opacity-50">
+                        {reportingResult ? 'Retrying…' : 'Retry result confirmation'}
+                      </button>
+                    </div>
+                  ) : (
+                    <p className="mt-1 text-sm font-semibold text-slate-500">{reportingResult ? 'Confirming the result with your opponent…' : 'Waiting for your opponent to confirm…'}</p>
+                  )}
                 </div>
               ) : submittingChoice || decision.kind === 'wait' ? (
                 <div className="flex min-h-24 items-center justify-center gap-3 text-sm font-black text-slate-500">
@@ -263,8 +266,8 @@ export function VsBattle({ match, userId }: { match: VsMatch; userId: string }) 
                 </div>
               ) : null}
 
-              <button type="button" onClick={() => void handleForfeit()} className={`mt-2 flex w-full items-center justify-center gap-2 rounded-lg py-1.5 text-[10px] font-bold transition sm:mt-4 sm:py-2 sm:text-xs ${forfeitArmed ? 'bg-red-700 text-white' : 'text-slate-400 hover:bg-red-50 hover:text-red-700'}`}>
-                <LogOut size={15} /> {forfeitArmed ? 'Click again to confirm forfeit' : 'Forfeit battle'}
+              <button type="button" disabled={forfeiting} onClick={() => void handleForfeit()} className={`mt-2 flex w-full items-center justify-center gap-2 rounded-lg py-1.5 text-[10px] font-bold transition disabled:cursor-not-allowed disabled:opacity-50 sm:mt-4 sm:py-2 sm:text-xs ${forfeitArmed ? 'bg-red-700 text-white' : 'text-slate-400 hover:bg-red-50 hover:text-red-700'}`}>
+                {forfeiting ? <Loader2 className="h-[15px] w-[15px] animate-spin" /> : <LogOut size={15} />} {forfeiting ? 'Forfeiting…' : forfeitArmed ? 'Click again to confirm forfeit' : 'Forfeit battle'}
               </button>
             </div>
           </section>
@@ -281,7 +284,7 @@ export function VsBattle({ match, userId }: { match: VsMatch; userId: string }) 
           </details>
       </div>
 
-      <div className="relative mt-3 text-center"><Link to="/vs" className="text-xs font-bold text-slate-500 hover:text-red-700">Leave battle screen</Link></div>
+      <p className="relative mt-3 text-center text-xs font-semibold text-slate-400">Reload this page at any time to reconnect to the match.</p>
     </main>
   );
 }
