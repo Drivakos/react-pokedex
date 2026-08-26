@@ -1,3 +1,10 @@
+## [1.18.1](https://github.com/Drivakos/react-pokedex/compare/v1.18.0...v1.18.1) (2026-08-26)
+
+
+### Bug Fixes
+
+* **vs:** stabilize turn synchronization ([1e49db8](https://github.com/Drivakos/react-pokedex/commit/1e49db8a77ac24d1bb0915f6d16de7841454d54c))
+
 # [1.18.0](https://github.com/Drivakos/react-pokedex/compare/v1.17.0...v1.18.0) (2026-08-19)
 
 
