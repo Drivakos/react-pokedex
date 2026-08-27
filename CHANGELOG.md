@@ -1,3 +1,10 @@
+# [1.21.0](https://github.com/Drivakos/react-pokedex/compare/v1.20.0...v1.21.0) (2026-08-27)
+
+
+### Features
+
+* improve team reorder controls ([d1689ab](https://github.com/Drivakos/react-pokedex/commit/d1689ab79bf6f74eb4caf9ee404c3451656b6024))
+
 # [1.20.0](https://github.com/Drivakos/react-pokedex/compare/v1.19.0...v1.20.0) (2026-08-27)
 
 
