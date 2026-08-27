@@ -1,3 +1,10 @@
+# [1.20.0](https://github.com/Drivakos/react-pokedex/compare/v1.19.0...v1.20.0) (2026-08-27)
+
+
+### Features
+
+* revamp team building workflow ([b8bb5a3](https://github.com/Drivakos/react-pokedex/commit/b8bb5a39c30e9420f0f9767b51d1ff4e1b59365e))
+
 # [1.19.0](https://github.com/Drivakos/react-pokedex/compare/v1.18.1...v1.19.0) (2026-08-26)
 
 
