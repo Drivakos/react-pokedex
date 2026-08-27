@@ -22,6 +22,29 @@ export function sortTeamMembers(members: TeamMember[]): TeamMember[] {
   return [...members].sort((left, right) => left.position - right.position);
 }
 
+export function moveTeamMemberToPosition(
+  members: TeamMember[],
+  memberId: number,
+  targetPosition: number,
+): TeamMember[] {
+  const ordered = sortTeamMembers(members);
+  const sourceIndex = ordered.findIndex(member => member.id === memberId);
+  const targetIndex = targetPosition - 1;
+
+  if (
+    sourceIndex < 0
+    || targetIndex < 0
+    || targetIndex >= ordered.length
+    || sourceIndex === targetIndex
+  ) {
+    return ordered;
+  }
+
+  const [movedMember] = ordered.splice(sourceIndex, 1);
+  ordered.splice(targetIndex, 0, movedMember);
+  return ordered.map((member, index) => ({ ...member, position: index + 1 }));
+}
+
 export function nextAvailableTeamPosition(members: TeamMember[]): number | null {
   const occupied = new Set(members.map(member => member.position));
   for (let position = 1; position <= 6; position += 1) {

@@ -6,6 +6,7 @@ import { fetchPokemonData } from '../services/api';
 import type { Team, TeamMember } from '../lib/supabase';
 import type { TeamPokemonData } from '../types/team-builder';
 import {
+  moveTeamMemberToPosition,
   nextAvailableTeamPosition,
   sortTeamMembers,
   toTeamPokemonData,
@@ -190,16 +191,14 @@ export function useTeamEditor(teamId: number | null) {
     return updatedMember;
   }, [applyMembers, teamId, teamMembers, updateTeamMemberBuild]);
 
-  const movePokemon = useCallback(async (member: TeamMember, direction: -1 | 1) => {
+  const reorderPokemon = useCallback(async (member: TeamMember, targetPosition: number) => {
     if (teamId === null) return false;
-    const ordered = sortTeamMembers(teamMembers);
-    const currentIndex = ordered.findIndex(entry => entry.id === member.id);
-    const targetIndex = currentIndex + direction;
-    if (currentIndex < 0 || targetIndex < 0 || targetIndex >= ordered.length) return false;
-    [ordered[currentIndex], ordered[targetIndex]] = [ordered[targetIndex], ordered[currentIndex]];
+    const currentOrder = sortTeamMembers(teamMembers);
+    const ordered = moveTeamMemberToPosition(currentOrder, member.id, targetPosition);
+    if (ordered.every((entry, index) => entry.id === currentOrder[index]?.id)) return false;
     const success = await reorderTeamMembers(teamId, ordered.map(entry => entry.id));
     if (!success) return false;
-    applyMembers(ordered.map((entry, index) => ({ ...entry, position: index + 1 })));
+    applyMembers(ordered);
     return true;
   }, [applyMembers, reorderTeamMembers, teamId, teamMembers]);
 
@@ -230,7 +229,7 @@ export function useTeamEditor(teamId: number | null) {
     addPokemon,
     removePokemon,
     updateMemberBuild,
-    movePokemon,
+    reorderPokemon,
     editMember,
     closeMovesetEditor,
     closePokemonSearch,

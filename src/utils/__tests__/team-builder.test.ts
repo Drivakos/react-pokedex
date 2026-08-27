@@ -1,6 +1,7 @@
 import type { TeamMember } from '../../lib/supabase';
 import type { TeamPokemonData } from '../../types/team-builder';
 import {
+  moveTeamMemberToPosition,
   nextAvailableTeamPosition,
   pickTeamMemberBuild,
   serializeShowdownMember,
@@ -41,6 +42,30 @@ describe('team builder domain helpers', () => {
   it('does not allocate a seventh team position', () => {
     const fullTeam = Array.from({ length: 6 }, (_, index) => member({ id: index + 1, position: index + 1 }));
     expect(nextAvailableTeamPosition(fullTeam)).toBeNull();
+  });
+
+  it('moves a member directly to its destination and normalizes every position', () => {
+    const source = [
+      member({ id: 1, position: 1 }),
+      member({ id: 2, position: 2 }),
+      member({ id: 3, position: 3 }),
+      member({ id: 4, position: 4 }),
+    ];
+
+    const moved = moveTeamMemberToPosition(source, 1, 4);
+
+    expect(moved.map(entry => [entry.id, entry.position])).toEqual([
+      [2, 1],
+      [3, 2],
+      [4, 3],
+      [1, 4],
+    ]);
+    expect(source.map(entry => [entry.id, entry.position])).toEqual([
+      [1, 1],
+      [2, 2],
+      [3, 3],
+      [4, 4],
+    ]);
   });
 
   it('normalizes an editor build while preserving intentional false and empty values', () => {

@@ -103,6 +103,21 @@
   background: linear-gradient(to bottom, #f0f2f8, #e0e4f0);
 }
 
+.sd-team-tab--dragging {
+  opacity: 0.42;
+}
+
+.sd-team-tab--drop-target {
+  border-color: #3b82f6;
+  box-shadow: inset 0 0 0 1px #3b82f6, 0 -3px 0 #3b82f6;
+  transform: translateY(-2px);
+}
+
+.sd-team-tab--saving {
+  opacity: 0.65;
+  pointer-events: none;
+}
+
 .sd-team-tab--active {
   background: rgba(255, 255, 255, 0.85);
   border-bottom: 1px solid rgba(255, 255, 255, 0.85);
@@ -117,41 +132,59 @@
   image-rendering: pixelated;
 }
 
-.sd-team-tab-position {
-  margin-top: 1px;
-  color: #858b98;
-  font-size: 8px;
-  font-weight: 600;
-  text-transform: uppercase;
-}
-
-.sd-team-tab-reorder {
+.sd-team-tab-order-controls {
   display: flex;
+  align-items: center;
   gap: 2px;
   margin-top: 3px;
 }
 
-.sd-team-tab-reorder button {
+.sd-team-tab-drag-handle {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 20px;
-  height: 17px;
+  width: 19px;
+  height: 20px;
+  border: 1px solid #abb2c1;
+  border-radius: 3px;
+  background: #fff;
+  color: #4d5668;
+  cursor: grab;
+  touch-action: none;
+}
+
+.sd-team-tab-drag-handle:hover {
+  border-color: #64748b;
+  background: #f8fafc;
+}
+
+.sd-team-tab-drag-handle:active {
+  cursor: grabbing;
+}
+
+.sd-team-tab-position-select {
+  width: 42px;
+  height: 20px;
+  padding: 0 3px;
   border: 1px solid #abb2c1;
   border-radius: 3px;
   background: #fff;
   color: #4d5668;
   cursor: pointer;
+  font-family: inherit;
+  font-size: 9px;
+  font-weight: 700;
 }
 
-.sd-team-tab-reorder button:hover:not(:disabled) {
-  border-color: #64748b;
-  background: #f8fafc;
+.sd-team-tab-position-select:hover:not(:disabled),
+.sd-team-tab-position-select:focus-visible {
+  border-color: #3b82f6;
+  outline: none;
 }
 
-.sd-team-tab-reorder button:disabled {
-  cursor: not-allowed;
-  opacity: 0.3;
+.sd-team-tab-position-select:disabled {
+  cursor: wait;
+  opacity: 0.5;
 }
 
 .sd-team-tab-add {

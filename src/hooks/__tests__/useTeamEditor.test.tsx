@@ -33,11 +33,11 @@ jest.mock('react-hot-toast', () => ({ error: jest.fn(), success: jest.fn() }));
 import { useTeamEditor } from '../useTeamEditor';
 
 const team = (id: number): Team => ({ id, user_id: 'user-1', name: `Team ${id}` });
-const member = (id: number, teamId: number, pokemonId: number): TeamMember => ({
+const member = (id: number, teamId: number, pokemonId: number, position = 1): TeamMember => ({
   id,
   team_id: teamId,
   pokemon_id: pokemonId,
-  position: 1,
+  position,
 });
 
 function pokemon(id: number) {
@@ -145,5 +145,30 @@ describe('useTeamEditor', () => {
     expect(result.current.teamMembers).toEqual([addedMember]);
     expect(result.current.showPokemonSearch).toBe(false);
     expect(mockGetTeamMembers).toHaveBeenCalledTimes(1);
+  });
+
+  it('moves a member directly across the roster with one backend call', async () => {
+    mockGetTeamMembers.mockResolvedValue([
+      member(1, 1, 1, 1),
+      member(2, 1, 2, 2),
+      member(3, 1, 3, 3),
+      member(4, 1, 4, 4),
+    ]);
+    mockReorderTeamMembers.mockResolvedValue(true);
+    const { result } = renderHook(() => useTeamEditor(1));
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    await act(async () => {
+      await result.current.reorderPokemon(result.current.teamMembers[0], 4);
+    });
+
+    expect(mockReorderTeamMembers).toHaveBeenCalledTimes(1);
+    expect(mockReorderTeamMembers).toHaveBeenCalledWith(1, [2, 3, 4, 1]);
+    expect(result.current.teamMembers.map(entry => [entry.id, entry.position])).toEqual([
+      [2, 1],
+      [3, 2],
+      [4, 3],
+      [1, 4],
+    ]);
   });
 });

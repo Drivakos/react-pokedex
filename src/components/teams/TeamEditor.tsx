@@ -72,11 +72,11 @@ const TeamEditor: React.FC = () => {
     }
   };
 
-  const handleMovePokemon = async (member: TeamMember, direction: -1 | 1) => {
+  const handleReorderPokemon = async (member: TeamMember, targetPosition: number) => {
     if (reorderingMemberId !== null) return;
     setReorderingMemberId(member.id);
     try {
-      await editor.movePokemon(member, direction);
+      await editor.reorderPokemon(member, targetPosition);
     } finally {
       setReorderingMemberId(null);
     }
@@ -168,7 +168,7 @@ const TeamEditor: React.FC = () => {
         showMovesetEditor={editor.showMovesetEditor}
         onEditMember={editor.editMember}
         onRemoveClick={setMemberToRemove}
-        onMoveMember={(member, direction) => void handleMovePokemon(member, direction)}
+        onReorderMember={(member, targetPosition) => void handleReorderPokemon(member, targetPosition)}
         reorderingMemberId={reorderingMemberId}
         onShowSearch={() => editor.setShowPokemonSearch(true)}
         formatName={formatPokemonName}
