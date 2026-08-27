@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { CheckCircle2, Copy, Save, Upload, UserRound, Wand2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { formatName } from '../../utils/helpers';
@@ -280,6 +280,7 @@ const moveDetailsCache: Record<string, MoveDetails> = {};
 const toShowdownId = (value: string): string => value.toLowerCase().replace(/[^a-z0-9]+/g, '');
 
 const MovesetEditorContent: React.FC<MovesetEditorProps> = ({ pokemon, teamId, initialBuild, onSave }) => {
+  const initialBuildRef = useRef(initialBuild);
   const [selectedMoves, setSelectedMoves] = useState<string[]>([]);
   const [availableMoves, setAvailableMoves] = useState<string[]>([]);
   const [moveDetails, setMoveDetails] = useState<Record<string, MoveDetails>>(moveDetailsCache);
@@ -463,9 +464,10 @@ const MovesetEditorContent: React.FC<MovesetEditorProps> = ({ pokemon, teamId, i
         }));
 
         // Load saved build
-        if (initialBuild) {
-          setPokemonBuild(initialBuild);
-          setSelectedMoves(initialBuild.moves || []);
+        const buildToLoad = initialBuildRef.current;
+        if (buildToLoad) {
+          setPokemonBuild(buildToLoad);
+          setSelectedMoves(buildToLoad.moves || []);
         } else {
           const savedBuild = localStorage.getItem(`build_${teamId}_${pokemon.id}`);
           if (savedBuild) {

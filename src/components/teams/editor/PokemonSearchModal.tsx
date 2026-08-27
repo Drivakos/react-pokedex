@@ -1,7 +1,7 @@
 import React from 'react';
 import { Search, X } from 'lucide-react';
 import PokemonImage from '../../PokemonImage';
-import type { TeamPokemonData } from '../../../store/teamStore';
+import type { TeamPokemonData } from '../../../types/team-builder';
 
 interface PokemonSearchModalProps {
   searchQuery: string;
@@ -9,6 +9,7 @@ interface PokemonSearchModalProps {
   searchResults: TeamPokemonData[];
   onAddPokemon: (pokemon: TeamPokemonData) => Promise<void>;
   addingPokemonId: number | null;
+  searching: boolean;
   onClose: () => void;
   formatName: (name: string) => string;
 }
@@ -19,6 +20,7 @@ export const PokemonSearchModal: React.FC<PokemonSearchModalProps> = ({
   searchResults,
   onAddPokemon,
   addingPokemonId,
+  searching,
   onClose,
   formatName
 }) => {
@@ -57,7 +59,9 @@ export const PokemonSearchModal: React.FC<PokemonSearchModalProps> = ({
           </div>
         </div>
         <div style={{ flex: 1, overflow: 'auto' }}>
-          {searchResults.length > 0 ? (
+          {searching ? (
+            <div className="p-8 text-center text-sm text-gray-500">Searching…</div>
+          ) : searchResults.length > 0 ? (
             <table className="sd-search-table">
               <thead>
                 <tr>

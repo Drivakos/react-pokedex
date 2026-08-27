@@ -2,7 +2,7 @@ import React from 'react';
 import PokemonImage from '../../PokemonImage';
 import { TeamMember } from '../../../lib/supabase';
 import { CopyPlus, Pencil, Trash2, UserRound } from 'lucide-react';
-import type { TeamPokemonData } from '../../../store/teamStore';
+import type { TeamPokemonData } from '../../../types/team-builder';
 
 interface TeamMemberCardProps {
   member: TeamMember;

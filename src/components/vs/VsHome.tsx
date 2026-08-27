@@ -9,14 +9,14 @@ import { getVsTeamErrors } from './vs-team-validation';
 
 export default function VsHome() {
   const navigate = useNavigate();
-  const { teams, teamsLoaded, fetchTeams } = useAuth();
+  const { teams, teamsLoaded, teamsError, fetchTeams } = useAuth();
   const { createInvite, loading, error, clearError } = useVsMatchStore();
   const [selectedTeamId, setSelectedTeamId] = useState<number | null>(null);
   const [teamErrors, setTeamErrors] = useState<string[]>([]);
 
   useEffect(() => {
-    void fetchTeams();
-  }, [fetchTeams]);
+    if (!teamsLoaded) void fetchTeams();
+  }, [fetchTeams, teamsLoaded]);
 
   useEffect(() => {
     if (!teamsLoaded) return;
@@ -68,7 +68,12 @@ export default function VsHome() {
             </Link>
           </div>
 
-          {!teamsLoaded ? (
+          {teamsError ? (
+            <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-center text-sm text-red-800">
+              <p>{teamsError}</p>
+              <button className="mt-2 font-bold underline" onClick={() => void fetchTeams()}>Try again</button>
+            </div>
+          ) : !teamsLoaded ? (
             <div className="py-10 text-center text-slate-500">Loading your teams…</div>
           ) : (
             <VsTeamPicker
@@ -92,7 +97,7 @@ export default function VsHome() {
 
           <button
             type="button"
-            disabled={loading || !teamsLoaded || teams.length === 0}
+            disabled={loading || !teamsLoaded || Boolean(teamsError) || teams.length === 0}
             onClick={() => void handleCreate()}
             className="mt-6 flex w-full items-center justify-center gap-2 rounded-xl bg-red-600 px-5 py-3 font-bold text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
           >

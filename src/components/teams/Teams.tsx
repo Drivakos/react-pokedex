@@ -4,15 +4,17 @@ import { useAuth } from '../../hooks/useAuth';
 import { ChevronRight, Plus, X, Trash2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import type { Team } from '../../lib/supabase';
+import { TeamRosterPreview } from './TeamRosterPreview';
 
 const Teams: React.FC = () => {
-  const { user, teams, teamsLoaded, fetchTeams, createTeam, deleteTeam } = useAuth();
+  const { user, teams, teamsLoaded, teamsError, fetchTeams, createTeam, deleteTeam } = useAuth();
   const navigate = useNavigate();
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [formData, setFormData] = useState({ name: '', description: '' });
   const [creating, setCreating] = useState(false);
   const [teamToDelete, setTeamToDelete] = useState<Team | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [retrying, setRetrying] = useState(false);
 
   const handleTeamSelect = (team: Team) => {
     // Navigate directly to team editor instead of showing details
@@ -29,8 +31,8 @@ const Teams: React.FC = () => {
 
     try {
       setDeleting(true);
-      await deleteTeam(teamToDelete.id);
-      setTeamToDelete(null);
+      const success = await deleteTeam(teamToDelete.id);
+      if (success) setTeamToDelete(null);
     } catch (error) {
       console.error('Failed to delete team:', error);
       toast.error('Failed to delete team');
@@ -88,6 +90,27 @@ const Teams: React.FC = () => {
     );
   }
 
+  if (teamsError) {
+    return (
+      <div className="min-h-screen bg-gray-50 p-6">
+        <div className="max-w-4xl mx-auto text-center py-12">
+          <h1 className="text-2xl font-bold text-gray-800 mb-3">Teams unavailable</h1>
+          <p className="text-gray-600 mb-5">{teamsError}</p>
+          <button
+            className="bg-blue-500 hover:bg-blue-600 text-white px-5 py-2.5 rounded font-medium disabled:opacity-50"
+            disabled={retrying}
+            onClick={() => {
+              setRetrying(true);
+              void fetchTeams().finally(() => setRetrying(false));
+            }}
+          >
+            {retrying ? 'Retrying…' : 'Try again'}
+          </button>
+        </div>
+      </div>
+    );
+  }
+
 
   // Show teams list
   return (
@@ -138,8 +161,10 @@ const Teams: React.FC = () => {
                   </div>
                 </div>
 
-                <div className="text-sm text-gray-500">
-                  Created {team.created_at ? new Date(team.created_at).toLocaleDateString() : '—'}
+                <TeamRosterPreview members={team.team_members} />
+                <div className="mt-3 flex items-center justify-between text-sm text-gray-500">
+                  <span>{team.team_members?.length ?? 0} / 6 Pokémon</span>
+                  <span>Created {team.created_at ? new Date(team.created_at).toLocaleDateString() : '—'}</span>
                 </div>
               </div>
             ))}

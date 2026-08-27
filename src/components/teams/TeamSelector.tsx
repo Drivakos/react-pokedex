@@ -17,9 +17,11 @@ interface TeamSelectorProps {
 
 const TeamSelector: React.FC<TeamSelectorProps> = ({ pokemon, onClose }) => {
   const auth = useAuth();
-  const { user, teams, teamsLoaded, fetchTeams, createTeam, addPokemonToTeam, removePokemonFromTeam } = auth;
+  const { user, teams, teamsLoaded, teamsError, fetchTeams, createTeam, addPokemonToTeam, removePokemonFromTeam } = auth;
 
   const [isCreating, setIsCreating] = useState(false);
+  const [creatingTeam, setCreatingTeam] = useState(false);
+  const [pendingPosition, setPendingPosition] = useState<string | null>(null);
   const [newTeamName, setNewTeamName] = useState('');
   const [newTeamDescription, setNewTeamDescription] = useState('');
 
@@ -39,40 +41,43 @@ const TeamSelector: React.FC<TeamSelectorProps> = ({ pokemon, onClose }) => {
     }
 
     try {
-      setIsCreating(true);
-
-      if (createTeam && typeof createTeam === 'function') {
-        const team = await createTeam(newTeamName.trim(), newTeamDescription.trim() || undefined);
-        if (team) {
-          setIsCreating(false);
-          setNewTeamName('');
-          setNewTeamDescription('');
-        }
+      setCreatingTeam(true);
+      const team = await createTeam(newTeamName.trim(), newTeamDescription.trim() || undefined);
+      if (team) {
+        setIsCreating(false);
+        setNewTeamName('');
+        setNewTeamDescription('');
       }
     } catch (error) {
       console.error('Failed to create team:', error);
       toast.error('Failed to create team');
     } finally {
-      setIsCreating(false);
+      setCreatingTeam(false);
     }
   };
 
   const handleAddPokemon = async (teamId: number, position: number) => {
+    const operationKey = `${teamId}:${position}`;
+    setPendingPosition(operationKey);
     try {
-      await addPokemonToTeam(teamId, pokemon.id, position);
-      // fetchTeams is called within addPokemonToTeam in AuthProvider
-      onClose();
+      const success = await addPokemonToTeam(teamId, pokemon.id, position);
+      if (success) onClose();
     } catch (error) {
       console.error('Error adding Pokémon to team:', error);
+    } finally {
+      setPendingPosition(null);
     }
   };
 
   const handleRemovePokemon = async (teamId: number, position: number) => {
+    const operationKey = `${teamId}:${position}`;
+    setPendingPosition(operationKey);
     try {
       await removePokemonFromTeam(teamId, position);
-      // fetchTeams is called within removePokemonFromTeam in AuthProvider
     } catch (error) {
       console.error('Error removing Pokémon from team:', error);
+    } finally {
+      setPendingPosition(null);
     }
   };
 
@@ -88,7 +93,6 @@ const TeamSelector: React.FC<TeamSelectorProps> = ({ pokemon, onClose }) => {
           {[1, 2, 3, 4, 5, 6].map((position) => {
             const pokemonAtPosition = teamMembers.find((m) => m.position === position);
             const isTaken = !!pokemonAtPosition;
-
             return (
               <button
                 key={position}
@@ -98,10 +102,11 @@ const TeamSelector: React.FC<TeamSelectorProps> = ({ pokemon, onClose }) => {
                     'bg-gray-100 hover:bg-gray-200 hover:shadow-sm'}
                 `}
                 onClick={() => {
-                  if (!isTaken) {
-                    handleAddPokemon(team.id, position);
+                  if (!isTaken && pendingPosition === null) {
+                    void handleAddPokemon(team.id, position);
                   }
                 }}
+                disabled={pendingPosition !== null}
                 title={isTaken ? 'This position is taken - click X to remove' : `Add to position ${position}`}
               >
                 {isTaken && pokemonAtPosition ? (
@@ -110,7 +115,7 @@ const TeamSelector: React.FC<TeamSelectorProps> = ({ pokemon, onClose }) => {
                       className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center hover:bg-red-600 z-10 cursor-pointer"
                       onClick={(e) => {
                         e.stopPropagation();
-                        handleRemovePokemon(team.id, position);
+                        if (pendingPosition === null) void handleRemovePokemon(team.id, position);
                       }}
                     >
                       <X size={12} />
@@ -152,6 +157,17 @@ const TeamSelector: React.FC<TeamSelectorProps> = ({ pokemon, onClose }) => {
     );
   }
 
+  if (teamsError) {
+    return (
+      <div className="p-4 bg-white rounded-lg shadow text-center">
+        <p className="text-gray-700 mb-3">{teamsError}</p>
+        <button className="bg-blue-500 text-white px-3 py-2 rounded-lg" onClick={() => void fetchTeams()}>
+          Try again
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div className="p-4 bg-white rounded-lg shadow max-w-md mx-auto">
       <div className="flex justify-between items-center mb-4">
@@ -187,6 +203,7 @@ const TeamSelector: React.FC<TeamSelectorProps> = ({ pokemon, onClose }) => {
               value={newTeamName}
               onChange={(e) => setNewTeamName(e.target.value)}
               placeholder="Enter team name"
+              disabled={creatingTeam}
             />
           </div>
           <div className="mb-3">
@@ -197,6 +214,7 @@ const TeamSelector: React.FC<TeamSelectorProps> = ({ pokemon, onClose }) => {
               onChange={(e) => setNewTeamDescription(e.target.value)}
               placeholder="Enter team description"
               rows={2}
+              disabled={creatingTeam}
             />
           </div>
           <div className="flex justify-end space-x-2">
@@ -207,14 +225,16 @@ const TeamSelector: React.FC<TeamSelectorProps> = ({ pokemon, onClose }) => {
                 setNewTeamName('');
                 setNewTeamDescription('');
               }}
+              disabled={creatingTeam}
             >
               Cancel
             </button>
             <button
               className="bg-green-500 text-white px-3 py-1 rounded-lg flex items-center"
               onClick={handleCreateTeam}
+              disabled={creatingTeam || !newTeamName.trim()}
             >
-              Create & Select
+              {creatingTeam ? 'Creating…' : 'Create Team'}
             </button>
           </div>
         </div>

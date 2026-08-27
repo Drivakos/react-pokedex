@@ -10,14 +10,14 @@ import { getVsTeamErrors } from './vs-team-validation';
 export default function VsInvite() {
   const { token = '' } = useParams<{ token: string }>();
   const navigate = useNavigate();
-  const { teams, teamsLoaded, fetchTeams } = useAuth();
+  const { teams, teamsLoaded, teamsError, fetchTeams } = useAuth();
   const { invitePreview, loading, error, inspectInvite, acceptInvite, clearError } = useVsMatchStore();
   const [selectedTeamId, setSelectedTeamId] = useState<number | null>(null);
   const [teamErrors, setTeamErrors] = useState<string[]>([]);
 
   useEffect(() => {
-    void fetchTeams();
-  }, [fetchTeams]);
+    if (!teamsLoaded) void fetchTeams();
+  }, [fetchTeams, teamsLoaded]);
 
   useEffect(() => {
     if (!teamsLoaded) return;
@@ -84,7 +84,12 @@ export default function VsInvite() {
               Gen 9 Custom Game · All Pokémon are normalized to level 50 · Casual battle
             </div>
             <h2 className="mb-3 text-lg font-bold text-slate-900">Choose your team</h2>
-            {!teamsLoaded ? (
+            {teamsError ? (
+              <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-center text-sm text-red-800">
+                <p>{teamsError}</p>
+                <button className="mt-2 font-bold underline" onClick={() => void fetchTeams()}>Try again</button>
+              </div>
+            ) : !teamsLoaded ? (
               <p className="py-8 text-center text-slate-500">Loading your teams…</p>
             ) : (
               <VsTeamPicker
@@ -107,7 +112,7 @@ export default function VsInvite() {
 
             <button
               type="button"
-              disabled={loading || teams.length === 0}
+              disabled={loading || Boolean(teamsError) || teams.length === 0}
               onClick={() => void handleAccept()}
               className="mt-6 w-full rounded-xl bg-red-600 px-5 py-3 font-bold text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
             >

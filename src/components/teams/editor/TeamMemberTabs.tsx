@@ -2,10 +2,11 @@ import React from 'react';
 import PokemonImage from '../../PokemonImage';
 import { TeamMember } from '../../../lib/supabase';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
+import type { TeamPokemonData } from '../../../types/team-builder';
 
 interface TeamMemberTabsProps {
   teamMembers: TeamMember[];
-  pokemonData: Record<number, any>;
+  pokemonData: Record<number, TeamPokemonData>;
   selectedMember: TeamMember | null;
   showMovesetEditor: boolean;
   onEditMember: (member: TeamMember) => void;

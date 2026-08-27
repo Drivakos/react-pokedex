@@ -4,6 +4,13 @@ import { Profile, Favorite, Team, TeamMember, TeamWithJoinedMembers } from '../l
 import authService, { withAuthSession } from '../services/auth.service';
 import { supabase } from '../lib/supabase';
 import toast from 'react-hot-toast';
+import {
+  addTeamMemberToCollection,
+  removeTeamMemberFromCollection,
+  reorderTeamMembersInCollection,
+  updateTeamMemberInCollection,
+} from '../utils/team-collection';
+import { pickTeamMemberBuild } from '../utils/team-builder';
 
 interface AuthContextType {
   session: Session | null;
@@ -12,6 +19,7 @@ interface AuthContextType {
   favorites: Favorite[];
   teams: TeamWithJoinedMembers[];
   teamsLoaded: boolean;
+  teamsError: string | null;
   loading: boolean;
 
   // Auth methods
@@ -36,15 +44,20 @@ interface AuthContextType {
   isFavorite: (pokemonId: number) => boolean;
 
   // Team methods
-  fetchTeams: () => Promise<void>;
+  fetchTeams: () => Promise<boolean>;
   createTeam: (name: string, description?: string) => Promise<Team | null>;
-  updateTeam: (teamId: number, name: string, description?: string) => Promise<void>;
-  deleteTeam: (teamId: number) => Promise<void>;
-  addPokemonToTeam: (teamId: number, pokemonId: number, position: number) => Promise<void>;
-  removePokemonFromTeam: (teamId: number, position: number) => Promise<void>;
+  updateTeam: (teamId: number, name: string, description?: string) => Promise<boolean>;
+  deleteTeam: (teamId: number) => Promise<boolean>;
+  addPokemonToTeam: (
+    teamId: number,
+    pokemonId: number,
+    position: number,
+    buildData?: Partial<TeamMember>,
+  ) => Promise<TeamMember | null>;
+  removePokemonFromTeam: (teamId: number, position: number) => Promise<boolean>;
   getTeamMembers: (teamId: number) => Promise<TeamMember[]>;
-  updateTeamMemberBuild: (teamId: number, position: number, buildData: Partial<TeamMember>) => Promise<void>;
-  reorderTeamMembers: (teamId: number, memberIds: number[]) => Promise<void>;
+  updateTeamMemberBuild: (teamId: number, position: number, buildData: Partial<TeamMember>) => Promise<TeamMember | null>;
+  reorderTeamMembers: (teamId: number, memberIds: number[]) => Promise<boolean>;
 }
 
 export const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -64,6 +77,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [favorites, setFavorites] = useState<Favorite[]>([]);
   const [teams, setTeams] = useState<TeamWithJoinedMembers[]>([]);
   const [teamsLoaded, setTeamsLoaded] = useState(false);
+  const [teamsError, setTeamsError] = useState<string | null>(null);
 
   const [loading, setLoading] = useState(true);
 
@@ -203,8 +217,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (!user) {
       setTeams([]);
       setTeamsLoaded(false);
-      return;
+      setTeamsError(null);
+      return false;
     }
+
+    setTeamsError(null);
 
     const result = await withAuthSession(async () => {
       const { data, error } = await supabase
@@ -214,7 +231,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         .order('created_at', { ascending: false });
 
       if (error) {
-        return [];
+        throw error;
       }
 
       return data;
@@ -222,8 +239,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     if (result.data) {
       setTeams(result.data);
-      setTeamsLoaded(true);
+    } else {
+      setTeamsError('Could not load your teams. Check your connection and try again.');
     }
+    setTeamsLoaded(true);
+    return result.data !== null;
   }, [user]);
 
   // Fetch teams when user becomes available and teams aren't loaded yet
@@ -274,18 +294,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     });
 
     if (result.data) {
-      await fetchTeams();
+      const createdTeam = result.data as TeamWithJoinedMembers;
+      setTeams(current => [{ ...createdTeam, team_members: [] }, ...current]);
       toast.success('Team created successfully!');
-      return result.data;
+      return createdTeam;
     }
 
     return null;
-  }, [user, fetchTeams]);
+  }, [user]);
 
   const updateTeam = useCallback(async (teamId: number, name: string, description?: string) => {
     if (!user) {
       toast.error('You must be logged in to update a team');
-      return;
+      return false;
     }
 
     const result = await withAuthSession(async () => {
@@ -295,30 +316,37 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         updated_at: new Date().toISOString()
       };
 
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('teams')
         .update(updates)
         .eq('id', teamId)
-        .eq('user_id', user.id);
+        .eq('user_id', user.id)
+        .select()
+        .single();
 
       if (error) {
         toast.error('Failed to update team');
-        return false;
+        return null;
       }
 
-      return true;
+      return data;
     });
 
     if (result.data) {
-      await fetchTeams();
+      const updatedTeam = result.data;
+      setTeams(current => current.map(team => team.id === teamId
+        ? { ...team, ...updatedTeam, team_members: team.team_members }
+        : team));
       toast.success('Team updated successfully!');
+      return true;
     }
-  }, [user, fetchTeams]);
+    return false;
+  }, [user]);
 
   const deleteTeam = useCallback(async (teamId: number) => {
     if (!user) {
       toast.error('You must be logged in to delete a team');
-      return;
+      return false;
     }
 
     const result = await withAuthSession(async () => {
@@ -337,64 +365,62 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     });
 
     if (result.data) {
-      await fetchTeams();
+      setTeams(current => current.filter(team => team.id !== teamId));
       toast.success('Team deleted successfully!');
+      return true;
     }
-  }, [user, fetchTeams]);
+    return false;
+  }, [user]);
 
-  const addPokemonToTeam = useCallback(async (teamId: number, pokemonId: number, position: number) => {
+  const addPokemonToTeam = useCallback(async (
+    teamId: number,
+    pokemonId: number,
+    position: number,
+    buildData?: Partial<TeamMember>,
+  ) => {
     if (!user) {
       toast.error('You must be logged in to add Pokémon to a team');
-      return;
+      return null;
+    }
+
+    if (!Number.isInteger(position) || position < 1 || position > 6) {
+      toast.error('Team positions must be between 1 and 6');
+      return null;
     }
 
     const result = await withAuthSession(async () => {
-      const { data: existingData, error: existingError } = await supabase
+      const { data, error } = await supabase
         .from('team_members')
-        .select('*')
-        .eq('team_id', teamId)
-        .eq('position', position);
+        .insert([{
+          team_id: teamId,
+          pokemon_id: pokemonId,
+          position,
+          ...pickTeamMemberBuild(buildData),
+        }])
+        .select()
+        .single();
 
-      if (existingError) {
-        toast.error('Failed to check existing team members');
-        return false;
+      if (error) {
+        toast.error(error.code === '23505'
+          ? 'That team position is already occupied'
+          : 'Failed to add Pokémon to team');
+        return null;
       }
-
-      if (existingData && existingData.length > 0) {
-        const { error } = await supabase
-          .from('team_members')
-          .update({ pokemon_id: pokemonId })
-          .eq('team_id', teamId)
-          .eq('position', position);
-
-        if (error) {
-          toast.error('Failed to update Pokémon in team');
-          return false;
-        }
-      } else {
-        const { error } = await supabase
-          .from('team_members')
-          .insert([{ team_id: teamId, pokemon_id: pokemonId, position }]);
-
-        if (error) {
-          toast.error('Failed to add Pokémon to team');
-          return false;
-        }
-      }
-
-      return true;
+      return data as TeamMember;
     });
 
     if (result.data) {
-      await fetchTeams();
+      setTeams(current => addTeamMemberToCollection(current, result.data as TeamMember));
       toast.success('Pokémon added to team!');
+      return result.data as TeamMember;
     }
-  }, [user, fetchTeams]);
+    return null;
+  }, [user]);
 
   const removePokemonFromTeam = useCallback(async (teamId: number, position: number) => {
     if (!user) {
       toast.error('You must be logged in to remove Pokémon from a team');
-      return;
+      return false;
     }
 
     const result = await withAuthSession(async () => {
@@ -413,14 +439,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     });
 
     if (result.data) {
-      await fetchTeams();
+      setTeams(current => removeTeamMemberFromCollection(current, teamId, position));
       toast.success('Pokémon removed from team!');
+      return true;
     }
-  }, [user, fetchTeams]);
+    return false;
+  }, [user]);
 
   const getTeamMembers = useCallback(async (teamId: number) => {
     if (!user) {
-      return [];
+      throw new Error('Authentication required');
     }
 
     const result = await withAuthSession(async () => {
@@ -430,62 +458,56 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         .eq('team_id', teamId);
 
       if (error) {
-        return [];
+        throw error;
       }
 
-      return data || [];
+      return (data || []).sort((left, right) => left.position - right.position);
     });
 
+    if (result.error) throw result.error;
     return result.data || [];
   }, [user]);
 
   const updateTeamMemberBuild = useCallback(async (teamId: number, position: number, buildData: Partial<TeamMember>) => {
     if (!user) {
       toast.error('You must be logged in to update team member builds');
-      return;
+      return null;
     }
 
     const result = await withAuthSession(async () => {
       const updateData: Partial<TeamMember> & { updated_at: string } = {
-        updated_at: new Date().toISOString()
+        ...pickTeamMemberBuild(buildData),
+        updated_at: new Date().toISOString(),
       };
 
-      if (buildData.moves !== undefined) updateData.moves = buildData.moves;
-      if (buildData.item !== undefined) updateData.item = buildData.item;
-      if (buildData.ability !== undefined) updateData.ability = buildData.ability;
-      if (buildData.nature !== undefined) updateData.nature = buildData.nature;
-      if (buildData.evs !== undefined) updateData.evs = buildData.evs;
-      if (buildData.ivs !== undefined) updateData.ivs = buildData.ivs;
-      if (buildData.level !== undefined) updateData.level = buildData.level;
-      if (buildData.gender !== undefined) updateData.gender = buildData.gender;
-      if (buildData.tera_type !== undefined) updateData.tera_type = buildData.tera_type;
-      if (buildData.nickname !== undefined) updateData.nickname = buildData.nickname;
-      if (buildData.is_shiny !== undefined) updateData.is_shiny = buildData.is_shiny;
-
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('team_members')
         .update(updateData)
         .eq('team_id', teamId)
-        .eq('position', position);
+        .eq('position', position)
+        .select()
+        .single();
 
       if (error) {
         toast.error('Failed to update team member build');
-        return false;
+        return null;
       }
 
-      return true;
+      return data as TeamMember;
     });
 
     if (result.data) {
-      await fetchTeams();
+      setTeams(current => updateTeamMemberInCollection(current, result.data as TeamMember));
       toast.success('Build saved successfully!');
+      return result.data as TeamMember;
     }
-  }, [user, fetchTeams]);
+    return null;
+  }, [user]);
 
   const reorderTeamMembers = useCallback(async (teamId: number, memberIds: number[]) => {
     if (!user) {
       toast.error('You must be logged in to reorder a team');
-      return;
+      return false;
     }
 
     const result = await withAuthSession(async () => {
@@ -504,10 +526,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     });
 
     if (result.data) {
-      await fetchTeams();
+      setTeams(current => reorderTeamMembersInCollection(current, teamId, memberIds));
       toast.success('Pokémon positions updated');
+      return true;
     }
-  }, [user, fetchTeams]);
+    return false;
+  }, [user]);
 
   useEffect(() => {
     const initAuth = async () => {
@@ -534,6 +558,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setProfile(null);
           setFavorites([]);
           setTeams([]);
+          setTeamsError(null);
         }
       } catch (err) {
         setSession(null);
@@ -541,6 +566,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setProfile(null);
         setFavorites([]);
         setTeams([]);
+        setTeamsError(null);
       } finally {
         setLoading(false);
       }
@@ -594,6 +620,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               setFavorites([]);
               setTeams([]);
               setTeamsLoaded(false);
+              setTeamsError(null);
               break;
           }
         } catch (err) {
@@ -616,6 +643,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     favorites,
     teams,
     teamsLoaded,
+    teamsError,
     loading,
     // Auth methods
     refreshSession: authService.refreshSession.bind(authService),
@@ -642,7 +670,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     updateTeamMemberBuild,
     reorderTeamMembers
   }), [
-    session, user, profile, favorites, teams, teamsLoaded, loading,
+    session, user, profile, favorites, teams, teamsLoaded, teamsError, loading,
     signUp, signIn, signInWithGoogle, signInWithMagicLink, signOut, 
     resetPassword, updatePassword, updateProfile,
     addFavorite, removeFavorite, isFavorite,
