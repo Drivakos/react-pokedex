@@ -19,6 +19,7 @@ export default function VsHome() {
   const [friendsLoading, setFriendsLoading] = useState(true);
   const [friendsError, setFriendsError] = useState<string | null>(null);
   const [teamErrors, setTeamErrors] = useState<string[]>([]);
+  const onlineFriends = friends.filter(friend => friend.is_online);
 
   useEffect(() => {
     if (!teamsLoaded) void fetchTeams();
@@ -148,47 +149,55 @@ export default function VsHome() {
             </div>
           )}
 
-          <div className="my-6 border-t border-slate-200" />
+          {onlineFriends.length > 0 && (
+            <>
+              <div className="my-6 border-t border-slate-200" />
 
-          <div className="mb-4">
-            <h2 className="text-xl font-bold text-slate-900">Challenge an online friend</h2>
-            <p className="text-sm text-slate-500">They will receive the battle invitation in the app.</p>
-          </div>
+              <div className="mb-4">
+                <h2 className="text-xl font-bold text-slate-900">Challenge an online friend</h2>
+                <p className="text-sm text-slate-500">They will receive the battle invitation in the app.</p>
+              </div>
 
-          <VsFriendPicker
-            friends={friends}
-            selectedFriendId={selectedFriendId}
-            loading={friendsLoading}
-            disabled={loading}
-            onSelect={friendId => {
-              setSelectedFriendId(friendId);
-              setFriendsError(null);
-              clearError();
-            }}
-            onRefresh={() => void loadFriends()}
-          />
+              <VsFriendPicker
+                friends={onlineFriends}
+                selectedFriendId={selectedFriendId}
+                loading={friendsLoading}
+                disabled={loading}
+                onSelect={friendId => {
+                  setSelectedFriendId(friendId);
+                  setFriendsError(null);
+                  clearError();
+                }}
+                onRefresh={() => void loadFriends()}
+              />
 
-          {friendsError && (
-            <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
-              {friendsError}
-            </div>
+              {friendsError && (
+                <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
+                  {friendsError}
+                </div>
+              )}
+
+              <button
+                type="button"
+                disabled={loading || friendsLoading || !selectedFriendId || !teamsLoaded || Boolean(teamsError) || teams.length === 0}
+                onClick={() => void handleFriendInvite()}
+                className="mt-5 flex w-full items-center justify-center gap-2 rounded-xl bg-green-600 px-5 py-3 font-bold text-white transition hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <Send size={18} aria-hidden="true" />
+                {loading ? 'Sending challenge…' : 'Challenge selected friend'}
+              </button>
+            </>
           )}
 
-          <button
-            type="button"
-            disabled={loading || friendsLoading || !selectedFriendId || !teamsLoaded || Boolean(teamsError) || teams.length === 0}
-            onClick={() => void handleFriendInvite()}
-            className="mt-5 flex w-full items-center justify-center gap-2 rounded-xl bg-green-600 px-5 py-3 font-bold text-white transition hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            <Send size={18} aria-hidden="true" />
-            {loading ? 'Sending challenge…' : 'Challenge selected friend'}
-          </button>
-
-          <div className="my-6 flex items-center gap-3 text-xs font-bold uppercase tracking-wider text-slate-400">
-            <span className="h-px flex-1 bg-slate-200" />
-            Or share a link
-            <span className="h-px flex-1 bg-slate-200" />
-          </div>
+          {onlineFriends.length > 0 ? (
+            <div className="my-6 flex items-center gap-3 text-xs font-bold uppercase tracking-wider text-slate-400">
+              <span className="h-px flex-1 bg-slate-200" />
+              Or share a link
+              <span className="h-px flex-1 bg-slate-200" />
+            </div>
+          ) : (
+            <div className="my-6 border-t border-slate-200" />
+          )}
 
           <button
             type="button"
