@@ -139,6 +139,49 @@ describe('VsBattleSession', () => {
     session.dispose();
   });
 
+  it('auto-submits a default choice for a forced move continuation', async () => {
+    let emitLocalDecision: ((decision: BattleDecision) => void) | undefined;
+    const session = new VsBattleSession({
+      matchId: 'match-forced-fly',
+      isHost: true,
+      playerParty: [createRunPokemon('Charizard', 5)],
+      opponentParty: [createRunPokemon('Venusaur', 5)],
+      battleSeed: [1, 2, 3, 4],
+      playerName: 'Host',
+      opponentName: 'Guest',
+      callbacks: {
+        onSnapshot: () => undefined,
+        onDecision: () => undefined,
+        onLog: () => undefined,
+        onVisual: () => undefined,
+        onEnd: () => undefined,
+        onError: () => undefined,
+      },
+      simulatorFactory: options => {
+        emitLocalDecision = options.callbacks.onDecision;
+        return {
+          start: () => undefined,
+          submitSynchronizedChoices: () => undefined,
+          dispose: () => undefined,
+        };
+      },
+    });
+
+    session.start();
+    await Promise.resolve();
+    emitLocalDecision?.({
+      requestId: 2,
+      kind: 'wait',
+      moves: [],
+      switches: [],
+      switchingBlocked: true,
+    });
+    await Promise.resolve();
+
+    expect(submitVsChoice).toHaveBeenCalledWith('match-forced-fly', 2, 'default');
+    session.dispose();
+  });
+
   it('replays a persisted pair only after the matching local request exists', async () => {
     jest.mocked(getVsChoicePairs).mockResolvedValue([{
       requestIndex: 1,

@@ -2,6 +2,7 @@ import type { BattleDecision } from '../../types/battle-run';
 import {
   canSubmitMove,
   canSubmitSwitch,
+  isForcedMoveRequest,
   isSwitchingBlocked,
   isTrappedSwitchError,
 } from '../battle-request-rules';
@@ -34,6 +35,19 @@ describe('battle request rules', () => {
   it('recognizes a trapped rejection after an uncertain switch attempt', () => {
     expect(isTrappedSwitchError("[Invalid choice] Can't switch: The active Pokémon is trapped")).toBe(true);
     expect(isTrappedSwitchError("[Invalid choice] Can't move: The selected move is disabled")).toBe(false);
+  });
+
+  it('recognizes a simulator-locked continuation without exposing it as a move choice', () => {
+    expect(isForcedMoveRequest({ moves: [{ id: 'fly' }] })).toBe(true);
+    expect(isForcedMoveRequest({ moves: [{ id: 'recharge' }] })).toBe(true);
+  });
+
+  it('keeps a single normal move selectable when its PP data is present', () => {
+    expect(isForcedMoveRequest({ moves: [{ pp: 15, maxpp: 15 }] })).toBe(false);
+    expect(isForcedMoveRequest({ moves: [
+      { pp: 15, maxpp: 15 },
+      { pp: 0, maxpp: 10 },
+    ] })).toBe(false);
   });
 
   it('accepts only enabled moves from the current move request', () => {

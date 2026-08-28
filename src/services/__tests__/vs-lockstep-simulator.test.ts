@@ -17,6 +17,92 @@ function choiceFor(decision: BattleDecision): string {
 }
 
 describe('manual Showdown lockstep simulation', () => {
+  it('reports Fly continuation as a forced wait while normal single moves stay selectable', async () => {
+    await new Promise<void>((resolve, reject) => {
+      const seed = [1111, 2222, 3333, 4444] as [number, number, number, number];
+      const hostDecisions = new Map<number, BattleDecision>();
+      const guestDecisions = new Map<number, BattleDecision>();
+      const applied = new Set<number>();
+      const watchdog = setTimeout(() => reject(new Error('Timed out waiting for Fly continuation')), 5_000);
+      let host!: ShowdownBattleSession;
+      let guest!: ShowdownBattleSession;
+
+      const finish = () => {
+        host.dispose();
+        guest.dispose();
+        clearTimeout(watchdog);
+        resolve();
+      };
+
+      const maybeAdvance = (requestId: number) => {
+        const hostDecision = hostDecisions.get(requestId);
+        const guestDecision = guestDecisions.get(requestId);
+        if (!hostDecision || !guestDecision || applied.has(requestId)) return;
+
+        if (requestId === 2) {
+          expect(hostDecision).toMatchObject({ kind: 'wait', moves: [] });
+          expect(guestDecision.kind).toBe('move');
+          finish();
+          return;
+        }
+
+        applied.add(requestId);
+        const fly = hostDecision.moves.find(move => move.name === 'Fly');
+        const guestMove = guestDecision.moves.find(move => !move.disabled);
+        if (!fly || !guestMove) {
+          reject(new Error('Expected selectable opening moves'));
+          return;
+        }
+        host.submitSynchronizedChoices(`move ${fly.slot}`, `move ${guestMove.slot}`);
+        guest.submitSynchronizedChoices(`move ${fly.slot}`, `move ${guestMove.slot}`);
+      };
+
+      const hostParty = [{
+        ...createRunPokemon('Charizard', 5),
+        item: undefined,
+        moves: ['Fly', 'Splash'],
+      }];
+      const guestParty = [{
+        ...createRunPokemon('Blissey', 5),
+        item: undefined,
+        moves: ['Splash'],
+      }];
+
+      host = new ShowdownBattleSession(hostParty, guestParty, {
+        onSnapshot: () => undefined,
+        onDecision: decision => {
+          if (decision.requestId === undefined) return reject(new Error('Missing host request id'));
+          hostDecisions.set(decision.requestId, decision);
+          maybeAdvance(decision.requestId);
+        },
+        onLog: () => undefined,
+        onVisual: () => undefined,
+        onEnd: () => reject(new Error('Battle ended before Fly continuation')),
+        onError: (message, fatal) => { if (fatal) reject(new Error(message)); },
+      }, 1, 'medium', { battle: seed, opponentAi: seed }, {
+        playerSide: 'p1', opponentMode: 'manual', playerName: 'Host', opponentName: 'Guest', emitPendingDecision: false,
+      });
+
+      guest = new ShowdownBattleSession(guestParty, hostParty, {
+        onSnapshot: () => undefined,
+        onDecision: decision => {
+          if (decision.requestId === undefined) return reject(new Error('Missing guest request id'));
+          guestDecisions.set(decision.requestId, decision);
+          maybeAdvance(decision.requestId);
+        },
+        onLog: () => undefined,
+        onVisual: () => undefined,
+        onEnd: () => reject(new Error('Battle ended before Fly continuation')),
+        onError: (message, fatal) => { if (fatal) reject(new Error(message)); },
+      }, 1, 'medium', { battle: seed, opponentAi: seed }, {
+        playerSide: 'p2', opponentMode: 'manual', playerName: 'Guest', opponentName: 'Host', emitPendingDecision: false,
+      });
+
+      host.start();
+      guest.start();
+    });
+  }, 10_000);
+
   it('produces matching inverse results from host and guest perspectives', async () => {
     await new Promise<void>((resolve, reject) => {
       const seed = [1234, 2345, 3456, 4567] as [number, number, number, number];

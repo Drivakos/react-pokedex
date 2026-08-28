@@ -14,7 +14,11 @@ import type {
 } from '../types/battle-run';
 import type { ShowdownBattleCallbacks } from '../types/battle-worker';
 import { toPokemonSet } from '../utils/battle-pokemon-set';
-import { isSwitchingBlocked, isTrappedSwitchError } from '../utils/battle-request-rules';
+import {
+  isForcedMoveRequest,
+  isSwitchingBlocked,
+  isTrappedSwitchError,
+} from '../utils/battle-request-rules';
 import { calculateMoveEffectiveness } from '../utils/battle-move-effectiveness';
 import { ChallengePlayerAI } from './challenge-player-ai';
 
@@ -306,6 +310,21 @@ export class ShowdownBattleSession {
     const requestId = this.opponentMode === 'manual' ? this.getManualRequestId() : undefined;
     if (request.requestType === 'move') {
       const active = request.active[0];
+      if (isForcedMoveRequest(active)) {
+        if (this.opponentMode === 'manual') {
+          this.callbacks.onDecision({
+            requestId,
+            kind: 'wait',
+            moves: [],
+            switches: [],
+            switchingBlocked: true,
+          });
+        } else {
+          this.submitChoice('default');
+        }
+        return;
+      }
+
       const switchingBlocked = switchingBlockedOverride || isSwitchingBlocked(active);
       const opponent = this.playerSide === 'p1' ? this.client.p2 : this.client.p1;
       const opponentTypes = safeClientPokemonTypes(opponent.active[0]);
