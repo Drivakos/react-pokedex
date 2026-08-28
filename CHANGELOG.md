@@ -1,3 +1,10 @@
+## [1.23.1](https://github.com/Drivakos/react-pokedex/compare/v1.23.0...v1.23.1) (2026-08-28)
+
+
+### Bug Fixes
+
+* quote Mermaid diagram labels ([088ebfc](https://github.com/Drivakos/react-pokedex/commit/088ebfc6b45e3ee6a89a79262c231709a326b620))
+
 # [1.23.0](https://github.com/Drivakos/react-pokedex/compare/v1.22.2...v1.23.0) (2026-08-28)
 
 
