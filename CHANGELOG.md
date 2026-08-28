@@ -1,3 +1,10 @@
+## [1.22.1](https://github.com/Drivakos/react-pokedex/compare/v1.22.0...v1.22.1) (2026-08-28)
+
+
+### Bug Fixes
+
+* hide VS challenge when friends are offline ([b32fb39](https://github.com/Drivakos/react-pokedex/commit/b32fb3955eccbffb5706e556ea2bdf7cf6892d85))
+
 # [1.22.0](https://github.com/Drivakos/react-pokedex/compare/v1.21.0...v1.22.0) (2026-08-28)
 
 
