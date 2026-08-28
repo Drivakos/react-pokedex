@@ -42,7 +42,7 @@ flowchart LR
     Session --> AI[Local AI session]
     Session --> Lockstep[VS lockstep session]
 
-    AI --> Worker[@pkmn/sim worker]
+    AI --> Worker["@pkmn/sim worker"]
     Lockstep --> Worker
     Lockstep <--> Supabase[(Supabase choice log)]
 
@@ -66,7 +66,7 @@ flowchart LR
     Redis -->|hit| Client
     Redis -->|miss| Postgres{Supabase cache}
     Postgres -->|hit| Redis
-    Postgres -->|miss| PokeAPI[PokeAPI REST / GraphQL]
+    Postgres -->|miss| PokeAPI["PokeAPI REST / GraphQL"]
     PokeAPI --> Postgres
     Postgres --> Redis
 ```

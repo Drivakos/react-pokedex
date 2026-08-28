@@ -81,7 +81,7 @@ flowchart LR
   Service --> DB[(Supabase Postgres)]
   Service --> RT[Private Realtime channel]
   Engine --> Session[Versus battle session]
-  Session --> Worker[@pkmn/sim worker]
+  Session --> Worker["@pkmn/sim worker"]
   Session --> Service
   Engine --> Stage[ShowdownStage]
 ```
