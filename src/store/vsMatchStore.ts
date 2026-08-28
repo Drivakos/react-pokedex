@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import {
   acceptVsInvite,
   cancelVsInvite,
+  createVsFriendInvite,
   createVsInvite,
   getVsMatch,
   inspectVsInvite,
@@ -17,6 +18,7 @@ interface VsMatchStore {
   loading: boolean;
   error: string | null;
   createInvite: (teamId: number) => Promise<VsMatch>;
+  createFriendInvite: (teamId: number, friendId: string) => Promise<VsMatch>;
   inspectInvite: (token: string) => Promise<VsInvitePreview>;
   acceptInvite: (token: string, teamId: number) => Promise<VsMatch>;
   loadMatch: (matchId: string) => Promise<VsMatch>;
@@ -41,6 +43,19 @@ export const useVsMatchStore = create<VsMatchStore>((set, get) => ({
     set({ loading: true, error: null });
     try {
       const result = await createVsInvite(teamId);
+      saveInviteToken(result.match.id, result.inviteToken);
+      set({ match: result.match, loading: false });
+      return result.match;
+    } catch (error) {
+      set({ loading: false, error: messageFrom(error) });
+      throw error;
+    }
+  },
+
+  createFriendInvite: async (teamId, friendId) => {
+    set({ loading: true, error: null });
+    try {
+      const result = await createVsFriendInvite(teamId, friendId);
       saveInviteToken(result.match.id, result.inviteToken);
       set({ match: result.match, loading: false });
       return result.match;

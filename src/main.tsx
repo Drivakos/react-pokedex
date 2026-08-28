@@ -20,6 +20,7 @@ import { HelmetProvider } from 'react-helmet-async';
 import { AuthProvider } from './contexts/AuthProvider';
 import ErrorBoundary from './components/ErrorBoundary';
 import App from './App.tsx';
+import { PresenceHeartbeat } from './components/PresenceHeartbeat';
 import './index.css';
 import './styles/card-animations.css';
 import './styles/pokemon-types.css';
@@ -70,6 +71,7 @@ createRoot(document.getElementById('root')!).render(
     <ErrorBoundary>
       <HelmetProvider>
         <AuthProvider>
+          <PresenceHeartbeat />
           <App />
           <Toaster position="top-right" toastOptions={{
             success: {

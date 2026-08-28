@@ -24,7 +24,7 @@ jest.mock('date-fns', () => ({
 }));
 
 import { formatDistanceToNow } from 'date-fns';
-import { notificationsService, type Notification } from '../../services/notifications.service';
+import type { Notification } from '../../services/notifications.service';
 
 const mockFormatDistanceToNow = formatDistanceToNow as jest.Mock;
 
@@ -59,6 +59,16 @@ describe('NotificationDropdown Component', () => {
       data: {},
       read: false,
       created_at: '2024-01-01T02:00:00Z'
+    },
+    {
+      id: 4,
+      type: 'vs_invite',
+      title: 'Battle challenge',
+      message: 'Misty challenged you to a VS battle',
+      url: '/vs/invite/secret-token',
+      data: { sender_id: 'misty-id', sender_name: 'Misty', match_id: 'match-1' },
+      read: false,
+      created_at: '2024-01-01T03:00:00Z'
     }
   ];
 
@@ -205,6 +215,14 @@ describe('NotificationDropdown Component', () => {
 
       const achievementIcon = screen.getByText('New Achievement!').closest('button')?.querySelector('.bg-gray-400.rounded-full');
       expect(achievementIcon).toBeInTheDocument();
+    });
+
+    it('should show the battle icon for a VS invitation', () => {
+      render(<NotificationDropdown {...mockProps} />);
+
+      const battleIcon = screen.getByText('Battle challenge').closest('button')?.querySelector('svg');
+      expect(battleIcon).toBeInTheDocument();
+      expect(battleIcon).toHaveClass('text-red-600');
     });
   });
 

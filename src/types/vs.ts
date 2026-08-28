@@ -35,6 +35,7 @@ export interface VsMatch {
   id: string;
   host_user_id: string;
   guest_user_id: string | null;
+  invited_user_id?: string | null;
   status: VsMatchStatus;
   invite_expires_at: string;
   host_team_snapshot: VsTeamSnapshot;
@@ -54,6 +55,7 @@ export interface VsMatch {
   updated_at: string;
   hostName?: string;
   guestName?: string;
+  invitedName?: string;
 }
 
 export type VsCanonicalResult = 'host' | 'guest' | 'tie';

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Bell } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { notificationsService, type Notification } from '../services/notifications.service';
 import { friendsService } from '../services/friends.service';
@@ -12,6 +13,7 @@ interface NotificationBellProps {
 }
 
 export const NotificationBell: React.FC<NotificationBellProps> = ({ onOpenFriendsModal }) => {
+  const navigate = useNavigate();
   const { user } = useAuth();
   const [unreadCount, setUnreadCount] = useState(0);
   const [isOpen, setIsOpen] = useState(false);
@@ -75,9 +77,32 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({ onOpenFriend
 
         // toastId is unused but assigned to avoid lint warnings; it's the toast id
         void toastId;
+      } else if (notification.type === 'vs_invite' && notification.url && user) {
+        const displayName = notification.data?.sender_name || 'A friend';
+        toast.custom(
+          t => (
+            <button
+              type="button"
+              className="flex w-full items-center gap-3 rounded-xl border border-red-200 bg-white px-4 py-3 text-left shadow-lg"
+              onClick={() => {
+                void notificationsService.markAsRead(notification.id, user.id);
+                markReadLocally(notification.id);
+                toast.dismiss(t.id);
+                navigate(notification.url!);
+              }}
+            >
+              <span className="text-2xl" aria-hidden="true">⚔️</span>
+              <span>
+                <span className="block font-bold text-slate-900">Battle challenge</span>
+                <span className="block text-sm text-slate-600">{displayName} challenged you. Open invite</span>
+              </span>
+            </button>
+          ),
+          { duration: 15_000, id: `vs-invite-${notification.id}` },
+        );
       }
     }, 100); // 100ms debounce
-  }, [user, markReadLocally]);
+  }, [user, markReadLocally, navigate]);
 
 
   // Load only unread count on mount, full notifications when needed

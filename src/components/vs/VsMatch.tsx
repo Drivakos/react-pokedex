@@ -118,7 +118,7 @@ export default function VsMatch() {
               waitingLabel="Host"
             />
             <TrainerCard
-              name={match.guestName || 'Waiting for a friend…'}
+              name={match.guestName || (match.invitedName ? `Waiting for ${match.invitedName}…` : 'Waiting for a friend…')}
               teamName={match.guest_team_snapshot?.name}
               count={match.guest_team_snapshot?.members.length}
               ready={match.guest_ready}
@@ -128,12 +128,18 @@ export default function VsMatch() {
 
           {match.status === 'invited' && isHost && (
             <div className="mt-6 rounded-xl border border-slate-200 bg-slate-50 p-5">
-              <div className="flex items-center gap-2 font-bold text-slate-900"><Link2 size={18} /> Invite your friend</div>
+              <div className="flex items-center gap-2 font-bold text-slate-900">
+                <Link2 size={18} />
+                {match.invitedName ? `Challenge sent to ${match.invitedName}` : 'Invite your friend'}
+              </div>
+              {match.invitedName && (
+                <p className="mt-1 text-sm text-green-700">They can open the invitation from their notifications.</p>
+              )}
               {inviteUrl ? (
                 <div className="mt-3 flex gap-2">
                   <input readOnly value={inviteUrl} className="min-w-0 flex-1 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm" />
                   <button type="button" onClick={() => void copyInvite()} className="flex items-center gap-2 rounded-lg bg-slate-900 px-4 py-2 font-bold text-white">
-                    <Copy size={16} /> Copy
+                    <Copy size={16} /> {match.invitedName ? 'Copy link' : 'Copy'}
                   </button>
                 </div>
               ) : (

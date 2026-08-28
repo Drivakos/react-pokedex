@@ -14,7 +14,8 @@ function throwRpcError(error: { message: string } | null): void {
 }
 
 async function addParticipantNames(match: VsMatch): Promise<VsMatch> {
-  const ids = [match.host_user_id, match.guest_user_id].filter((id): id is string => Boolean(id));
+  const ids = [match.host_user_id, match.guest_user_id, match.invited_user_id]
+    .filter((id): id is string => Boolean(id));
   const { data, error } = await supabase
     .from('profiles')
     .select('id, username')
@@ -26,11 +27,25 @@ async function addParticipantNames(match: VsMatch): Promise<VsMatch> {
     ...match,
     hostName: names.get(match.host_user_id) ?? 'Host',
     guestName: match.guest_user_id ? names.get(match.guest_user_id) ?? 'Challenger' : undefined,
+    invitedName: match.invited_user_id ? names.get(match.invited_user_id) ?? 'Friend' : undefined,
   };
 }
 
 export async function createVsInvite(teamId: number): Promise<CreateVsInviteResult> {
   const { data, error } = await supabase.rpc('create_vs_invite', { p_team_id: teamId });
+  throwRpcError(error);
+  const result = data as CreateVsInviteResult;
+  return { ...result, match: await addParticipantNames(result.match) };
+}
+
+export async function createVsFriendInvite(
+  teamId: number,
+  friendId: string,
+): Promise<CreateVsInviteResult> {
+  const { data, error } = await supabase.rpc('create_vs_friend_invite', {
+    p_team_id: teamId,
+    p_friend_id: friendId,
+  });
   throwRpcError(error);
   const result = data as CreateVsInviteResult;
   return { ...result, match: await addParticipantNames(result.match) };

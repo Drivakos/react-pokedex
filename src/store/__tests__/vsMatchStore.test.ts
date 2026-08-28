@@ -1,6 +1,7 @@
 import type { VsMatch } from '../../types/vs';
 
 const mockCreateVsInvite = jest.fn();
+const mockCreateVsFriendInvite = jest.fn();
 const mockInspectVsInvite = jest.fn();
 const mockAcceptVsInvite = jest.fn();
 const mockGetVsMatch = jest.fn();
@@ -12,6 +13,7 @@ let mockRealtimeCallback: (() => void) | null = null;
 
 jest.mock('../../services/vs-match.service', () => ({
   createVsInvite: (...args: unknown[]) => mockCreateVsInvite(...args),
+  createVsFriendInvite: (...args: unknown[]) => mockCreateVsFriendInvite(...args),
   inspectVsInvite: (...args: unknown[]) => mockInspectVsInvite(...args),
   acceptVsInvite: (...args: unknown[]) => mockAcceptVsInvite(...args),
   getVsMatch: (...args: unknown[]) => mockGetVsMatch(...args),
@@ -60,6 +62,28 @@ describe('VS match store', () => {
     await expect(useVsMatchStore.getState().createInvite(1)).resolves.toEqual(match);
     expect(mockSaveInviteToken).toHaveBeenCalledWith('match-1', 'secret-token');
     expect(useVsMatchStore.getState()).toMatchObject({ match, loading: false, error: null });
+  });
+
+  it('creates a targeted friend invite and preserves its one-time invite token', async () => {
+    const targetedMatch = {
+      ...match,
+      invited_user_id: 'friend-1',
+      invitedName: 'Misty',
+    };
+    mockCreateVsFriendInvite.mockResolvedValue({
+      match: targetedMatch,
+      inviteToken: 'friend-secret-token',
+    });
+
+    await expect(useVsMatchStore.getState().createFriendInvite(1, 'friend-1'))
+      .resolves.toEqual(targetedMatch);
+    expect(mockCreateVsFriendInvite).toHaveBeenCalledWith(1, 'friend-1');
+    expect(mockSaveInviteToken).toHaveBeenCalledWith('match-1', 'friend-secret-token');
+    expect(useVsMatchStore.getState()).toMatchObject({
+      match: targetedMatch,
+      loading: false,
+      error: null,
+    });
   });
 
   it('updates readiness for the loaded match', async () => {

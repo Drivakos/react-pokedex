@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { CheckCheck, ExternalLink, UserPlus, Users } from 'lucide-react';
+import { CheckCheck, ExternalLink, Swords, UserPlus, Users } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { type Notification } from '../services/notifications.service';
 import { formatDistanceToNow } from 'date-fns';
@@ -69,6 +69,8 @@ export const NotificationDropdown: React.FC<NotificationDropdownProps> = ({
         return <UserPlus className="h-4 w-4 text-blue-500" />;
       case 'friend_accepted':
         return <Users className="h-4 w-4 text-green-500" />;
+      case 'vs_invite':
+        return <Swords className="h-4 w-4 text-red-600" />;
       default:
         return <div className="h-4 w-4 bg-gray-400 rounded-full" />;
     }

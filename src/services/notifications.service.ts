@@ -13,6 +13,7 @@ export interface Notification {
     request_id?: number;
     acceptor_id?: string;
     acceptor_name?: string;
+    match_id?: string;
   };
   read: boolean;
   created_at: string;

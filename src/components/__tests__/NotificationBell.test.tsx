@@ -3,16 +3,14 @@ import { render, screen, fireEvent, waitFor, act } from '@testing-library/react'
 import '@testing-library/jest-dom';
 import { NotificationBell } from '../NotificationBell';
 
-// Need to properly handle memoized component in tests
-const TestNotificationBell = NotificationBell;
-
 // Mock the hooks and services
 jest.mock('../../hooks/useAuth', () => ({
   useAuth: jest.fn()
 }));
 
+const mockNavigate = jest.fn();
 jest.mock('react-router-dom', () => ({
-  useNavigate: () => jest.fn()
+  useNavigate: () => mockNavigate
 }));
 
 jest.mock('../../services/notifications.service', () => ({
@@ -299,6 +297,34 @@ describe('NotificationBell Component', () => {
       });
 
       expect(mockToastCustom).not.toHaveBeenCalled();
+    });
+
+    it('shows an actionable toast when a VS invitation arrives', () => {
+      let capturedCallback: ((n: Notification) => void) | null = null;
+      mockSubscribeToNotifications.mockImplementation((_userId: string, cb: (n: Notification) => void) => {
+        capturedCallback = cb;
+        return jest.fn();
+      });
+
+      render(<NotificationBell />);
+
+      const battleInvite: Notification = {
+        id: 12,
+        type: 'vs_invite',
+        title: 'Battle challenge',
+        message: 'Misty challenged you to a VS battle',
+        url: '/vs/invite/secret-token',
+        data: { sender_id: 'misty-id', sender_name: 'Misty', match_id: 'match-1' },
+        read: false,
+        created_at: new Date().toISOString(),
+      };
+
+      act(() => {
+        capturedCallback!(battleInvite);
+        jest.advanceTimersByTime(200);
+      });
+
+      expect(mockToastCustom).toHaveBeenCalled();
     });
   });
 
