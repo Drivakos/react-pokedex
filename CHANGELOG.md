@@ -1,3 +1,10 @@
+# [1.23.0](https://github.com/Drivakos/react-pokedex/compare/v1.22.2...v1.23.0) (2026-08-28)
+
+
+### Features
+
+* show saved team build details ([8f9aedd](https://github.com/Drivakos/react-pokedex/commit/8f9aedd9bb10f7e667cedce7c781687ef754e1b3))
+
 ## [1.22.2](https://github.com/Drivakos/react-pokedex/compare/v1.22.1...v1.22.2) (2026-08-28)
 
 
