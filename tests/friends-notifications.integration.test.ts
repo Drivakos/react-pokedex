@@ -3,9 +3,6 @@
  * Tests for the integration between friends system and notifications
  */
 
-// Mock functions need to be defined with jest.fn() before jest.mock
-const mockRpc = jest.fn();
-
 // Use jest.doMock to avoid hoisting issues
 jest.mock('../src/lib/supabase', () => {
   return {

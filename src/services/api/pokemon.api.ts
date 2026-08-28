@@ -13,12 +13,11 @@ import type {
 } from '../../types/api';
 import {
   fetchCachedPokemonById,
-  fetchCachedPokemonData,
   fetchCachedPokemonDetails
 } from './pokemon.cached';
 import { buildCompleteWhereClause, POKEMON_FIELDS } from '../../utils/query-builder';
 import { transformSinglePokemon, transformRawData } from '../../utils/pokemon-transform';
-import { cacheAside, CACHE_KEYS, CACHE_TTL, generateSearchCacheKey, isCacheEnabled } from '../../lib/redis';
+import { cacheAside, CACHE_KEYS, CACHE_TTL, isCacheEnabled } from '../../lib/redis';
 import { supabase } from '../../lib/supabase';
 import { GRAPHQL_ENDPOINT, handleGraphQLResponse } from './base';
 

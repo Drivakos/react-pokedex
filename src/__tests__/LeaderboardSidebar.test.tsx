@@ -1,11 +1,11 @@
 import React from 'react';
-import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
 
 import { LeaderboardSidebar } from '../components/pokegrid/LeaderboardSidebar';
 
 // Mock the auth context
-jest.mock('../contexts/AuthProvider', () => ({
+jest.mock('../hooks/useAuth', () => ({
   useAuth: () => ({
     user: { id: 'test-user-id', email: 'test@example.com' }
   })
@@ -92,12 +92,6 @@ describe('LeaderboardSidebar', () => {
     mockGetLeaderboard.mockReturnValue(Promise.resolve(mockLeaderboardData));
     mockGetFriendsLeaderboard.mockReturnValue(Promise.resolve([]));
   });
-
-  // Helper to setup friends mocks
-  const setupFriendsMocks = () => {
-    mockGetFriendsCount.mockReturnValue(Promise.resolve(2));
-    mockGetFriendsLeaderboard.mockReturnValue(Promise.resolve(mockLeaderboardData));
-  };
 
   it('renders leaderboard title', () => {
     render(<LeaderboardSidebar {...mockProps} />);

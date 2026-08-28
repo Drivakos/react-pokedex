@@ -1,6 +1,6 @@
-import React, { createContext, useState, useEffect, useContext, useCallback, useMemo } from 'react';
-import { Session, User, AuthError, AuthResponse, OAuthResponse } from '@supabase/supabase-js';
-import { Profile, Favorite, Team, TeamMember, TeamWithJoinedMembers } from '../lib/supabase';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { Session, User } from '@supabase/supabase-js';
+import { Profile, Favorite, TeamMember, TeamWithJoinedMembers } from '../lib/supabase';
 import authService, { withAuthSession } from '../services/auth.service';
 import { supabase } from '../lib/supabase';
 import toast from 'react-hot-toast';
@@ -11,64 +11,7 @@ import {
   updateTeamMemberInCollection,
 } from '../utils/team-collection';
 import { pickTeamMemberBuild } from '../utils/team-builder';
-
-interface AuthContextType {
-  session: Session | null;
-  user: User | null;
-  profile: Profile | null;
-  favorites: Favorite[];
-  teams: TeamWithJoinedMembers[];
-  teamsLoaded: boolean;
-  teamsError: string | null;
-  loading: boolean;
-
-  // Auth methods
-  refreshSession: () => Promise<Session | null>;
-  signUp: (email: string, password: string) => Promise<AuthResponse>;
-  signIn: (email: string, password: string) => Promise<AuthResponse>;
-  signInWithGoogle: () => Promise<OAuthResponse>;
-  signInWithMagicLink: (email: string) => Promise<{ error: AuthError | null }>;
-  signOut: () => Promise<{ error: AuthError | null }>;
-  resetPassword: (email: string) => Promise<{ error: AuthError | null }>;
-  updatePassword: (password: string) => Promise<{ error: AuthError | null }>;
-
-  // Profile methods
-  updateProfile: (profile: Partial<Profile>) => Promise<{
-    data: Profile | null;
-    error: Error | null;
-  }>;
-
-  // Favorites methods
-  addFavorite: (pokemonId: number) => Promise<void>;
-  removeFavorite: (pokemonId: number) => Promise<void>;
-  isFavorite: (pokemonId: number) => boolean;
-
-  // Team methods
-  fetchTeams: () => Promise<boolean>;
-  createTeam: (name: string, description?: string) => Promise<Team | null>;
-  updateTeam: (teamId: number, name: string, description?: string) => Promise<boolean>;
-  deleteTeam: (teamId: number) => Promise<boolean>;
-  addPokemonToTeam: (
-    teamId: number,
-    pokemonId: number,
-    position: number,
-    buildData?: Partial<TeamMember>,
-  ) => Promise<TeamMember | null>;
-  removePokemonFromTeam: (teamId: number, position: number) => Promise<boolean>;
-  getTeamMembers: (teamId: number) => Promise<TeamMember[]>;
-  updateTeamMemberBuild: (teamId: number, position: number, buildData: Partial<TeamMember>) => Promise<TeamMember | null>;
-  reorderTeamMembers: (teamId: number, memberIds: number[]) => Promise<boolean>;
-}
-
-export const AuthContext = createContext<AuthContextType | undefined>(undefined);
-
-export const useAuth = () => {
-  const context = useContext(AuthContext);
-  if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
-  return context;
-};
+import { AuthContext } from './auth-context';
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [session, setSession] = useState<Session | null>(null);

@@ -24,12 +24,11 @@ describe('manual Showdown lockstep simulation', () => {
       const guestDecisions = new Map<number, BattleDecision>();
       const applied = new Set<number>();
       const watchdog = setTimeout(() => reject(new Error('Timed out waiting for Fly continuation')), 5_000);
-      let host!: ShowdownBattleSession;
-      let guest!: ShowdownBattleSession;
+      const sessions = {} as { host: ShowdownBattleSession; guest: ShowdownBattleSession };
 
       const finish = () => {
-        host.dispose();
-        guest.dispose();
+        sessions.host.dispose();
+        sessions.guest.dispose();
         clearTimeout(watchdog);
         resolve();
       };
@@ -53,8 +52,8 @@ describe('manual Showdown lockstep simulation', () => {
           reject(new Error('Expected selectable opening moves'));
           return;
         }
-        host.submitSynchronizedChoices(`move ${fly.slot}`, `move ${guestMove.slot}`);
-        guest.submitSynchronizedChoices(`move ${fly.slot}`, `move ${guestMove.slot}`);
+        sessions.host.submitSynchronizedChoices(`move ${fly.slot}`, `move ${guestMove.slot}`);
+        sessions.guest.submitSynchronizedChoices(`move ${fly.slot}`, `move ${guestMove.slot}`);
       };
 
       const hostParty = [{
@@ -68,7 +67,7 @@ describe('manual Showdown lockstep simulation', () => {
         moves: ['Splash'],
       }];
 
-      host = new ShowdownBattleSession(hostParty, guestParty, {
+      sessions.host = new ShowdownBattleSession(hostParty, guestParty, {
         onSnapshot: () => undefined,
         onDecision: decision => {
           if (decision.requestId === undefined) return reject(new Error('Missing host request id'));
@@ -83,7 +82,7 @@ describe('manual Showdown lockstep simulation', () => {
         playerSide: 'p1', opponentMode: 'manual', playerName: 'Host', opponentName: 'Guest', emitPendingDecision: false,
       });
 
-      guest = new ShowdownBattleSession(guestParty, hostParty, {
+      sessions.guest = new ShowdownBattleSession(guestParty, hostParty, {
         onSnapshot: () => undefined,
         onDecision: decision => {
           if (decision.requestId === undefined) return reject(new Error('Missing guest request id'));
@@ -98,8 +97,8 @@ describe('manual Showdown lockstep simulation', () => {
         playerSide: 'p2', opponentMode: 'manual', playerName: 'Guest', opponentName: 'Host', emitPendingDecision: false,
       });
 
-      host.start();
-      guest.start();
+      sessions.host.start();
+      sessions.guest.start();
     });
   }, 10_000);
 

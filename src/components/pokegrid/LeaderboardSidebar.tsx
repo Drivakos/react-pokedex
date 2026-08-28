@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useAuth } from '../../contexts/AuthProvider';
+import { useAuth } from '../../hooks/useAuth';
 import { pokegridService, type LeaderboardEntry } from '../../services/pokegrid.service';
 import { friendsService } from '../../services/friends.service';
 import { WeeklyStats } from './WeeklyStats';
@@ -294,4 +294,3 @@ export const LeaderboardSidebar: React.FC<LeaderboardSidebarProps> = ({
     </div>
   );
 };
-

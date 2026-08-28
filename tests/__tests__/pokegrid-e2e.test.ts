@@ -30,7 +30,7 @@ describe('PokéGrid End-to-End Workflow', () => {
   describe('Complete Daily Grid Lifecycle', () => {
     test('should handle full grid generation and validation workflow', () => {
       // Step 1: Generate solvable constraints
-      const generateSolvableConstraintsForDate = (date: Date) => {
+      const generateSolvableConstraintsForDate = (_date: Date) => {
         return {
           rows: [
             { type: 'type', value: 'electric', label: 'Electric' },
@@ -347,8 +347,6 @@ describe('PokéGrid End-to-End Workflow', () => {
 
       // The system should only allow today and last 6 days
       const today = new Date();
-      const validWindow = 7; // days
-
       const isValidDate = (date: Date) => {
         const diffTime = date.getTime() - today.getTime();
         const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));

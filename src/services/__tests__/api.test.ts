@@ -10,8 +10,6 @@ jest.mock('../../lib/supabase', () => ({
   }
 }));
 
-import { supabase } from '../../lib/supabase';
-
 // Mock cached-api and its new modularized versions to avoid side effects
 jest.mock('../api/pokemon.cached', () => ({
   fetchCachedPokemonDetails: jest.fn().mockRejectedValue(new Error('Not cached')),
@@ -136,7 +134,7 @@ describe('fetchPokemonDetails', () => {
 
       };
 
-  
+
 
       (global.fetch as jest.Mock).mockResolvedValue({
 
@@ -241,5 +239,3 @@ describe('fetchPokemonDetails', () => {
     });
 
   });
-
-  

@@ -3,12 +3,8 @@
  * Tests for the notifications.service.ts functionality
  */
 
-// Mock functions need to be defined with jest.fn() before jest.mock
-const mockRpc = jest.fn();
-const mockChannel = jest.fn();
 const mockOn = jest.fn();
 const mockSubscribe = jest.fn();
-const mockRemoveChannel = jest.fn();
 
 // Use jest.doMock to avoid hoisting issues
 jest.mock('../src/lib/supabase', () => {
@@ -343,7 +339,7 @@ describe('NotificationsService', () => {
     });
 
     it('should handle callback execution', () => {
-      const unsubscribe = notificationsService.subscribeToNotifications(mockUserId, mockCallback);
+      notificationsService.subscribeToNotifications(mockUserId, mockCallback);
 
       const mockPayload = {
         new: {

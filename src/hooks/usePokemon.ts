@@ -152,7 +152,7 @@ export const usePokemon = (options: { skipFetch?: boolean } = {}) => {
       loadingRef.current = false;
       setLoading(false); // Clear loading state
     }
-  }, [page, hasMore, debouncedSearchTerm, filters, lastUpdated]);
+  }, [page, hasMore, debouncedSearchTerm, filters]);
 
   // Handle filter changes - now just a proxy to the store if needed, 
   // but better to use useFilterStore directly in components

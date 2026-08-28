@@ -1,6 +1,5 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { LeaderboardSidebar } from './LeaderboardSidebar';
-import { WeeklyStats } from './WeeklyStats';
 
 interface MobileMenuProps {
   isOpen: boolean;

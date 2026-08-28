@@ -134,15 +134,6 @@ const PokemonPage: React.FC = () => {
         <div className="mt-8">
           <PokemonSeoContent pokemon={pokemonDetails} />
           
-          <div className="text-sm text-gray-500 flex justify-between mt-6 mb-2">
-            <div>
-              <span className="font-medium">Published:</span> April 1, 2025
-            </div>
-            <div>
-              <span className="font-medium">Last Modified:</span> April 7, 2025
-            </div>
-          </div>
-          
           <div className="mt-12">
             <h2 className="text-2xl font-bold mb-6">Pokémon Trading Cards</h2>
             <PokemonCards pokemonName={pokemonDetails.name} pokemonId={pokemonDetails.id} />

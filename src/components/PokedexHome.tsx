@@ -74,17 +74,6 @@ const PokedexHome: React.FC = () => {
         />
       )}
 
-      <div className="container mx-auto px-4 py-4 mt-8">
-        <div className="text-sm text-gray-500 flex justify-between">
-          <div>
-            <span className="font-medium">Published:</span> April 1, 2025
-          </div>
-          <div>
-            <span className="font-medium">Last Modified:</span> April 7, 2025
-          </div>
-        </div>
-      </div>
-      
       <Footer />
     </div>
   );

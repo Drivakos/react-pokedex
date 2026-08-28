@@ -20,8 +20,6 @@ export const PokemonPageSEO: React.FC<PokemonPageSEOProps> = ({ pokemonDetails, 
     "@context": "https://schema.org",
     "@type": "VideoGame",
     "name": "Pokémon",
-    "datePublished": "2025-04-01T00:00:00Z",
-    "dateModified": "2025-04-07T00:00:00Z",
     "character": {
       "@type": "Character",
       "name": formattedName,
@@ -55,8 +53,6 @@ export const PokemonPageSEO: React.FC<PokemonPageSEOProps> = ({ pokemonDetails, 
       <meta name="description" content={`Complete guide to ${pokemonDetails.name}, a ${pokemonDetails.types.join('/')} type Pokémon. Learn about its biology, habitat, training tips, evolution methods, competitive strategies, and more.`} />
       <meta name="keywords" content={`${pokemonDetails.name}, Pokémon ${formattedId}, ${pokemonDetails.types.join(', ')} type, Pokédex, Pokémon guide, Pokémon evolution, Pokémon stats, ${pokemonDetails.name} moves, ${pokemonDetails.name} abilities`} />
       <link rel="canonical" href={pokemonUrl} />
-      <meta property="article:published_time" content="2025-04-01T00:00:00Z" />
-      <meta property="article:modified_time" content="2025-04-07T00:00:00Z" />
       <meta property="og:title" content={`${pokemonDetails.name} | Pokémon #${formattedId} | Complete Pokédex Guide`} />
       <meta property="og:description" content={`Complete guide to ${pokemonDetails.name}, a ${pokemonDetails.types.join('/')} type Pokémon.`} />
       <meta property="og:url" content={pokemonUrl} />

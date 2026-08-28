@@ -27,7 +27,7 @@ describe('PokéGrid Integration Tests', () => {
   describe('Grid Generation Integration', () => {
     test('should generate solvable grid configurations', async () => {
       // Mock the constraint generation function
-      const generateSolvableConstraintsForDate = (date: Date) => {
+      const generateSolvableConstraintsForDate = (_date: Date) => {
         return {
           rows: [
             { type: 'type', value: 'fire', label: 'Fire' },
@@ -120,7 +120,7 @@ describe('PokéGrid Integration Tests', () => {
       };
 
       // Simulate the save operation
-      const result = await mockSupabaseClient.rpc('save_pokegrid_configuration', {
+      await mockSupabaseClient.rpc('save_pokegrid_configuration', {
         p_grid_date: '2024-01-01',
         p_configuration: testConfig,
         p_difficulty_level: 'medium',

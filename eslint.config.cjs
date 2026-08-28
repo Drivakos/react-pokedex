@@ -38,7 +38,7 @@ module.exports = [
       '@typescript-eslint/no-unused-expressions': 'off',
       'react-hooks/exhaustive-deps': 'warn',
       'no-useless-escape': 'warn',
-      '@typescript-eslint/no-unused-vars': 'warn',
+      '@typescript-eslint/no-unused-vars': ['warn', { argsIgnorePattern: '^_' }],
       'no-useless-catch': 'warn',
       'prefer-const': 'warn',
       'react-refresh/only-export-components': [

@@ -62,7 +62,6 @@ export const GameStats: React.FC<GameStatsProps> = ({
   totalGuesses,
   maxTotalGuesses,
   bonusRetries = 0,
-  perfectGame = false
 }) => {
   const effectiveMaxGuesses = maxTotalGuesses + bonusRetries;
   const guessesRemaining = effectiveMaxGuesses - totalGuesses;

@@ -1,5 +1,5 @@
 import { useCallback, useMemo } from 'react';
-import { useAuth } from '../contexts/AuthProvider';
+import { useAuth } from './useAuth';
 import { Pokemon } from '../types/pokemon';
 import { useGridStore } from '../store/gridStore';
 import {
@@ -10,18 +10,23 @@ import { GAME_CONSTANTS } from '../components/pokegrid/constants';
 export function usePokegridGame(displayedPokemon: Pokemon[], gameMode: 'daily') {
   const { user } = useAuth();
   const store = useGridStore();
+  const {
+    initializeGame: initializeStoredGame,
+    handlePokemonSelect: selectPokemon,
+    handleUndo: undoLastAction,
+  } = store;
 
   const initializeGame = useCallback(async (date: Date, mode: 'daily' | 'endless') => {
-    return store.initializeGame(date, mode, user, displayedPokemon);
-  }, [user, displayedPokemon, store.initializeGame]);
+    return initializeStoredGame(date, mode, user, displayedPokemon);
+  }, [user, displayedPokemon, initializeStoredGame]);
 
   const handlePokemonSelect = useCallback(async (pokemon: Pokemon) => {
-    return store.handlePokemonSelect(pokemon, user, gameMode);
-  }, [user, gameMode, store.handlePokemonSelect]);
+    return selectPokemon(pokemon, user, gameMode);
+  }, [user, gameMode, selectPokemon]);
 
   const handleUndo = useCallback(async () => {
-    return store.handleUndo(user);
-  }, [user, store.handleUndo]);
+    return undoLastAction(user);
+  }, [user, undoLastAction]);
 
   return useMemo(() => ({
     // State

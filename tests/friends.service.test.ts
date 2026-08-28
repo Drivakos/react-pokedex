@@ -3,9 +3,6 @@
  * Tests for the friends.service.ts functionality
  */
 
-// Mock functions need to be defined with jest.fn() before jest.mock
-const mockRpc = jest.fn();
-const mockFrom = jest.fn();
 const mockSelect = jest.fn();
 const mockEq = jest.fn();
 const mockOrder = jest.fn();

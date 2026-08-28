@@ -354,8 +354,6 @@ describe('Supabase REST Edge Function', () => {
     });
 
     it('should use 24 hour cache for individual Pokemon', async () => {
-      const { fetchWithCache } = require('@netlify/cache');
-
       const request = {
         httpMethod: 'GET',
         path: '/api/pokemon/rest/pokemon/25',
@@ -374,8 +372,6 @@ describe('Supabase REST Edge Function', () => {
     });
 
     it('should use 24 hour cache for moves', async () => {
-      const { fetchWithCache } = require('@netlify/cache');
-
       const request = {
         httpMethod: 'GET',
         path: '/api/pokemon/rest/move/tackle',
@@ -394,8 +390,6 @@ describe('Supabase REST Edge Function', () => {
     });
 
     it('should use 24 hour cache for abilities', async () => {
-      const { fetchWithCache } = require('@netlify/cache');
-
       const request = {
         httpMethod: 'GET',
         path: '/api/pokemon/rest/ability/overgrow',
@@ -414,8 +408,6 @@ describe('Supabase REST Edge Function', () => {
     });
 
     it('should use 24 hour cache for types', async () => {
-      const { fetchWithCache } = require('@netlify/cache');
-
       const request = {
         httpMethod: 'GET',
         path: '/api/pokemon/rest/type/grass',
@@ -434,8 +426,6 @@ describe('Supabase REST Edge Function', () => {
     });
 
     it('should use default cache for Pokemon endpoint', async () => {
-      const { fetchWithCache } = require('@netlify/cache');
-
       const request = {
         httpMethod: 'GET',
         path: '/api/pokemon/rest/pokemon',
@@ -454,8 +444,6 @@ describe('Supabase REST Edge Function', () => {
     });
 
     it('should use default 1 hour cache for other endpoints', async () => {
-      const { fetchWithCache } = require('@netlify/cache');
-
       const request = {
         httpMethod: 'GET',
         path: '/api/pokemon/rest/generation/1',
@@ -476,8 +464,6 @@ describe('Supabase REST Edge Function', () => {
 
   describe('API Response Handling', () => {
     it('should return successful response for valid Pokemon', async () => {
-      const { fetchWithCache } = require('@netlify/cache');
-      
       const mockPokemonData = {
         id: 1,
         name: 'bulbasaur',
@@ -735,4 +721,4 @@ describe('Supabase REST Edge Function', () => {
       );
     });
   });
-}); 
+});

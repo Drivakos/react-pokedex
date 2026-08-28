@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { useAuth } from '../../contexts/AuthProvider';
+import React, { useState, useEffect, useCallback } from 'react';
+import { useAuth } from '../../hooks/useAuth';
 import { pokegridService } from '../../services/pokegrid.service';
 
 interface UserStats {
@@ -25,13 +25,7 @@ export const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose }) => {
   const [stats, setStats] = useState<UserStats | null>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    if (isOpen && user) {
-      loadUserStats();
-    }
-  }, [isOpen, user]);
-
-  const loadUserStats = async () => {
+  const loadUserStats = useCallback(async () => {
     if (!user) return;
     
     setLoading(true);
@@ -44,7 +38,13 @@ export const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose }) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user]);
+
+  useEffect(() => {
+    if (isOpen && user) {
+      void loadUserStats();
+    }
+  }, [isOpen, user, loadUserStats]);
 
   if (!isOpen) return null;
 

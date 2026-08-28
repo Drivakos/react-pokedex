@@ -41,9 +41,7 @@ const Profile: React.FC = () => {
 
   // Sync profile username to form
   useEffect(() => {
-    if (profile && profile.username !== formData.username) {
-      setFormData({ username: profile.username ?? '' });
-    }
+    setFormData({ username: profile?.username ?? '' });
   }, [profile?.username]);
 
   // Load friends & friend code

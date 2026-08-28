@@ -11,18 +11,12 @@ global.fetch = jest.fn();
 
 // Mock Supabase connection for testing (NEVER use real service keys in tests)
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || 'http://127.0.0.1:54321';
-const SUPABASE_ANON_KEY = process.env.VITE_SUPABASE_ANON_KEY || 'mock-anon-key';
 const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || 'mock-service-key';
 
 // Security check: Never allow real Supabase service keys in tests
 if (SUPABASE_SERVICE_KEY && SUPABASE_SERVICE_KEY !== 'mock-service-key' && SUPABASE_SERVICE_KEY.length > 20) {
   throw new Error('SECURITY ERROR: Tests cannot use real Supabase service keys. Use mock keys only.');
 }
-
-// Always return true for testing - use mocks instead of real Supabase
-const checkSupabaseRunning = async () => {
-  return true;
-};
 
 // Simple HTTP client for RPC calls (avoids Supabase client issues in Jest)
 const rpc = async (functionName, params = {}) => {
@@ -243,7 +237,7 @@ describe('Friends Database Functions', () => {
 
     it('send_friend_request should fail with FK error for non-existent users (expected)', async () => {
 
-      const { data, error } = await rpc('send_friend_request', {
+      const { error } = await rpc('send_friend_request', {
         p_sender_id: testUser1Id,
         p_receiver_id: testUser2Id
       });

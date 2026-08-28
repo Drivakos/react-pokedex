@@ -1,7 +1,6 @@
 import React from 'react';
 import { Pokemon } from '../../types/pokemon';
 import { formatName } from '../../utils/helpers';
-import { TYPE_COLORS } from '../../types/pokemon';
 import PokemonImage from '../PokemonImage';
 import type { PopularityData } from '../../services/pokegrid.service';
 

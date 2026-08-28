@@ -143,9 +143,6 @@ describe('Generate Daily Grids Script', () => {
       
       expect(isConstraintCombinationSolvable(fireType, resistWater)).toBe(false);
 
-      // Ghost is immune to Normal
-      const ghostType = { type: 'type', value: 'ghost' };
-      const weakNormal = { type: 'type-effectiveness', value: 'weak-normal' };
       // Note: weak-normal isn't in our current constraints list but the logic should handle it
       // if it were there. Let's test with one that IS there if possible.
       // Actually weak-to-fire is there. Water resists Fire.
@@ -238,8 +235,6 @@ describe('Generate Daily Grids Script', () => {
   describe('Basic Constraint Checking', () => {
     test('should check type constraints correctly', () => {
       const fireConstraint = { type: 'type', value: 'fire' };
-      const waterConstraint = { type: 'type', value: 'water' };
-
       expect(checkBasicConstraints(['fire'], fireConstraint)).toBe(true);
       expect(checkBasicConstraints(['water'], fireConstraint)).toBe(false);
       expect(checkBasicConstraints(['fire', 'flying'], fireConstraint)).toBe(true);
@@ -293,7 +288,7 @@ describe('Generate Daily Grids Script', () => {
       const dateString = typeof date === 'string' ? date : date.toISOString().split('T')[0];
 
       try {
-        const { data, error } = await mockSupabaseClient
+        const { error } = await mockSupabaseClient
           .from('pokegrid_daily_configs')
           .upsert({
             grid_date: dateString,
@@ -410,4 +405,3 @@ describe('Generate Daily Grids Script', () => {
     });
   });
 });
-

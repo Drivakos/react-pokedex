@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { useAuth } from '../../contexts/AuthProvider';
+import React, { useState, useEffect, useCallback } from 'react';
+import { useAuth } from '../../hooks/useAuth';
 import { pokegridService } from '../../services/pokegrid.service';
 import toast from 'react-hot-toast';
 import { Award, LockKeyhole, Medal, Target, Trophy, X, type LucideIcon } from 'lucide-react';
@@ -41,13 +41,7 @@ export const AchievementsModal: React.FC<AchievementsModalProps> = ({
   const [achievements, setAchievements] = useState<Achievement[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    if (isOpen && user) {
-      loadAchievements();
-    }
-  }, [isOpen, user]);
-
-  const loadAchievements = async () => {
+  const loadAchievements = useCallback(async () => {
     setLoading(true);
     try {
       if (!user?.id) {
@@ -64,7 +58,13 @@ export const AchievementsModal: React.FC<AchievementsModalProps> = ({
     } finally {
       setLoading(false);
     }
-  };
+  }, [user?.id]);
+
+  useEffect(() => {
+    if (isOpen && user) {
+      void loadAchievements();
+    }
+  }, [isOpen, user, loadAchievements]);
 
   if (!isOpen) return null;
 

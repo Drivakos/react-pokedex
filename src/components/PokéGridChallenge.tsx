@@ -36,13 +36,14 @@ const PokéGridChallenge: React.FC = () => {
   const gameState = usePokegridGame(displayedPokemon, 'daily');
   const searchState = usePokegridSearch();
   const { currentGame, selectedCell, isLoading } = gameState;
+  const { resetSearch } = searchState;
 
   // Effects
   useEffect(() => {
     if (selectedCell && currentGame) {
-      searchState.resetSearch();
+      resetSearch();
     }
-  }, [selectedCell, currentGame, searchState.resetSearch]);
+  }, [selectedCell, currentGame, resetSearch]);
 
   useEffect(() => {
     // Initialize game on mount or date change, no longer waiting for displayedPokemon

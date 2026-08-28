@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { useAuth } from '../../contexts/AuthProvider';
+import { useAuth } from '../../hooks/useAuth';
 import { friendsService, type UserSearchResult } from '../../services/friends.service';
 import toast from 'react-hot-toast';
 
@@ -248,4 +248,3 @@ export const AddFriendModal: React.FC<AddFriendModalProps> = ({
     </div>
   );
 };
-

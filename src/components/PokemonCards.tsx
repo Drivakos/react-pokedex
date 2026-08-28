@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { getTcgCardImage } from '../utils/helpers';
 
 interface PokemonCard {
@@ -33,6 +33,55 @@ interface CachedData {
   pokemonId: number;
 }
 
+function getCacheKey(pokemonName: string, pokemonId?: number): string {
+  return `${CACHE_KEY_PREFIX}${pokemonId || pokemonName}`;
+}
+
+function clearOldCache(): void {
+  try {
+    const keysToRemove: string[] = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key?.startsWith(CACHE_KEY_PREFIX)) keysToRemove.push(key);
+    }
+    keysToRemove.forEach(key => localStorage.removeItem(key));
+  } catch (error) {
+    console.error('Error clearing cache:', error);
+  }
+}
+
+function loadFromCache(cacheKey: string): CachedData | null {
+  try {
+    const cached = localStorage.getItem(cacheKey);
+    if (!cached) return null;
+
+    const data: CachedData = JSON.parse(cached);
+    if (Date.now() - data.timestamp > CACHE_DURATION) {
+      localStorage.removeItem(cacheKey);
+      return null;
+    }
+    return data;
+  } catch (error) {
+    console.error('Error reading cache:', error);
+    return null;
+  }
+}
+
+function saveToCache(cacheKey: string, cards: PokemonCard[], totalCount: number, pokemonId?: number): void {
+  try {
+    const data: CachedData = {
+      cards,
+      totalCount,
+      timestamp: Date.now(),
+      pokemonId: pokemonId || 0,
+    };
+    localStorage.setItem(cacheKey, JSON.stringify(data));
+  } catch (error) {
+    console.error('Error saving to cache:', error);
+    if (error instanceof Error && error.name === 'QuotaExceededError') clearOldCache();
+  }
+}
+
 const PokemonCards: React.FC<PokemonCardsProps> = ({ pokemonName, pokemonId }) => {
   const [cards, setCards] = useState<PokemonCard[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
@@ -41,15 +90,12 @@ const PokemonCards: React.FC<PokemonCardsProps> = ({ pokemonName, pokemonId }) =
   const [selectedCard, setSelectedCard] = useState<PokemonCard | null>(null);
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [hasMore, setHasMore] = useState<boolean>(true);
-  const [lastFetchedPokemon, setLastFetchedPokemon] = useState<string>('');
-  const [loadedFromCache, setLoadedFromCache] = useState<boolean>(false);
   const [cachedImageUrl, setCachedImageUrl] = useState<string>('');
 
 
   const animationFrameIdRef = useRef<number | null>(null);
   const previousRotationRef = useRef<{ x: number, y: number }>({ x: 0, y: 0 });
   const currentCardRef = useRef<HTMLDivElement | null>(null);
-  const isRequestInProgressRef = useRef<boolean>(false);
 
 
   const getRarityClass = (rarity?: string): string => {
@@ -300,85 +346,16 @@ const PokemonCards: React.FC<PokemonCardsProps> = ({ pokemonName, pokemonId }) =
     }
   };
 
-  // Get cache key for this pokemon
-  const getCacheKey = (id?: number): string => {
-    return `${CACHE_KEY_PREFIX}${id || pokemonName}`;
-  };
-
-  // Load cards from cache
-  const loadFromCache = (): CachedData | null => {
-    try {
-      const cacheKey = getCacheKey(pokemonId);
-      const cached = localStorage.getItem(cacheKey);
-
-      if (!cached) {
-        return null;
-      }
-
-      const data: CachedData = JSON.parse(cached);
-      const now = Date.now();
-      const age = now - data.timestamp;
-
-      if (age > CACHE_DURATION) {
-        localStorage.removeItem(cacheKey);
-        return null;
-      }
-
-      return data;
-    } catch (err) {
-      console.error('Error reading cache:', err);
-      return null;
-    }
-  };
-
-  // Save cards to cache
-  const saveToCache = (cardsData: PokemonCard[], totalCount: number) => {
-    try {
-      const cacheKey = getCacheKey(pokemonId);
-      const data: CachedData = {
-        cards: cardsData,
-        totalCount,
-        timestamp: Date.now(),
-        pokemonId: pokemonId || 0
-      };
-
-      localStorage.setItem(cacheKey, JSON.stringify(data));
-    } catch (err) {
-      console.error('Error saving to cache:', err);
-      // If localStorage is full, try to clear old entries
-      if (err instanceof Error && err.name === 'QuotaExceededError') {
-        clearOldCache();
-      }
-    }
-  };
-
-  // Clear old cache entries
-  const clearOldCache = () => {
-    try {
-      const keysToRemove: string[] = [];
-      for (let i = 0; i < localStorage.length; i++) {
-        const key = localStorage.key(i);
-        if (key && key.startsWith(CACHE_KEY_PREFIX)) {
-          keysToRemove.push(key);
-        }
-      }
-      keysToRemove.forEach(key => localStorage.removeItem(key));
-    } catch (err) {
-      console.error('Error clearing cache:', err);
-    }
-  };
-
   // Modified fetch function to use local JSON mapping
-  const fetchCards = async (page: number = 1, append: boolean = false) => {
+  const fetchCards = useCallback(async (page: number = 1, append: boolean = false) => {
     // Check internal cache first
-      getCacheKey(pokemonId);
-      const cached = loadFromCache();
+    const cacheKey = getCacheKey(pokemonName, pokemonId);
+    const cached = loadFromCache(cacheKey);
     
     if (!append && page === 1 && cached) {
       setCards(cached.cards);
       setHasMore(cached.totalCount > cached.cards.length);
       setLoading(false);
-      setLoadedFromCache(true);
       return;
     }
 
@@ -407,16 +384,17 @@ const PokemonCards: React.FC<PokemonCardsProps> = ({ pokemonName, pokemonId }) =
       const paginatedCards = allPokemonCards.slice(startIndex, endIndex);
       
       if (append) {
-        const updatedCards = [...cards, ...paginatedCards];
-        setCards(updatedCards);
-        saveToCache(updatedCards, allPokemonCards.length);
+        setCards(currentCards => {
+          const updatedCards = [...currentCards, ...paginatedCards];
+          saveToCache(cacheKey, updatedCards, allPokemonCards.length, pokemonId);
+          return updatedCards;
+        });
       } else {
         setCards(paginatedCards);
-        saveToCache(paginatedCards, allPokemonCards.length);
+        saveToCache(cacheKey, paginatedCards, allPokemonCards.length, pokemonId);
       }
 
       setHasMore(allPokemonCards.length > (page * pageSize));
-      setLoadedFromCache(true);
 
     } catch (err: unknown) {
       console.error('Failed to load local TCG cards:', err);
@@ -425,7 +403,7 @@ const PokemonCards: React.FC<PokemonCardsProps> = ({ pokemonName, pokemonId }) =
       setLoading(false);
       setLoadingMore(false);
     }
-  };
+  }, [pokemonId, pokemonName]);
 
   // Load more cards
   const loadMoreCards = () => {
@@ -434,29 +412,13 @@ const PokemonCards: React.FC<PokemonCardsProps> = ({ pokemonName, pokemonId }) =
     fetchCards(nextPage, true);
   };
 
-  // Use a combined key to prevent duplicate calls when both pokemonName and pokemonId change
-  const pokemonKey = `${pokemonName}-${pokemonId}`;
-
   useEffect(() => {
-    // Prevent duplicate requests for the same Pokemon
-    if (pokemonName && pokemonKey !== lastFetchedPokemon) {
-      setLastFetchedPokemon(pokemonKey);
+    if (pokemonName) {
       setCurrentPage(1);
       setHasMore(true);
-      fetchCards(1, false);
+      void fetchCards(1, false);
     }
-
-    return () => {
-      // Reset request flag on cleanup to allow new requests after hot reload
-      isRequestInProgressRef.current = false;
-    };
-  }, [pokemonKey, lastFetchedPokemon]);
-
-  // Debug: Log cache status on mount
-  useEffect(() => {
-    const cacheKey = getCacheKey(pokemonId);
-    const cached = localStorage.getItem(cacheKey);
-  }, [pokemonName, pokemonId]);
+  }, [pokemonName, fetchCards]);
 
   const openCardModal = (card: PokemonCard) => {
     setSelectedCard(card);

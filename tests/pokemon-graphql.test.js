@@ -37,21 +37,6 @@ global.Deno = {
 
 // Create a mock edge function handler that mimics the real behavior
 const createMockHandler = () => {
-  const supabaseMock = {
-    from: jest.fn(() => ({
-      select: jest.fn(() => ({
-        eq: jest.fn(() => ({
-          gt: jest.fn(() => ({
-            single: jest.fn()
-          }))
-        }))
-      })),
-      upsert: jest.fn(() => ({
-        error: null
-      }))
-    }))
-  };
-
   return async (request) => {
     // Handle OPTIONS request for CORS
     if (request.method === 'OPTIONS') {
@@ -689,4 +674,4 @@ describe('Supabase GraphQL Edge Function', () => {
       );
     });
   });
-}); 
+});

@@ -167,7 +167,7 @@ export const useGridStore = create<GridState>()(
       },
 
       handlePokemonSelect: async (pokemon, user, gameMode) => {
-        const { currentGame, selectedCell, bonusRetries, sessionUndos, popularityData, hasRecentMistake, mistakePokemon } = get();
+        const { currentGame, selectedCell, bonusRetries, sessionUndos, popularityData } = get();
         if (!currentGame || !selectedCell) return;
 
         const isAlreadyUsed = currentGame.cells.some(

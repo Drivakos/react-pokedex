@@ -77,7 +77,7 @@ describe('Grid Generation Error Handling', () => {
         const dateString = typeof date === 'string' ? date : date.toISOString().split('T')[0];
 
         try {
-          const { data, error } = await mockSupabaseClient
+          const { error } = await mockSupabaseClient
             .from('pokegrid_daily_configs')
             .upsert({
               grid_date: dateString,
@@ -126,7 +126,7 @@ describe('Grid Generation Error Handling', () => {
         const dateString = typeof date === 'string' ? date : date.toISOString().split('T')[0];
 
         try {
-          const { data, error } = await mockSupabaseClient
+          const { error } = await mockSupabaseClient
             .from('pokegrid_daily_configs')
             .upsert({
               grid_date: dateString,
@@ -220,7 +220,7 @@ describe('Grid Generation Error Handling', () => {
         const dateString = typeof date === 'string' ? date : date.toISOString().split('T')[0];
 
         try {
-          const { data, error } = await mockSupabaseClient
+          const { error } = await mockSupabaseClient
             .from('pokegrid_daily_configs')
             .upsert({
               grid_date: dateString,
@@ -274,7 +274,7 @@ describe('Grid Generation Error Handling', () => {
       const saveGridConfiguration = async (date, constraints) => {
         const dateString = typeof date === 'string' ? date : date.toISOString().split('T')[0];
 
-        const { data, error } = await mockSupabaseClient
+        const { error } = await mockSupabaseClient
           .from('pokegrid_daily_configs')
           .upsert({
             grid_date: dateString,

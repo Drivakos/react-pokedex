@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Pokemon } from '../../types/pokemon';
 import { GridConstraint } from './types';
 import { checkConstraint } from '../../utils/pokegrid-game.utils';
@@ -37,13 +37,7 @@ export const HintModal: React.FC<HintModalProps> = ({
   const [hintData, setHintData] = useState<HintData | null>(null);
   const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    if (isOpen && selectedCell) {
-      generateHint();
-    }
-  }, [isOpen, selectedCell]);
-
-  const generateHint = async () => {
+  const generateHint = useCallback(async () => {
     if (!selectedCell) return;
     
     setLoading(true);
@@ -119,7 +113,13 @@ export const HintModal: React.FC<HintModalProps> = ({
     });
 
     setLoading(false);
-  };
+  }, [allPokemon, selectedCell]);
+
+  useEffect(() => {
+    if (isOpen && selectedCell) {
+      void generateHint();
+    }
+  }, [isOpen, selectedCell, generateHint]);
 
   const handleUseHint = () => {
     onHintUsed();

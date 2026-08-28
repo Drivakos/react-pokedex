@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { useAuth } from '../../contexts/AuthProvider';
+import { useAuth } from '../../hooks/useAuth';
 import { friendsService, type Friend, type FriendRequest, type UserSearchResult } from '../../services/friends.service';
 import { FriendsList } from './FriendsList';
 import { FriendRequests } from './FriendRequests';
@@ -37,7 +37,7 @@ export const FriendsModal: React.FC<FriendsModalProps> = ({ isOpen, onClose, ini
     }
   }, [isOpen, initialTab]);
 
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     if (!user) return;
 
     setLoading(true);
@@ -55,7 +55,7 @@ export const FriendsModal: React.FC<FriendsModalProps> = ({ isOpen, onClose, ini
     } finally {
       setLoading(false);
     }
-  };
+  }, [user]);
 
   // Perform search with the given query
   const performSearch = useCallback(async (query: string) => {
@@ -136,7 +136,7 @@ export const FriendsModal: React.FC<FriendsModalProps> = ({ isOpen, onClose, ini
       setSearchResults([]);
       lastSearchedQueryRef.current = '';
     }
-  }, [isOpen, user]);
+  }, [isOpen, user, loadData]);
 
   const handleAcceptRequest = async (requestId: number) => {
     if (!user) return;
@@ -418,4 +418,3 @@ export const FriendsModal: React.FC<FriendsModalProps> = ({ isOpen, onClose, ini
     </div>
   );
 };
-

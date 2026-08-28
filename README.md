@@ -18,7 +18,7 @@ The technically distinctive part is the battle platform: Pokémon Showdown's sim
 - **Animation-aware game pacing.** The worker can resolve a turn immediately, but decisions and results are released only after the Showdown scene's real animation queue becomes idle.
 - **Deterministic multiplayer lockstep.** Both players simulate the same seeded battle locally while Supabase acts as a durable choice rendezvous and reconnect log.
 - **Production-oriented backend.** Supabase Auth, PostgreSQL Row Level Security, Realtime, migrations, Netlify Functions, Upstash Redis, scheduled jobs, and Sentry support the client application.
-- **Substantial automated coverage.** The current suite contains **631 passing tests across 65 suites**, split into frontend, backend, and integration Jest projects.
+- **Substantial automated coverage.** The current suite contains **623 passing tests across 66 suites**, split into frontend, backend, and integration Jest projects.
 
 ## Product areas
 
@@ -88,11 +88,11 @@ flowchart LR
 
 ## Quality and delivery
 
-At version **1.22.2**, the repository passes:
+At version **1.23.1**, the repository passes:
 
 ```text
-Test Suites: 65 passed, 65 total
-Tests:       631 passed, 631 total
+Test Suites: 66 passed, 66 total
+Tests:       623 passed, 623 total
 TypeScript:  passed
 Build:       passed
 ```
