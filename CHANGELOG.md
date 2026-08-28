@@ -1,3 +1,10 @@
+## [1.22.2](https://github.com/Drivakos/react-pokedex/compare/v1.22.1...v1.22.2) (2026-08-28)
+
+
+### Bug Fixes
+
+* auto-resolve forced VS battle turns ([79eab82](https://github.com/Drivakos/react-pokedex/commit/79eab829eb38f4578d5bffcf49a9b6ad577b12f0))
+
 ## [1.22.1](https://github.com/Drivakos/react-pokedex/compare/v1.22.0...v1.22.1) (2026-08-28)
 
 
