@@ -8,6 +8,58 @@ import type {
   RawMoveEffectText,
 } from '../../types/api';
 
+export interface MovePreviewDetails {
+  name: string;
+  type: string;
+  damageClass: 'physical' | 'special' | 'status';
+  power: number | null;
+}
+
+/** Loads the compact metadata needed to decorate saved moves in team previews. */
+export const fetchMovePreviewDetails = async (moveNames: string[]): Promise<MovePreviewDetails[]> => {
+  const names = [...new Set(moveNames.map(name => name.trim().toLowerCase()).filter(Boolean))].sort();
+  if (names.length === 0) return [];
+
+  const cacheKey = `${CACHE_KEYS.MOVE_DETAILS}preview:${names.join(',')}`;
+  return cacheAside(cacheKey, async () => {
+    const query = `
+      query GetMovePreviewDetails($moveNames: [String!]!) {
+        pokemon_v2_move(where: { name: { _in: $moveNames } }) {
+          name
+          power
+          type: pokemon_v2_type { name }
+          damage_class: pokemon_v2_movedamageclass { name }
+        }
+      }
+    `;
+
+    const response = await fetch(GRAPHQL_ENDPOINT, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ query, variables: { moveNames: names } }),
+    });
+    const data = await handleGraphQLResponse<{
+      pokemon_v2_move: Array<{
+        name: string;
+        power: number | null;
+        type: { name: string } | null;
+        damage_class: { name: string } | null;
+      }>;
+    }>(response);
+
+    return data.pokemon_v2_move.flatMap(move => {
+      const damageClass = move.damage_class?.name;
+      if (!move.type?.name || !damageClass || !['physical', 'special', 'status'].includes(damageClass)) return [];
+      return [{
+        name: move.name,
+        type: move.type.name,
+        damageClass: damageClass as MovePreviewDetails['damageClass'],
+        power: move.power,
+      }];
+    });
+  }, CACHE_TTL.POKEMON);
+};
+
 /**
  * Fetches Pokemon moves for moveset editor
  */
