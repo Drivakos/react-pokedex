@@ -1,3 +1,10 @@
+# [1.22.0](https://github.com/Drivakos/react-pokedex/compare/v1.21.0...v1.22.0) (2026-08-28)
+
+
+### Features
+
+* invite online friends to VS battles ([fcd1b2f](https://github.com/Drivakos/react-pokedex/commit/fcd1b2fd2a3d1d8da38e3b3a631b0e9bf7f1493e))
+
 # [1.21.0](https://github.com/Drivakos/react-pokedex/compare/v1.20.0...v1.21.0) (2026-08-27)
 
 
