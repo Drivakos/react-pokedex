@@ -1,3 +1,10 @@
+# [1.25.0](https://github.com/Drivakos/react-pokedex/compare/v1.24.0...v1.25.0) (2026-08-29)
+
+
+### Features
+
+* organize profile into tabs ([8f24a5c](https://github.com/Drivakos/react-pokedex/commit/8f24a5c1cf9435e11b4c2f015d704fd1dde62c98))
+
 # [1.24.0](https://github.com/Drivakos/react-pokedex/compare/v1.23.2...v1.24.0) (2026-08-29)
 
 
