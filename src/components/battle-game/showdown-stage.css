@@ -7,6 +7,9 @@
    battle scene takes the full width. */
 .showdown-log-col {
   display: none;
+  /* .battle-log is absolutely positioned by Showdown. Keep that positioning
+     inside the desktop log column instead of letting it cover the viewport. */
+  position: relative;
 }
 @media (min-width: 1280px) {
   .showdown-log-col {
