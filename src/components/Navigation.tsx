@@ -77,7 +77,7 @@ const Navigation: React.FC = () => {
             </div>
           </div>
           
-          <div className="hidden sm:ml-6 sm:flex sm:items-center">
+          <div className="navigation-desktop-actions sm:ml-6">
             {/* Games Menu */}
             <div className="relative mr-4 games-menu">
               <button
@@ -154,7 +154,7 @@ const Navigation: React.FC = () => {
             )}
           </div>
           
-          <div className="flex items-center sm:hidden">
+          <div className="navigation-mobile-actions">
             {/* Mobile Games Menu */}
             <div className="relative mr-2 games-menu">
               <button

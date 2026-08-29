@@ -2,6 +2,29 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Keep the account/game actions stable across Tailwind rebuilds. This project has
+   seen the base `hidden` utility emitted after responsive display variants, which
+   can make `hidden sm:flex` hide both header variants at desktop widths. */
+.navigation-desktop-actions {
+  display: none;
+  align-items: center;
+}
+
+.navigation-mobile-actions {
+  display: flex;
+  align-items: center;
+}
+
+@media (min-width: 640px) {
+  .navigation-desktop-actions {
+    display: flex;
+  }
+
+  .navigation-mobile-actions {
+    display: none;
+  }
+}
+
 .battle-run-theme {
   --battle-panel-surface: rgba(255, 255, 255, 0.94);
   --battle-panel-border: #e2e8f0;
