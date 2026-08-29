@@ -1,3 +1,10 @@
+## [1.25.1](https://github.com/Drivakos/react-pokedex/compare/v1.25.0...v1.25.1) (2026-08-29)
+
+
+### Bug Fixes
+
+* contain desktop replay log ([a224567](https://github.com/Drivakos/react-pokedex/commit/a22456793f7d14d772620ec2ae59b34dcda36e0e))
+
 # [1.25.0](https://github.com/Drivakos/react-pokedex/compare/v1.24.0...v1.25.0) (2026-08-29)
 
 
