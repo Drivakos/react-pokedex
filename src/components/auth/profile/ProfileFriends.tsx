@@ -15,7 +15,7 @@ export const ProfileFriends: React.FC<ProfileFriendsProps> = ({
   onCopyCode
 }) => {
   return (
-    <div className="bg-white rounded-lg shadow p-6">
+    <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-lg font-bold text-gray-900">
           Friends {friends.length > 0 && <span className="text-sm font-normal text-gray-500">({friends.length})</span>}

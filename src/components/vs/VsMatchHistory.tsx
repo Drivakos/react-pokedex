@@ -4,7 +4,7 @@ import { History, Play, RefreshCw } from 'lucide-react';
 import { getVsMatchHistory } from '../../services/vs-match.service';
 import type { VsMatchHistoryItem } from '../../types/vs';
 
-export function VsMatchHistory({ userId }: { userId: string }) {
+export function VsMatchHistory({ userId, embedded = false }: { userId: string; embedded?: boolean }) {
   const [matches, setMatches] = useState<VsMatchHistoryItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -26,11 +26,11 @@ export function VsMatchHistory({ userId }: { userId: string }) {
   }, []);
 
   return (
-    <section className="mt-8 rounded-2xl bg-white p-6 shadow-lg sm:p-8" aria-labelledby="vs-history-title">
+    <section className={`${embedded ? '' : 'mt-8'} rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8`} aria-labelledby="vs-history-title">
       <div className="flex items-center justify-between gap-3">
         <div>
           <h2 id="vs-history-title" className="flex items-center gap-2 text-xl font-black text-slate-900">
-            <History size={20} className="text-red-600" aria-hidden="true" /> Battle history
+            <History size={20} className="text-red-600" aria-hidden="true" /> VS match history
           </h2>
           <p className="mt-1 text-sm text-slate-500">Completed matches are saved and can be watched again.</p>
         </div>

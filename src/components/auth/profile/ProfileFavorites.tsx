@@ -13,7 +13,7 @@ export const ProfileFavorites: React.FC<ProfileFavoritesProps> = ({
   onBrowse
 }) => {
   return (
-    <div className="bg-white rounded-lg shadow p-6">
+    <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
       <h2 className="text-lg font-bold text-gray-900 mb-4">Favorites</h2>
       {favoritePokemonIds.length === 0 ? (
         <p className="text-gray-500 text-sm">No favorites yet. <button onClick={onBrowse} className="text-blue-500 hover:underline">Browse Pokémon</button></p>

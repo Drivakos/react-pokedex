@@ -16,7 +16,7 @@ export const ProfileTeams: React.FC<ProfileTeamsProps> = ({
   onNavigateToTeam
 }) => {
   return (
-    <div className="bg-white rounded-lg shadow p-6">
+    <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-lg font-bold text-gray-900">Teams</h2>
         <button onClick={onManage} className="text-blue-500 hover:text-blue-600 text-sm font-medium">

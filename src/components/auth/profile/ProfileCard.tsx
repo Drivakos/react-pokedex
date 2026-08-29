@@ -27,9 +27,12 @@ export const ProfileCard: React.FC<ProfileCardProps> = ({
   onSubmit
 }) => {
   return (
-    <div className="bg-white rounded-lg shadow p-6">
+    <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
       <div className="flex justify-between items-center mb-4">
-        <h2 className="text-xl font-bold text-gray-900">Profile</h2>
+        <div>
+          <p className="text-xs font-black uppercase tracking-wider text-slate-400">Account</p>
+          <h2 className="text-xl font-black text-slate-900">Profile settings</h2>
+        </div>
         <button onClick={onSignOut} className="text-red-500 hover:text-red-700 text-sm font-medium">
           Sign Out
         </button>
@@ -74,12 +77,12 @@ export const ProfileCard: React.FC<ProfileCardProps> = ({
                 type="text"
                 value={formData.username}
                 onChange={(e) => setFormData({ username: e.target.value })}
-                className="w-full p-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full rounded-lg border border-slate-300 p-2.5 focus:border-red-500 focus:ring-2 focus:ring-red-200"
               />
             </div>
             <button
               type="submit"
-              className="w-full bg-blue-500 hover:bg-blue-600 text-white py-2 rounded font-medium"
+              className="w-full rounded-lg bg-slate-900 py-2.5 font-bold text-white hover:bg-slate-700"
             >
               Save
             </button>
