@@ -1,3 +1,10 @@
+## [1.23.2](https://github.com/Drivakos/react-pokedex/compare/v1.23.1...v1.23.2) (2026-08-29)
+
+
+### Bug Fixes
+
+* keep header actions visible ([06fcab1](https://github.com/Drivakos/react-pokedex/commit/06fcab1590d40762ac9619fc4f6a5678b27c61b3))
+
 ## [1.23.1](https://github.com/Drivakos/react-pokedex/compare/v1.23.0...v1.23.1) (2026-08-28)
 
 
