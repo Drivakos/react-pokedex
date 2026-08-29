@@ -85,4 +85,26 @@ export interface VsInvitePreview {
   hostName: string;
   isHost: boolean;
   rulesVersion: string;
+  headToHead: VsHeadToHeadRecord;
+}
+
+export interface VsHeadToHeadRecord {
+  opponentUserId: string;
+  opponentName: string;
+  totalBattles: number;
+  userWins: number;
+  opponentWins: number;
+  ties: number;
+  lastPlayedAt: string | null;
+}
+
+export interface VsMatchHistoryItem {
+  matchId: string;
+  opponentUserId: string;
+  opponentName: string;
+  winnerUserId: string | null;
+  finishReason: string | null;
+  finishedAt: string;
+  userTeamName: string;
+  opponentTeamName: string;
 }

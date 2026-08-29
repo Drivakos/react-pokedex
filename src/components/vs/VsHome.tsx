@@ -5,13 +5,14 @@ import { useAuth } from '../../hooks/useAuth';
 import { getVsFriendsPresence, type VsFriendPresence } from '../../services/presence.service';
 import { useVsMatchStore } from '../../store/vsMatchStore';
 import { VsFriendPicker } from './VsFriendPicker';
+import { VsMatchHistory } from './VsMatchHistory';
 import { VsTeamPicker } from './VsTeamPicker';
 import { resolveVsSelectedTeamId } from './vs-team-selection';
 import { getVsTeamErrors } from './vs-team-validation';
 
 export default function VsHome() {
   const navigate = useNavigate();
-  const { teams, teamsLoaded, teamsError, fetchTeams } = useAuth();
+  const { user, teams, teamsLoaded, teamsError, fetchTeams } = useAuth();
   const { createInvite, createFriendInvite, loading, error, clearError } = useVsMatchStore();
   const [selectedTeamId, setSelectedTeamId] = useState<number | null>(null);
   const [friends, setFriends] = useState<VsFriendPresence[]>([]);
@@ -209,6 +210,7 @@ export default function VsHome() {
             {loading ? 'Creating invite…' : 'Create invite link'}
           </button>
         </section>
+        {user && <VsMatchHistory userId={user.id} />}
       </div>
     </main>
   );

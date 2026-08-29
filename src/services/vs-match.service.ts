@@ -6,7 +6,9 @@ import type {
   VsChoicePair,
   VsChoiceSubmission,
   VsInvitePreview,
+  VsHeadToHeadRecord,
   VsMatch,
+  VsMatchHistoryItem,
 } from '../types/vs';
 
 function throwRpcError(error: { message: string } | null): void {
@@ -74,6 +76,20 @@ export async function getVsMatch(matchId: string): Promise<VsMatch> {
     .single();
   if (error) throw new Error(error.message);
   return addParticipantNames(data as VsMatch);
+}
+
+export async function getVsHeadToHead(otherUserId: string): Promise<VsHeadToHeadRecord> {
+  const { data, error } = await supabase.rpc('get_vs_head_to_head', {
+    p_other_user_id: otherUserId,
+  });
+  throwRpcError(error);
+  return data as VsHeadToHeadRecord;
+}
+
+export async function getVsMatchHistory(limit = 20): Promise<VsMatchHistoryItem[]> {
+  const { data, error } = await supabase.rpc('get_vs_match_history', { p_limit: limit });
+  throwRpcError(error);
+  return (data ?? []) as VsMatchHistoryItem[];
 }
 
 export async function setVsReady(matchId: string, ready: boolean): Promise<VsMatch> {

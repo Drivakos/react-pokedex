@@ -3,9 +3,11 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import { Check, Copy, Link2, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useAuth } from '../../hooks/useAuth';
-import { getSavedInviteToken } from '../../services/vs-match.service';
+import { getSavedInviteToken, getVsHeadToHead } from '../../services/vs-match.service';
 import { useVsMatchStore } from '../../store/vsMatchStore';
+import type { VsHeadToHeadRecord } from '../../types/vs';
 import { VsBattle } from './VsBattle';
+import { VsHeadToHead } from './VsHeadToHead';
 
 export default function VsMatch() {
   const { matchId = '' } = useParams<{ matchId: string }>();
@@ -13,6 +15,7 @@ export default function VsMatch() {
   const { user } = useAuth();
   const { match, loading, error, loadMatch, setReady, cancelInvite, subscribe } = useVsMatchStore();
   const [loadedMatchId, setLoadedMatchId] = useState<string | null>(null);
+  const [headToHead, setHeadToHead] = useState<VsHeadToHeadRecord | null>(null);
 
   useEffect(() => {
     if (!matchId) return;
@@ -30,9 +33,30 @@ export default function VsMatch() {
   }, [loadMatch, matchId, subscribe]);
 
   const isHost = match?.host_user_id === user?.id;
+  const opponentUserId = match && user
+    ? isHost ? match.guest_user_id || match.invited_user_id : match.host_user_id
+    : null;
   const localReady = isHost ? match?.host_ready : match?.guest_ready;
   const token = match ? getSavedInviteToken(match.id) : null;
   const inviteUrl = useMemo(() => token ? `${window.location.origin}/vs/invite/${token}` : null, [token]);
+
+  useEffect(() => {
+    if (!opponentUserId) {
+      setHeadToHead(null);
+      return;
+    }
+    let active = true;
+    void getVsHeadToHead(opponentUserId)
+      .then(record => {
+        if (active) setHeadToHead(record);
+      })
+      .catch(() => {
+        if (active) setHeadToHead(null);
+      });
+    return () => {
+      active = false;
+    };
+  }, [opponentUserId]);
 
   const copyInvite = useCallback(async () => {
     if (!inviteUrl) return;
@@ -94,7 +118,12 @@ export default function VsMatch() {
         <div className="mx-auto max-w-lg rounded-xl bg-white p-8 text-center shadow">
           <h1 className="text-2xl font-black text-slate-900">{title}</h1>
           {detail && <p className="mt-2 text-sm text-slate-600">{detail}</p>}
-          <Link to="/vs" className="mt-5 inline-block rounded-lg bg-red-600 px-5 py-2 font-bold text-white">Back to VS</Link>
+          <div className="mt-5 flex flex-col justify-center gap-3 sm:flex-row">
+            {match.status === 'finished' && match.battle_seed && (
+              <Link to={`/vs/replay/${match.id}`} className="inline-block rounded-lg bg-slate-900 px-5 py-2 font-bold text-white">Watch replay</Link>
+            )}
+            <Link to="/vs" className="inline-block rounded-lg bg-red-600 px-5 py-2 font-bold text-white">Back to VS</Link>
+          </div>
         </div>
       </main>
     );
@@ -109,6 +138,7 @@ export default function VsMatch() {
         </header>
 
         <section className="rounded-2xl bg-white p-6 shadow-lg sm:p-8">
+          {headToHead && <div className="mb-6"><VsHeadToHead record={headToHead} /></div>}
           <div className="grid gap-4 sm:grid-cols-2">
             <TrainerCard
               name={match.hostName || 'Host'}

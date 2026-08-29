@@ -4,6 +4,7 @@ import { Swords } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { useVsMatchStore } from '../../store/vsMatchStore';
 import { VsTeamPicker } from './VsTeamPicker';
+import { VsHeadToHead } from './VsHeadToHead';
 import { resolveVsSelectedTeamId } from './vs-team-selection';
 import { getVsTeamErrors } from './vs-team-validation';
 
@@ -80,6 +81,7 @@ export default function VsInvite() {
 
         {invitePreview && !unavailable && !invitePreview.isHost && (
           <>
+            {invitePreview.headToHead && <div className="mb-5"><VsHeadToHead record={invitePreview.headToHead} /></div>}
             <div className="mb-5 rounded-lg bg-slate-50 p-4 text-sm text-slate-600">
               Gen 9 Custom Game · All Pokémon are normalized to level 50 · Casual battle
             </div>

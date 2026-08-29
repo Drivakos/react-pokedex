@@ -16,11 +16,16 @@ jest.mock('react-router-dom', () => ({
 
 jest.mock('../../../hooks/useAuth', () => ({
   useAuth: () => ({
+    user: { id: 'user-1' },
     teams: [],
     teamsLoaded: true,
     teamsError: null,
     fetchTeams: jest.fn(),
   }),
+}));
+
+jest.mock('../../../services/vs-match.service', () => ({
+  getVsMatchHistory: jest.fn().mockResolvedValue([]),
 }));
 
 jest.mock('../../../services/presence.service', () => ({

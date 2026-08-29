@@ -21,6 +21,7 @@ const BattleAnimLab = React.lazy(() => import('./components/battle-anim-lab/Batt
 const VsHome = React.lazy(() => import('./components/vs/VsHome'));
 const VsInvite = React.lazy(() => import('./components/vs/VsInvite'));
 const VsMatch = React.lazy(() => import('./components/vs/VsMatch'));
+const VsReplay = React.lazy(() => import('./components/vs/VsReplay'));
 
 const LoadingFallback = ({ message = 'Loading...' }: { message?: string }) => (
   <div className="min-h-screen flex items-center justify-center bg-gray-50">
@@ -76,6 +77,11 @@ function AppContent() {
           <Route path="/vs/match/:matchId" element={
             <ProtectedRoute>
               <div data-testid="vs-match"><VsMatch /></div>
+            </ProtectedRoute>
+          } />
+          <Route path="/vs/replay/:matchId" element={
+            <ProtectedRoute>
+              <div data-testid="vs-replay"><VsReplay /></div>
             </ProtectedRoute>
           } />
           <Route path="/battle-anim-lab" element={<BattleAnimLab />} />
