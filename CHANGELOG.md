@@ -1,3 +1,10 @@
+# [1.24.0](https://github.com/Drivakos/react-pokedex/compare/v1.23.2...v1.24.0) (2026-08-29)
+
+
+### Features
+
+* add VS battle history and replays ([2b978f1](https://github.com/Drivakos/react-pokedex/commit/2b978f14fef130d6e52ab8731c61f80bb2f1be05))
+
 ## [1.23.2](https://github.com/Drivakos/react-pokedex/compare/v1.23.1...v1.23.2) (2026-08-29)
 
 
