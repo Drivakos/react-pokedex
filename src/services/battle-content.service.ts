@@ -24,11 +24,15 @@ interface BattleCatalogPokemon {
 
 interface BattlePokemonBuild {
   name: string;
+  source: 'smogon' | 'generated';
+  format: string;
   ability: string;
   moves: string[];
   item: string;
   nature: string;
   evs: PokemonStatSpread;
+  ivs?: PokemonStatSpread;
+  teraType?: string;
 }
 
 interface BattleProgressionEntry {
@@ -64,8 +68,12 @@ function materializePokemon(
     bst: pokemon.bst,
     ...((build?.item ?? pokemon.item) ? { item: build?.item ?? pokemon.item } : {}),
     ...(build ? { buildName: build.name } : {}),
+    ...(build?.source ? { buildSource: build.source } : {}),
+    ...(build?.format ? { buildFormat: build.format } : {}),
     ...(build?.nature ? { nature: build.nature } : {}),
     ...(build?.evs ? { evs: { ...build.evs } } : {}),
+    ...(build?.ivs ? { ivs: { ...build.ivs } } : {}),
+    ...(build?.teraType ? { teraType: build.teraType } : {}),
     level,
     ...(pokemon.isMega ? { isMega: true, baseSpecies } : {}),
   };

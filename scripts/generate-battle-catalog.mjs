@@ -1,4 +1,4 @@
-import { mkdir, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { Dex } from '@pkmn/sim';
 
@@ -6,6 +6,52 @@ const dex = Dex.forGen(9);
 const output = fileURLToPath(new URL('../src/data/battle-pokemon-catalog.json', import.meta.url));
 const progressionOutput = fileURLToPath(new URL('../src/data/battle-pokemon-progression.json', import.meta.url));
 const itemDescriptionsOutput = fileURLToPath(new URL('../src/data/battle-item-descriptions.json', import.meta.url));
+const SMOGON_SETS_URL = 'https://data.pkmn.cc/sets/gen9.json';
+const smogonSetsFile = process.env.BATTLE_SMOGON_SETS_FILE;
+
+const STANDARD_SMOGON_FORMATS = [
+  'ubers',
+  'ou',
+  'uu',
+  'ru',
+  'nu',
+  'pu',
+  'zu',
+  'lc',
+  'nfe',
+  'ubersuu',
+  'monotype',
+  'battlestadiumsingles',
+  '1v1',
+  'anythinggoes',
+];
+
+const SMOGON_FORMAT_BY_TIER = {
+  AG: 'anythinggoes',
+  Uber: 'ubers',
+  '(Uber)': 'ubers',
+  OU: 'ou',
+  '(OU)': 'ou',
+  UUBL: 'ou',
+  UU: 'uu',
+  RUBL: 'uu',
+  RU: 'ru',
+  NUBL: 'ru',
+  NU: 'nu',
+  '(NU)': 'nu',
+  PUBL: 'nu',
+  PU: 'pu',
+  '(PU)': 'pu',
+  ZUBL: 'pu',
+  ZU: 'zu',
+  LC: 'lc',
+  NFE: 'nfe',
+};
+
+const EMPTY_EVS = { hp: 0, atk: 0, def: 0, spa: 0, spd: 0, spe: 0 };
+const MAX_IVS = { hp: 31, atk: 31, def: 31, spa: 31, spd: 31, spe: 31 };
+
+let smogonData = {};
 
 const species = dex.species.all().filter(entry => (
   entry.exists &&
@@ -510,7 +556,7 @@ function trainingForBuild(name, moves, entry) {
   return { nature: fast ? 'Timid' : 'Modest', evs };
 }
 
-function pickBuilds(entry) {
+function pickGeneratedBuilds(entry) {
   const pool = buildMovePool(entry);
   const find = id => pool.find(move => move.id === id);
   const firstAvailable = ids => ids.map(find).find(Boolean) ?? null;
@@ -619,6 +665,82 @@ function pickBuilds(entry) {
   return builds.slice(0, 4);
 }
 
+function first(value) {
+  return Array.isArray(value) ? value[0] : value;
+}
+
+function normalizeSpread(spread, defaults) {
+  const selected = first(spread);
+  return selected && typeof selected === 'object'
+    ? { ...defaults, ...selected }
+    : { ...defaults };
+}
+
+function formatsForSmogonEntry(entry) {
+  if (entry.isMega) {
+    return ['nationaldex', 'nationaldexuu', 'nationaldexru', 'nationaldexubers'];
+  }
+
+  const nativeFormat = SMOGON_FORMAT_BY_TIER[entry.tier];
+  return [...new Set([nativeFormat, ...STANDARD_SMOGON_FORMATS].filter(Boolean))];
+}
+
+function rawSmogonSetsForEntry(entry, format) {
+  const sourceSpecies = entry.isMega ? entry.baseSpecies : entry.name;
+  const formatSets = smogonData[sourceSpecies]?.[format];
+  if (!formatSets) return [];
+
+  return Object.entries(formatSets).filter(([, set]) => {
+    if (!entry.isMega) return true;
+    const item = first(set.item);
+    return entry.requiredItems?.includes(item) || entry.requiredItem === item;
+  });
+}
+
+function pickSmogonBuilds(entry) {
+  for (const format of formatsForSmogonEntry(entry)) {
+    const sets = rawSmogonSetsForEntry(entry, format);
+    if (sets.length === 0) continue;
+
+    const builds = sets.flatMap(([name, set]) => {
+      const moves = (set.moves ?? [])
+        .map(first)
+        .filter(move => typeof move === 'string' && dex.moves.get(move).exists)
+        .slice(0, 4);
+      if (moves.length === 0) return [];
+
+      const ability = first(set.ability) ?? chooseAbility(entry, moves);
+      const item = first(set.item) ?? itemForBuild(name, moves, entry, ability);
+      return [{
+        name,
+        source: 'smogon',
+        format: `gen9${format}`,
+        ability,
+        moves,
+        item,
+        nature: first(set.nature) ?? trainingForBuild(name, moves, entry).nature,
+        evs: normalizeSpread(set.evs, EMPTY_EVS),
+        ivs: normalizeSpread(set.ivs, MAX_IVS),
+        ...(first(set.teratypes) ? { teraType: first(set.teratypes) } : {}),
+      }];
+    });
+
+    if (builds.length > 0) return builds.slice(0, 4);
+  }
+
+  return [];
+}
+
+function pickBuilds(entry) {
+  const smogonBuilds = pickSmogonBuilds(entry);
+  if (smogonBuilds.length > 0) return smogonBuilds;
+  return pickGeneratedBuilds(entry).map(build => ({
+    ...build,
+    source: 'generated',
+    format: 'gen9customgame',
+  }));
+}
+
 function toCatalogPokemon(entry) {
   const builds = pickBuilds(entry);
   const primary = builds[0];
@@ -634,32 +756,45 @@ function toCatalogPokemon(entry) {
   };
 }
 
-const catalog = species.map(toCatalogPokemon);
-const catalogSpecies = new Set(catalog.map(entry => entry.species));
-const progression = Object.fromEntries(species.flatMap(entry => {
-  const evolutions = entry.evos.filter(evolution => catalogSpecies.has(evolution));
-  const megas = (entry.otherFormes ?? [])
-    .map(form => dex.species.get(form))
-    .filter(form => form.exists && form.forme.startsWith('Mega'))
-    .map(form => ({ ...toCatalogPokemon(form), isMega: true }));
+async function loadSmogonData() {
+  if (smogonSetsFile) {
+    return JSON.parse(await readFile(smogonSetsFile, 'utf8'));
+  }
 
-  return evolutions.length > 0 || megas.length > 0
-    ? [[entry.name, { evolutions, megas }]]
-    : [];
-}));
-const generatedPokemon = [
-  ...catalog,
-  ...Object.values(progression).flatMap(entry => entry.megas),
-];
-const generatedItemNames = [...new Set(generatedPokemon.flatMap(pokemon => (
-  pokemon.builds.map(build => build.item)
-)))].sort();
-const itemDescriptions = Object.fromEntries(generatedItemNames.map(itemName => {
-  const item = dex.items.get(itemName);
-  return [itemName, item.shortDesc || item.desc || 'This Pokémon is holding this item.'];
-}));
+  const response = await fetch(SMOGON_SETS_URL);
+  if (!response.ok) {
+    throw new Error(`Smogon sets returned ${response.status}`);
+  }
+  return response.json();
+}
 
 async function main() {
+  smogonData = await loadSmogonData();
+  const catalog = species.map(toCatalogPokemon);
+  const catalogSpecies = new Set(catalog.map(entry => entry.species));
+  const progression = Object.fromEntries(species.flatMap(entry => {
+    const evolutions = entry.evos.filter(evolution => catalogSpecies.has(evolution));
+    const megas = (entry.otherFormes ?? [])
+      .map(form => dex.species.get(form))
+      .filter(form => form.exists && form.forme.startsWith('Mega'))
+      .map(form => ({ ...toCatalogPokemon(form), isMega: true }));
+
+    return evolutions.length > 0 || megas.length > 0
+      ? [[entry.name, { evolutions, megas }]]
+      : [];
+  }));
+  const generatedPokemon = [
+    ...catalog,
+    ...Object.values(progression).flatMap(entry => entry.megas),
+  ];
+  const generatedItemNames = [...new Set(generatedPokemon.flatMap(pokemon => (
+    pokemon.builds.map(build => build.item)
+  )))].sort();
+  const itemDescriptions = Object.fromEntries(generatedItemNames.map(itemName => {
+    const item = dex.items.get(itemName);
+    return [itemName, item.shortDesc || item.desc || 'This Pokémon is holding this item.'];
+  }));
+
   await mkdir(fileURLToPath(new URL('../src/data', import.meta.url)), { recursive: true });
   await writeFile(output, `${JSON.stringify(catalog)}\n`);
   await writeFile(progressionOutput, `${JSON.stringify(progression)}\n`);
@@ -667,6 +802,7 @@ async function main() {
   console.log(`Generated ${catalog.length} Battle Run Pokémon at ${output}`);
   console.log(`Generated ${Object.keys(progression).length} progression entries at ${progressionOutput}`);
   console.log(`Generated ${generatedItemNames.length} held-item descriptions at ${itemDescriptionsOutput}`);
+  console.log(`Used Smogon builds for ${catalog.filter(pokemon => pokemon.builds[0]?.source === 'smogon').length} Pokémon`);
 }
 
 void main();

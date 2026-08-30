@@ -30,6 +30,8 @@ export interface RunPokemon {
   isMega?: boolean;
   baseSpecies?: string;
   buildName?: string;
+  buildSource?: 'smogon' | 'generated';
+  buildFormat?: string;
 }
 
 export interface PokemonStatSpread {

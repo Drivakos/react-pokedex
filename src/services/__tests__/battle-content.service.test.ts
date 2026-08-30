@@ -19,38 +19,44 @@ describe('battle content catalog', () => {
       level: 11,
       types: ['Electric'],
       ability: 'Lightning Rod',
-      moves: ['Volt Tackle', 'Surf', 'Volt Switch', 'Thunder Wave'],
+      moves: ['Thunderbolt', 'Surf', 'Volt Switch', 'Knock Off'],
       item: 'Light Ball',
-      buildName: 'Offensive pivot',
-      nature: 'Naive',
-      evs: { hp: 0, atk: 4, def: 0, spa: 252, spd: 0, spe: 252 },
+      buildName: 'Special Attacker',
+      buildSource: 'smogon',
+      buildFormat: 'gen9nfe',
+      nature: 'Timid',
+      evs: { hp: 0, atk: 0, def: 0, spa: 252, spd: 4, spe: 252 },
+      ivs: { hp: 31, atk: 31, def: 31, spa: 31, spd: 31, spe: 31 },
       bst: 320,
     });
   });
 
-  it('offers distinct competitive goals with matching held items for one species', () => {
+  it('offers distinct Smogon builds with their full competitive details', () => {
     const pivot = createRunPokemon('Grimmsnarl', 4, () => 0);
-    const screens = createRunPokemon('Grimmsnarl', 4, () => 0.3);
-    const cleaner = createRunPokemon('Grimmsnarl', 4, () => 0.9);
+    const setup = createRunPokemon('Grimmsnarl', 4, () => 0.4);
+    const band = createRunPokemon('Grimmsnarl', 4, () => 0.9);
 
     expect(pivot).toMatchObject({
-      buildName: 'Offensive pivot',
+      buildName: 'Bulky Pivot',
+      buildSource: 'smogon',
+      buildFormat: 'gen9pu',
       ability: 'Prankster',
       item: 'Heavy-Duty Boots',
-      moves: ['Play Rough', 'Crunch', 'Parting Shot', 'Thunder Wave'],
+      nature: 'Careful',
+      moves: ['Parting Shot', 'Thunder Wave', 'Spirit Break', 'Sucker Punch'],
     });
-    expect(screens).toMatchObject({
-      buildName: 'Screens support',
+    expect(setup).toMatchObject({
+      buildName: 'Bulk Up',
       ability: 'Prankster',
-      item: 'Light Clay',
-      nature: 'Bold',
-      evs: { hp: 252, atk: 0, def: 252, spa: 0, spd: 4, spe: 0 },
-      moves: ['Reflect', 'Light Screen', 'Thunder Wave', 'Play Rough'],
+      item: 'Leftovers',
+      nature: 'Careful',
+      evs: { hp: 252, atk: 4, def: 0, spa: 0, spd: 252, spe: 0 },
+      moves: ['Bulk Up', 'Sucker Punch', 'Spirit Break', 'Substitute'],
     });
-    expect(cleaner).toMatchObject({
-      buildName: 'Choice cleaner',
-      item: 'Choice Scarf',
-      moves: ['Play Rough', 'Crunch', 'Hammer Arm', 'Leech Life'],
+    expect(band).toMatchObject({
+      buildName: 'Choice Band',
+      item: 'Choice Band',
+      moves: ['Crunch', 'Play Rough', 'Sucker Punch', 'Trick'],
     });
   });
 
@@ -58,13 +64,14 @@ describe('battle content catalog', () => {
     expect(createRunPokemon('Gliscor', 6, () => 0)).toMatchObject({
       ability: 'Poison Heal',
       item: 'Toxic Orb',
-      buildName: 'Hazard pivot',
+      buildName: 'Swords Dance',
+      buildSource: 'smogon',
     });
     expect(createRunPokemon('Cloyster', 6, () => 0.3)).toMatchObject({
       ability: 'Skill Link',
       item: 'White Herb',
-      buildName: 'Multi-hit sweeper',
-      moves: ['Shell Smash', 'Icicle Spear', 'Rock Blast', 'Liquidation'],
+      buildName: 'Shell Smash Sweeper',
+      moves: ['Shell Smash', 'Icicle Spear', 'Drill Run', 'Tera Blast'],
     });
     expect(createRunPokemon('Pelipper', 6, () => 0)).toMatchObject({
       ability: 'Drizzle',
@@ -85,6 +92,24 @@ describe('battle content catalog', () => {
     expect(first).toEqual(second);
     expect(first).toHaveLength(3);
     expect(first.map(pokemon => pokemon.species)).not.toContain('Pikachu');
+  });
+
+  it('materializes Smogon builds for both recruitment boards and AI rosters', () => {
+    const recruit = createDraftChoices(5, [], () => 0.1)[0];
+    const opponent = createEnemyParty(5, [], () => 0.1)[0];
+
+    expect(recruit).toMatchObject({
+      buildSource: 'smogon',
+      buildFormat: expect.stringMatching(/^gen9/),
+      evs: expect.objectContaining({ hp: expect.any(Number), spe: expect.any(Number) }),
+      ivs: expect.objectContaining({ hp: expect.any(Number), spe: expect.any(Number) }),
+    });
+    expect(opponent).toMatchObject({
+      buildSource: 'smogon',
+      buildFormat: expect.stringMatching(/^gen9/),
+      evs: expect.objectContaining({ hp: expect.any(Number), spe: expect.any(Number) }),
+      ivs: expect.objectContaining({ hp: expect.any(Number), spe: expect.any(Number) }),
+    });
   });
 
   it('offers one-stage and branching evolutions at the current level', () => {
