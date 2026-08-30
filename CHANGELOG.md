@@ -1,3 +1,11 @@
+# [1.27.0](https://github.com/Drivakos/react-pokedex/compare/v1.26.0...v1.27.0) (2026-08-30)
+
+
+### Features
+
+* add personalized battle victory sequence ([2dec927](https://github.com/Drivakos/react-pokedex/commit/2dec9275ebfb4594d4e5c24aad0d343247ef262b))
+* use Smogon builds in battle run ([5dfd2d7](https://github.com/Drivakos/react-pokedex/commit/5dfd2d7b1c7c8c2a1cf85fed75ea003340c4c742))
+
 # [1.26.0](https://github.com/Drivakos/react-pokedex/compare/v1.25.1...v1.26.0) (2026-08-30)
 
 
