@@ -1,3 +1,10 @@
+# [1.26.0](https://github.com/Drivakos/react-pokedex/compare/v1.25.1...v1.26.0) (2026-08-30)
+
+
+### Features
+
+* add searchable paginated replay and friend lists ([eb9b6a6](https://github.com/Drivakos/react-pokedex/commit/eb9b6a6828015183406d856504ab1073506b677d))
+
 ## [1.25.1](https://github.com/Drivakos/react-pokedex/compare/v1.25.0...v1.25.1) (2026-08-29)
 
 
