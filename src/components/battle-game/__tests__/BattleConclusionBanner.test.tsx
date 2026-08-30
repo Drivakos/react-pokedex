@@ -16,7 +16,6 @@ describe('BattleConclusionBanner', () => {
     render(<BattleConclusionBanner result={{ winner: 'player', faintedPlayerSpecies: [] }} playerName="Ash" />);
 
     expect(screen.getByRole('status')).toHaveTextContent('Ash has won the battle!');
-    expect(screen.getByRole('status')).toHaveTextContent('Victory!');
     expect(mockPlayBattleVictoryCue).toHaveBeenCalledTimes(1);
   });
 
@@ -30,7 +29,6 @@ describe('BattleConclusionBanner', () => {
     render(<BattleConclusionBanner result={{ winner: 'opponent', faintedPlayerSpecies: ['Pikachu'] }} />);
 
     expect(screen.getByRole('status')).toHaveTextContent('You were defeated.');
-    expect(screen.getByRole('status')).toHaveTextContent('The opponent won the battle.');
     expect(mockPlayBattleVictoryCue).not.toHaveBeenCalled();
   });
 });

@@ -339,6 +339,94 @@
 .battle-event-label { animation: battle-event-label 780ms ease-out forwards; will-change: opacity, transform; }
 .battle-event-label-fast { animation-duration: 540ms; }
 
+@keyframes battle-conclusion-enter {
+  0% { transform: translateY(20px); opacity: 0; }
+  65% { transform: translateY(-2px); opacity: 1; }
+  100% { transform: translateY(0); opacity: 1; }
+}
+
+@keyframes battle-conclusion-cursor {
+  0%, 49% { transform: translateY(0); }
+  50%, 100% { transform: translateY(4px); }
+}
+
+.battle-conclusion-overlay {
+  background: linear-gradient(to bottom, transparent 46%, rgb(15 23 42 / 22%) 72%, rgb(15 23 42 / 48%));
+}
+
+.battle-conclusion-dialog {
+  position: relative;
+  display: flex;
+  width: min(100%, 600px);
+  min-height: 82px;
+  align-items: center;
+  padding: 15px 50px 16px 20px;
+  border: 4px solid #172554;
+  border-radius: 7px;
+  background: #fffef3;
+  box-shadow:
+    0 0 0 3px #f8fafc,
+    0 0 0 7px #64748b,
+    0 9px 0 rgb(15 23 42 / 38%);
+  color: #182037;
+  animation: battle-conclusion-enter 320ms steps(4, end) both;
+  isolation: isolate;
+}
+
+.battle-conclusion-dialog::before {
+  position: absolute;
+  z-index: -1;
+  inset: 4px;
+  border: 2px solid #cbd5e1;
+  border-radius: 2px;
+  content: '';
+  pointer-events: none;
+}
+
+.battle-conclusion-dialog::after {
+  position: absolute;
+  top: -7px;
+  left: 18px;
+  width: 56px;
+  height: 5px;
+  background: #ef4444;
+  box-shadow: 62px 0 #facc15, 124px 0 #3b82f6;
+  content: '';
+}
+
+.battle-conclusion-copy {
+  margin: 0;
+  font-family: "Courier New", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: clamp(1rem, 3.8vw, 1.4rem);
+  font-weight: 900;
+  line-height: 1.35;
+  letter-spacing: .035em;
+  text-shadow: 1px 0 currentColor, 0 1px currentColor;
+  text-rendering: geometricPrecision;
+}
+
+.battle-conclusion-name {
+  color: #1d4ed8;
+  text-transform: uppercase;
+}
+
+.battle-conclusion-neutral .battle-conclusion-name {
+  color: #b91c1c;
+}
+
+.battle-conclusion-cursor {
+  position: absolute;
+  right: 20px;
+  bottom: 17px;
+  width: 0;
+  height: 0;
+  border-top: 9px solid #ef4444;
+  border-right: 7px solid transparent;
+  border-left: 7px solid transparent;
+  filter: drop-shadow(1px 1px 0 #7f1d1d);
+  animation: battle-conclusion-cursor 650ms steps(2, end) infinite;
+}
+
 .battle-field-grid {
   background-image:
     linear-gradient(90deg, transparent 49.5%, rgb(255 255 255 / 30%) 50%, transparent 50.5%),
@@ -358,6 +446,8 @@
   .battle-enter,
   .battle-impact,
   .battle-event-label,
+  .battle-conclusion-dialog,
+  .battle-conclusion-cursor,
   .move-fx-sprite,
   .move-fx-glow,
   .move-fx-particle {

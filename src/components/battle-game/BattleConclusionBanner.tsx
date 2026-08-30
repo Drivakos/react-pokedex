@@ -1,24 +1,26 @@
 import { useEffect } from 'react';
-import { Trophy } from 'lucide-react';
 import type { BattleResult } from '../../types/battle-run';
 import { playBattleVictoryCue } from './battle-victory-audio';
 
-function conclusionCopy(winner: BattleResult['winner'], playerName?: string): { title: string; detail: string } {
+function conclusionCopy(winner: BattleResult['winner'], playerName?: string): {
+  name?: string;
+  message: string;
+} {
   const displayName = playerName?.trim() || 'You';
 
   if (winner === 'player') {
     return {
-      title: displayName === 'You' ? 'You have won the battle!' : `${displayName} has won the battle!`,
-      detail: 'Victory!',
+      name: displayName,
+      message: displayName === 'You' ? ' have won the battle!' : ' has won the battle!',
     };
   }
   if (winner === 'opponent') {
     return {
-      title: displayName === 'You' ? 'You were defeated.' : `${displayName} was defeated.`,
-      detail: 'The opponent won the battle.',
+      name: displayName,
+      message: displayName === 'You' ? ' were defeated.' : ' was defeated.',
     };
   }
-  return { title: 'Draw', detail: 'The battle ended in a tie.' };
+  return { message: 'The battle ended in a draw.' };
 }
 
 export function BattleConclusionBanner({ result, playerName }: {
@@ -34,18 +36,16 @@ export function BattleConclusionBanner({ result, playerName }: {
 
   return (
     <div
-      className="pointer-events-none absolute inset-0 z-30 flex items-center justify-center bg-slate-950/35 px-4 backdrop-blur-[1px]"
+      className="battle-conclusion-overlay pointer-events-none absolute inset-0 z-30 flex items-end justify-center px-4 pb-6 sm:px-8 sm:pb-8"
       role="status"
       aria-live="assertive"
     >
-      <div className={`battle-event-label flex items-center gap-3 rounded-2xl border px-5 py-3 shadow-2xl ${victory ? 'border-amber-300 bg-amber-400 text-amber-950' : 'border-slate-600 bg-slate-950/95 text-white'}`}>
-        <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${victory ? 'bg-white/55' : 'bg-white/10'}`}>
-          <Trophy className="h-5 w-5" aria-hidden="true" />
-        </span>
-        <span>
-          <strong className="block text-lg font-black leading-tight sm:text-xl">{copy.title}</strong>
-          <span className={`block text-[11px] font-bold sm:text-xs ${victory ? 'text-amber-900' : 'text-slate-300'}`}>{copy.detail}</span>
-        </span>
+      <div className={`battle-conclusion-dialog ${victory ? 'battle-conclusion-victory' : 'battle-conclusion-neutral'}`}>
+        <p className="battle-conclusion-copy">
+          {copy.name && <span className="battle-conclusion-name">{copy.name}</span>}
+          {copy.message}
+        </p>
+        <span className="battle-conclusion-cursor" aria-hidden="true" />
       </div>
     </div>
   );
