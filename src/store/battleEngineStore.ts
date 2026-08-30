@@ -27,6 +27,7 @@ import type { BattleSession, BattleSessionFactory, ShowdownBattleCallbacks } fro
  */
 
 const emptyDecision: BattleDecision = { kind: 'wait', moves: [], switches: [], switchingBlocked: false };
+export const BATTLE_CONCLUSION_DURATION_MS = 4300;
 
 /** Everything a narrative hands the engine to run one battle. */
 export interface StartBattleConfig {
@@ -40,7 +41,7 @@ export interface StartBattleConfig {
   introLog?: string[];
   /** Fired once the battle is actually live on screen (first event from the worker). */
   onActive?: () => void;
-  /** Fired exactly once when the on-screen battle is over (final KO animation done). */
+  /** Fired exactly once after the final animation and conclusion message have finished. */
   onEnd: (result: BattleResult) => void;
   /** Optional transport/simulator implementation. Battle Run uses the local AI session. */
   sessionFactory?: BattleSessionFactory;
@@ -49,6 +50,7 @@ export interface StartBattleConfig {
 // The live worker session for the current battle (null between battles).
 let session: BattleSession | null = null;
 let startTimer: number | null = null;
+let conclusionTimer: number | null = null;
 // The narrative's outcome callback for the current battle.
 let onBattleEnd: ((result: BattleResult) => void) | null = null;
 let lastBattleConfig: StartBattleConfig | null = null;
@@ -107,6 +109,7 @@ interface BattleEngineStore {
   // Bumped each time a new battle begins, so a Showdown scene can reset itself.
   battleNonce: number;
   status: BattleEngineStatus;
+  conclusion: BattleResult | null;
   error: string | null;
   startBattle: (config: StartBattleConfig) => void;
   chooseMove: (slot: number) => void;
@@ -132,9 +135,8 @@ export const useBattleEngineStore = create<BattleEngineStore>((set, get) => {
     set({ decision, status: 'awaiting-choice', error: null });
   };
 
-  // Report the battle outcome to the narrative — exactly once, when the on-screen
-  // battle is truly over. `pendingBattleResult` is the single-fire guard (set when
-  // the worker ends the battle, cleared here on the first call).
+  // Hold the finished arena on screen for a short conclusion beat before reporting
+  // the outcome to the narrative. `pendingBattleResult` is the single-fire guard.
   const finishBattle = (result: BattleResult) => {
     if (pendingBattleResult === null) return;
     pendingBattleResult = null;
@@ -142,8 +144,18 @@ export const useBattleEngineStore = create<BattleEngineStore>((set, get) => {
     sceneGateActive = false;
     const notify = onBattleEnd;
     onBattleEnd = null;
-    set({ decision: emptyDecision, visualEvents: [], status: 'finished', error: null });
-    notify?.(result);
+    set({
+      decision: emptyDecision,
+      visualEvents: [],
+      status: 'finished',
+      conclusion: result,
+      error: null,
+    });
+    conclusionTimer = window.setTimeout(() => {
+      conclusionTimer = null;
+      set({ conclusion: null });
+      notify?.(result);
+    }, BATTLE_CONCLUSION_DURATION_MS);
   };
 
   return {
@@ -153,6 +165,7 @@ export const useBattleEngineStore = create<BattleEngineStore>((set, get) => {
     visualEvents: [],
     battleNonce: 0,
     status: 'idle',
+    conclusion: null,
     error: null,
 
     startBattle: config => {
@@ -167,7 +180,9 @@ export const useBattleEngineStore = create<BattleEngineStore>((set, get) => {
       } = config;
       session?.dispose();
       if (startTimer !== null) window.clearTimeout(startTimer);
+      if (conclusionTimer !== null) window.clearTimeout(conclusionTimer);
       startTimer = null;
+      conclusionTimer = null;
       resetBattleProtocol();
       sceneGateActive = false;
       sceneIdle = true;
@@ -181,6 +196,7 @@ export const useBattleEngineStore = create<BattleEngineStore>((set, get) => {
         battleLog: introLog,
         visualEvents: [],
         status: 'starting',
+        conclusion: null,
         error: null,
         battleNonce: current.battleNonce + 1,
       }));
@@ -305,7 +321,9 @@ export const useBattleEngineStore = create<BattleEngineStore>((set, get) => {
     resetBattle: () => {
       session?.dispose();
       if (startTimer !== null) window.clearTimeout(startTimer);
+      if (conclusionTimer !== null) window.clearTimeout(conclusionTimer);
       startTimer = null;
+      conclusionTimer = null;
       session = null;
       onBattleEnd = null;
       lastBattleConfig = null;
@@ -320,6 +338,7 @@ export const useBattleEngineStore = create<BattleEngineStore>((set, get) => {
         battleLog: [],
         visualEvents: [],
         status: 'idle',
+        conclusion: null,
         error: null,
       });
     },

@@ -1,11 +1,13 @@
 import { memo, useCallback, useEffect, useRef, useState } from 'react';
 import { Bot, ChevronRight, Compass, Info, Loader2, LockKeyhole, ShieldCheck, Swords, Target, Volume2, VolumeX } from 'lucide-react';
+import { useAuth } from '../../hooks/useAuth';
 import { useBattleRunStore } from '../../store/battleRunStore';
 import { useBattleEngineStore } from '../../store/battleEngineStore';
 import type { ActiveBattlePokemon, BattleSide, BattleVisualEvent } from '../../types/battle-run';
 import { getBossModifier, getContractChainMultiplier, getStageChallengeProgress } from '../../utils/battle-run-rules';
 import { getBattleAiProfile } from '../../utils/battle-ai-profile';
 import { BattlePokemonImage } from './BattlePokemonImage';
+import { BattleConclusionBanner } from './BattleConclusionBanner';
 import { MoveBattleEffect } from './MoveBattleEffect';
 import { ShowdownStage } from './ShowdownStage';
 import { isShowdownMuted, setShowdownMuted } from './showdown-client';
@@ -264,6 +266,7 @@ function MobileBattleSummary() {
 }
 
 export function BattleArena() {
+  const { profile, user } = useAuth();
   const snapshot = useBattleEngineStore(state => state.snapshot);
   const stage = useBattleRunStore(state => state.stage);
   const activeChallenge = useBattleRunStore(state => state.activeChallenge);
@@ -271,6 +274,14 @@ export function BattleArena() {
   const partySize = useBattleRunStore(state => state.party.length);
   const decision = useBattleEngineStore(state => state.decision);
   const engineStatus = useBattleEngineStore(state => state.status);
+  const conclusion = useBattleEngineStore(state => state.conclusion);
+  const metadataName = typeof user?.user_metadata?.full_name === 'string'
+    ? user.user_metadata.full_name.trim()
+    : '';
+  const playerName = profile?.username?.trim()
+    || metadataName
+    || user?.email?.split('@')[0]?.trim()
+    || undefined;
   const error = useBattleEngineStore(state => state.error);
   const visualEvents = useBattleEngineStore(state => state.visualEvents);
   const consumeVisualEvent = useBattleEngineStore(state => state.consumeVisualEvent);
@@ -423,6 +434,8 @@ export function BattleArena() {
             <span className="text-red-300">VS</span>
             <span>{displaySnapshot?.opponentRemaining ?? 0} NPC</span>
           </div>
+
+          {conclusion && <BattleConclusionBanner result={conclusion} playerName={playerName} />}
         </div>
 
         <div className="relative border-t border-slate-200 bg-slate-50 p-1.5 sm:p-6">

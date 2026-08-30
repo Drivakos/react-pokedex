@@ -257,7 +257,7 @@ function prepareStageEncounter(
 export const useBattleRunStore = create<BattleRunStore>((set, get) => {
   // The reward payout when a battle ends — handed to the engine as its onEnd
   // callback. The engine guarantees this fires exactly once, after the on-screen
-  // KO animation has finished, so we only decide what the win/loss *means*.
+  // KO animation and conclusion beat finish, so we only decide what the result means.
   const finishBattle = (result: BattleResult) => {
     const current = get();
     const rng = random ?? Math.random;
@@ -374,7 +374,7 @@ export const useBattleRunStore = create<BattleRunStore>((set, get) => {
     });
 
     // Hand the fight to the reusable engine: it runs the sim, drives the scene,
-    // and calls finishBattle once the on-screen battle is over. We only supply the
+    // and calls finishBattle once the on-screen conclusion is over. We only supply the
     // two parties, the difficulty (stage), the opening flavor lines, and flip to
     // the 'battle' phase the moment the fight goes live.
     useBattleEngineStore.getState().startBattle({

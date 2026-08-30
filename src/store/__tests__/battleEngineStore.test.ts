@@ -31,7 +31,7 @@ jest.mock('../../services/showdown-battle-worker.service', () => ({
 
 import type { BattleDecision, BattleResult, RunPokemon } from '../../types/battle-run';
 import type { BattleSession, BattleSessionFactoryConfig } from '../../types/battle-worker';
-import { useBattleEngineStore } from '../battleEngineStore';
+import { BATTLE_CONCLUSION_DURATION_MS, useBattleEngineStore } from '../battleEngineStore';
 
 const pokemon: RunPokemon = {
   id: 25,
@@ -115,7 +115,7 @@ describe('battle engine pacing and recovery', () => {
     });
   });
 
-  it('finishes exactly once when the scene detaches after the simulator ends', () => {
+  it('shows the conclusion before finishing exactly once after the scene detaches', () => {
     const { session, onEnd } = startBattle();
     useBattleEngineStore.getState().attachBattleScene();
     const result: BattleResult = { winner: 'player', faintedPlayerSpecies: [] };
@@ -126,9 +126,18 @@ describe('battle engine pacing and recovery', () => {
     useBattleEngineStore.getState().detachBattleScene();
     useBattleEngineStore.getState().detachBattleScene();
 
+    expect(onEnd).not.toHaveBeenCalled();
+    expect(useBattleEngineStore.getState()).toMatchObject({
+      status: 'finished',
+      conclusion: result,
+    });
+
+    jest.advanceTimersByTime(BATTLE_CONCLUSION_DURATION_MS);
+
     expect(onEnd).toHaveBeenCalledTimes(1);
     expect(onEnd).toHaveBeenCalledWith(result);
     expect(useBattleEngineStore.getState().status).toBe('finished');
+    expect(useBattleEngineStore.getState().conclusion).toBeNull();
   });
 
   it('enters a recoverable error state and can restart the same encounter', () => {
@@ -157,11 +166,31 @@ describe('battle engine pacing and recovery', () => {
 
     useBattleEngineStore.getState().forfeitBattle();
 
+    expect(onEnd).not.toHaveBeenCalled();
+    expect(useBattleEngineStore.getState().conclusion).toMatchObject({ winner: 'opponent' });
+    jest.advanceTimersByTime(BATTLE_CONCLUSION_DURATION_MS);
+
     expect(onEnd).toHaveBeenCalledWith({
       winner: 'opponent',
       faintedPlayerSpecies: ['Pikachu'],
     });
     expect(useBattleEngineStore.getState().status).toBe('finished');
+  });
+
+  it('cancels a pending conclusion when the engine resets', () => {
+    const { session, onEnd } = startBattle();
+    const result: BattleResult = { winner: 'player', faintedPlayerSpecies: [] };
+    session.callbacks.onEnd(result);
+
+    expect(useBattleEngineStore.getState().conclusion).toEqual(result);
+    useBattleEngineStore.getState().resetBattle();
+    jest.advanceTimersByTime(BATTLE_CONCLUSION_DURATION_MS);
+
+    expect(onEnd).not.toHaveBeenCalled();
+    expect(useBattleEngineStore.getState()).toMatchObject({
+      status: 'idle',
+      conclusion: null,
+    });
   });
 
   it('ignores callbacks from a disposed previous battle', () => {
