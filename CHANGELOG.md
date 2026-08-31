@@ -1,3 +1,10 @@
+## [1.29.1](https://github.com/Drivakos/react-pokedex/compare/v1.29.0...v1.29.1) (2026-08-31)
+
+
+### Bug Fixes
+
+* route pokemon images through proxies ([8309c7b](https://github.com/Drivakos/react-pokedex/commit/8309c7b5e0f66062d2deaed1d69117c21fd6e038))
+
 # [1.29.0](https://github.com/Drivakos/react-pokedex/compare/v1.28.0...v1.29.0) (2026-08-31)
 
 
