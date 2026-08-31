@@ -1,3 +1,10 @@
+# [1.28.0](https://github.com/Drivakos/react-pokedex/compare/v1.27.0...v1.28.0) (2026-08-31)
+
+
+### Features
+
+* use recorded battle victory sound ([ff6e128](https://github.com/Drivakos/react-pokedex/commit/ff6e128182abb105a8328d3667ab2862e33b7e86))
+
 # [1.27.0](https://github.com/Drivakos/react-pokedex/compare/v1.26.0...v1.27.0) (2026-08-30)
 
 
