@@ -133,7 +133,9 @@
 
 [[redirects]]
   from = "/api/pokemon/images/*"
-  to = "/.netlify/functions/pokemon-image-proxy?id=:splat"
+  # Keep the requested path intact for the function to parse. Interpolating the
+  # splat into a query string drops it in production, leaving `id` undefined.
+  to = "/.netlify/functions/pokemon-image-proxy"
   status = 200
   force = false
 

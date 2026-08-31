@@ -23,7 +23,16 @@ describe('BattlePokemonImage', () => {
 
     expect(screen.getByAltText('Charizard-Mega-X')).toHaveAttribute(
       'src',
-      'https://play.pokemonshowdown.com/sprites/Charizard-Mega-X.gif',
+      '/ps/sprites/Charizard-Mega-X.gif',
+    );
+  });
+
+  it('routes Mega sprites through the same-origin proxy allowed by the CSP', () => {
+    render(<BattlePokemonImage id={362} species="Glalie-Mega" variant="icon" />);
+
+    expect(screen.getByAltText('Glalie-Mega')).toHaveAttribute(
+      'src',
+      '/ps/sprites/Glalie-Mega.gif',
     );
   });
 });

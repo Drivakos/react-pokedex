@@ -1,5 +1,36 @@
 const { fetchWithCache } = require("@netlify/cache");
 
+const pokemonImagePath = /^\/api\/pokemon\/images\/([1-9]\d{0,4})\/?$/;
+
+/**
+ * Netlify rewrites preserve the original request URL, but query-string splat
+ * interpolation is not reliable. Accept the legacy query parameter for direct
+ * function calls and the public API path used by the app.
+ */
+const getPokemonId = (event) => {
+  const queryId = event.queryStringParameters?.id;
+  if (typeof queryId === 'string' && /^[1-9]\d{0,4}$/.test(queryId)) {
+    return queryId;
+  }
+
+  const paths = [event.path, event.rawPath];
+  if (event.rawUrl) {
+    try {
+      paths.push(new URL(event.rawUrl).pathname);
+    } catch {
+      // Ignore malformed raw URLs and return the normal validation response.
+    }
+  }
+
+  for (const path of paths) {
+    if (typeof path !== 'string') continue;
+    const match = path.match(pokemonImagePath);
+    if (match) return match[1];
+  }
+
+  return null;
+};
+
 /**
  * Netlify Function to proxy and cache Pokemon images from external sources.
  * This allows us to set long-term CDN caching headers and provide a consistent 
@@ -23,13 +54,13 @@ exports.handler = async (event, context) => {
   }
 
   try {
-    const pokemonId = event.queryStringParameters.id;
+    const pokemonId = getPokemonId(event);
     
     if (!pokemonId) {
       return {
         statusCode: 400,
         headers: { 'Content-Type': 'application/json', ...corsHeaders },
-        body: JSON.stringify({ error: 'Pokemon ID is required' })
+        body: JSON.stringify({ error: 'A valid Pokemon ID is required' })
       };
     }
 

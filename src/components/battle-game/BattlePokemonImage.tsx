@@ -2,6 +2,17 @@ import { memo, useLayoutEffect, useMemo, useState, type CSSProperties, type Synt
 import { Sprites } from '@pkmn/img';
 
 const spriteRoot = 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon';
+const showdownOrigin = 'https://play.pokemonshowdown.com';
+
+function getShowdownSprite(species: string, side: 'p1' | 'p2', gen: 5 | 'ani'): string {
+  const url = Sprites.getPokemon(species, { side, gen }).url;
+
+  // Keep Showdown assets on the same origin. Both Vite and Netlify proxy /ps to
+  // play.pokemonshowdown.com, which satisfies the CSP and avoids CDN hotlinking.
+  return url.startsWith(`${showdownOrigin}/`)
+    ? `/ps/${url.slice(showdownOrigin.length + 1)}`
+    : url;
+}
 
 interface BattlePokemonImageProps {
   id: number;
@@ -26,7 +37,7 @@ export const BattlePokemonImage = memo(function BattlePokemonImage({
   className = '',
 }: BattlePokemonImageProps) {
   const sources = useMemo(() => {
-    const showdown = Sprites.getPokemon(species, { side, gen: variant === 'icon' ? 5 : 'ani' }).url;
+    const showdown = getShowdownSprite(species, side, variant === 'icon' ? 5 : 'ani');
     const isMega = species.includes('-Mega');
     const front = `${spriteRoot}/${id}.png`;
     const back = `${spriteRoot}/back/${id}.png`;
