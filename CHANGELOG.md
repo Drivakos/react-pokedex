@@ -1,3 +1,10 @@
+# [1.29.0](https://github.com/Drivakos/react-pokedex/compare/v1.28.0...v1.29.0) (2026-08-31)
+
+
+### Features
+
+* show trainer names in battle simulator ([9f6c734](https://github.com/Drivakos/react-pokedex/commit/9f6c73436ace3a14a03823166c88a098aa8680a2))
+
 # [1.28.0](https://github.com/Drivakos/react-pokedex/compare/v1.27.0...v1.28.0) (2026-08-31)
 
 
