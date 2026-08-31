@@ -88,6 +88,12 @@ public/*
 
 !public/data/pokemon-to-tcg-cards.json
 
+!public/audio/
+public/audio/*
+!public/audio/battle-run/
+public/audio/battle-run/*
+!public/audio/battle-run/victory.mp3
+
 !public/images/
 public/images/*
 !public/images/trainers/
