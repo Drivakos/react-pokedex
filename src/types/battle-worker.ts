@@ -32,6 +32,8 @@ export interface BattleSession {
 export interface BattleSessionFactoryConfig {
   playerParty: RunPokemon[];
   opponentParty: RunPokemon[];
+  playerName: string;
+  opponentName: string;
   level: number;
   difficulty: RunDifficulty;
   callbacks: ShowdownBattleCallbacks;
@@ -41,7 +43,15 @@ export interface BattleSessionFactoryConfig {
 export type BattleSessionFactory = (config: BattleSessionFactoryConfig) => BattleSession;
 
 export type BattleWorkerRequest =
-  | { type: 'init'; playerParty: RunPokemon[]; opponentParty: RunPokemon[]; stage: number; difficulty?: RunDifficulty }
+  | {
+      type: 'init';
+      playerParty: RunPokemon[];
+      opponentParty: RunPokemon[];
+      playerName?: string;
+      opponentName?: string;
+      stage: number;
+      difficulty?: RunDifficulty;
+    }
   | {
       type: 'init-vs';
       playerParty: RunPokemon[];

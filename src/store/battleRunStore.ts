@@ -213,7 +213,7 @@ interface BattleRunStore {
   resumeRun: () => void;
   chooseStarter: (pokemon: RunPokemon) => void;
   chooseLead: (index: number) => void;
-  selectRoute: (routeId: RunRouteId) => void;
+  selectRoute: (routeId: RunRouteId, playerName?: string) => void;
   chooseUpgrade: (upgradeId: RunUpgradeId) => void;
   chooseReward: (pokemon: RunPokemon) => void;
   openPartyDevelopment: () => void;
@@ -352,7 +352,7 @@ export const useBattleRunStore = create<BattleRunStore>((set, get) => {
     });
   };
 
-  const beginBattle = (route: RunRoute) => {
+  const beginBattle = (route: RunRoute, playerName?: string) => {
     const state = get();
     const rng = random ?? Math.random;
     const opponentTrainer = state.opponentTrainer ?? pickOpponentTrainer(state.stage, rng);
@@ -380,6 +380,8 @@ export const useBattleRunStore = create<BattleRunStore>((set, get) => {
     useBattleEngineStore.getState().startBattle({
       playerParty: state.party,
       enemyParty,
+      playerName,
+      opponentName: opponentTrainer.name,
       level: state.stage,
       difficulty: route.difficulty,
       introLog: [
@@ -512,12 +514,12 @@ export const useBattleRunStore = create<BattleRunStore>((set, get) => {
       });
     },
 
-    selectRoute: routeId => {
+    selectRoute: (routeId, playerName) => {
       if (get().phase !== 'route-select') return;
       if (isCheckpointStage(get().stage) && routeId !== 'apex') return;
       const route = RUN_ROUTES.find(option => option.id === routeId);
       if (!route) return;
-      beginBattle(route);
+      beginBattle(route, playerName);
     },
 
     chooseUpgrade: upgradeId => {

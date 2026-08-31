@@ -33,6 +33,9 @@ export const BATTLE_CONCLUSION_DURATION_MS = 4300;
 export interface StartBattleConfig {
   playerParty: RunPokemon[];
   enemyParty: RunPokemon[];
+  /** Trainer labels forwarded to the simulator protocol and on-screen scene. */
+  playerName?: string;
+  opponentName?: string;
   /** Difficulty/level context for the worker (higher = tougher AI and levels). */
   level: number;
   /** AI decision profile selected by the narrative. */
@@ -96,10 +99,19 @@ let pendingBattleResult: BattleResult | null = null;
 const createLocalAiSession: BattleSessionFactory = ({
   playerParty,
   opponentParty,
+  playerName,
+  opponentName,
   level,
   callbacks,
   difficulty,
-}) => new ShowdownBattleWorkerSession(playerParty, opponentParty, level, callbacks, difficulty);
+}) => new ShowdownBattleWorkerSession(
+  playerParty,
+  opponentParty,
+  level,
+  callbacks,
+  difficulty,
+  { playerName, opponentName },
+);
 
 interface BattleEngineStore {
   snapshot: BattleSnapshot | null;
@@ -172,6 +184,8 @@ export const useBattleEngineStore = create<BattleEngineStore>((set, get) => {
       const {
         playerParty,
         enemyParty,
+        playerName = 'Player',
+        opponentName = 'Opponent',
         level,
         difficulty = 'medium',
         introLog = [],
@@ -269,6 +283,8 @@ export const useBattleEngineStore = create<BattleEngineStore>((set, get) => {
       const battleSession = (config.sessionFactory ?? createLocalAiSession)({
         playerParty,
         opponentParty: enemyParty,
+        playerName,
+        opponentName,
         level,
         callbacks,
         difficulty,

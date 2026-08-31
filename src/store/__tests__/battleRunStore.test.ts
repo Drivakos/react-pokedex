@@ -4,6 +4,7 @@ jest.mock('../../services/showdown-battle-worker.service', () => ({
 
 import { createRunPokemon } from '../../services/battle-content.service';
 import { BATTLE_RUN_SAVE_KEY, useBattleRunStore } from '../battleRunStore';
+import { useBattleEngineStore } from '../battleEngineStore';
 import { RUN_UPGRADES } from '../../utils/battle-run-rules';
 
 const fullParty = () => [
@@ -114,6 +115,34 @@ describe('Battle Run boss route selection', () => {
       phase: 'route-select',
       activeRoute: null,
     });
+  });
+});
+
+describe('Battle Run trainer names', () => {
+  it('passes the user name and selected random opponent to the battle engine', () => {
+    const startBattle = jest.spyOn(useBattleEngineStore.getState(), 'startBattle')
+      .mockImplementation(() => undefined);
+    useBattleRunStore.getState().startRun();
+    useBattleRunStore.setState({
+      stage: 1,
+      phase: 'route-select',
+      party: fullParty().slice(0, 1),
+      opponentTrainer: {
+        id: 'nova',
+        name: 'Nova',
+        title: 'Ace Trainer',
+        intro: 'Battle time.',
+        image: '/images/trainers/ace-f.png',
+      },
+    });
+
+    useBattleRunStore.getState().selectRoute('trail', 'Ash');
+
+    expect(startBattle).toHaveBeenCalledWith(expect.objectContaining({
+      playerName: 'Ash',
+      opponentName: 'Nova',
+    }));
+    startBattle.mockRestore();
   });
 });
 

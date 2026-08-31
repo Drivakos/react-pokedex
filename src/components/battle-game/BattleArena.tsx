@@ -1,6 +1,6 @@
 import { memo, useCallback, useEffect, useRef, useState } from 'react';
 import { Bot, ChevronRight, Compass, Info, Loader2, LockKeyhole, ShieldCheck, Swords, Target, Volume2, VolumeX } from 'lucide-react';
-import { useAuth } from '../../hooks/useAuth';
+import { useBattleTrainerName } from '../../hooks/useBattleTrainerName';
 import { useBattleRunStore } from '../../store/battleRunStore';
 import { useBattleEngineStore } from '../../store/battleEngineStore';
 import type { ActiveBattlePokemon, BattleSide, BattleVisualEvent } from '../../types/battle-run';
@@ -266,7 +266,7 @@ function MobileBattleSummary() {
 }
 
 export function BattleArena() {
-  const { profile, user } = useAuth();
+  const playerName = useBattleTrainerName('You');
   const snapshot = useBattleEngineStore(state => state.snapshot);
   const stage = useBattleRunStore(state => state.stage);
   const activeChallenge = useBattleRunStore(state => state.activeChallenge);
@@ -275,13 +275,6 @@ export function BattleArena() {
   const decision = useBattleEngineStore(state => state.decision);
   const engineStatus = useBattleEngineStore(state => state.status);
   const conclusion = useBattleEngineStore(state => state.conclusion);
-  const metadataName = typeof user?.user_metadata?.full_name === 'string'
-    ? user.user_metadata.full_name.trim()
-    : '';
-  const playerName = profile?.username?.trim()
-    || metadataName
-    || user?.email?.split('@')[0]?.trim()
-    || undefined;
   const error = useBattleEngineStore(state => state.error);
   const visualEvents = useBattleEngineStore(state => state.visualEvents);
   const consumeVisualEvent = useBattleEngineStore(state => state.consumeVisualEvent);

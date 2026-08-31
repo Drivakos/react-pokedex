@@ -20,7 +20,10 @@ workerScope.onmessage = ({ data }: MessageEvent<BattleWorkerRequest>) => {
           onProtocol: chunk => send({ type: 'protocol', chunk }),
           onEnd: result => send({ type: 'end', result }),
           onError: (message, fatal) => send({ type: 'error', message, fatal }),
-        }, data.stage, data.difficulty);
+        }, data.stage, data.difficulty, undefined, {
+          playerName: data.playerName,
+          opponentName: data.opponentName,
+        });
         send({ type: 'ready' });
         break;
       case 'init-vs':

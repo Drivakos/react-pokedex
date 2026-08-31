@@ -55,6 +55,7 @@ export class ShowdownBattleWorkerSession implements BattleSession {
     stage: number,
     callbacks: ShowdownBattleCallbacks,
     difficulty: RunDifficulty = 'medium',
+    names: { playerName?: string; opponentName?: string } = {},
   ) {
     this.callbacks = callbacks;
     this.worker = acquireBattleWorker();
@@ -68,7 +69,15 @@ export class ShowdownBattleWorkerSession implements BattleSession {
       this.callbacks.onError('The battle engine took too long to initialize.', true);
       this.dispose();
     }, 12_000);
-    this.send({ type: 'init', playerParty, opponentParty, stage, difficulty });
+    this.send({
+      type: 'init',
+      playerParty,
+      opponentParty,
+      playerName: names.playerName,
+      opponentName: names.opponentName,
+      stage,
+      difficulty,
+    });
   }
 
   start(): void {

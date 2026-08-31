@@ -1,4 +1,5 @@
 import { ArrowLeftRight, Bot, ChevronRight, Compass, Crown, Flag, Loader2, Medal, Shield, ShieldCheck, Swords, Target } from 'lucide-react';
+import { useBattleTrainerName } from '../../hooks/useBattleTrainerName';
 import { useBattleRunStore } from '../../store/battleRunStore';
 import { RUN_ROUTES, RUN_SECTORS, getBossModifier, getContractChainMultiplier, getRecruitmentRewardProfile, getRunSector, isCheckpointStage, isFinalStage } from '../../utils/battle-run-rules';
 import { getBattleAiProfile } from '../../utils/battle-ai-profile';
@@ -7,6 +8,7 @@ import { TrainerImage } from './TrainerImage';
 import { ChallengeCard, HeldItemBadge, PartyStrip, RunMilestoneBoard, TypeBadges } from './BattleRunShared';
 
 export function VersusScreen() {
+  const playerName = useBattleTrainerName();
   const trainer = useBattleRunStore(state => state.opponentTrainer);
   const enemyParty = useBattleRunStore(state => state.enemyParty);
   const stage = useBattleRunStore(state => state.stage);
@@ -24,9 +26,9 @@ export function VersusScreen() {
     <section className="mx-auto max-w-4xl overflow-hidden rounded-[2rem] border border-white bg-white/90 shadow-2xl">
       <div className="relative grid items-center overflow-hidden bg-gradient-to-br from-sky-100 via-white to-red-100 p-7 text-slate-950 sm:grid-cols-[1fr_auto_1fr] sm:p-10">
         <div className="text-center">
-          <TrainerImage src="/images/trainers/player.png" name="You" className="mx-auto h-32 w-32 drop-shadow-2xl sm:h-40 sm:w-40" />
+          <TrainerImage src="/images/trainers/player.png" name={playerName} className="mx-auto h-32 w-32 drop-shadow-2xl sm:h-40 sm:w-40" />
           <p className="mt-3 text-xs font-black uppercase tracking-[0.2em] text-blue-700">Challenger</p>
-          <p className="text-2xl font-black">You</p>
+          <p className="text-2xl font-black">{playerName}</p>
         </div>
         <div className="my-5 text-center sm:mx-8 sm:my-0">
           <div className="rounded-full border-4 border-white bg-red-600 p-4 text-2xl font-black italic text-white shadow-xl shadow-red-200">VS</div>
@@ -181,6 +183,7 @@ export function LeadSelectionScreen() {
 }
 
 export function RouteSelectionScreen() {
+  const playerName = useBattleTrainerName();
   const stage = useBattleRunStore(state => state.stage);
   const selectRoute = useBattleRunStore(state => state.selectRoute);
   const party = useBattleRunStore(state => state.party);
@@ -324,7 +327,7 @@ export function RouteSelectionScreen() {
             <button
               key={route.id}
               type="button"
-              onClick={() => selectRoute(route.id)}
+              onClick={() => selectRoute(route.id, playerName)}
               className="group flex h-full flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white text-left shadow-md transition duration-200 hover:-translate-y-1 hover:border-slate-400 hover:shadow-xl focus:outline-none focus:ring-4 focus:ring-red-200"
             >
               <div className={`flex items-center justify-between border-b p-2.5 sm:p-4 ${accent}`}>

@@ -3,6 +3,39 @@ import { ShowdownBattleSession } from '../showdown-battle.service';
 import type { BattleSnapshot } from '../../types/battle-run';
 
 describe('ShowdownBattleSession', () => {
+  it('emits the supplied player and opponent trainer names in the scene protocol', async () => {
+    let protocol = '';
+
+    await new Promise<void>((resolve, reject) => {
+      const session = new ShowdownBattleSession(
+        [createRunPokemon('Pikachu', 3)],
+        [createRunPokemon('Eevee', 3)],
+        {
+          onSnapshot: () => undefined,
+          onDecision: decision => {
+            if (decision.kind === 'wait') return;
+            session.dispose();
+            resolve();
+          },
+          onLog: () => undefined,
+          onVisual: () => undefined,
+          onProtocol: chunk => { protocol += chunk; },
+          onEnd: () => resolve(),
+          onError: (message, fatal) => { if (fatal) reject(new Error(message)); },
+        },
+        3,
+        'easy',
+        undefined,
+        { playerName: 'Ash', opponentName: 'Nova' },
+      );
+
+      session.start();
+    });
+
+    expect(protocol).toContain('|player|p1|Ash|');
+    expect(protocol).toContain('|player|p2|Nova|');
+  });
+
   it('starts and resolves a battle with a permanent Mega party member', async () => {
     const venusaur = createRunPokemon('Venusaur', 7);
     const megaParty = developPartyPokemon([venusaur], 0, 'Venusaur-Mega');

@@ -220,6 +220,8 @@ describe('battle engine pacing and recovery', () => {
     useBattleEngineStore.getState().startBattle({
       playerParty: [pokemon],
       enemyParty: [{ ...pokemon, species: 'Raichu', id: 26 }],
+      playerName: 'Ash',
+      opponentName: 'Nova',
       level: 50,
       onEnd: jest.fn(),
       sessionFactory: config => {
@@ -231,6 +233,8 @@ describe('battle engine pacing and recovery', () => {
     expect(factoryConfig).toMatchObject({
       playerParty: [pokemon],
       opponentParty: [{ ...pokemon, species: 'Raichu', id: 26 }],
+      playerName: 'Ash',
+      opponentName: 'Nova',
       level: 50,
       difficulty: 'medium',
     });
