@@ -14,7 +14,7 @@ export function useMovesetEditor({ pokemon, teamId, initialBuild, onSave }: Move
   const [moveDetails, setMoveDetails] = useState<Record<string, MoveDetails>>(moveDetailsCache);
   const [validationErrors, setValidationErrors] = useState<BuildValidationErrors>({});
   const [premadeBuilds, setPremadeBuilds] = useState<PremadePokemonBuild[]>([]);
-  const [showPremadeBuilds, setShowPremadeBuilds] = useState(false);
+  const [selectedPremadeBuildId, setSelectedPremadeBuildId] = useState('');
   const [premadeBuildsLoading, setPremadeBuildsLoading] = useState(false);
   const [loading, setLoading] = useState(true);
 
@@ -208,6 +208,32 @@ export function useMovesetEditor({ pokemon, teamId, initialBuild, onSave }: Move
 
     loadPokemonData();
   }, [pokemon.id, teamId]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadPremadeBuilds = async () => {
+      setPremadeBuilds([]);
+      setSelectedPremadeBuildId('');
+      setPremadeBuildsLoading(true);
+
+      try {
+        const { fetchPremadeBuilds } = await import('../../services/premade-builds.service');
+        const builds = await fetchPremadeBuilds(pokemon.name);
+        if (!cancelled) setPremadeBuilds(builds);
+      } catch (error) {
+        console.warn(`Could not load build options for ${pokemon.name}:`, error);
+      } finally {
+        if (!cancelled) setPremadeBuildsLoading(false);
+      }
+    };
+
+    void loadPremadeBuilds();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [pokemon.name]);
 
   const handleSaveBuild = () => {
     const errors: BuildValidationErrors = {};
@@ -417,30 +443,6 @@ export function useMovesetEditor({ pokemon, teamId, initialBuild, onSave }: Move
     setSelectedMoves(prev => prev.filter(move => move !== moveName));
   };
 
-  const handlePremadeBuildsToggle = async () => {
-    if (premadeBuilds.length > 0) {
-      setShowPremadeBuilds(current => !current);
-      return;
-    }
-
-    setPremadeBuildsLoading(true);
-    try {
-      const { fetchPremadeBuilds } = await import('../../services/premade-builds.service');
-      const builds = await fetchPremadeBuilds(pokemon.name);
-      setPremadeBuilds(builds);
-      setShowPremadeBuilds(builds.length > 0);
-
-      if (builds.length === 0) {
-        toast.error(`No premade builds are available for ${formatName(pokemon.name)} yet.`);
-      }
-    } catch (error) {
-      console.error('Error loading premade builds:', error);
-      toast.error('Could not load premade builds. Please try again.');
-    } finally {
-      setPremadeBuildsLoading(false);
-    }
-  };
-
   const handleApplyPremadeBuild = (build: PremadePokemonBuild) => {
     const resolvedMoves = build.moves.flatMap((moveName) => {
       const moveId = toShowdownId(moveName);
@@ -464,15 +466,35 @@ export function useMovesetEditor({ pokemon, teamId, initialBuild, onSave }: Move
       heldItem: build.item || current.heldItem,
       nature: build.nature?.toLowerCase() || current.nature,
       teraType: build.teraType || current.teraType,
-      evs: { ...current.evs, ...build.evs },
-      ivs: { ...current.ivs, ...build.ivs },
+      evs: build.evs
+        ? {
+            hp: 0,
+            attack: 0,
+            defense: 0,
+            'special-attack': 0,
+            'special-defense': 0,
+            speed: 0,
+            ...build.evs,
+          }
+        : current.evs,
+      ivs: build.ivs
+        ? {
+            hp: 31,
+            attack: 31,
+            defense: 31,
+            'special-attack': 31,
+            'special-defense': 31,
+            speed: 31,
+            ...build.ivs,
+          }
+        : current.ivs,
     }));
     setValidationErrors(current => ({
       ...current,
       moves: undefined,
       ability: resolvedAbility || pokemonBuild.ability || availableAbilities[0] ? undefined : current.ability,
     }));
-    setShowPremadeBuilds(false);
+    setSelectedPremadeBuildId(build.id);
     toast.success(
       resolvedMoves.length < build.moves.length
         ? `${build.name} applied with ${resolvedMoves.length} compatible moves. Review it before saving.`
@@ -506,8 +528,7 @@ export function useMovesetEditor({ pokemon, teamId, initialBuild, onSave }: Move
     moveDetails,
     validationErrors,
     premadeBuilds,
-    showPremadeBuilds,
-    setShowPremadeBuilds,
+    selectedPremadeBuildId,
     premadeBuildsLoading,
     loading,
     pokemonBuild,
@@ -522,7 +543,6 @@ export function useMovesetEditor({ pokemon, teamId, initialBuild, onSave }: Move
     handleMoveToggle,
     handleAbilityChange,
     handleRemoveMove,
-    handlePremadeBuildsToggle,
     handleApplyPremadeBuild,
     availableHeldItems,
     statBarClass,

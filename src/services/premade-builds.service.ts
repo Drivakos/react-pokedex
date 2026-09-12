@@ -198,24 +198,35 @@ export async function fetchPremadeBuilds(speciesName: string): Promise<PremadePo
   if (!species.exists) return [];
 
   const format = Smogon.format(generation, species);
-  if (format) {
-    try {
-      const smogon = new Smogon(fetchPkmnData, true);
-      const sets = await smogon.sets(generation, species, format);
-      const builds = mapSmogonSets(species.name, format, sets);
-      if (builds.length > 0) return builds;
-    } catch (error) {
-      console.warn(`Could not load Smogon builds for ${species.name}:`, error);
-    }
-  }
+  const smogonBuildsPromise = format
+    ? (async () => {
+        try {
+          const smogon = new Smogon(fetchPkmnData, true);
+          const sets = await smogon.sets(generation, species, format);
+          return mapSmogonSets(species.name, format, sets);
+        } catch (error) {
+          console.warn(`Could not load Smogon builds for ${species.name}:`, error);
+          return [];
+        }
+      })()
+    : Promise.resolve([]);
 
-  try {
-    const data = await fetchRandbatsData();
-    return mapRandbatsRoles(species.name, data[species.name] ?? data[species.baseSpecies]);
-  } catch (error) {
-    console.warn(`Could not load Random Battle builds for ${species.name}:`, error);
-    return [];
-  }
+  const randbatsBuildsPromise = (async () => {
+    try {
+      const data = await fetchRandbatsData();
+      return mapRandbatsRoles(species.name, data[species.name] ?? data[species.baseSpecies]);
+    } catch (error) {
+      console.warn(`Could not load Random Battle builds for ${species.name}:`, error);
+      return [];
+    }
+  })();
+
+  const [smogonBuilds, randbatsBuilds] = await Promise.all([
+    smogonBuildsPromise,
+    randbatsBuildsPromise,
+  ]);
+
+  return [...smogonBuilds, ...randbatsBuilds];
 }
 
 export function materializeAutomaticBuild(

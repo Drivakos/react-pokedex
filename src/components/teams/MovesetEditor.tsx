@@ -22,8 +22,7 @@ const MovesetEditorContent: React.FC<MovesetEditorProps> = ({ pokemon, teamId, i
     moveDetails,
     validationErrors,
     premadeBuilds,
-    showPremadeBuilds,
-    setShowPremadeBuilds,
+    selectedPremadeBuildId,
     premadeBuildsLoading,
     loading,
     pokemonBuild,
@@ -38,7 +37,6 @@ const MovesetEditorContent: React.FC<MovesetEditorProps> = ({ pokemon, teamId, i
     handleMoveToggle,
     handleAbilityChange,
     handleRemoveMove,
-    handlePremadeBuildsToggle,
     handleApplyPremadeBuild,
     availableHeldItems,
     statBarClass,
@@ -63,15 +61,6 @@ const MovesetEditorContent: React.FC<MovesetEditorProps> = ({ pokemon, teamId, i
       <div className="sd-panel">
         {/* Action bar */}
         <div className="sd-actions" style={{ borderTop: 'none', borderBottom: '1px solid #ddd' }}>
-          <button
-            className="sd-action-btn sd-action-btn--autofill"
-            onClick={handlePremadeBuildsToggle}
-            disabled={premadeBuildsLoading}
-            aria-expanded={showPremadeBuilds}
-          >
-            <Wand2 size={12} aria-hidden="true" />
-            {premadeBuildsLoading ? 'Finding builds…' : 'Auto-fill'}
-          </button>
           <button className="sd-action-btn" onClick={exportCurrentPokemon}>
             <Copy size={12} /> Copy
           </button>
@@ -83,38 +72,40 @@ const MovesetEditorContent: React.FC<MovesetEditorProps> = ({ pokemon, teamId, i
           </button>
         </div>
 
-        {showPremadeBuilds && (
-          <section className="sd-premade-picker" aria-label="Premade builds">
-            <div className="sd-premade-picker__header">
-              <div>
-                <strong>Choose a build</strong>
-                <span>Applying a build replaces moves and battle settings, but does not save it.</span>
-              </div>
-              <button type="button" onClick={() => setShowPremadeBuilds(false)} aria-label="Close premade builds">×</button>
-            </div>
-            <div className="sd-premade-grid">
-              {premadeBuilds.map(build => (
-                <button
-                  type="button"
-                  key={build.id}
-                  className="sd-premade-card"
-                  onClick={() => handleApplyPremadeBuild(build)}
-                >
-                  <span className="sd-premade-card__title">{build.name}</span>
-                  <span className="sd-premade-card__meta">
-                    {build.source === 'smogon' ? build.format.toUpperCase() : 'Random Battle role'}
-                    {build.item ? ` · ${build.item}` : ''}
-                  </span>
-                  <span className="sd-premade-card__moves">{build.moves.map(formatMoveName).join(' · ')}</span>
-                </button>
-              ))}
-            </div>
-            <p className="sd-premade-attribution">
-              Competitive sets from <a href="https://www.smogon.com/" target="_blank" rel="noreferrer">Smogon</a>;
-              fallback roles from <a href="https://github.com/pkmn/randbats" target="_blank" rel="noreferrer">Pokémon Showdown Random Battles</a>.
-            </p>
-          </section>
-        )}
+        <section className="sd-build-switcher" aria-label="Available builds">
+          <label className="sd-build-switcher__label" htmlFor={`build-option-${pokemon.id}`}>
+            <Wand2 size={14} aria-hidden="true" />
+            Build
+          </label>
+          <select
+            id={`build-option-${pokemon.id}`}
+            className="sd-build-switcher__select"
+            value={selectedPremadeBuildId}
+            disabled={premadeBuildsLoading || premadeBuilds.length === 0}
+            onChange={(event) => {
+              const build = premadeBuilds.find(option => option.id === event.target.value);
+              if (build) handleApplyPremadeBuild(build);
+            }}
+            aria-describedby={`build-option-help-${pokemon.id}`}
+          >
+            <option value="">
+              {premadeBuildsLoading
+                ? 'Finding every available build…'
+                : premadeBuilds.length > 0
+                  ? `Choose from ${premadeBuilds.length} available build${premadeBuilds.length === 1 ? '' : 's'}`
+                  : 'No premade builds found'}
+            </option>
+            {premadeBuilds.map(build => (
+              <option key={build.id} value={build.id}>
+                {build.name} — {build.source === 'smogon' ? build.format.toUpperCase() : 'Random Battle'}
+                {build.item ? ` — ${build.item}` : ''}
+              </option>
+            ))}
+          </select>
+          <span id={`build-option-help-${pokemon.id}`} className="sd-build-switcher__help">
+            Pick a build to fill its moves and available battle settings. You can still customize it before saving.
+          </span>
+        </section>
 
         <div className="sd-build-card">
           {/* Sprite */}

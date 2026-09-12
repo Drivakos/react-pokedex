@@ -1,6 +1,6 @@
 import type { PokemonSet } from '@pkmn/data';
 import type { DeepPartial } from '@pkmn/smogon';
-import { mapRandbatsRoles, mapSmogonSets, materializeAutomaticBuild } from '../premade-builds.service';
+import { fetchPremadeBuilds, mapRandbatsRoles, mapSmogonSets, materializeAutomaticBuild } from '../premade-builds.service';
 
 describe('premade build mapping', () => {
   it('maps a Smogon set into editor-friendly fields', () => {
@@ -42,6 +42,58 @@ describe('premade build mapping', () => {
       item: 'Heavy-Duty Boots',
       teraType: 'Dragon',
     })]);
+  });
+
+  it('returns both curated sets and Random Battle roles when both are available', async () => {
+    const originalFetch = globalThis.fetch;
+    const fetchMock = jest.fn(async (input: Parameters<typeof globalThis.fetch>[0]) => {
+      const url = String(input);
+
+      if (url.includes('/sets/')) {
+        return {
+          ok: true,
+          json: async () => ({
+            Charizard: {
+              'Special Attacker': {
+                ability: 'Blaze',
+                item: 'Heavy-Duty Boots',
+                nature: 'Timid',
+                moves: ['Flamethrower', 'Hurricane', 'Focus Blast', 'Roost'],
+                evs: { spa: 252, spd: 4, spe: 252 },
+              },
+            },
+          }),
+        } as Response;
+      }
+
+      return {
+        ok: true,
+        json: async () => ({
+          Charizard: {
+            abilities: ['Blaze'],
+            items: ['Life Orb'],
+            roles: {
+              'Dragon Dance': {
+                moves: ['Dragon Dance', 'Flare Blitz', 'Earthquake', 'Roost'],
+              },
+            },
+          },
+        }),
+      } as Response;
+    });
+    globalThis.fetch = fetchMock as typeof fetch;
+
+    try {
+      const builds = await fetchPremadeBuilds('Charizard');
+
+      expect(builds).toEqual(expect.arrayContaining([
+        expect.objectContaining({ name: 'Special Attacker', source: 'smogon' }),
+        expect.objectContaining({ name: 'Dragon Dance', source: 'randbats' }),
+      ]));
+      expect(builds).toHaveLength(2);
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
   });
 
   it('turns a partial preset into a complete editor build', () => {
