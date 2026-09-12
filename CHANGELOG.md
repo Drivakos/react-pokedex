@@ -1,3 +1,10 @@
+## [1.30.1](https://github.com/Drivakos/react-pokedex/compare/v1.30.0...v1.30.1) (2026-09-12)
+
+
+### Bug Fixes
+
+* **vs:** prevent stale move selection ([2e77393](https://github.com/Drivakos/react-pokedex/commit/2e77393f438ef84527fa8c89c801cca4d00cb693))
+
 # [1.30.0](https://github.com/Drivakos/react-pokedex/compare/v1.29.1...v1.30.0) (2026-09-12)
 
 
