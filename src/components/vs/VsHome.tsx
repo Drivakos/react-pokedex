@@ -18,7 +18,7 @@ export default function VsHome() {
   const navigate = useNavigate();
   const { user, teams, teamsLoaded, teamsError, fetchTeams } = useAuth();
   const { createInvite, createFriendInvite, loading, error, clearError } = useVsMatchStore();
-  const [selectedTeamId, setSelectedTeamId] = useState<VsTeamSelection | null>(null);
+  const [selectedTeamId, setSelectedTeamId] = useState<VsTeamSelection>(RANDOM_VS_TEAM);
   const [friends, setFriends] = useState<VsFriendPresence[]>([]);
   const [selectedFriendId, setSelectedFriendId] = useState<string | null>(null);
   const [friendsLoading, setFriendsLoading] = useState(true);

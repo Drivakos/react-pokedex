@@ -107,6 +107,7 @@ export function VsTeamPicker({
       <button
         type="button"
         disabled={disabled}
+        aria-pressed={selectedTeamId === RANDOM_VS_TEAM}
         onClick={() => onSelect(RANDOM_VS_TEAM)}
         className={`rounded-xl border-2 p-4 text-left transition disabled:cursor-not-allowed disabled:opacity-60 ${
           selectedTeamId === RANDOM_VS_TEAM
@@ -136,6 +137,7 @@ export function VsTeamPicker({
             key={team.id}
             type="button"
             disabled={disabled}
+            aria-pressed={selected}
             onClick={() => onSelect(team.id)}
             className={`rounded-xl border-2 p-4 text-left transition disabled:cursor-not-allowed disabled:opacity-60 ${
               selected

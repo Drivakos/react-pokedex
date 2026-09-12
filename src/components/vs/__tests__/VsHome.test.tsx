@@ -79,15 +79,14 @@ describe('VsHome online friend challenge', () => {
     expect(screen.getByRole('button', { name: 'Challenge selected friend' })).toBeInTheDocument();
   });
 
-  it('can create an invite with a random competitive team and no saved teams', async () => {
+  it('preselects a random competitive team and can create an invite without saved teams', async () => {
     mockGetVsFriendsPresence.mockResolvedValue([]);
     mockCreateInvite.mockResolvedValue({ id: 'random-match' });
 
     render(<VsHome />);
 
     const createButton = screen.getByRole('button', { name: 'Create invite link' });
-    expect(createButton).toBeDisabled();
-    fireEvent.click(screen.getByRole('button', { name: /Random competitive team/i }));
+    expect(screen.getByRole('button', { name: /Random competitive team/i })).toHaveAttribute('aria-pressed', 'true');
     expect(createButton).toBeEnabled();
     fireEvent.click(createButton);
 

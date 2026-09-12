@@ -17,7 +17,7 @@ export default function VsInvite() {
   const navigate = useNavigate();
   const { teams, teamsLoaded, teamsError, fetchTeams } = useAuth();
   const { invitePreview, loading, error, inspectInvite, acceptInvite, clearError } = useVsMatchStore();
-  const [selectedTeamId, setSelectedTeamId] = useState<VsTeamSelection | null>(null);
+  const [selectedTeamId, setSelectedTeamId] = useState<VsTeamSelection>(RANDOM_VS_TEAM);
   const [teamErrors, setTeamErrors] = useState<string[]>([]);
 
   useEffect(() => {
