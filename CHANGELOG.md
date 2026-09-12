@@ -1,3 +1,10 @@
+## [1.31.1](https://github.com/Drivakos/react-pokedex/compare/v1.31.0...v1.31.1) (2026-09-12)
+
+
+### Bug Fixes
+
+* preselect random team in vs mode ([5e1647d](https://github.com/Drivakos/react-pokedex/commit/5e1647d53d35b8b0a8748bb30896042f993f2fa7))
+
 # [1.31.0](https://github.com/Drivakos/react-pokedex/compare/v1.30.1...v1.31.0) (2026-09-12)
 
 
