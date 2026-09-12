@@ -1,3 +1,10 @@
+# [1.30.0](https://github.com/Drivakos/react-pokedex/compare/v1.29.1...v1.30.0) (2026-09-12)
+
+
+### Features
+
+* add competitive random teams to vs battles ([4d89973](https://github.com/Drivakos/react-pokedex/commit/4d89973b8d1e485f8925b7ef7006f78c0f1c2fb5))
+
 ## [1.29.1](https://github.com/Drivakos/react-pokedex/compare/v1.29.0...v1.29.1) (2026-08-31)
 
 
