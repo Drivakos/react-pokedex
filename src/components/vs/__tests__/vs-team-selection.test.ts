@@ -1,5 +1,5 @@
 import type { TeamWithJoinedMembers } from '../../../lib/supabase';
-import { resolveVsSelectedTeamId } from '../vs-team-selection';
+import { RANDOM_VS_TEAM, resolveVsSelectedTeamId } from '../vs-team-selection';
 
 const team = (id: number): TeamWithJoinedMembers => ({
   id,
@@ -21,5 +21,9 @@ describe('VS team selection', () => {
     const teams = [team(1), team(2)];
     expect(resolveVsSelectedTeamId(teams, 2)).toBe(2);
     expect(resolveVsSelectedTeamId(teams, 3)).toBeNull();
+  });
+
+  it('preserves the random competitive selection without saved teams', () => {
+    expect(resolveVsSelectedTeamId([], RANDOM_VS_TEAM)).toBe(RANDOM_VS_TEAM);
   });
 });

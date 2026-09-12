@@ -9,7 +9,9 @@ import type {
   VsHeadToHeadRecord,
   VsMatch,
   VsMatchHistoryItem,
+  VsTeamSelection,
 } from '../types/vs';
+import { RANDOM_VS_TEAM } from '../types/vs';
 
 function throwRpcError(error: { message: string } | null): void {
   if (error) throw new Error(error.message);
@@ -33,21 +35,25 @@ async function addParticipantNames(match: VsMatch): Promise<VsMatch> {
   };
 }
 
-export async function createVsInvite(teamId: number): Promise<CreateVsInviteResult> {
-  const { data, error } = await supabase.rpc('create_vs_invite', { p_team_id: teamId });
+export async function createVsInvite(teamId: VsTeamSelection): Promise<CreateVsInviteResult> {
+  const { data, error } = teamId === RANDOM_VS_TEAM
+    ? await supabase.rpc('create_random_vs_invite')
+    : await supabase.rpc('create_vs_invite', { p_team_id: teamId });
   throwRpcError(error);
   const result = data as CreateVsInviteResult;
   return { ...result, match: await addParticipantNames(result.match) };
 }
 
 export async function createVsFriendInvite(
-  teamId: number,
+  teamId: VsTeamSelection,
   friendId: string,
 ): Promise<CreateVsInviteResult> {
-  const { data, error } = await supabase.rpc('create_vs_friend_invite', {
-    p_team_id: teamId,
-    p_friend_id: friendId,
-  });
+  const { data, error } = teamId === RANDOM_VS_TEAM
+    ? await supabase.rpc('create_random_vs_friend_invite', { p_friend_id: friendId })
+    : await supabase.rpc('create_vs_friend_invite', {
+      p_team_id: teamId,
+      p_friend_id: friendId,
+    });
   throwRpcError(error);
   const result = data as CreateVsInviteResult;
   return { ...result, match: await addParticipantNames(result.match) };
@@ -59,11 +65,13 @@ export async function inspectVsInvite(inviteToken: string): Promise<VsInvitePrev
   return data as VsInvitePreview;
 }
 
-export async function acceptVsInvite(inviteToken: string, teamId: number): Promise<VsMatch> {
-  const { data, error } = await supabase.rpc('accept_vs_invite', {
-    p_invite_token: inviteToken,
-    p_team_id: teamId,
-  });
+export async function acceptVsInvite(inviteToken: string, teamId: VsTeamSelection): Promise<VsMatch> {
+  const { data, error } = teamId === RANDOM_VS_TEAM
+    ? await supabase.rpc('accept_vs_invite_random', { p_invite_token: inviteToken })
+    : await supabase.rpc('accept_vs_invite', {
+      p_invite_token: inviteToken,
+      p_team_id: teamId,
+    });
   throwRpcError(error);
   return addParticipantNames(data as VsMatch);
 }

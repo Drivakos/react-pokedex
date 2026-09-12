@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import type { AnchorHTMLAttributes } from 'react';
 import type { VsFriendPresence } from '../../../services/presence.service';
@@ -6,6 +6,7 @@ import VsHome from '../VsHome';
 
 const mockGetVsFriendsPresence = jest.fn<Promise<VsFriendPresence[]>, []>();
 const mockNavigate = jest.fn();
+const mockCreateInvite = jest.fn();
 
 jest.mock('react-router-dom', () => ({
   Link: ({ children, to, ...props }: AnchorHTMLAttributes<HTMLAnchorElement> & { to: string }) => (
@@ -34,7 +35,7 @@ jest.mock('../../../services/presence.service', () => ({
 
 jest.mock('../../../store/vsMatchStore', () => ({
   useVsMatchStore: () => ({
-    createInvite: jest.fn(),
+    createInvite: mockCreateInvite,
     createFriendInvite: jest.fn(),
     loading: false,
     error: null,
@@ -76,5 +77,21 @@ describe('VsHome online friend challenge', () => {
     expect(await screen.findByRole('heading', { name: 'Challenge an online friend' })).toBeInTheDocument();
     expect(screen.getByRole('radio', { name: /Misty Online/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Challenge selected friend' })).toBeInTheDocument();
+  });
+
+  it('can create an invite with a random competitive team and no saved teams', async () => {
+    mockGetVsFriendsPresence.mockResolvedValue([]);
+    mockCreateInvite.mockResolvedValue({ id: 'random-match' });
+
+    render(<VsHome />);
+
+    const createButton = screen.getByRole('button', { name: 'Create invite link' });
+    expect(createButton).toBeDisabled();
+    fireEvent.click(screen.getByRole('button', { name: /Random competitive team/i }));
+    expect(createButton).toBeEnabled();
+    fireEvent.click(createButton);
+
+    await waitFor(() => expect(mockCreateInvite).toHaveBeenCalledWith('random'));
+    expect(mockNavigate).toHaveBeenCalledWith('/vs/match/random-match');
   });
 });

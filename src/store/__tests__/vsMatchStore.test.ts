@@ -64,6 +64,14 @@ describe('VS match store', () => {
     expect(useVsMatchStore.getState()).toMatchObject({ match, loading: false, error: null });
   });
 
+  it('passes the random team selection through to the invite service', async () => {
+    mockCreateVsInvite.mockResolvedValue({ match, inviteToken: 'secret-token' });
+
+    await useVsMatchStore.getState().createInvite('random');
+
+    expect(mockCreateVsInvite).toHaveBeenCalledWith('random');
+  });
+
   it('creates a targeted friend invite and preserves its one-time invite token', async () => {
     const targetedMatch = {
       ...match,

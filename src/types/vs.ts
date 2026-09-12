@@ -7,6 +7,9 @@ export type VsMatchStatus =
   | 'expired'
   | 'desynced';
 
+export const RANDOM_VS_TEAM = 'random' as const;
+export type VsTeamSelection = number | typeof RANDOM_VS_TEAM;
+
 export interface VsTeamSnapshotMember {
   pokemonId: number;
   species: string;
@@ -29,6 +32,7 @@ export interface VsTeamSnapshot {
   teamId: number;
   name: string;
   members: VsTeamSnapshotMember[];
+  poolFormat?: string;
 }
 
 export interface VsMatch {

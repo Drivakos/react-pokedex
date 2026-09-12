@@ -10,17 +10,17 @@ import {
   setVsReady,
   subscribeToVsMatch,
 } from '../services/vs-match.service';
-import type { VsInvitePreview, VsMatch } from '../types/vs';
+import type { VsInvitePreview, VsMatch, VsTeamSelection } from '../types/vs';
 
 interface VsMatchStore {
   match: VsMatch | null;
   invitePreview: VsInvitePreview | null;
   loading: boolean;
   error: string | null;
-  createInvite: (teamId: number) => Promise<VsMatch>;
-  createFriendInvite: (teamId: number, friendId: string) => Promise<VsMatch>;
+  createInvite: (teamId: VsTeamSelection) => Promise<VsMatch>;
+  createFriendInvite: (teamId: VsTeamSelection, friendId: string) => Promise<VsMatch>;
   inspectInvite: (token: string) => Promise<VsInvitePreview>;
-  acceptInvite: (token: string, teamId: number) => Promise<VsMatch>;
+  acceptInvite: (token: string, teamId: VsTeamSelection) => Promise<VsMatch>;
   loadMatch: (matchId: string) => Promise<VsMatch>;
   setReady: (ready: boolean) => Promise<VsMatch>;
   cancelInvite: () => Promise<VsMatch>;

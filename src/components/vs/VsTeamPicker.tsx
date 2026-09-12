@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react';
+import { Dices } from 'lucide-react';
 import type { TeamWithJoinedMembers } from '../../lib/supabase';
 import type { AbilityPreviewDetails } from '../../services/api/abilities.api';
 import type { MovePreviewDetails } from '../../services/api/moves.api';
 import type { Pokemon } from '../../types/pokemon';
 import { TeamRosterPreview } from '../teams/TeamRosterPreview';
+import { RANDOM_VS_TEAM, type VsTeamSelection } from './vs-team-selection';
 
 export function VsTeamPicker({
   teams,
@@ -12,8 +14,8 @@ export function VsTeamPicker({
   disabled = false,
 }: {
   teams: TeamWithJoinedMembers[];
-  selectedTeamId: number | null;
-  onSelect: (teamId: number) => void;
+  selectedTeamId: VsTeamSelection | null;
+  onSelect: (teamId: VsTeamSelection) => void;
   disabled?: boolean;
 }) {
   const [pokemonById, setPokemonById] = useState<Record<number, Pokemon>>({});
@@ -100,16 +102,32 @@ export function VsTeamPicker({
     };
   }, [abilityNameKey]);
 
-  if (teams.length === 0) {
-    return (
-      <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-6 text-center text-slate-600">
-        You do not have a saved team yet.
-      </div>
-    );
-  }
-
   return (
     <div className="grid gap-3 sm:grid-cols-2">
+      <button
+        type="button"
+        disabled={disabled}
+        onClick={() => onSelect(RANDOM_VS_TEAM)}
+        className={`rounded-xl border-2 p-4 text-left transition disabled:cursor-not-allowed disabled:opacity-60 ${
+          selectedTeamId === RANDOM_VS_TEAM
+            ? 'border-violet-500 bg-violet-50 shadow-sm'
+            : 'border-violet-200 bg-white hover:border-violet-300 hover:shadow-sm'
+        }`}
+      >
+        <span className="flex items-center gap-2 font-bold text-slate-900">
+          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-violet-100 text-violet-700">
+            <Dices size={18} aria-hidden="true" />
+          </span>
+          Random competitive team
+        </span>
+        <span className="mt-2 block text-sm text-slate-500">
+          6 Smogon-built Pokémon from one competitive singles tier
+        </span>
+        <span className="mt-3 block text-xs font-semibold uppercase tracking-wide text-violet-700">
+          Team is rolled when you enter the lobby
+        </span>
+      </button>
+
       {teams.map(team => {
         const count = team.team_members?.length ?? 0;
         const selected = selectedTeamId === team.id;

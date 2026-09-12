@@ -7,14 +7,18 @@ import { useVsMatchStore } from '../../store/vsMatchStore';
 import { VsFriendPicker } from './VsFriendPicker';
 import { VsMatchHistory } from './VsMatchHistory';
 import { VsTeamPicker } from './VsTeamPicker';
-import { resolveVsSelectedTeamId } from './vs-team-selection';
+import {
+  RANDOM_VS_TEAM,
+  resolveVsSelectedTeamId,
+  type VsTeamSelection,
+} from './vs-team-selection';
 import { getVsTeamErrors } from './vs-team-validation';
 
 export default function VsHome() {
   const navigate = useNavigate();
   const { user, teams, teamsLoaded, teamsError, fetchTeams } = useAuth();
   const { createInvite, createFriendInvite, loading, error, clearError } = useVsMatchStore();
-  const [selectedTeamId, setSelectedTeamId] = useState<number | null>(null);
+  const [selectedTeamId, setSelectedTeamId] = useState<VsTeamSelection | null>(null);
   const [friends, setFriends] = useState<VsFriendPresence[]>([]);
   const [selectedFriendId, setSelectedFriendId] = useState<string | null>(null);
   const [friendsLoading, setFriendsLoading] = useState(true);
@@ -53,12 +57,13 @@ export default function VsHome() {
     return () => window.clearInterval(intervalId);
   }, [loadFriends]);
 
-  const validateTeam = async (): Promise<number | null> => {
+  const validateTeam = async (): Promise<VsTeamSelection | null> => {
     clearError();
     setTeamErrors([]);
+    if (selectedTeamId === RANDOM_VS_TEAM) return selectedTeamId;
     const team = teams.find(entry => entry.id === selectedTeamId);
     if (!team) {
-      setTeamErrors(['Choose a saved team first.']);
+      setTeamErrors(['Choose a saved team or the random competitive team.']);
       return null;
     }
 
@@ -109,14 +114,14 @@ export default function VsHome() {
             <Swords aria-hidden="true" />
           </div>
           <h1 className="text-4xl font-black tracking-tight text-slate-900">VS Battle</h1>
-          <p className="mt-2 text-slate-600">Choose a saved team and invite a friend to battle.</p>
+          <p className="mt-2 text-slate-600">Bring a saved team or roll a competitive squad, then invite a friend.</p>
         </header>
 
         <section className="rounded-2xl bg-white p-6 shadow-lg sm:p-8">
           <div className="mb-5 flex items-center justify-between gap-4">
             <div>
               <h2 className="text-xl font-bold text-slate-900">Choose your team</h2>
-              <p className="text-sm text-slate-500">Teams are copied and locked when the invite is created.</p>
+              <p className="text-sm text-slate-500">Saved teams are copied; random teams are rolled and locked when the invite is created.</p>
             </div>
             <Link to="/teams" className="shrink-0 text-sm font-semibold text-red-600 hover:text-red-700">
               Manage teams
@@ -180,7 +185,7 @@ export default function VsHome() {
 
               <button
                 type="button"
-                disabled={loading || friendsLoading || !selectedFriendId || !teamsLoaded || Boolean(teamsError) || teams.length === 0}
+                disabled={loading || friendsLoading || !selectedFriendId || !selectedTeamId || !teamsLoaded || Boolean(teamsError)}
                 onClick={() => void handleFriendInvite()}
                 className="mt-5 flex w-full items-center justify-center gap-2 rounded-xl bg-green-600 px-5 py-3 font-bold text-white transition hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-50"
               >
@@ -202,7 +207,7 @@ export default function VsHome() {
 
           <button
             type="button"
-            disabled={loading || !teamsLoaded || Boolean(teamsError) || teams.length === 0}
+            disabled={loading || !selectedTeamId || !teamsLoaded || Boolean(teamsError)}
             onClick={() => void handleCreate()}
             className="flex w-full items-center justify-center gap-2 rounded-xl border border-red-200 bg-red-50 px-5 py-3 font-bold text-red-700 transition hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-50"
           >

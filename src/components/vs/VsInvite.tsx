@@ -5,7 +5,11 @@ import { useAuth } from '../../hooks/useAuth';
 import { useVsMatchStore } from '../../store/vsMatchStore';
 import { VsTeamPicker } from './VsTeamPicker';
 import { VsHeadToHead } from './VsHeadToHead';
-import { resolveVsSelectedTeamId } from './vs-team-selection';
+import {
+  RANDOM_VS_TEAM,
+  resolveVsSelectedTeamId,
+  type VsTeamSelection,
+} from './vs-team-selection';
 import { getVsTeamErrors } from './vs-team-validation';
 
 export default function VsInvite() {
@@ -13,7 +17,7 @@ export default function VsInvite() {
   const navigate = useNavigate();
   const { teams, teamsLoaded, teamsError, fetchTeams } = useAuth();
   const { invitePreview, loading, error, inspectInvite, acceptInvite, clearError } = useVsMatchStore();
-  const [selectedTeamId, setSelectedTeamId] = useState<number | null>(null);
+  const [selectedTeamId, setSelectedTeamId] = useState<VsTeamSelection | null>(null);
   const [teamErrors, setTeamErrors] = useState<string[]>([]);
 
   useEffect(() => {
@@ -37,9 +41,18 @@ export default function VsInvite() {
   const handleAccept = async () => {
     clearError();
     setTeamErrors([]);
+    if (selectedTeamId === RANDOM_VS_TEAM) {
+      try {
+        const match = await acceptInvite(token, selectedTeamId);
+        navigate(`/vs/match/${match.id}`, { replace: true });
+      } catch {
+        // The store exposes the server message inline.
+      }
+      return;
+    }
     const team = teams.find(entry => entry.id === selectedTeamId);
     if (!team) {
-      setTeamErrors(['Choose a saved team first.']);
+      setTeamErrors(['Choose a saved team or the random competitive team.']);
       return;
     }
     const issues = await getVsTeamErrors(team);
@@ -114,7 +127,7 @@ export default function VsInvite() {
 
             <button
               type="button"
-              disabled={loading || Boolean(teamsError) || teams.length === 0}
+              disabled={loading || !selectedTeamId || Boolean(teamsError)}
               onClick={() => void handleAccept()}
               className="mt-6 w-full rounded-xl bg-red-600 px-5 py-3 font-bold text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
             >
