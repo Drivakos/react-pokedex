@@ -1,14 +1,32 @@
-import { render, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import type { BattleDecision } from '../../../types/battle-run';
 import type { VsMatch, VsTeamSnapshotMember } from '../../../types/vs';
 
 const mockStartBattle = jest.fn();
 const mockResetBattle = jest.fn();
 const mockLoadMatch = jest.fn();
 
-const mockEngineState = {
+const waitingDecision: BattleDecision = {
+  kind: 'wait',
+  moves: [],
+  switches: [],
+  switchingBlocked: false,
+};
+
+const mockEngineState: {
+  snapshot: null;
+  decision: BattleDecision;
+  status: 'starting';
+  error: null;
+  battleLog: string[];
+  chooseMove: jest.Mock;
+  chooseSwitch: jest.Mock;
+  startBattle: jest.Mock;
+  resetBattle: jest.Mock;
+} = {
   snapshot: null,
-  decision: { kind: 'wait' as const, moves: [], switches: [], switchingBlocked: false },
-  status: 'starting' as const,
+  decision: waitingDecision,
+  status: 'starting',
   error: null,
   battleLog: [],
   chooseMove: jest.fn(),
@@ -89,6 +107,7 @@ const match: VsMatch = {
 describe('VsBattle', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockEngineState.decision = waitingDecision;
   });
 
   it('does not restart the active simulation when Realtime updates match metadata', async () => {
@@ -101,5 +120,35 @@ describe('VsBattle', () => {
 
     unmount();
     expect(mockResetBattle).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps a move selectable until the battle engine acknowledges the choice', () => {
+    mockEngineState.decision = {
+      requestId: 4,
+      kind: 'move',
+      moves: [{
+        slot: 1,
+        name: 'Thunderbolt',
+        type: 'Electric',
+        category: 'Special',
+        description: 'May paralyze the target.',
+        power: 90,
+        accuracy: 100,
+        priority: 0,
+        pp: 15,
+        maxpp: 15,
+        disabled: false,
+        effectiveness: 1,
+      }],
+      switches: [],
+      switchingBlocked: false,
+    };
+
+    render(<VsBattle match={match} userId="host-1" />);
+    const moveButton = screen.getByText('Thunderbolt').closest('button') as HTMLButtonElement;
+    fireEvent.click(moveButton);
+
+    expect(mockEngineState.chooseMove).toHaveBeenCalledWith(1);
+    expect(document.body.contains(moveButton)).toBe(true);
   });
 });

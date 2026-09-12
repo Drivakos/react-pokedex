@@ -65,7 +65,6 @@ export function VsBattle({ match, userId }: { match: VsMatch; userId: string }) 
   const [reportingResult, setReportingResult] = useState(false);
   const [forfeiting, setForfeiting] = useState(false);
   const [forfeitArmed, setForfeitArmed] = useState(false);
-  const [submittingChoice, setSubmittingChoice] = useState(false);
   const [inspectedMoveSlot, setInspectedMoveSlot] = useState<number | null>(null);
 
   const playerParty = useMemo(() => playerTeam?.members.map(toVsRunPokemon) ?? [], [playerTeam]);
@@ -139,22 +138,8 @@ export function VsBattle({ match, userId }: { match: VsMatch; userId: string }) 
   };
 
   useEffect(() => {
-    if (decision.kind !== 'wait') setSubmittingChoice(false);
-  }, [decision.kind]);
-
-  useEffect(() => {
     if (decision.kind !== 'move') setInspectedMoveSlot(null);
   }, [decision.kind]);
-
-  const handleMove = (slot: number) => {
-    setSubmittingChoice(true);
-    chooseMove(slot);
-  };
-
-  const handleSwitch = (slot: number) => {
-    setSubmittingChoice(true);
-    chooseSwitch(slot);
-  };
 
   if (!playerTeam || !opponentTeam || !battleMatch.battle_seed) {
     return <p className="py-16 text-center text-red-700">This match is missing its locked battle data.</p>;
@@ -221,7 +206,7 @@ export function VsBattle({ match, userId }: { match: VsMatch; userId: string }) 
                     <p className="mt-1 text-sm font-semibold text-slate-500">{reportingResult ? 'Confirming the result with your opponent…' : 'Waiting for your opponent to confirm…'}</p>
                   )}
                 </div>
-              ) : submittingChoice || decision.kind === 'wait' ? (
+              ) : decision.kind === 'wait' ? (
                 <div className="flex min-h-24 items-center justify-center gap-3 text-sm font-black text-slate-500">
                   <Loader2 className="h-5 w-5 animate-spin text-red-500" />
                   {engineStatus === 'starting' ? 'Starting battle…' : 'Waiting for your opponent…'}
@@ -242,7 +227,7 @@ export function VsBattle({ match, userId }: { match: VsMatch; userId: string }) 
                       const effectiveness = effectivenessPresentation(move.effectiveness);
                       return (
                         <div key={move.slot} className="relative flex min-w-0 flex-col">
-                          <button type="button" disabled={move.disabled} onClick={() => handleMove(move.slot)} onMouseEnter={() => setInspectedMoveSlot(move.slot)} onMouseLeave={() => setInspectedMoveSlot(current => current === move.slot ? null : current)} onFocus={() => setInspectedMoveSlot(move.slot)} onBlur={() => setInspectedMoveSlot(current => current === move.slot ? null : current)} className="group relative min-h-[70px] w-full touch-manipulation overflow-hidden rounded-lg border border-slate-200 bg-white p-1.5 text-left transition active:scale-[0.98] hover:border-red-300 hover:shadow-md focus-visible:border-red-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-200 disabled:cursor-not-allowed disabled:opacity-40 sm:min-h-[92px] sm:rounded-2xl sm:p-3 xl:min-h-[108px]">
+                          <button type="button" disabled={move.disabled} onClick={() => chooseMove(move.slot)} onMouseEnter={() => setInspectedMoveSlot(move.slot)} onMouseLeave={() => setInspectedMoveSlot(current => current === move.slot ? null : current)} onFocus={() => setInspectedMoveSlot(move.slot)} onBlur={() => setInspectedMoveSlot(current => current === move.slot ? null : current)} className="group relative min-h-[70px] w-full touch-manipulation overflow-hidden rounded-lg border border-slate-200 bg-white p-1.5 text-left transition active:scale-[0.98] hover:border-red-300 hover:shadow-md focus-visible:border-red-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-200 disabled:cursor-not-allowed disabled:opacity-40 sm:min-h-[92px] sm:rounded-2xl sm:p-3 xl:min-h-[108px]">
                             <span className={`absolute inset-y-0 left-0 w-1 sm:w-1.5 ${typeClasses[move.type] ?? 'bg-slate-400'}`} />
                             <span className="flex items-start justify-between gap-1 pl-1.5 sm:gap-3 sm:pl-2"><span className="min-w-0"><span className="block truncate text-[11px] font-black leading-tight text-slate-900 sm:text-base">{move.name}</span><span className="mt-0.5 flex items-center gap-0.5 text-[8px] font-bold text-slate-500 sm:mt-1 sm:gap-1 sm:text-[11px]"><span className={`${typeClasses[move.type] ?? 'bg-slate-400'} rounded px-1 py-0.5 text-[7px] uppercase text-white sm:px-1.5 sm:text-[9px]`}>{move.type}</span><MoveCategoryBadge category={move.category} /></span></span><span className="shrink-0 text-right text-[9px] font-black leading-none text-slate-500 sm:text-[11px] sm:leading-normal">{move.pp}/{move.maxpp}<span className="ml-0.5 font-bold text-slate-400 sm:ml-0 sm:block">PP</span></span></span>
                             <span className="mt-1 flex items-center justify-between gap-1 pl-1.5 pr-7 text-[8px] font-bold sm:mt-2 sm:pl-2 sm:pr-0 sm:text-[10px]"><span className="truncate text-slate-400">{move.category === 'Status' ? 'Effect move' : `${move.power || '—'} power · ${move.accuracy === true ? 'Always hits' : `${move.accuracy}%`}`}</span><span className={`shrink-0 rounded-full border px-1 py-0.5 font-black sm:px-1.5 ${effectiveness.classes}`}>{effectiveness.label}</span></span>
@@ -253,14 +238,14 @@ export function VsBattle({ match, userId }: { match: VsMatch; userId: string }) 
                     })}
                   </div>
                   {decision.switchingBlocked && <div className="mt-1 flex items-center gap-1.5 rounded-lg bg-amber-100 px-2 py-1.5 text-[10px] font-black text-amber-800 sm:hidden"><LockKeyhole className="h-3 w-3" /> Active Pokémon is trapped and cannot switch</div>}
-                  {switches.length > 0 && !decision.switchingBlocked && <details className="mt-1 rounded-lg border border-blue-100 bg-blue-50/70 px-2 py-1.5 sm:mt-3 sm:rounded-xl sm:p-3"><summary className="cursor-pointer text-[10px] font-black text-blue-800 sm:text-sm">Switch Pokémon instead</summary><div className="mt-2 grid gap-2 sm:grid-cols-2">{switches.map(choice => <button key={choice.slot} type="button" onClick={() => handleSwitch(choice.slot)} className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white px-3 py-2 text-left transition hover:border-blue-300 hover:bg-blue-50 hover:shadow"><BattlePokemonImage id={choice.id} species={choice.species} variant="icon" className="h-12 w-12" /><span><strong className="block text-sm text-slate-800">{choice.species}</strong><span className="text-[11px] font-bold text-slate-500">{choice.condition}</span></span></button>)}</div></details>}
+                  {switches.length > 0 && !decision.switchingBlocked && <details className="mt-1 rounded-lg border border-blue-100 bg-blue-50/70 px-2 py-1.5 sm:mt-3 sm:rounded-xl sm:p-3"><summary className="cursor-pointer text-[10px] font-black text-blue-800 sm:text-sm">Switch Pokémon instead</summary><div className="mt-2 grid gap-2 sm:grid-cols-2">{switches.map(choice => <button key={choice.slot} type="button" onClick={() => chooseSwitch(choice.slot)} className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white px-3 py-2 text-left transition hover:border-blue-300 hover:bg-blue-50 hover:shadow"><BattlePokemonImage id={choice.id} species={choice.species} variant="icon" className="h-12 w-12" /><span><strong className="block text-sm text-slate-800">{choice.species}</strong><span className="text-[11px] font-bold text-slate-500">{choice.condition}</span></span></button>)}</div></details>}
                 </div>
               ) : decision.kind === 'switch' ? (
                 <div>
                   <p className="mb-3 text-xs font-black uppercase tracking-[0.18em] text-slate-500">Choose your next Pokémon</p>
                   <div className="grid gap-2 sm:grid-cols-2">
                     {switches.map(choice => (
-                      <button key={choice.slot} type="button" onClick={() => handleSwitch(choice.slot)} className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white px-3 py-2 text-left transition hover:border-blue-300 hover:bg-blue-50 hover:shadow"><BattlePokemonImage id={choice.id} species={choice.species} variant="icon" className="h-12 w-12" /><span><strong className="block text-sm text-slate-800">{choice.species}</strong><span className="text-[11px] font-bold text-slate-500">{choice.condition}</span></span></button>
+                      <button key={choice.slot} type="button" onClick={() => chooseSwitch(choice.slot)} className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white px-3 py-2 text-left transition hover:border-blue-300 hover:bg-blue-50 hover:shadow"><BattlePokemonImage id={choice.id} species={choice.species} variant="icon" className="h-12 w-12" /><span><strong className="block text-sm text-slate-800">{choice.species}</strong><span className="text-[11px] font-bold text-slate-500">{choice.condition}</span></span></button>
                     ))}
                   </div>
                 </div>

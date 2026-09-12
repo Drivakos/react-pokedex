@@ -105,16 +105,18 @@ export class VsBattleSession implements BattleSession {
     this.requestIndex = decision.requestId;
     this.observed.add(decision.requestId);
     this.pendingDecision = decision;
-    this.callbacks.onDecision(decision);
 
     // Reconnecting clients may already have this completed pair in the durable
     // log. Apply it only after the local simulator has exposed its matching
-    // request; applying from the opponent stream can race `currentRequest` and
-    // permanently drop the resolution.
+    // request, but do not publish that already-resolved request as a fresh UI
+    // choice. A click during that replay window would otherwise be submitted for
+    // the next open request.
     if (this.pairs.has(decision.requestId)) {
       this.tryAdvance();
       return;
     }
+
+    this.callbacks.onDecision(decision);
 
     if (decision.kind === 'wait') {
       void this.submitLocalChoice('default');

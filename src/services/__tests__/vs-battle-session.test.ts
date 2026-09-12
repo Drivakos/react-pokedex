@@ -191,6 +191,7 @@ describe('VsBattleSession', () => {
     let emitLocalDecision: ((decision: BattleDecision) => void) | undefined;
     let emitOpponentRequest: ((requestId: number) => void) | undefined;
     const applyPair = jest.fn();
+    const publishDecision = jest.fn();
     const session = new VsBattleSession({
       matchId: 'match-reconnect',
       isHost: true,
@@ -201,7 +202,7 @@ describe('VsBattleSession', () => {
       opponentName: 'Guest',
       callbacks: {
         onSnapshot: () => undefined,
-        onDecision: () => undefined,
+        onDecision: publishDecision,
         onLog: () => undefined,
         onVisual: () => undefined,
         onEnd: () => undefined,
@@ -233,6 +234,7 @@ describe('VsBattleSession', () => {
     });
 
     expect(applyPair).toHaveBeenCalledWith('move 1', 'move 1');
+    expect(publishDecision).not.toHaveBeenCalled();
     expect(submitVsChoice).not.toHaveBeenCalled();
     session.dispose();
   });
